@@ -109,20 +109,20 @@
 }
 
 .hex {
-  fill: rgba(255, 255, 255, 0.28);
+  fill: transparent;
   stroke: #000;
   stroke-width: 2.2;
   vector-effect: non-scaling-stroke;
 }
 
 .hex:nth-child(odd) {
-  fill: rgba(255, 255, 255, 0.2);
+  fill: transparent;
 }
 
 .hex.objective {
-  fill: rgba(251, 191, 36, 0.55);
-  stroke: rgba(120, 53, 15, 1);
-  stroke-width: 2.6;
+  fill: transparent;
+  stroke: #000;
+  stroke-width: 2.2;
 }
 
 .fighter {
