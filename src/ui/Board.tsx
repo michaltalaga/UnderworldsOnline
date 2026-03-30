@@ -11,8 +11,9 @@ type BoardProps = {
 
 const BOARD_WIDTH = 900;
 const BOARD_HEIGHT = 760;
-const HEX_X_STEP = 90;
-const HEX_Y_STEP = 78;
+const HEX_X_STEP = 84;
+const HEX_Y_STEP = 72;
+const HEX_RADIUS = 48;
 
 function toPixel(q: number, r: number) {
   const rowCount = rowCountForR(r);
@@ -23,27 +24,39 @@ function toPixel(q: number, r: number) {
   return { x, y };
 }
 
+function hexPolygonPoints(cx: number, cy: number) {
+  const half = HEX_RADIUS * 0.5;
+  const h = HEX_RADIUS * 0.8660254;
+  return [
+    `${cx - half},${cy - h}`,
+    `${cx + half},${cy - h}`,
+    `${cx + HEX_RADIUS},${cy}`,
+    `${cx + half},${cy + h}`,
+    `${cx - half},${cy + h}`,
+    `${cx - HEX_RADIUS},${cy}`,
+  ].join(" ");
+}
+
 export function Board({ state, selectedFighterId, onSelectFighter }: BoardProps) {
   const hexes = boardHexes(state);
 
   return (
     <div className="board-wrap">
       <div className="board-surface" role="img" aria-label="Underworlds tactical board">
-        {hexes.map((h) => {
-          const p = toPixel(h.q, h.r);
-          const key = hexKey(h);
-          const isObjective = state.objectiveHexes.some((o) => o.q === h.q && o.r === h.r);
-          return (
-            <div
-              key={key}
-              className={`hex ${isObjective ? "objective" : ""}`}
-              style={{
-                left: `${(p.x / BOARD_WIDTH) * 100}%`,
-                top: `${(p.y / BOARD_HEIGHT) * 100}%`,
-              }}
-            />
-          );
-        })}
+        <svg className="hex-layer" viewBox={`0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}`} aria-hidden="true">
+          {hexes.map((h) => {
+            const p = toPixel(h.q, h.r);
+            const key = hexKey(h);
+            const isObjective = state.objectiveHexes.some((o) => o.q === h.q && o.r === h.r);
+            return (
+              <polygon
+                key={key}
+                className={`hex ${isObjective ? "objective" : ""}`}
+                points={hexPolygonPoints(p.x, p.y)}
+              />
+            );
+          })}
+        </svg>
 
         {Object.values(state.components.fighters)
           .filter((f) => f.hp > 0)
