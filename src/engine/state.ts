@@ -118,12 +118,11 @@ function spawnCards(
   return cards.map((card, idx) => {
     const id = `${team}-${kind}-${zone}-${idx}-${idCounter.value}`;
     idCounter.value += 1;
-    const componentNames = ["card", "name", "cardOwner", "cardZone"];
+    const componentNames = ["name", "cardOwner", "cardZone"];
     if (kind === "objective") componentNames.push("objectiveCard", "glory");
     if (kind === "power") componentNames.push("powerCard");
     addEntity(entities, id, componentNames);
 
-    components.card[id] = { tag: "card" };
     components.name[id] = { value: card.name };
     components.cardOwner[id] = { owner: team };
     components.cardZone[id] = { zone };
@@ -200,7 +199,7 @@ export function cardGloryValue(state: GameState, cardId: EntityId): number {
 }
 
 export function cardEntityIdsInZone(state: GameState, team: TeamId, zone: CardZone): EntityId[] {
-  return Object.keys(state.components.card).filter((id) => {
+  return Object.keys(state.components.cardOwner).filter((id) => {
     const owner = state.components.cardOwner[id];
     const zoneComp = state.components.cardZone[id];
     return owner?.owner === team && zoneComp?.zone === zone;
@@ -253,7 +252,6 @@ export function initialState(
     health: {},
     combat: {},
     status: {},
-    card: {},
     cardOwner: {},
     cardZone: {},
     objectiveCard: {},

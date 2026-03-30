@@ -97,10 +97,6 @@ export type CardZone =
   | "power-discard"
   | "power-temp-discard";
 
-export type CardComponent = {
-  tag: "card";
-};
-
 export type CardOwnerComponent = {
   owner: TeamId;
 };
@@ -128,7 +124,6 @@ export type Components = {
   health: Record<EntityId, HealthComponent>;
   combat: Record<EntityId, CombatComponent>;
   status: Record<EntityId, StatusComponent>;
-  card: Record<EntityId, CardComponent>;
   cardOwner: Record<EntityId, CardOwnerComponent>;
   cardZone: Record<EntityId, CardZoneComponent>;
   objectiveCard: Record<EntityId, ObjectiveCardComponent>;
