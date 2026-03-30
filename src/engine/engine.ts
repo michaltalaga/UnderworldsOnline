@@ -1,4 +1,4 @@
-import { fighterName, fighterPos, fighterStatus, objectiveOccupancy, occupiedBy } from "./state";
+import { cloneState, fighterName, fighterPos, fighterStatus, objectiveOccupancy, occupiedBy } from "./state";
 import { getLegalActions } from "./systems/legalActions";
 import { resolveAttack } from "./systems/combat";
 import { resolvePowerCard } from "./systems/cards";
@@ -123,7 +123,7 @@ function applyPowerStep(state: GameState, action: GameAction): void {
 }
 
 export function applyAction(state: GameState, action: GameAction): GameState {
-  const next = structuredClone(state) as GameState;
+  const next = cloneState(state);
 
   if (next.winner) return next;
   if (action.actorTeam !== next.activeTeam) return next;

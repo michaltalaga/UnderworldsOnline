@@ -1,3 +1,5 @@
+import { AbstractEntity, Engine } from "@trixt0r/ecs";
+
 export type EntityId = string;
 
 export type TeamId = "red" | "blue";
@@ -48,48 +50,41 @@ export type WarbandData = {
   fighters: FighterArchetype[];
 };
 
-
-export type Entity = {
-  id: EntityId;
-  components: Component[];
-};
-
-export type Component =
-  | FighterComponent
-  | NameComponent
-  | PositionComponent
-  | HealthComponent
-  | CombatComponent
-  | StatusComponent
-  | CardOwnerComponent
-  | CardZoneComponent
-  | ObjectiveCardComponent
-  | PowerCardComponent
-  | GloryComponent;
-
-export type FighterComponent = {
-  type: "fighter";
+export class FighterComponent {
   team: TeamId;
-};
 
-export type NameComponent = {
-  type: "name";
+  constructor(team: TeamId) {
+    this.team = team;
+  }
+}
+
+export class NameComponent {
   value: string;
-};
 
-export type PositionComponent = {
-  type: "position";
+  constructor(value: string) {
+    this.value = value;
+  }
+}
+
+export class PositionComponent {
   pos: Hex;
-};
 
-export type HealthComponent = {
-  type: "health";
+  constructor(pos: Hex) {
+    this.pos = pos;
+  }
+}
+
+export class HealthComponent {
   hp: number;
   maxHp: number;
-};
 
-export type CombatComponent = {
-  type: "combat";
+  constructor(hp: number, maxHp: number) {
+    this.hp = hp;
+    this.maxHp = maxHp;
+  }
+}
+
+export class CombatComponent {
   move: number;
   attackDice: number;
   attackTrait: AttackTrait;
@@ -98,13 +93,37 @@ export type CombatComponent = {
   saveDice: number;
   saveTrait: SaveTrait;
   nextAttackBonusDamage: number;
-};
 
-export type StatusComponent = {
-  type: "status";
+  constructor(
+    move: number,
+    attackDice: number,
+    attackTrait: AttackTrait,
+    attackRange: number,
+    attackDamage: number,
+    saveDice: number,
+    saveTrait: SaveTrait,
+    nextAttackBonusDamage: number,
+  ) {
+    this.move = move;
+    this.attackDice = attackDice;
+    this.attackTrait = attackTrait;
+    this.attackRange = attackRange;
+    this.attackDamage = attackDamage;
+    this.saveDice = saveDice;
+    this.saveTrait = saveTrait;
+    this.nextAttackBonusDamage = nextAttackBonusDamage;
+  }
+}
+
+export class StatusComponent {
   guard: boolean;
   charged: boolean;
-};
+
+  constructor(guard: boolean, charged: boolean) {
+    this.guard = guard;
+    this.charged = charged;
+  }
+}
 
 export type CardZone =
   | "objective-deck"
@@ -117,30 +136,80 @@ export type CardZone =
   | "power-discard"
   | "power-temp-discard";
 
-export type CardOwnerComponent = {
-  type: "cardOwner";
+export class CardOwnerComponent {
   owner: TeamId;
-};
 
-export type CardZoneComponent = {
-  type: "cardZone";
+  constructor(owner: TeamId) {
+    this.owner = owner;
+  }
+}
+
+export class CardZoneComponent {
   zone: CardZone;
-};
 
-export type ObjectiveCardComponent = {
-  type: "objectiveCard";
+  constructor(zone: CardZone) {
+    this.zone = zone;
+  }
+}
+
+export class ObjectiveCardComponent {
   cardType: ObjectiveCardType;
-};
 
-export type PowerCardComponent = {
-  type: "powerCard";
+  constructor(cardType: ObjectiveCardType) {
+    this.cardType = cardType;
+  }
+}
+
+export class PowerCardComponent {
   cardType: PowerCardType;
-};
 
-export type GloryComponent = {
-  type: "glory";
+  constructor(cardType: PowerCardType) {
+    this.cardType = cardType;
+  }
+}
+
+export class GloryComponent {
   value: number;
-};
+
+  constructor(value: number) {
+    this.value = value;
+  }
+}
+
+export type GameComponent =
+  | FighterComponent
+  | NameComponent
+  | PositionComponent
+  | HealthComponent
+  | CombatComponent
+  | StatusComponent
+  | CardOwnerComponent
+  | CardZoneComponent
+  | ObjectiveCardComponent
+  | PowerCardComponent
+  | GloryComponent;
+
+export class GameEntity extends AbstractEntity<GameComponent> {
+  constructor(id: EntityId, components: GameComponent[] = []) {
+    super(id);
+    if (components.length > 0) {
+      this.components.add(...components);
+    }
+  }
+}
+
+export type ComponentType =
+  | "fighter"
+  | "name"
+  | "position"
+  | "health"
+  | "combat"
+  | "status"
+  | "cardOwner"
+  | "cardZone"
+  | "objectiveCard"
+  | "powerCard"
+  | "glory";
 
 export type TeamState = {
   glory: number;
@@ -183,10 +252,40 @@ export type GameState = {
   objectiveHexes: Hex[];
   occupiedObjectives: Record<string, string | null>;
   diceRollEvent: DiceRollEvent | null;
-  entities: Record<EntityId, Entity>;
+  ecs: Engine<GameEntity>;
+  entities: Record<EntityId, GameEntity>;
   teams: Record<TeamId, TeamState>;
   log: EventLogEntry[];
 };
+
+export function cloneGameComponent(component: GameComponent): GameComponent {
+  if (component instanceof FighterComponent) return new FighterComponent(component.team);
+  if (component instanceof NameComponent) return new NameComponent(component.value);
+  if (component instanceof PositionComponent) return new PositionComponent({ ...component.pos });
+  if (component instanceof HealthComponent) return new HealthComponent(component.hp, component.maxHp);
+  if (component instanceof CombatComponent) {
+    return new CombatComponent(
+      component.move,
+      component.attackDice,
+      component.attackTrait,
+      component.attackRange,
+      component.attackDamage,
+      component.saveDice,
+      component.saveTrait,
+      component.nextAttackBonusDamage,
+    );
+  }
+  if (component instanceof StatusComponent) return new StatusComponent(component.guard, component.charged);
+  if (component instanceof CardOwnerComponent) return new CardOwnerComponent(component.owner);
+  if (component instanceof CardZoneComponent) return new CardZoneComponent(component.zone);
+  if (component instanceof ObjectiveCardComponent) return new ObjectiveCardComponent(component.cardType);
+  if (component instanceof PowerCardComponent) return new PowerCardComponent(component.cardType);
+  return new GloryComponent(component.value);
+}
+
+export function cloneGameEntity(entity: GameEntity): GameEntity {
+  return new GameEntity(entity.id as EntityId, entity.components.map(cloneGameComponent));
+}
 
 export type ActionBase = { actorTeam: TeamId };
 
