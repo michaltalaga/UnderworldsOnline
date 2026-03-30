@@ -358,6 +358,106 @@
   background: #fff8e8;
 }
 
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.65rem;
+}
+
+.card-grid.compact {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.card-tile {
+  min-height: 172px;
+  border-radius: 14px;
+  padding: 0.7rem;
+  border: 1px solid rgba(20, 17, 15, 0.18);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    0 10px 22px rgba(20, 17, 15, 0.14);
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-tile::after {
+  content: "";
+  position: absolute;
+  inset: auto -15% -42% auto;
+  width: 110px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: 0.2;
+}
+
+.card-tile.objective {
+  background:
+    linear-gradient(160deg, rgba(120, 53, 15, 0.08), transparent 45%),
+    linear-gradient(180deg, #fef3c7, #fbbf24);
+}
+
+.card-tile.objective::after {
+  background: radial-gradient(circle, rgba(120, 53, 15, 0.55), transparent 68%);
+}
+
+.card-tile.power {
+  background:
+    linear-gradient(160deg, rgba(127, 29, 29, 0.08), transparent 45%),
+    linear-gradient(180deg, #fee2e2, #f87171);
+}
+
+.card-tile.power::after {
+  background: radial-gradient(circle, rgba(127, 29, 29, 0.55), transparent 68%);
+}
+
+.card-tile.compact {
+  min-height: 132px;
+  padding: 0.6rem;
+}
+
+.card-tile-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.45rem;
+  align-items: start;
+}
+
+.card-tile-kind,
+.card-tile-glory {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.18rem 0.42rem;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(20, 17, 15, 0.1);
+}
+
+.card-tile-name {
+  font-size: 0.98rem;
+  line-height: 1.15;
+  max-width: 12ch;
+}
+
+.card-tile-rule {
+  margin: 0;
+  font-size: 0.78rem;
+  text-transform: capitalize;
+  color: rgba(20, 17, 15, 0.72);
+}
+
+.card-tile.compact .card-tile-name {
+  font-size: 0.84rem;
+}
+
+.card-tile.compact .card-tile-rule {
+  font-size: 0.72rem;
+}
+
 .mulligan-controls button {
   border: 1px solid #14532d;
   background: #15803d;
@@ -533,22 +633,6 @@
 .opening-hand-head span {
   color: #7a6d67;
   font-size: 0.8rem;
-}
-
-.opening-hand-card ul,
-.opening-review-card ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.3rem;
-}
-
-.opening-hand-card li,
-.opening-review-card li {
-  border-bottom: 1px dashed rgba(20, 17, 15, 0.1);
-  padding-bottom: 0.28rem;
-  font-size: 0.86rem;
 }
 
 .opening-hand-footer,

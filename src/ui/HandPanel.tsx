@@ -1,5 +1,6 @@
 import type { GameAction, GameState } from "../engine/types";
-import { cardEntityIdsInZone, cardName } from "../engine/state";
+import { cardEntityIdsInZone } from "../engine/state";
+import { CardTile } from "./CardTile";
 
 type HandPanelProps = {
   state: GameState;
@@ -57,6 +58,19 @@ export function HandPanel({ state, onDispatch }: HandPanelProps) {
 
   const mulliganPending = myObjectiveTemp.length > 0 || myPowerTemp.length > 0;
   const canMulligan = state.round === 1 && state.turnInRound === 1 && !myTeam.mulliganUsed && !state.winner;
+  const renderCards = (cardIds: string[], emptyLabel: string) => {
+    if (cardIds.length === 0) {
+      return <p className="muted">{emptyLabel}</p>;
+    }
+
+    return (
+      <div className="card-grid compact">
+        {cardIds.map((cardId) => (
+          <CardTile key={cardId} state={state} cardId={cardId} compact />
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="panel hand-panel">
@@ -116,37 +130,17 @@ export function HandPanel({ state, onDispatch }: HandPanelProps) {
       <h3>Your Hand (Red)</h3>
       <div className="section">
         <h4>Objectives</h4>
-        <ul>
-          {myObjectiveHand.map((cardId) => (
-            <li key={cardId}>{cardName(state, cardId)}</li>
-          ))}
-          {myObjectiveHand.length === 0 && <li className="muted">No objectives in hand</li>}
-        </ul>
+        {renderCards(myObjectiveHand, "No objectives in hand")}
       </div>
       <div className="section">
         <h4>Power Cards</h4>
-        <ul>
-          {myPowerHand.map((cardId) => (
-            <li key={cardId}>{cardName(state, cardId)}</li>
-          ))}
-          {myPowerHand.length === 0 && <li className="muted">No power cards in hand</li>}
-        </ul>
+        {renderCards(myPowerHand, "No power cards in hand")}
       </div>
 
       {mulliganPending && (
         <div className="section">
           <h4>Temp Discard (During Mulligan)</h4>
-          <ul>
-            {myObjectiveTemp.map((cardId) => (
-              <li key={cardId}>Objective: {cardName(state, cardId)}</li>
-            ))}
-            {myPowerTemp.map((cardId) => (
-              <li key={cardId}>Power: {cardName(state, cardId)}</li>
-            ))}
-            {myObjectiveTemp.length + myPowerTemp.length === 0 && (
-              <li className="muted">No cards in temp discard</li>
-            )}
-          </ul>
+          {renderCards([...myObjectiveTemp, ...myPowerTemp], "No cards in temp discard")}
         </div>
       )}
     </div>

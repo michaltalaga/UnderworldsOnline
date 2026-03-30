@@ -1,5 +1,6 @@
-import { cardEntityIdsInZone, cardName } from "../engine/state";
+import { cardEntityIdsInZone } from "../engine/state";
 import type { GameAction, GameState } from "../engine/types";
+import { CardTile } from "./CardTile";
 
 type OpeningHandModalProps = {
   state: GameState;
@@ -8,10 +9,10 @@ type OpeningHandModalProps = {
 
 function cardList(state: GameState, cardIds: string[], emptyLabel: string) {
   if (cardIds.length === 0) {
-    return <li className="muted">{emptyLabel}</li>;
+    return <p className="muted">{emptyLabel}</p>;
   }
 
-  return cardIds.map((cardId) => <li key={cardId}>{cardName(state, cardId)}</li>);
+  return cardIds.map((cardId) => <CardTile key={cardId} state={state} cardId={cardId} />);
 }
 
 export function OpeningHandModal({ state, onDispatch }: OpeningHandModalProps) {
@@ -49,7 +50,7 @@ export function OpeningHandModal({ state, onDispatch }: OpeningHandModalProps) {
             <h3>Objectives</h3>
             <span>{objectiveHand.length} cards</span>
           </div>
-          <ul>{cardList(state, objectiveHand, "No objectives in hand")}</ul>
+          <div className="card-grid">{cardList(state, objectiveHand, "No objectives in hand")}</div>
           {!mulliganPending && (
             <button
               type="button"
@@ -67,7 +68,7 @@ export function OpeningHandModal({ state, onDispatch }: OpeningHandModalProps) {
             <h3>Power</h3>
             <span>{powerHand.length} cards</span>
           </div>
-          <ul>{cardList(state, powerHand, "No power cards in hand")}</ul>
+          <div className="card-grid">{cardList(state, powerHand, "No power cards in hand")}</div>
           {!mulliganPending && (
             <button
               type="button"
@@ -106,14 +107,14 @@ export function OpeningHandModal({ state, onDispatch }: OpeningHandModalProps) {
         <div className="opening-hand-review">
           <div className="opening-review-card">
             <h3>Set Aside For Mulligan</h3>
-            <ul>
+            <div className="card-grid compact">
               {objectiveTemp.map((cardId) => (
-                <li key={cardId}>Objective: {cardName(state, cardId)}</li>
+                <CardTile key={cardId} state={state} cardId={cardId} compact />
               ))}
               {powerTemp.map((cardId) => (
-                <li key={cardId}>Power: {cardName(state, cardId)}</li>
+                <CardTile key={cardId} state={state} cardId={cardId} compact />
               ))}
-            </ul>
+            </div>
           </div>
 
           <button
