@@ -10,6 +10,31 @@ function facesWithSlots(faces: DiceFace[], slots = 8): Array<DiceFace | null> {
   return out;
 }
 
+function faceLabel(face: DiceFace): string {
+  switch (face.face) {
+    case "crit-attack":
+      return "CRIT";
+    case "crit-save":
+      return "CRIT";
+    case "hammer":
+      return "HAM";
+    case "sword":
+      return "SWD";
+    case "shield":
+      return "SHD";
+    case "dodge":
+      return "DOD";
+    case "support":
+      return "SUP";
+    case "double-support":
+      return "2SUP";
+    case "blank":
+      return "-";
+    default:
+      return "?";
+  }
+}
+
 export function DiceTray({ event }: DiceTrayProps) {
   const attack = facesWithSlots(event?.attackFaces ?? []);
   const defense = facesWithSlots(event?.defenseFaces ?? []);
@@ -30,7 +55,7 @@ export function DiceTray({ event }: DiceTrayProps) {
             <div className="dice-grid">
               {attack.map((face, idx) => (
                 <div key={`atk-${idx}`} className={`die ${face ? face.result : "empty"}`}>
-                  {face ? face.value : ""}
+                  {face ? faceLabel(face) : ""}
                 </div>
               ))}
             </div>
@@ -41,7 +66,7 @@ export function DiceTray({ event }: DiceTrayProps) {
             <div className="dice-grid">
               {defense.map((face, idx) => (
                 <div key={`def-${idx}`} className={`die ${face ? face.result : "empty"}`}>
-                  {face ? face.value : ""}
+                  {face ? faceLabel(face) : ""}
                 </div>
               ))}
             </div>

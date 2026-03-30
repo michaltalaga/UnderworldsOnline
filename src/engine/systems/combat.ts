@@ -1,7 +1,7 @@
 import { hexDistance, neighbors } from "../hex";
 import { rollD6 } from "../rng";
 import { isAlive, isBoardHex, objectiveOccupancy, occupiedBy } from "../state";
-import type { DiceFace, FighterEntity, GameState, TeamId } from "../types";
+import type { AttackDieFace, DiceFace, FighterEntity, GameState, SaveDieFace, TeamId } from "../types";
 
 function adjacentAlliesExcluding(
   state: GameState,
@@ -16,25 +16,92 @@ function adjacentAlliesExcluding(
     .filter((f) => isAlive(f) && f.team === team).length;
 }
 
-function countSuccesses(
+function rollAttackFace(rngState: number): { state: number; face: AttackDieFace } {
+  const roll = rollD6(rngState);
+  if (roll.value === 6) return { state: roll.state, face: "crit-attack" };
+  if (roll.value === 5) return { state: roll.state, face: "hammer" };
+  if (roll.value === 4) return { state: roll.state, face: "sword" };
+  if (roll.value === 3) return { state: roll.state, face: "double-support" };
+  if (roll.value === 2) return { state: roll.state, face: "support" };
+  return { state: roll.state, face: "blank" };
+}
+
+function rollSaveFace(rngState: number): { state: number; face: SaveDieFace } {
+  const roll = rollD6(rngState);
+  if (roll.value === 6) return { state: roll.state, face: "crit-save" };
+  if (roll.value === 5) return { state: roll.state, face: "shield" };
+  if (roll.value === 4) return { state: roll.state, face: "dodge" };
+  if (roll.value === 3) return { state: roll.state, face: "double-support" };
+  if (roll.value === 2) return { state: roll.state, face: "support" };
+  return { state: roll.state, face: "blank" };
+}
+
+function countAttackSuccesses(
   dice: number,
   rngState: number,
+  attackTrait: FighterEntity["stats"]["attackTrait"],
+  supportEnabled: boolean,
+  criticalSupportEnabled: boolean,
 ): { rngState: number; successes: number; crits: number; faces: DiceFace[] } {
   let state = rngState;
   let successes = 0;
   let crits = 0;
   const faces: DiceFace[] = [];
   for (let i = 0; i < dice; i += 1) {
-    const roll = rollD6(state);
+    const roll = rollAttackFace(state);
     state = roll.state;
-    if (roll.value >= 4) successes += 1;
-    if (roll.value === 6) crits += 1;
 
-    faces.push({
-      value: roll.value,
-      result: roll.value === 6 ? "crit" : roll.value >= 4 ? "success" : "fail",
-    });
+    const isCrit = roll.face === "crit-attack";
+    const isMatch = roll.face === attackTrait;
+    const isSupport = roll.face === "support" && supportEnabled;
+    const isCritSupport = roll.face === "double-support" && criticalSupportEnabled;
+
+    if (isCrit) {
+      crits += 1;
+      successes += 1;
+    } else if (isMatch || isSupport || isCritSupport) {
+      successes += 1;
+    }
+
+    faces.push({ face: roll.face, result: isCrit ? "crit" : isMatch || isSupport || isCritSupport ? "success" : "fail" });
   }
+  return { rngState: state, successes, crits, faces };
+}
+
+function countSaveSuccesses(
+  dice: number,
+  rngState: number,
+  saveTrait: FighterEntity["stats"]["saveTrait"],
+  supportEnabled: boolean,
+  criticalSupportEnabled: boolean,
+  guardEnabled: boolean,
+): { rngState: number; successes: number; crits: number; faces: DiceFace[] } {
+  let state = rngState;
+  let successes = 0;
+  let crits = 0;
+  const faces: DiceFace[] = [];
+
+  for (let i = 0; i < dice; i += 1) {
+    const roll = rollSaveFace(state);
+    state = roll.state;
+
+    const isCrit = roll.face === "crit-save";
+    const isMatch = guardEnabled
+      ? roll.face === "shield" || roll.face === "dodge"
+      : roll.face === saveTrait;
+    const isSupport = roll.face === "support" && supportEnabled;
+    const isCritSupport = roll.face === "double-support" && criticalSupportEnabled;
+
+    if (isCrit) {
+      crits += 1;
+      successes += 1;
+    } else if (isMatch || isSupport || isCritSupport) {
+      successes += 1;
+    }
+
+    faces.push({ face: roll.face, result: isCrit ? "crit" : isMatch || isSupport || isCritSupport ? "success" : "fail" });
+  }
+
   return { rngState: state, successes, crits, faces };
 }
 
@@ -61,11 +128,29 @@ export function resolveAttack(state: GameState, attackerId: string, targetId: st
   const flankAtk = adjacentAlliesExcluding(state, target, atkTeam, attackerId);
   const flankDef = adjacentAlliesExcluding(state, attacker, defTeam, targetId);
 
-  const atkDice = attacker.stats.attackDice + Math.min(flankAtk, 2);
-  const defDice = target.stats.saveDice + (target.guard ? 1 : 0) + Math.min(flankDef, 1);
+  const targetFlanked = flankAtk >= 1;
+  const targetSurrounded = flankAtk >= 2;
+  const attackerFlanked = flankDef >= 1;
+  const attackerSurrounded = flankDef >= 2;
 
-  const atkRoll = countSuccesses(atkDice, state.rngState);
-  const defRoll = countSuccesses(defDice, atkRoll.rngState);
+  const atkDice = attacker.stats.attackDice;
+  const defDice = target.stats.saveDice;
+
+  const atkRoll = countAttackSuccesses(
+    atkDice,
+    state.rngState,
+    attacker.stats.attackTrait,
+    targetFlanked,
+    targetSurrounded,
+  );
+  const defRoll = countSaveSuccesses(
+    defDice,
+    atkRoll.rngState,
+    target.stats.saveTrait,
+    attackerFlanked,
+    attackerSurrounded,
+    target.guard,
+  );
   state.rngState = defRoll.rngState;
   state.diceRollEvent = {
     turn: state.turnInRound,
@@ -93,10 +178,10 @@ export function resolveAttack(state: GameState, attackerId: string, targetId: st
       state.teams[atkTeam].roundTakedowns += 1;
       state.log.push({ turn: state.turnInRound, text: `${target.name} is taken down` });
     } else {
-      driveBack(state, attackerId, targetId);
+      if (!target.guard) driveBack(state, attackerId, targetId);
     }
   } else if (atkTotal === defTotal) {
-    driveBack(state, attackerId, targetId);
+    if (!target.guard) driveBack(state, attackerId, targetId);
     attacker.nextAttackBonusDamage = 0;
     state.log.push({ turn: state.turnInRound, text: "Drawn attack" });
   } else {

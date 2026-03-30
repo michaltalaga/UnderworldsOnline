@@ -3,6 +3,7 @@ import { rivalsObjectiveDeckById, rivalsPowerDeckById, starterWarbandById } from
 import { rollD6, shuffleWithSeed } from "./rng";
 import { createBoardHexes } from "./boardShape";
 import type { RivalsDeckId, WarbandId } from "./data/starterData";
+import type { AttackDieFace } from "./types";
 import type { FighterEntity, GameState, TeamId } from "./types";
 
 type InitialStateSetup = {
@@ -26,26 +27,45 @@ function drawN<T>(arr: T[], n: number): { hand: T[]; deck: T[] } {
   return { hand: arr.slice(0, n), deck: arr.slice(n) };
 }
 
+function rollAttackDieFace(rngState: number): { state: number; face: AttackDieFace } {
+  const roll = rollD6(rngState);
+  if (roll.value === 6) return { state: roll.state, face: "crit-attack" };
+  if (roll.value === 5) return { state: roll.state, face: "hammer" };
+  if (roll.value === 4) return { state: roll.state, face: "sword" };
+  if (roll.value === 3) return { state: roll.state, face: "double-support" };
+  if (roll.value === 2) return { state: roll.state, face: "support" };
+  return { state: roll.state, face: "blank" };
+}
+
+function rollOffRank(face: AttackDieFace): number {
+  if (face === "crit-attack") return 3;
+  if (face === "hammer" || face === "sword") return 2;
+  if (face === "support" || face === "double-support") return 1;
+  return 0;
+}
+
 function determineFirstTeam(rngState: number): {
   rngState: number;
   firstTeam: TeamId;
-  redRoll: number;
-  blueRoll: number;
+  redRoll: AttackDieFace;
+  blueRoll: AttackDieFace;
 } {
   let state = rngState;
 
-  // Embergard uses a roll-off to decide who has the first activation.
+  // Embergard uses symbol-based attack die roll-offs.
   while (true) {
-    const red = rollD6(state);
-    const blue = rollD6(red.state);
+    const red = rollAttackDieFace(state);
+    const blue = rollAttackDieFace(red.state);
     state = blue.state;
-    if (red.value === blue.value) continue;
+    const redRank = rollOffRank(red.face);
+    const blueRank = rollOffRank(blue.face);
+    if (redRank === blueRank) continue;
 
     return {
       rngState: state,
-      firstTeam: red.value > blue.value ? "red" : "blue",
-      redRoll: red.value,
-      blueRoll: blue.value,
+      firstTeam: redRank > blueRank ? "red" : "blue",
+      redRoll: red.face,
+      blueRoll: blue.face,
     };
   }
 }

@@ -1,6 +1,11 @@
 export type TeamId = "red" | "blue";
 export type TurnStep = "action" | "power";
 
+export type AttackTrait = "hammer" | "sword";
+export type SaveTrait = "shield" | "dodge";
+export type AttackDieFace = "crit-attack" | "hammer" | "sword" | "support" | "double-support" | "blank";
+export type SaveDieFace = "crit-save" | "shield" | "dodge" | "support" | "double-support" | "blank";
+
 export type Hex = { q: number; r: number };
 
 export type ObjectiveCardType = "hold-center" | "take-down" | "no-mercy";
@@ -23,9 +28,11 @@ export type FighterStats = {
   maxHp: number;
   move: number;
   attackDice: number;
+  attackTrait: AttackTrait;
   attackRange: number;
   attackDamage: number;
   saveDice: number;
+  saveTrait: SaveTrait;
 };
 
 export type FighterEntity = {
@@ -72,7 +79,7 @@ export type EventLogEntry = {
 };
 
 export type DiceFace = {
-  value: number;
+  face: AttackDieFace | SaveDieFace;
   result: "crit" | "success" | "fail";
 };
 
