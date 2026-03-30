@@ -11,9 +11,9 @@ type BoardProps = {
 
 const BOARD_WIDTH = 900;
 const BOARD_HEIGHT = 760;
-const HEX_X_STEP = 84;
-const HEX_Y_STEP = 72;
-const HEX_RADIUS = 48;
+const HEX_RADIUS = 44;
+const HEX_X_STEP = Math.sqrt(3) * HEX_RADIUS;
+const HEX_Y_STEP = 1.5 * HEX_RADIUS;
 
 function toPixel(q: number, r: number) {
   const rowCount = rowCountForR(r);
@@ -25,16 +25,15 @@ function toPixel(q: number, r: number) {
 }
 
 function hexPolygonPoints(cx: number, cy: number) {
-  const half = HEX_RADIUS * 0.5;
-  const h = HEX_RADIUS * 0.8660254;
-  return [
-    `${cx - half},${cy - h}`,
-    `${cx + half},${cy - h}`,
-    `${cx + HEX_RADIUS},${cy}`,
-    `${cx + half},${cy + h}`,
-    `${cx - half},${cy + h}`,
-    `${cx - HEX_RADIUS},${cy}`,
-  ].join(" ");
+  const pts: string[] = [];
+  for (let i = 0; i < 6; i += 1) {
+    const angleDeg = -90 + i * 60;
+    const angle = (angleDeg * Math.PI) / 180;
+    const x = cx + HEX_RADIUS * Math.cos(angle);
+    const y = cy + HEX_RADIUS * Math.sin(angle);
+    pts.push(`${x},${y}`);
+  }
+  return pts.join(" ");
 }
 
 export function Board({ state, selectedFighterId, onSelectFighter }: BoardProps) {
