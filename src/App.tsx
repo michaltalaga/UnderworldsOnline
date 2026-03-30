@@ -199,7 +199,7 @@ function App() {
                 </div>
               </div>
 
-              <HandPanel state={state} />
+              <HandPanel state={state} onDispatch={dispatch} />
               <EventLog entries={state.log} />
             </aside>
           </main>

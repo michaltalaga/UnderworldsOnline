@@ -265,6 +265,53 @@
   font-size: 0.86rem;
 }
 
+.deck-section {
+  border: 1px solid rgba(20, 17, 15, 0.12);
+  border-radius: 10px;
+  padding: 0.45rem;
+  margin-bottom: 0.55rem;
+}
+
+.deck-track {
+  margin-top: 0.35rem;
+}
+
+.deck-track h5 {
+  margin: 0 0 0.2rem;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #5b4f4a;
+}
+
+.pile-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.pile-row span {
+  border: 1px solid rgba(20, 17, 15, 0.18);
+  border-radius: 999px;
+  padding: 0.14rem 0.45rem;
+  font-size: 0.75rem;
+  background: #fff8e8;
+}
+
+.mulligan-controls button {
+  border: 1px solid #14532d;
+  background: #15803d;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.32rem 0.6rem;
+  cursor: pointer;
+}
+
+.mulligan-controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .section ul,
 .log-panel ul {
   margin: 0;

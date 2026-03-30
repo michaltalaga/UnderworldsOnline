@@ -14,6 +14,10 @@ function weight(action: GameAction): number {
       return 2;
     case "guard":
       return 2;
+    case "start-mulligan":
+      return 3;
+    case "resolve-mulligan":
+      return 5;
     case "end-power":
       return 1;
     case "pass":

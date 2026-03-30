@@ -2,6 +2,7 @@ import { objectiveOccupancy, occupiedBy } from "./state";
 import { getLegalActions } from "./systems/legalActions";
 import { resolveAttack } from "./systems/combat";
 import { resolvePowerCard } from "./systems/cards";
+import { resolveMulligan, startMulligan } from "./systems/mulligan";
 import { advanceAfterPower, rotatePowerPriority, startPowerStep } from "./systems/turn";
 import type { GameAction, GameState, LegalAction } from "./types";
 
@@ -40,6 +41,10 @@ function actionsEqual(a: GameAction, b: GameAction): boolean {
       return b.type === "pass";
     case "end-power":
       return b.type === "end-power";
+    case "start-mulligan":
+      return b.type === "start-mulligan";
+    case "resolve-mulligan":
+      return b.type === "resolve-mulligan";
     default:
       return false;
   }
@@ -51,6 +56,18 @@ function isActionLegal(state: GameState, action: GameAction): boolean {
 }
 
 function applyActionStep(state: GameState, action: GameAction): void {
+  if (action.type === "start-mulligan") {
+    startMulligan(state, action.actorTeam);
+    state.log.push({ turn: state.turnInRound, text: `${action.actorTeam} starts mulligan` });
+    return;
+  }
+
+  if (action.type === "resolve-mulligan") {
+    resolveMulligan(state, action.actorTeam);
+    state.log.push({ turn: state.turnInRound, text: `${action.actorTeam} finalizes mulligan` });
+    return;
+  }
+
   if (action.type === "move") {
     const fighter = state.components.fighters[action.fighterId];
     fighter.pos = action.to;

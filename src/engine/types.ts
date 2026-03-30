@@ -50,10 +50,14 @@ export type TeamState = {
   fighters: string[];
   objectiveDeck: ObjectiveCard[];
   objectiveHand: ObjectiveCard[];
+  objectiveDiscard: ObjectiveCard[];
+  objectiveTempDiscard: ObjectiveCard[];
   scoredObjectives: ObjectiveCard[];
   powerDeck: PowerCard[];
   powerHand: PowerCard[];
   discardPower: PowerCard[];
+  powerTempDiscard: PowerCard[];
+  mulliganUsed: boolean;
   roundTakedowns: number;
   roundSuccessfulAttacks: number;
 };
@@ -127,6 +131,14 @@ export type EndPowerStepAction = ActionBase & {
   type: "end-power";
 };
 
+export type StartMulliganAction = ActionBase & {
+  type: "start-mulligan";
+};
+
+export type ResolveMulliganAction = ActionBase & {
+  type: "resolve-mulligan";
+};
+
 export type GameAction =
   | MoveAction
   | GuardAction
@@ -134,7 +146,9 @@ export type GameAction =
   | ChargeAction
   | PlayPowerCardAction
   | PassAction
-  | EndPowerStepAction;
+  | EndPowerStepAction
+  | StartMulliganAction
+  | ResolveMulliganAction;
 
 export type LegalAction = {
   label: string;

@@ -1,6 +1,7 @@
 import { hexDistance, neighbors } from "../hex";
 import { boardCoordLabel } from "../coords";
 import { isAlive, occupiedBy } from "../state";
+import { canStartMulligan, isMulliganPending } from "./mulligan";
 import type { FighterEntity, GameAction, GameState, LegalAction, TeamId } from "../types";
 
 function aliveTeamFighters(state: GameState, team: TeamId): FighterEntity[] {
@@ -37,6 +38,15 @@ export function getLegalActions(state: GameState, team: TeamId): LegalAction[] {
   const fighters = aliveTeamFighters(state, team);
 
   if (state.turnStep === "action") {
+    const mulliganPending = isMulliganPending(state, team);
+    if (mulliganPending) {
+      return [{ label: "Finalize mulligan", action: { type: "resolve-mulligan", actorTeam: team } }];
+    }
+
+    if (canStartMulligan(state, team)) {
+      out.push({ label: "Mulligan hand", action: { type: "start-mulligan", actorTeam: team } });
+    }
+
     const canBreakChargeLock = allFriendlyCharged(state, team);
     fighters.forEach((f) => {
       const chargeLocked = f.charged && !canBreakChargeLock;
