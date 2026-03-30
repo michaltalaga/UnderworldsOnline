@@ -93,7 +93,9 @@
   margin: 0 auto;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  background-image: linear-gradient(rgba(12, 10, 9, 0.12), rgba(12, 10, 9, 0.18)), url("/board-map.png");
+  background-image:
+    linear-gradient(rgba(12, 10, 9, 0.12), rgba(12, 10, 9, 0.18)),
+    url("/embergard-board-1.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
