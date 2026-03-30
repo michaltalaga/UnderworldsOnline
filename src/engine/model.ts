@@ -110,169 +110,136 @@ export abstract class Card {
   }
 }
 
-export abstract class ObjectiveCard extends Card {
+export class ObjectiveCard extends Card {
+  kind: ObjectiveCardKind;
   glory: number;
 
-  constructor(owner: TeamId, name: string, zone: CardZone, glory: number) {
+  constructor(owner: TeamId, name: string, zone: CardZone, kind: ObjectiveCardKind, glory: number) {
     super(owner, name, zone);
+    this.kind = kind;
     this.glory = glory;
   }
 
   sameDefinition(other: Card): boolean {
-    return super.sameDefinition(other) && other instanceof ObjectiveCard && this.glory === other.glory;
+    return super.sameDefinition(other) && other instanceof ObjectiveCard && this.kind === other.kind && this.glory === other.glory;
   }
 
-  abstract isScored(state: GameState, team: TeamId): boolean;
-}
-
-export class HoldCenterObjectiveCard extends ObjectiveCard {
   ruleText(): string {
-    return "Score this in an end phase if you hold the center objective.";
+    switch (this.kind) {
+      case "hold-center":
+        return "Score this in an end phase if you hold the center objective.";
+      case "take-down":
+        return "Score this in an end phase if your warband made a takedown this round.";
+      case "no-mercy":
+        return "Score this in an end phase if your warband made 2 or more successful attacks this round.";
+    }
   }
 
   isScored(state: GameState, team: TeamId): boolean {
-    const holderId = state.occupiedObjectives[hexKey({ q: 0, r: 0 })];
-    const holder = holderId ? fighterById(state, holderId) : undefined;
-    return !!holder && holder.hp > 0 && holder.team === team;
+    switch (this.kind) {
+      case "hold-center": {
+        const holderId = state.occupiedObjectives[hexKey({ q: 0, r: 0 })];
+        const holder = holderId ? fighterById(state, holderId) : undefined;
+        return !!holder && holder.hp > 0 && holder.team === team;
+      }
+      case "take-down":
+        return state.teams[team].roundTakedowns > 0;
+      case "no-mercy":
+        return state.teams[team].roundSuccessfulAttacks >= 2;
+    }
   }
 }
 
-export class TakeDownObjectiveCard extends ObjectiveCard {
+export class PowerCard extends Card {
+  kind: PowerCardKind;
+
+  constructor(owner: TeamId, name: string, zone: CardZone, kind: PowerCardKind) {
+    super(owner, name, zone);
+    this.kind = kind;
+  }
+
+  sameDefinition(other: Card): boolean {
+    return super.sameDefinition(other) && other instanceof PowerCard && this.kind === other.kind;
+  }
+
   ruleText(): string {
-    return "Score this in an end phase if your warband made a takedown this round.";
-  }
-
-  isScored(state: GameState, team: TeamId): boolean {
-    return state.teams[team].roundTakedowns > 0;
-  }
-}
-
-export class NoMercyObjectiveCard extends ObjectiveCard {
-  ruleText(): string {
-    return "Score this in an end phase if your warband made 2 or more successful attacks this round.";
-  }
-
-  isScored(state: GameState, team: TeamId): boolean {
-    return state.teams[team].roundSuccessfulAttacks >= 2;
-  }
-}
-
-export abstract class PowerCard extends Card {
-  abstract legalActions(state: GameState, team: TeamId): PlayPowerCardAction[];
-  abstract describeAction(state: GameState, action: PlayPowerCardAction): string;
-  abstract play(state: GameState, action: PlayPowerCardAction): void;
-}
-
-export class FerociousStrikeCard extends PowerCard {
-  ruleText(): string {
-    return "Pick a friendly fighter. Their next attack has +1 Damage.";
+    switch (this.kind) {
+      case "ferocious-strike":
+        return "Pick a friendly fighter. Their next attack has +1 Damage.";
+      case "healing-potion":
+        return "Pick a friendly fighter. Heal 1.";
+      case "sidestep":
+        return "Pick a friendly fighter. Push them 1 hex.";
+    }
   }
 
   legalActions(state: GameState, team: TeamId): PlayPowerCardAction[] {
-    return liveTeamFighters(state, team).map((fighter) => ({
-      type: "play-power",
-      actorTeam: team,
-      card: this,
-      fighter,
-    }));
-  }
-
-  describeAction(_state: GameState, action: PlayPowerCardAction): string {
-    return `Play ${this.name} on ${action.fighter?.name ?? "fighter"}`;
-  }
-
-  play(state: GameState, action: PlayPowerCardAction): void {
-    const fighter = action.fighter ? fighterById(state, action.fighter.id) : undefined;
-    if (!fighter || fighter.team !== action.actorTeam || fighter.hp <= 0) return;
-    fighter.weapon.nextAttackBonusDamage += 1;
-    state.log.push({ turn: state.turnInRound, text: `${fighter.name} gains +1 damage on next attack` });
-  }
-}
-
-export class HealingPotionCard extends PowerCard {
-  ruleText(): string {
-    return "Pick a friendly fighter. Heal 1.";
-  }
-
-  legalActions(state: GameState, team: TeamId): PlayPowerCardAction[] {
-    return liveTeamFighters(state, team)
-      .filter((fighter) => fighter.hp < fighter.maxHp)
-      .map((fighter) => ({
-        type: "play-power",
-        actorTeam: team,
-        card: this,
-        fighter,
-      }));
-  }
-
-  describeAction(_state: GameState, action: PlayPowerCardAction): string {
-    return `Play ${this.name} on ${action.fighter?.name ?? "fighter"}`;
-  }
-
-  play(state: GameState, action: PlayPowerCardAction): void {
-    const fighter = action.fighter ? fighterById(state, action.fighter.id) : undefined;
-    if (!fighter || fighter.team !== action.actorTeam || fighter.hp <= 0) return;
-    fighter.heal(1);
-    state.log.push({ turn: state.turnInRound, text: `${fighter.name} heals 1` });
-  }
-}
-
-export class SidestepCard extends PowerCard {
-  ruleText(): string {
-    return "Pick a friendly fighter. Push them 1 hex.";
-  }
-
-  legalActions(state: GameState, team: TeamId): PlayPowerCardAction[] {
-    return liveTeamFighters(state, team).flatMap((fighter) =>
-      neighbors(fighter.position)
-        .filter((hex) => state.boardHexes.some((boardHex) => boardHex.q === hex.q && boardHex.r === hex.r))
-        .filter((hex) => occupantAt(state, hex) === undefined)
-        .map((targetHex) => ({
+    switch (this.kind) {
+      case "ferocious-strike":
+        return liveTeamFighters(state, team).map((fighter) => ({
           type: "play-power",
           actorTeam: team,
           card: this,
           fighter,
-          targetHex,
-        })),
-    );
+        }));
+      case "healing-potion":
+        return liveTeamFighters(state, team)
+          .filter((fighter) => fighter.hp < fighter.maxHp)
+          .map((fighter) => ({
+            type: "play-power",
+            actorTeam: team,
+            card: this,
+            fighter,
+          }));
+      case "sidestep":
+        return liveTeamFighters(state, team).flatMap((fighter) =>
+          neighbors(fighter.position)
+            .filter((hex) => state.boardHexes.some((boardHex) => boardHex.q === hex.q && boardHex.r === hex.r))
+            .filter((hex) => occupantAt(state, hex) === undefined)
+            .map((targetHex) => ({
+              type: "play-power",
+              actorTeam: team,
+              card: this,
+              fighter,
+              targetHex,
+            })),
+        );
+    }
   }
 
   describeAction(_state: GameState, action: PlayPowerCardAction): string {
-    return `Play ${this.name}: ${action.fighter?.name ?? "fighter"} -> ${action.targetHex ? boardCoordLabel(action.targetHex) : "hex"}`;
+    if (this.kind === "sidestep") {
+      return `Play ${this.name}: ${action.fighter?.name ?? "fighter"} -> ${action.targetHex ? boardCoordLabel(action.targetHex) : "hex"}`;
+    }
+    return `Play ${this.name} on ${action.fighter?.name ?? "fighter"}`;
   }
 
   play(state: GameState, action: PlayPowerCardAction): void {
     const fighter = action.fighter ? fighterById(state, action.fighter.id) : undefined;
-    const targetHex = action.targetHex;
-    if (!fighter || !targetHex || fighter.team !== action.actorTeam || fighter.hp <= 0) return;
-    if (!state.boardHexes.some((hex) => hex.q === targetHex.q && hex.r === targetHex.r)) return;
-    if (hexDistance(fighter.position, targetHex) !== 1) return;
-    if (occupantAt(state, targetHex)) return;
-    fighter.position.q = targetHex.q;
-    fighter.position.r = targetHex.r;
-    state.log.push({ turn: state.turnInRound, text: `${fighter.name} uses ${this.name}` });
-  }
-}
 
-export function createObjectiveCard(owner: TeamId, zone: CardZone, spec: { name: string; kind: ObjectiveCardKind; glory: number }): ObjectiveCard {
-  switch (spec.kind) {
-    case "hold-center":
-      return new HoldCenterObjectiveCard(owner, spec.name, zone, spec.glory);
-    case "take-down":
-      return new TakeDownObjectiveCard(owner, spec.name, zone, spec.glory);
-    case "no-mercy":
-      return new NoMercyObjectiveCard(owner, spec.name, zone, spec.glory);
-  }
-}
-
-export function createPowerCard(owner: TeamId, zone: CardZone, spec: { name: string; kind: PowerCardKind }): PowerCard {
-  switch (spec.kind) {
-    case "sidestep":
-      return new SidestepCard(owner, spec.name, zone);
-    case "ferocious-strike":
-      return new FerociousStrikeCard(owner, spec.name, zone);
-    case "healing-potion":
-      return new HealingPotionCard(owner, spec.name, zone);
+    switch (this.kind) {
+      case "ferocious-strike":
+        if (!fighter || fighter.team !== action.actorTeam || fighter.hp <= 0) return;
+        fighter.weapon.nextAttackBonusDamage += 1;
+        state.log.push({ turn: state.turnInRound, text: `${fighter.name} gains +1 damage on next attack` });
+        return;
+      case "healing-potion":
+        if (!fighter || fighter.team !== action.actorTeam || fighter.hp <= 0) return;
+        fighter.heal(1);
+        state.log.push({ turn: state.turnInRound, text: `${fighter.name} heals 1` });
+        return;
+      case "sidestep": {
+        const targetHex = action.targetHex;
+        if (!fighter || !targetHex || fighter.team !== action.actorTeam || fighter.hp <= 0) return;
+        if (!state.boardHexes.some((hex) => hex.q === targetHex.q && hex.r === targetHex.r)) return;
+        if (hexDistance(fighter.position, targetHex) !== 1) return;
+        if (occupantAt(state, targetHex)) return;
+        fighter.position.q = targetHex.q;
+        fighter.position.r = targetHex.r;
+        state.log.push({ turn: state.turnInRound, text: `${fighter.name} uses ${this.name}` });
+        return;
+      }
+    }
   }
 }
 

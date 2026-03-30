@@ -6,21 +6,14 @@ import {
   CardPool,
   Deck,
   DiscardPile,
-  FerociousStrikeCard,
   Fighter,
-  HealingPotionCard,
-  HoldCenterObjectiveCard,
-  NoMercyObjectiveCard,
-  createObjectiveCard,
-  createPowerCard,
   type FighterStatus,
   Hand,
   ObjectiveCard,
   PlayerCardPools,
+  PowerCard,
   ScoredPile,
-  SidestepCard,
   SetAsidePile,
-  TakeDownObjectiveCard,
   Weapon,
 } from "./model";
 import { rollD6, shuffleWithSeed } from "./rng";
@@ -140,8 +133,8 @@ function spawnCards(
   return sourceCards.map((sourceCard) => {
     const gameCard =
       kind === "objective"
-        ? createObjectiveCard(team, zone, sourceCard as ObjectiveCardSpec)
-        : createPowerCard(team, zone, sourceCard as PowerCardSpec);
+        ? new ObjectiveCard(team, sourceCard.name, zone, (sourceCard as ObjectiveCardSpec).kind, (sourceCard as ObjectiveCardSpec).glory)
+        : new PowerCard(team, sourceCard.name, zone, (sourceCard as PowerCardSpec).kind);
     addCard(cards, pools.pool(zone), gameCard);
     return gameCard;
   });
@@ -355,12 +348,8 @@ function cloneCardPools(source: PlayerCardPools, cards: Map<Card, Card>): Player
 }
 
 function cloneCard(card: Card): Card {
-  if (card instanceof HoldCenterObjectiveCard) return new HoldCenterObjectiveCard(card.owner, card.name, card.zone, card.glory);
-  if (card instanceof TakeDownObjectiveCard) return new TakeDownObjectiveCard(card.owner, card.name, card.zone, card.glory);
-  if (card instanceof NoMercyObjectiveCard) return new NoMercyObjectiveCard(card.owner, card.name, card.zone, card.glory);
-  if (card instanceof SidestepCard) return new SidestepCard(card.owner, card.name, card.zone);
-  if (card instanceof FerociousStrikeCard) return new FerociousStrikeCard(card.owner, card.name, card.zone);
-  if (card instanceof HealingPotionCard) return new HealingPotionCard(card.owner, card.name, card.zone);
+  if (card instanceof ObjectiveCard) return new ObjectiveCard(card.owner, card.name, card.zone, card.kind, card.glory);
+  if (card instanceof PowerCard) return new PowerCard(card.owner, card.name, card.zone, card.kind);
   throw new Error(`Unsupported card class: ${card.constructor.name}`);
 }
 
