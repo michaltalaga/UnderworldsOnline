@@ -2,11 +2,11 @@ import { createBoardHexes } from "./boardShape";
 import { rivalsObjectiveDeckById, rivalsPowerDeckById, starterWarbandById } from "./data/starterData";
 import { hexKey } from "./hex";
 import { rollD6, shuffleWithSeed } from "./rng";
-import { Engine } from "@trixt0r/ecs";
 import type { RivalsDeckId, WarbandId } from "./data/starterData";
 import type {
   AttackDieFace,
   CardZone,
+  Entity,
   EntityId,
   FighterArchetype,
   GameState,
@@ -14,22 +14,7 @@ import type {
   PowerCard,
   TeamId,
 } from "./types";
-import {
-  CardOwnerComponent,
-  CardZoneComponent,
-  cloneGameEntity,
-  CombatComponent,
-  FighterComponent,
-  GameEntity,
-  GloryComponent,
-  HealthComponent,
-  NameComponent,
-  ObjectiveCardComponent,
-  PositionComponent,
-  PowerCardComponent,
-  StatusComponent,
-  type ComponentType,
-} from "./types";
+import type { ComponentType } from "./types";
 
 type InitialStateSetup = {
   redWarbandId: WarbandId;
@@ -84,39 +69,33 @@ function determineFirstTeam(rngState: number): {
   }
 }
 
-function addEntity(state: Pick<GameState, "ecs" | "entities">, entity: GameEntity): void {
-  const id = entity.id as EntityId;
-  state.ecs.entities.add(entity);
-  state.entities[id] = entity;
-}
-
-function addEntityToRecord(entities: Record<EntityId, GameEntity>, id: EntityId, entity: GameEntity): void {
+function addEntity(entities: Record<EntityId, Entity>, id: EntityId, entity: Entity): void {
   entities[id] = entity;
 }
 
-function spawnFighter(team: TeamId, src: FighterArchetype, entities: Record<EntityId, GameEntity>): EntityId {
+function spawnFighter(team: TeamId, src: FighterArchetype, entities: Record<EntityId, Entity>): EntityId {
   const id = `${team}-${src.id}`;
-  addEntityToRecord(
-    entities,
+  addEntity(entities, id, {
     id,
-    new GameEntity(id, [
-      new FighterComponent(team),
-      new NameComponent(src.name),
-      new PositionComponent({ ...src.pos }),
-      new HealthComponent(src.hp, src.stats.maxHp),
-      new CombatComponent(
-        src.stats.move,
-        src.stats.attackDice,
-        src.stats.attackTrait,
-        src.stats.attackRange,
-        src.stats.attackDamage,
-        src.stats.saveDice,
-        src.stats.saveTrait,
-        0,
-      ),
-      new StatusComponent(false, false),
-    ]),
-  );
+    components: [
+      { type: "fighter", team },
+      { type: "name", value: src.name },
+      { type: "position", pos: { ...src.pos } },
+      { type: "health", hp: src.hp, maxHp: src.stats.maxHp },
+      {
+        type: "combat",
+        move: src.stats.move,
+        attackDice: src.stats.attackDice,
+        attackTrait: src.stats.attackTrait,
+        attackRange: src.stats.attackRange,
+        attackDamage: src.stats.attackDamage,
+        saveDice: src.stats.saveDice,
+        saveTrait: src.stats.saveTrait,
+        nextAttackBonusDamage: 0,
+      },
+      { type: "status", guard: false, charged: false },
+    ],
+  });
   return id;
 }
 
@@ -125,65 +104,42 @@ function spawnCards(
   kind: "objective" | "power",
   zone: CardZone,
   cards: ObjectiveCard[] | PowerCard[],
-  entities: Record<EntityId, GameEntity>,
+  entities: Record<EntityId, Entity>,
   idCounter: { value: number },
 ): EntityId[] {
   return cards.map((card, idx) => {
     const id = `${team}-${kind}-${zone}-${idx}-${idCounter.value}`;
     idCounter.value += 1;
-    const components: import("./types").GameComponent[] = [
-      new NameComponent(card.name),
-      new CardOwnerComponent(team),
-      new CardZoneComponent(zone),
+    const components: Entity["components"] = [
+      { type: "name", value: card.name },
+      { type: "cardOwner", owner: team },
+      { type: "cardZone", zone },
     ];
     if (kind === "objective") {
       const obj = card as ObjectiveCard;
-      components.push(new ObjectiveCardComponent(obj.type));
-      components.push(new GloryComponent(obj.glory));
+      components.push({ type: "objectiveCard", cardType: obj.type });
+      components.push({ type: "glory", value: obj.glory });
     } else {
       const power = card as PowerCard;
-      components.push(new PowerCardComponent(power.type));
+      components.push({ type: "powerCard", cardType: power.type });
     }
-    addEntityToRecord(entities, id, new GameEntity(id, components));
+    addEntity(entities, id, { id, components });
     return id;
   });
 }
 // ECS helpers
-function entity(state: GameState, id: EntityId): GameEntity {
-  const found = state.ecs.entities.get(id) ?? state.entities[id];
+function getComponent<T extends { type: string }>(entity: Entity, type: T["type"]): T | undefined {
+  return entity.components.find((c) => c.type === type) as T | undefined;
+}
+
+function entity(state: GameState, id: EntityId): Entity {
+  const found = state.entities[id];
   if (!found) throw new Error(`Missing entity: ${id}`);
   return found;
 }
 
-function hasComponents(gameEntity: GameEntity, types: ComponentType[]): boolean {
-  return types.every((type) => {
-    switch (type) {
-      case "fighter":
-        return Boolean(gameEntity.components.get(FighterComponent));
-      case "name":
-        return Boolean(gameEntity.components.get(NameComponent));
-      case "position":
-        return Boolean(gameEntity.components.get(PositionComponent));
-      case "health":
-        return Boolean(gameEntity.components.get(HealthComponent));
-      case "combat":
-        return Boolean(gameEntity.components.get(CombatComponent));
-      case "status":
-        return Boolean(gameEntity.components.get(StatusComponent));
-      case "cardOwner":
-        return Boolean(gameEntity.components.get(CardOwnerComponent));
-      case "cardZone":
-        return Boolean(gameEntity.components.get(CardZoneComponent));
-      case "objectiveCard":
-        return Boolean(gameEntity.components.get(ObjectiveCardComponent));
-      case "powerCard":
-        return Boolean(gameEntity.components.get(PowerCardComponent));
-      case "glory":
-        return Boolean(gameEntity.components.get(GloryComponent));
-      default:
-        return false;
-    }
-  });
+function hasComponents(entityValue: Entity, types: ComponentType[]): boolean {
+  return types.every((type) => entityValue.components.some((c) => c.type === type));
 }
 
 export function fighterEntityIds(state: GameState, team?: TeamId): EntityId[] {
@@ -192,76 +148,76 @@ export function fighterEntityIds(state: GameState, team?: TeamId): EntityId[] {
 }
 
 export function entityIdsWithComponents(state: GameState, required: ComponentType[]): EntityId[] {
-  return state.ecs.entities
+  return Object.values(state.entities)
     .filter((e) => hasComponents(e, required))
-    .map((e) => e.id as EntityId);
+    .map((e) => e.id);
 }
 
 export function isAlive(state: GameState, fighterId: EntityId): boolean {
-  const health = entity(state, fighterId).components.get(HealthComponent);
+  const health = getComponent<import("./types").HealthComponent>(entity(state, fighterId), "health");
   return !!health && health.hp > 0;
 }
 
 export function fighterName(state: GameState, fighterId: EntityId): string {
-  return entity(state, fighterId).components.get(NameComponent)?.value ?? fighterId;
+  return getComponent<import("./types").NameComponent>(entity(state, fighterId), "name")?.value ?? fighterId;
 }
 
 export function fighterTeam(state: GameState, fighterId: EntityId): import("./types").TeamId {
-  return entity(state, fighterId).components.get(FighterComponent)!.team;
+  return getComponent<import("./types").FighterComponent>(entity(state, fighterId), "fighter")!.team;
 }
 
 export function fighterPos(state: GameState, fighterId: EntityId): import("./types").Hex {
-  return entity(state, fighterId).components.get(PositionComponent)!.pos;
+  return getComponent<import("./types").PositionComponent>(entity(state, fighterId), "position")!.pos;
 }
 
 export function fighterHealth(state: GameState, fighterId: EntityId) {
-  return entity(state, fighterId).components.get(HealthComponent)!;
+  return getComponent<import("./types").HealthComponent>(entity(state, fighterId), "health")!;
 }
 
 export function fighterCombat(state: GameState, fighterId: EntityId) {
-  return entity(state, fighterId).components.get(CombatComponent)!;
+  return getComponent<import("./types").CombatComponent>(entity(state, fighterId), "combat")!;
 }
 
 export function fighterStatus(state: GameState, fighterId: EntityId) {
-  return entity(state, fighterId).components.get(StatusComponent)!;
+  return getComponent<import("./types").StatusComponent>(entity(state, fighterId), "status")!;
 }
 
 export function cardName(state: GameState, cardId: EntityId): string {
-  return entity(state, cardId).components.get(NameComponent)?.value ?? cardId;
+  return getComponent<import("./types").NameComponent>(entity(state, cardId), "name")?.value ?? cardId;
 }
 
 export function cardIsObjective(state: GameState, cardId: EntityId): boolean {
-  return Boolean(entity(state, cardId).components.get(ObjectiveCardComponent));
+  return !!getComponent<import("./types").ObjectiveCardComponent>(entity(state, cardId), "objectiveCard");
 }
 
 export function cardIsPower(state: GameState, cardId: EntityId): boolean {
-  return Boolean(entity(state, cardId).components.get(PowerCardComponent));
+  return !!getComponent<import("./types").PowerCardComponent>(entity(state, cardId), "powerCard");
 }
 
 export function cardObjectiveType(state: GameState, cardId: EntityId) {
-  return entity(state, cardId).components.get(ObjectiveCardComponent)?.cardType;
+  return getComponent<import("./types").ObjectiveCardComponent>(entity(state, cardId), "objectiveCard")?.cardType;
 }
 
 export function cardPowerType(state: GameState, cardId: EntityId) {
-  return entity(state, cardId).components.get(PowerCardComponent)?.cardType;
+  return getComponent<import("./types").PowerCardComponent>(entity(state, cardId), "powerCard")?.cardType;
 }
 
 export function cardGloryValue(state: GameState, cardId: EntityId): number {
-  return entity(state, cardId).components.get(GloryComponent)?.value ?? 0;
+  return getComponent<import("./types").GloryComponent>(entity(state, cardId), "glory")?.value ?? 0;
 }
 
 export function cardEntityIdsInZone(state: GameState, team: TeamId, zone: CardZone): EntityId[] {
   return entityIdsWithComponents(state, ["cardOwner", "cardZone"]).filter((id) => {
     const e = entity(state, id);
-    const owner = e.components.get(CardOwnerComponent);
-    const cz = e.components.get(CardZoneComponent);
+    const owner = getComponent<import("./types").CardOwnerComponent>(e, "cardOwner");
+    const cz = getComponent<import("./types").CardZoneComponent>(e, "cardZone");
     return owner?.owner === team && cz?.zone === zone;
   });
 }
 
 export function moveCardEntityToZone(state: GameState, cardId: EntityId, zone: CardZone): void {
   const e = entity(state, cardId);
-  const cz = e.components.get(CardZoneComponent);
+  const cz = getComponent<import("./types").CardZoneComponent>(e, "cardZone");
   if (!cz) return;
   cz.zone = zone;
 }
@@ -296,7 +252,7 @@ export function initialState(
     blueRivalsDeckId: "emberstone-hold",
   },
 ): GameState {
-  const entities: Record<EntityId, GameEntity> = {};
+  const entities: Record<EntityId, Entity> = {};
   const idCounter = { value: 1 };
 
   const redRoster = starterWarbandById(setup.redWarbandId).fighters.map((src) => spawnFighter("red", src, entities));
@@ -324,11 +280,6 @@ export function initialState(
 
   const firstRoll = determineFirstTeam(bluePow.seed);
 
-  const ecs = new Engine<GameEntity>();
-  Object.values(entities).forEach((gameEntity) => {
-    ecs.entities.add(gameEntity);
-  });
-
   const state: GameState = {
     seed,
     rngState: firstRoll.rngState,
@@ -344,7 +295,6 @@ export function initialState(
     objectiveHexes: [{ q: 0, r: 0 }, { q: -1, r: 0 }, { q: 1, r: 0 }],
     occupiedObjectives: {},
     diceRollEvent: null,
-    ecs,
     entities,
     teams: {
       red: {
@@ -379,41 +329,5 @@ export function boardHexes(state: GameState) {
 }
 
 export function cloneState(state: GameState): GameState {
-  const ecs = new Engine<GameEntity>();
-  const entities: Record<EntityId, GameEntity> = {};
-
-  Object.values(state.entities).forEach((gameEntity) => {
-    const copy = cloneGameEntity(gameEntity);
-    addEntity({ ecs, entities }, copy);
-  });
-
-  return {
-    seed: state.seed,
-    rngState: state.rngState,
-    round: state.round,
-    turnInRound: state.turnInRound,
-    activeTeam: state.activeTeam,
-    firstTeam: state.firstTeam,
-    powerPriorityTeam: state.powerPriorityTeam,
-    powerPassCount: state.powerPassCount,
-    turnStep: state.turnStep,
-    winner: state.winner,
-    boardHexes: state.boardHexes.map((hex) => ({ ...hex })),
-    objectiveHexes: state.objectiveHexes.map((hex) => ({ ...hex })),
-    occupiedObjectives: { ...state.occupiedObjectives },
-    diceRollEvent: state.diceRollEvent
-      ? {
-          ...state.diceRollEvent,
-          attackFaces: state.diceRollEvent.attackFaces.map((face) => ({ ...face })),
-          defenseFaces: state.diceRollEvent.defenseFaces.map((face) => ({ ...face })),
-        }
-      : null,
-    ecs,
-    entities,
-    teams: {
-      red: { ...state.teams.red, fighterEntities: [...state.teams.red.fighterEntities] },
-      blue: { ...state.teams.blue, fighterEntities: [...state.teams.blue.fighterEntities] },
-    },
-    log: state.log.map((entry) => ({ ...entry })),
-  };
+  return structuredClone(state) as GameState;
 }

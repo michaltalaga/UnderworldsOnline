@@ -1,5 +1,3 @@
-import { AbstractEntity, Engine } from "@trixt0r/ecs";
-
 export type EntityId = string;
 
 export type TeamId = "red" | "blue";
@@ -50,133 +48,12 @@ export type WarbandData = {
   fighters: FighterArchetype[];
 };
 
-export class FighterComponent {
-  team: TeamId;
+export type Entity = {
+  id: EntityId;
+  components: Component[];
+};
 
-  constructor(team: TeamId) {
-    this.team = team;
-  }
-}
-
-export class NameComponent {
-  value: string;
-
-  constructor(value: string) {
-    this.value = value;
-  }
-}
-
-export class PositionComponent {
-  pos: Hex;
-
-  constructor(pos: Hex) {
-    this.pos = pos;
-  }
-}
-
-export class HealthComponent {
-  hp: number;
-  maxHp: number;
-
-  constructor(hp: number, maxHp: number) {
-    this.hp = hp;
-    this.maxHp = maxHp;
-  }
-}
-
-export class CombatComponent {
-  move: number;
-  attackDice: number;
-  attackTrait: AttackTrait;
-  attackRange: number;
-  attackDamage: number;
-  saveDice: number;
-  saveTrait: SaveTrait;
-  nextAttackBonusDamage: number;
-
-  constructor(
-    move: number,
-    attackDice: number,
-    attackTrait: AttackTrait,
-    attackRange: number,
-    attackDamage: number,
-    saveDice: number,
-    saveTrait: SaveTrait,
-    nextAttackBonusDamage: number,
-  ) {
-    this.move = move;
-    this.attackDice = attackDice;
-    this.attackTrait = attackTrait;
-    this.attackRange = attackRange;
-    this.attackDamage = attackDamage;
-    this.saveDice = saveDice;
-    this.saveTrait = saveTrait;
-    this.nextAttackBonusDamage = nextAttackBonusDamage;
-  }
-}
-
-export class StatusComponent {
-  guard: boolean;
-  charged: boolean;
-
-  constructor(guard: boolean, charged: boolean) {
-    this.guard = guard;
-    this.charged = charged;
-  }
-}
-
-export type CardZone =
-  | "objective-deck"
-  | "objective-hand"
-  | "objective-discard"
-  | "objective-temp-discard"
-  | "objective-scored"
-  | "power-deck"
-  | "power-hand"
-  | "power-discard"
-  | "power-temp-discard";
-
-export class CardOwnerComponent {
-  owner: TeamId;
-
-  constructor(owner: TeamId) {
-    this.owner = owner;
-  }
-}
-
-export class CardZoneComponent {
-  zone: CardZone;
-
-  constructor(zone: CardZone) {
-    this.zone = zone;
-  }
-}
-
-export class ObjectiveCardComponent {
-  cardType: ObjectiveCardType;
-
-  constructor(cardType: ObjectiveCardType) {
-    this.cardType = cardType;
-  }
-}
-
-export class PowerCardComponent {
-  cardType: PowerCardType;
-
-  constructor(cardType: PowerCardType) {
-    this.cardType = cardType;
-  }
-}
-
-export class GloryComponent {
-  value: number;
-
-  constructor(value: number) {
-    this.value = value;
-  }
-}
-
-export type GameComponent =
+export type Component =
   | FighterComponent
   | NameComponent
   | PositionComponent
@@ -189,14 +66,80 @@ export type GameComponent =
   | PowerCardComponent
   | GloryComponent;
 
-export class GameEntity extends AbstractEntity<GameComponent> {
-  constructor(id: EntityId, components: GameComponent[] = []) {
-    super(id);
-    if (components.length > 0) {
-      this.components.add(...components);
-    }
-  }
-}
+export type FighterComponent = {
+  type: "fighter";
+  team: TeamId;
+};
+
+export type NameComponent = {
+  type: "name";
+  value: string;
+};
+
+export type PositionComponent = {
+  type: "position";
+  pos: Hex;
+};
+
+export type HealthComponent = {
+  type: "health";
+  hp: number;
+  maxHp: number;
+};
+
+export type CombatComponent = {
+  type: "combat";
+  move: number;
+  attackDice: number;
+  attackTrait: AttackTrait;
+  attackRange: number;
+  attackDamage: number;
+  saveDice: number;
+  saveTrait: SaveTrait;
+  nextAttackBonusDamage: number;
+};
+
+export type StatusComponent = {
+  type: "status";
+  guard: boolean;
+  charged: boolean;
+};
+
+export type CardZone =
+  | "objective-deck"
+  | "objective-hand"
+  | "objective-discard"
+  | "objective-temp-discard"
+  | "objective-scored"
+  | "power-deck"
+  | "power-hand"
+  | "power-discard"
+  | "power-temp-discard";
+
+export type CardOwnerComponent = {
+  type: "cardOwner";
+  owner: TeamId;
+};
+
+export type CardZoneComponent = {
+  type: "cardZone";
+  zone: CardZone;
+};
+
+export type ObjectiveCardComponent = {
+  type: "objectiveCard";
+  cardType: ObjectiveCardType;
+};
+
+export type PowerCardComponent = {
+  type: "powerCard";
+  cardType: PowerCardType;
+};
+
+export type GloryComponent = {
+  type: "glory";
+  value: number;
+};
 
 export type ComponentType =
   | "fighter"
@@ -252,40 +195,10 @@ export type GameState = {
   objectiveHexes: Hex[];
   occupiedObjectives: Record<string, string | null>;
   diceRollEvent: DiceRollEvent | null;
-  ecs: Engine<GameEntity>;
-  entities: Record<EntityId, GameEntity>;
+  entities: Record<EntityId, Entity>;
   teams: Record<TeamId, TeamState>;
   log: EventLogEntry[];
 };
-
-export function cloneGameComponent(component: GameComponent): GameComponent {
-  if (component instanceof FighterComponent) return new FighterComponent(component.team);
-  if (component instanceof NameComponent) return new NameComponent(component.value);
-  if (component instanceof PositionComponent) return new PositionComponent({ ...component.pos });
-  if (component instanceof HealthComponent) return new HealthComponent(component.hp, component.maxHp);
-  if (component instanceof CombatComponent) {
-    return new CombatComponent(
-      component.move,
-      component.attackDice,
-      component.attackTrait,
-      component.attackRange,
-      component.attackDamage,
-      component.saveDice,
-      component.saveTrait,
-      component.nextAttackBonusDamage,
-    );
-  }
-  if (component instanceof StatusComponent) return new StatusComponent(component.guard, component.charged);
-  if (component instanceof CardOwnerComponent) return new CardOwnerComponent(component.owner);
-  if (component instanceof CardZoneComponent) return new CardZoneComponent(component.zone);
-  if (component instanceof ObjectiveCardComponent) return new ObjectiveCardComponent(component.cardType);
-  if (component instanceof PowerCardComponent) return new PowerCardComponent(component.cardType);
-  return new GloryComponent(component.value);
-}
-
-export function cloneGameEntity(entity: GameEntity): GameEntity {
-  return new GameEntity(entity.id as EntityId, entity.components.map(cloneGameComponent));
-}
 
 export type ActionBase = { actorTeam: TeamId };
 
