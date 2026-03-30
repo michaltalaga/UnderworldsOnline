@@ -6,11 +6,13 @@ import { HexCell } from "../state/HexCell";
 import { PlayerState } from "../state/PlayerState";
 import { Territory } from "../state/Territory";
 import {
+  RollOffKind,
   CardZone,
   FeatureTokenSide,
   HexKind,
   Phase,
   SetupStep,
+  TurnStep,
 } from "../values/enums";
 import type { CardZone as CardZoneType } from "../values/enums";
 import type { FighterId, HexId, PlayerId, TerritoryId } from "../values/ids";
@@ -20,15 +22,25 @@ import { DeployFighterAction } from "../setup/DeployFighterAction";
 import { DrawStartingHandsAction } from "../setup/DrawStartingHandsAction";
 import { PlaceFeatureTokenAction } from "../setup/PlaceFeatureTokenAction";
 import { ResolveMulliganAction } from "../setup/ResolveMulliganAction";
+import { ResolveTerritoryRollOffAction } from "../setup/ResolveTerritoryRollOffAction";
 import { SetupAction } from "../setup/SetupAction";
+import { RollOffContext } from "../rules/RollOffContext";
+import { RollOffResolver } from "../rules/RollOffResolver";
+import { type RollOffRoundInput } from "../rules/RollOffRound";
+import { RollOffResult } from "../rules/RollOffResult";
 
 export type GameEngineShuffleCards = (cards: readonly CardInstance[]) => CardInstance[];
 
 export class GameEngine {
   private readonly shuffleCards: GameEngineShuffleCards;
+  private readonly rollOffResolver: RollOffResolver;
 
-  public constructor(shuffleCards: GameEngineShuffleCards = GameEngine.copyCards) {
+  public constructor(
+    shuffleCards: GameEngineShuffleCards = GameEngine.copyCards,
+    rollOffResolver: RollOffResolver = new RollOffResolver(),
+  ) {
     this.shuffleCards = shuffleCards;
+    this.rollOffResolver = rollOffResolver;
   }
 
   public applySetupAction(game: Game, action: SetupAction): Game {
@@ -44,6 +56,11 @@ export class GameEngine {
 
     if (action instanceof ResolveMulliganAction) {
       this.applyResolveMulligan(game, action);
+      return game;
+    }
+
+    if (action instanceof ResolveTerritoryRollOffAction) {
+      this.applyResolveTerritoryRollOff(game, action);
       return game;
     }
 
@@ -63,6 +80,75 @@ export class GameEngine {
     }
 
     throw new Error(`Unsupported setup action: ${action.kind}.`);
+  }
+
+  public resolveFirstTurnRollOff(
+    game: Game,
+    rounds: readonly RollOffRoundInput[],
+  ): RollOffResult {
+    if (game.phase !== Phase.Combat) {
+      throw new Error(`Expected combat phase, got ${game.phase}.`);
+    }
+
+    const [playerOne, playerTwo] = this.requireTwoPlayers(game);
+    const tieWinnerPlayerId =
+      game.roundNumber >= 2 ? this.getUnderdogPlayerId(playerOne, playerTwo) : null;
+
+    const result = this.rollOffResolver.resolve(
+      new RollOffContext(
+        playerOne.id,
+        playerTwo.id,
+        RollOffKind.FirstTurn,
+        tieWinnerPlayerId,
+      ),
+      rounds,
+    );
+
+    game.priorityPlayerId = result.winnerPlayerId;
+    game.activePlayerId = null;
+    game.firstPlayerId = null;
+    game.turnStep = null;
+    game.eventLog.push(this.describeRollOff(game, result));
+
+    return result;
+  }
+
+  public chooseFirstPlayer(
+    game: Game,
+    chooserPlayerId: PlayerId,
+    firstPlayerId: PlayerId,
+  ): Game {
+    if (game.phase !== Phase.Combat) {
+      throw new Error(`Expected combat phase, got ${game.phase}.`);
+    }
+
+    if (game.priorityPlayerId !== chooserPlayerId) {
+      throw new Error(
+        `Expected roll-off winner ${game.priorityPlayerId} to choose first player, got ${chooserPlayerId}.`,
+      );
+    }
+
+    const chooser = this.requirePlayer(game, chooserPlayerId);
+    const firstPlayer = this.requirePlayer(game, firstPlayerId);
+    const rollOffLoser = this.requireOpponent(game, chooser.id);
+
+    this.drawCards(rollOffLoser.powerDeck.drawPile, rollOffLoser.powerHand, 1, CardZone.PowerHand);
+
+    for (const player of game.players) {
+      player.turnsTakenThisRound = 0;
+      player.hasDelvedThisPowerStep = false;
+    }
+
+    game.firstPlayerId = firstPlayer.id;
+    game.activePlayerId = firstPlayer.id;
+    game.priorityPlayerId = null;
+    game.turnStep = TurnStep.Action;
+    game.consecutivePasses = 0;
+    game.eventLog.push(
+      `${chooser.name} chose ${firstPlayer.name} to take the first turn. ${rollOffLoser.name} drew 1 power card.`,
+    );
+
+    return game;
   }
 
   private applyCompleteMuster(game: Game): void {
@@ -121,6 +207,22 @@ export class GameEngine {
     game.activePlayerId = game.players[currentPlayerIndex + 1]?.id ?? null;
   }
 
+  private applyResolveTerritoryRollOff(
+    game: Game,
+    action: ResolveTerritoryRollOffAction,
+  ): void {
+    this.assertSetupStep(game, SetupStep.DetermineTerritories);
+    const [playerOne, playerTwo] = this.requireTwoPlayers(game);
+
+    const result = this.rollOffResolver.resolve(
+      new RollOffContext(playerOne.id, playerTwo.id, RollOffKind.TerritoryChoice),
+      action.rounds,
+    );
+
+    game.activePlayerId = result.winnerPlayerId;
+    game.eventLog.push(this.describeRollOff(game, result));
+  }
+
   private applyChooseTerritory(game: Game, action: ChooseTerritoryAction): void {
     this.assertSetupStep(game, SetupStep.DetermineTerritories);
     if (game.board.territories.length !== 2) {
@@ -128,6 +230,7 @@ export class GameEngine {
     }
 
     const winningPlayer = this.requirePlayer(game, action.playerId);
+    this.assertActivePlayer(game, winningPlayer.id);
     const losingPlayer = this.requireOpponent(game, winningPlayer.id);
     const chosenTerritory = this.requireTerritory(game, action.territoryId);
     const remainingTerritory = game.board.territories.find(
@@ -145,6 +248,7 @@ export class GameEngine {
     losingPlayer.territoryId = remainingTerritory.id;
     game.setupStep = SetupStep.PlaceFeatureTokens;
     game.activePlayerId = losingPlayer.id;
+    game.priorityPlayerId = null;
     game.eventLog.push(
       `${winningPlayer.name} chose ${chosenTerritory.name} on the ${action.boardSide} board side.`,
     );
@@ -394,6 +498,15 @@ export class GameEngine {
     return player;
   }
 
+  private requireTwoPlayers(game: Game): [PlayerState, PlayerState] {
+    const [playerOne, playerTwo] = game.players;
+    if (playerOne === undefined || playerTwo === undefined || game.players.length !== 2) {
+      throw new Error("Roll-offs require exactly two players.");
+    }
+
+    return [playerOne, playerTwo];
+  }
+
   private requireOpponent(game: Game, playerId: PlayerId): PlayerState {
     const opponent = game.getOpponent(playerId);
     if (opponent === undefined) {
@@ -435,6 +548,23 @@ export class GameEngine {
     if (game.activePlayerId !== playerId) {
       throw new Error(`Expected active player ${game.activePlayerId}, got ${playerId}.`);
     }
+  }
+
+  private getUnderdogPlayerId(playerOne: PlayerState, playerTwo: PlayerState): PlayerId | null {
+    if (playerOne.glory === playerTwo.glory) {
+      return null;
+    }
+
+    return playerOne.glory < playerTwo.glory ? playerOne.id : playerTwo.id;
+  }
+
+  private describeRollOff(game: Game, result: RollOffResult): string {
+    const winner = this.requirePlayer(game, result.winnerPlayerId);
+    const loser = this.requirePlayer(game, result.loserPlayerId);
+    const decisiveRoundNumber = result.rounds.length;
+    const tieBreakerSuffix = result.resolvedByTieBreaker ? " by tie-breaker" : "";
+
+    return `${winner.name} won the ${result.context.kind} roll-off against ${loser.name} in round ${decisiveRoundNumber}${tieBreakerSuffix}.`;
   }
 
   private static copyCards(cards: readonly CardInstance[]): CardInstance[] {

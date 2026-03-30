@@ -157,12 +157,20 @@ export const SetupActionKind = {
   CompleteMuster: "completeMuster",
   DrawStartingHands: "drawStartingHands",
   ResolveMulligan: "resolveMulligan",
+  ResolveTerritoryRollOff: "resolveTerritoryRollOff",
   ChooseTerritory: "chooseTerritory",
   PlaceFeatureToken: "placeFeatureToken",
   DeployFighter: "deployFighter",
 } as const;
 
 export type SetupActionKind = (typeof SetupActionKind)[keyof typeof SetupActionKind];
+
+export const RollOffKind = {
+  TerritoryChoice: "territoryChoice",
+  FirstTurn: "firstTurn",
+} as const;
+
+export type RollOffKind = (typeof RollOffKind)[keyof typeof RollOffKind];
 
 export const CombatOutcome = {
   Success: "success",
