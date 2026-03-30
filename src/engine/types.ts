@@ -1,7 +1,5 @@
 import type { Card, Fighter, PlayerCardPools } from "./model";
 
-export type FighterId = string;
-
 export type TeamId = "red" | "blue";
 export type TurnStep = "action" | "power";
 
@@ -15,13 +13,13 @@ export type Hex = { q: number; r: number };
 export type ObjectiveCardType = "hold-center" | "take-down" | "no-mercy";
 export type PowerCardType = "sidestep" | "ferocious-strike" | "healing-potion";
 
-export type ObjectiveCard = {
+export type ObjectiveCardSpec = {
   name: string;
   type: ObjectiveCardType;
   glory: number;
 };
 
-export type PowerCard = {
+export type PowerCardSpec = {
   name: string;
   type: PowerCardType;
 };

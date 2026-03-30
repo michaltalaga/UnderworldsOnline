@@ -1,4 +1,4 @@
-import type { ObjectiveCard, PowerCard, TeamId, WarbandData } from "../types";
+import type { ObjectiveCardSpec, PowerCardSpec, TeamId, WarbandData } from "../types";
 
 export type WarbandId = "emberguard" | "duskraiders";
 export type RivalsDeckId = "blazing-assault" | "emberstone-hold" | "nightfall-raids" | "grave-math";
@@ -18,8 +18,8 @@ export type RivalsDeckOption = {
 type RivalsDeckData = {
   name: string;
   summary: string;
-  objectives: Array<Omit<ObjectiveCard, "id">>;
-  power: Array<Omit<PowerCard, "id">>;
+  objectives: ObjectiveCardSpec[];
+  power: PowerCardSpec[];
 };
 
 const rivalsDecksById: Record<RivalsDeckId, RivalsDeckData> = {
@@ -256,12 +256,12 @@ export function opposingRivalsDeckId(id: RivalsDeckId): RivalsDeckId {
   return rivalsDeckOrder[(idx + 1) % rivalsDeckOrder.length];
 }
 
-export function rivalsObjectiveDeckById(id: RivalsDeckId): ObjectiveCard[] {
+export function rivalsObjectiveDeckById(id: RivalsDeckId): ObjectiveCardSpec[] {
   const data = rivalsDecksById[id];
   return data.objectives.map((c) => ({ ...c }));
 }
 
-export function rivalsPowerDeckById(id: RivalsDeckId): PowerCard[] {
+export function rivalsPowerDeckById(id: RivalsDeckId): PowerCardSpec[] {
   const data = rivalsDecksById[id];
   return data.power.map((c) => ({ ...c }));
 }

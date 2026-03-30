@@ -16,7 +16,7 @@ import {
   occupiedBy,
 } from "../state";
 import { canStartMulligan, isMulliganPending } from "./mulligan";
-import type { GameAction, GameState, Hex, LegalAction, TeamId } from "../types";
+import type { GameState, Hex, LegalAction, TeamId } from "../types";
 
 function aliveTeamFighters(state: GameState, team: TeamId): Fighter[] {
   return fightersForTeam(state, team).filter((fighter) => isAlive(state, fighter));
@@ -158,6 +158,3 @@ export function getLegalActions(state: GameState, team: TeamId): LegalAction[] {
   return out;
 }
 
-export function actionSignature(action: GameAction): string {
-  return JSON.stringify(action);
-}

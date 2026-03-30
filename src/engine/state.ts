@@ -9,16 +9,24 @@ import {
   Fighter,
   type FighterStatus,
   Hand,
-  ObjectiveCardModel,
+  ObjectiveCard,
   PlayerCardPools,
-  PowerCardModel,
+  PowerCard,
   ScoredPile,
   SetAsidePile,
   Weapon,
 } from "./model";
 import { rollD6, shuffleWithSeed } from "./rng";
 import type { RivalsDeckId, WarbandId } from "./data/starterData";
-import type { AttackDieFace, CardZone, FighterArchetype, FighterId, GameState, ObjectiveCard, PowerCard, TeamId } from "./types";
+import type {
+  AttackDieFace,
+  CardZone,
+  FighterArchetype,
+  GameState,
+  ObjectiveCardSpec,
+  PowerCardSpec,
+  TeamId,
+} from "./types";
 
 type InitialStateSetup = {
   redWarbandId: WarbandId;
@@ -86,7 +94,7 @@ function poolsFor(state: GameState, team: TeamId): PlayerCardPools {
   return state.cardPools[team];
 }
 
-function fighterById(state: GameState, fighterId: FighterId): Fighter {
+function fighterById(state: GameState, fighterId: string): Fighter {
   const found = state.fighters.find((fighter) => fighter.id === fighterId);
   if (!found) throw new Error(`Missing fighter: ${fighterId}`);
   return found;
@@ -118,23 +126,24 @@ function spawnCards(
   team: TeamId,
   kind: "objective" | "power",
   zone: CardZone,
-  sourceCards: ObjectiveCard[] | PowerCard[],
+  sourceCards: ObjectiveCardSpec[] | PowerCardSpec[],
   cards: Card[],
   pools: PlayerCardPools,
 ): Card[] {
   return sourceCards.map((sourceCard) => {
     const gameCard =
       kind === "objective"
-        ? new ObjectiveCardModel(team, sourceCard.name, zone, (sourceCard as ObjectiveCard).type, (sourceCard as ObjectiveCard).glory)
-        : new PowerCardModel(team, sourceCard.name, zone, (sourceCard as PowerCard).type);
+        ? new ObjectiveCard(
+            team,
+            sourceCard.name,
+            zone,
+            (sourceCard as ObjectiveCardSpec).type,
+            (sourceCard as ObjectiveCardSpec).glory,
+          )
+        : new PowerCard(team, sourceCard.name, zone, (sourceCard as PowerCardSpec).type);
     addCard(cards, pools.pool(zone), gameCard);
     return gameCard;
   });
-}
-
-export function fighterIds(state: GameState, team?: TeamId): FighterId[] {
-  if (team) return state.teams[team].fighters.map((fighter) => fighter.id);
-  return state.fighters.map((fighter) => fighter.id);
 }
 
 export function fightersForTeam(state: GameState, team?: TeamId): Fighter[] {
@@ -142,45 +151,45 @@ export function fightersForTeam(state: GameState, team?: TeamId): Fighter[] {
   return [...state.fighters];
 }
 
-export function isAlive(state: GameState, fighterOrId: Fighter | FighterId): boolean {
+export function isAlive(state: GameState, fighterOrId: Fighter | string): boolean {
   const fighter = typeof fighterOrId === "string" ? fighterById(state, fighterOrId) : fighterOrId;
   return fighter.hp > 0;
 }
 
-export function fighterName(state: GameState, fighterOrId: Fighter | FighterId): string {
+export function fighterName(state: GameState, fighterOrId: Fighter | string): string {
   return (typeof fighterOrId === "string" ? fighterById(state, fighterOrId) : fighterOrId).name;
 }
 
-export function fighterTeam(state: GameState, fighterOrId: Fighter | FighterId): TeamId {
+export function fighterTeam(state: GameState, fighterOrId: Fighter | string): TeamId {
   return (typeof fighterOrId === "string" ? fighterById(state, fighterOrId) : fighterOrId).team;
 }
 
-export function fighterPos(state: GameState, fighterOrId: Fighter | FighterId) {
+export function fighterPos(state: GameState, fighterOrId: Fighter | string) {
   return (typeof fighterOrId === "string" ? fighterById(state, fighterOrId) : fighterOrId).position;
 }
 
-export function fighterHealth(state: GameState, fighterOrId: Fighter | FighterId) {
+export function fighterHealth(state: GameState, fighterOrId: Fighter | string) {
   return typeof fighterOrId === "string" ? fighterById(state, fighterOrId) : fighterOrId;
 }
 
-export function fighterWeapon(state: GameState, fighterOrId: Fighter | FighterId) {
+export function fighterWeapon(state: GameState, fighterOrId: Fighter | string) {
   return (typeof fighterOrId === "string" ? fighterById(state, fighterOrId) : fighterOrId).weapon;
 }
 
-export function fighterStatuses(state: GameState, fighterOrId: Fighter | FighterId) {
+export function fighterStatuses(state: GameState, fighterOrId: Fighter | string) {
   return (typeof fighterOrId === "string" ? fighterById(state, fighterOrId) : fighterOrId).statuses;
 }
 
-export function hasStatus(state: GameState, fighterOrId: Fighter | FighterId, status: FighterStatus): boolean {
+export function hasStatus(state: GameState, fighterOrId: Fighter | string, status: FighterStatus): boolean {
   return fighterStatuses(state, fighterOrId).includes(status);
 }
 
-export function addStatus(state: GameState, fighterOrId: Fighter | FighterId, status: FighterStatus): void {
+export function addStatus(state: GameState, fighterOrId: Fighter | string, status: FighterStatus): void {
   const statuses = fighterStatuses(state, fighterOrId);
   if (!statuses.includes(status)) statuses.push(status);
 }
 
-export function removeStatus(state: GameState, fighterOrId: Fighter | FighterId, status: FighterStatus): void {
+export function removeStatus(state: GameState, fighterOrId: Fighter | string, status: FighterStatus): void {
   const statuses = fighterStatuses(state, fighterOrId);
   const index = statuses.indexOf(status);
   if (index >= 0) statuses.splice(index, 1);
@@ -191,23 +200,19 @@ export function cardName(_state: GameState, card: Card): string {
 }
 
 export function cardIsObjective(_state: GameState, card: Card): boolean {
-  return card instanceof ObjectiveCardModel;
-}
-
-export function cardIsPower(_state: GameState, card: Card): boolean {
-  return card instanceof PowerCardModel;
+  return card instanceof ObjectiveCard;
 }
 
 export function cardObjectiveType(_state: GameState, card: Card) {
-  return card instanceof ObjectiveCardModel ? card.goal : undefined;
+  return card instanceof ObjectiveCard ? card.goal : undefined;
 }
 
 export function cardPowerType(_state: GameState, card: Card) {
-  return card instanceof PowerCardModel ? card.effect : undefined;
+  return card instanceof PowerCard ? card.effect : undefined;
 }
 
 export function cardGloryValue(_state: GameState, card: Card): number {
-  return card instanceof ObjectiveCardModel ? card.glory : 0;
+  return card instanceof ObjectiveCard ? card.glory : 0;
 }
 
 export function cardsInZone(state: GameState, team: TeamId, zone: CardZone): Card[] {
@@ -377,9 +382,9 @@ export function cloneState(state: GameState): GameState {
   );
   const fighterMap = new Map(state.fighters.map((fighter, index) => [fighter, fighters[index]]));
   const cards = state.cards.map((card) =>
-    card instanceof ObjectiveCardModel
-      ? new ObjectiveCardModel(card.owner, card.name, card.zone, card.goal, card.glory)
-      : new PowerCardModel(card.owner, card.name, card.zone, (card as PowerCardModel).effect),
+    card instanceof ObjectiveCard
+      ? new ObjectiveCard(card.owner, card.name, card.zone, card.goal, card.glory)
+      : new PowerCard(card.owner, card.name, card.zone, (card as PowerCard).effect),
   );
   const cardMap = new Map(state.cards.map((card, index) => [card, cards[index]]));
 

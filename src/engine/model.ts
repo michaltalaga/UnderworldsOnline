@@ -1,4 +1,4 @@
-import type { AttackTrait, CardZone, FighterId, Hex, ObjectiveCardType, PowerCardType, SaveTrait, TeamId } from "./types";
+import type { AttackTrait, CardZone, Hex, ObjectiveCardType, PowerCardType, SaveTrait, TeamId } from "./types";
 
 export type FighterStatus = "guard" | "charged";
 
@@ -34,7 +34,7 @@ export class Weapon {
 }
 
 export class Fighter {
-  id: FighterId;
+  id: string;
   team: TeamId;
   name: string;
   position: Hex;
@@ -44,7 +44,7 @@ export class Fighter {
   statuses: FighterStatus[];
 
   constructor(
-    id: FighterId,
+    id: string,
     team: TeamId,
     name: string,
     position: Hex,
@@ -76,7 +76,7 @@ export abstract class Card {
   }
 }
 
-export class ObjectiveCardModel extends Card {
+export class ObjectiveCard extends Card {
   goal: ObjectiveCardType;
   glory: number;
 
@@ -87,7 +87,7 @@ export class ObjectiveCardModel extends Card {
   }
 }
 
-export class PowerCardModel extends Card {
+export class PowerCard extends Card {
   effect: PowerCardType;
 
   constructor(owner: TeamId, name: string, zone: CardZone, effect: PowerCardType) {

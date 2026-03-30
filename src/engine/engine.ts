@@ -1,11 +1,11 @@
-import { addStatus, cloneState, fighterName, fighterPos, objectiveOccupancy, occupiedBy, removeStatus } from "./state";
+import { addStatus, cloneState, fighterName, fighterPos, objectiveOccupancy, removeStatus } from "./state";
 import { getLegalActions } from "./systems/legalActions";
 import { resolveAttack } from "./systems/combat";
 import { resolvePowerCard } from "./systems/cards";
 import { resolveMulligan, startMulligan } from "./systems/mulligan";
 import { advanceAfterPower, rotatePowerPriority, startPowerStep } from "./systems/turn";
 import type { GameAction, GameState, LegalAction } from "./types";
-import { ObjectiveCardModel, PowerCardModel } from "./model";
+import { ObjectiveCard, PowerCard } from "./model";
 
 function sameHex(a?: { q: number; r: number }, b?: { q: number; r: number }): boolean {
   if (!a && !b) return true;
@@ -16,8 +16,8 @@ function sameHex(a?: { q: number; r: number }, b?: { q: number; r: number }): bo
 function sameCard(a: GameAction extends never ? never : import("./model").Card, b: import("./model").Card): boolean {
   if (a.constructor !== b.constructor) return false;
   if (a.owner !== b.owner || a.name !== b.name) return false;
-  if (a instanceof ObjectiveCardModel && b instanceof ObjectiveCardModel) return a.goal === b.goal && a.glory === b.glory;
-  if (a instanceof PowerCardModel && b instanceof PowerCardModel) return a.effect === b.effect;
+  if (a instanceof ObjectiveCard && b instanceof ObjectiveCard) return a.goal === b.goal && a.glory === b.glory;
+  if (a instanceof PowerCard && b instanceof PowerCard) return a.effect === b.effect;
   return true;
 }
 
@@ -150,11 +150,6 @@ export function applyAction(state: GameState, action: GameAction): GameState {
   }
 
   return next;
-}
-
-export function getFighterAt(state: GameState, q: number, r: number) {
-  const id = occupiedBy(state, q, r);
-  return id;
 }
 
 export function getLegal(state: GameState): LegalAction[] {
