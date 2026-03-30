@@ -153,6 +153,17 @@ export const GameActionKind = {
 
 export type GameActionKind = (typeof GameActionKind)[keyof typeof GameActionKind];
 
+export const SetupActionKind = {
+  CompleteMuster: "completeMuster",
+  DrawStartingHands: "drawStartingHands",
+  ResolveMulligan: "resolveMulligan",
+  ChooseTerritory: "chooseTerritory",
+  PlaceFeatureToken: "placeFeatureToken",
+  DeployFighter: "deployFighter",
+} as const;
+
+export type SetupActionKind = (typeof SetupActionKind)[keyof typeof SetupActionKind];
+
 export const CombatOutcome = {
   Success: "success",
   Draw: "draw",
