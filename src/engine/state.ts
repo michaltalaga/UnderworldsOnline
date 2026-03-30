@@ -1,13 +1,15 @@
 import { hexKey } from "./hex";
-import { starterObjectiveDeck, starterPowerDeck, starterWarbandById } from "./data/starterData";
+import { rivalsObjectiveDeckById, rivalsPowerDeckById, starterWarbandById } from "./data/starterData";
 import { rollD6, shuffleWithSeed } from "./rng";
 import { createBoardHexes } from "./boardShape";
-import type { WarbandId } from "./data/starterData";
+import type { RivalsDeckId, WarbandId } from "./data/starterData";
 import type { FighterEntity, GameState, TeamId } from "./types";
 
 type InitialStateSetup = {
   redWarbandId: WarbandId;
   blueWarbandId: WarbandId;
+  redRivalsDeckId: RivalsDeckId;
+  blueRivalsDeckId: RivalsDeckId;
 };
 
 function prefixedFighters(team: TeamId, warbandId: WarbandId): Record<string, FighterEntity> {
@@ -72,16 +74,21 @@ export function isBoardHex(state: GameState, q: number, r: number): boolean {
 
 export function initialState(
   seed = 1337,
-  setup: InitialStateSetup = { redWarbandId: "emberguard", blueWarbandId: "duskraiders" },
+  setup: InitialStateSetup = {
+    redWarbandId: "emberguard",
+    blueWarbandId: "duskraiders",
+    redRivalsDeckId: "blazing-assault",
+    blueRivalsDeckId: "emberstone-hold",
+  },
 ): GameState {
   const redFighters = prefixedFighters("red", setup.redWarbandId);
   const blueFighters = prefixedFighters("blue", setup.blueWarbandId);
   const allFighters = { ...redFighters, ...blueFighters };
 
-  const redObj = shuffleWithSeed(starterObjectiveDeck(), seed);
-  const redPow = shuffleWithSeed(starterPowerDeck(), redObj.seed);
-  const blueObj = shuffleWithSeed(starterObjectiveDeck(), redPow.seed);
-  const bluePow = shuffleWithSeed(starterPowerDeck(), blueObj.seed);
+  const redObj = shuffleWithSeed(rivalsObjectiveDeckById(setup.redRivalsDeckId), seed);
+  const redPow = shuffleWithSeed(rivalsPowerDeckById(setup.redRivalsDeckId), redObj.seed);
+  const blueObj = shuffleWithSeed(rivalsObjectiveDeckById(setup.blueRivalsDeckId), redPow.seed);
+  const bluePow = shuffleWithSeed(rivalsPowerDeckById(setup.blueRivalsDeckId), blueObj.seed);
 
   const redObjDraw = drawN(redObj.result, 3);
   const redPowDraw = drawN(redPow.result, 5);

@@ -1,6 +1,7 @@
 import type { ObjectiveCard, PowerCard, TeamId, WarbandData } from "../types";
 
 export type WarbandId = "emberguard" | "duskraiders";
+export type RivalsDeckId = "blazing-assault" | "emberstone-hold" | "nightfall-raids" | "grave-math";
 
 export type WarbandOption = {
   id: WarbandId;
@@ -8,24 +9,113 @@ export type WarbandOption = {
   fighterNames: string[];
 };
 
-const objectiveCards: ObjectiveCard[] = [
-  { id: "o1", name: "Hold Center", type: "hold-center", glory: 1 },
-  { id: "o2", name: "Take Down", type: "take-down", glory: 1 },
-  { id: "o3", name: "No Mercy", type: "no-mercy", glory: 1 },
-  { id: "o4", name: "Hold Center", type: "hold-center", glory: 1 },
-  { id: "o5", name: "Take Down", type: "take-down", glory: 1 },
-  { id: "o6", name: "No Mercy", type: "no-mercy", glory: 1 },
-];
+export type RivalsDeckOption = {
+  id: RivalsDeckId;
+  name: string;
+  summary: string;
+};
 
-const powerCards: PowerCard[] = [
-  { id: "p1", name: "Sidestep", type: "sidestep" },
-  { id: "p2", name: "Ferocious Strike", type: "ferocious-strike" },
-  { id: "p3", name: "Healing Potion", type: "healing-potion" },
-  { id: "p4", name: "Sidestep", type: "sidestep" },
-  { id: "p5", name: "Ferocious Strike", type: "ferocious-strike" },
-  { id: "p6", name: "Healing Potion", type: "healing-potion" },
-  { id: "p7", name: "Sidestep", type: "sidestep" },
-];
+type RivalsDeckData = {
+  name: string;
+  summary: string;
+  objectives: Array<Omit<ObjectiveCard, "id">>;
+  power: Array<Omit<PowerCard, "id">>;
+};
+
+const rivalsDecksById: Record<RivalsDeckId, RivalsDeckData> = {
+  "blazing-assault": {
+    name: "Blazing Assault",
+    summary: "Aggressive scoring and damage boosts.",
+    objectives: [
+      { name: "Hold Center", type: "hold-center", glory: 1 },
+      { name: "Take Down", type: "take-down", glory: 1 },
+      { name: "No Mercy", type: "no-mercy", glory: 1 },
+      { name: "Take Down", type: "take-down", glory: 1 },
+      { name: "No Mercy", type: "no-mercy", glory: 1 },
+      { name: "Hold Center", type: "hold-center", glory: 1 },
+    ],
+    power: [
+      { name: "Ferocious Strike", type: "ferocious-strike" },
+      { name: "Ferocious Strike", type: "ferocious-strike" },
+      { name: "Sidestep", type: "sidestep" },
+      { name: "Healing Potion", type: "healing-potion" },
+      { name: "Sidestep", type: "sidestep" },
+      { name: "Ferocious Strike", type: "ferocious-strike" },
+      { name: "Sidestep", type: "sidestep" },
+    ],
+  },
+  "emberstone-hold": {
+    name: "Emberstone Hold",
+    summary: "Objective-focused control and sustain.",
+    objectives: [
+      { name: "Hold Center", type: "hold-center", glory: 1 },
+      { name: "Hold Center", type: "hold-center", glory: 1 },
+      { name: "Hold Center", type: "hold-center", glory: 1 },
+      { name: "Take Down", type: "take-down", glory: 1 },
+      { name: "No Mercy", type: "no-mercy", glory: 1 },
+      { name: "Hold Center", type: "hold-center", glory: 1 },
+    ],
+    power: [
+      { name: "Healing Potion", type: "healing-potion" },
+      { name: "Sidestep", type: "sidestep" },
+      { name: "Healing Potion", type: "healing-potion" },
+      { name: "Sidestep", type: "sidestep" },
+      { name: "Ferocious Strike", type: "ferocious-strike" },
+      { name: "Healing Potion", type: "healing-potion" },
+      { name: "Sidestep", type: "sidestep" },
+    ],
+  },
+  "nightfall-raids": {
+    name: "Nightfall Raids",
+    summary: "Mobility and opportunistic strikes.",
+    objectives: [
+      { name: "Take Down", type: "take-down", glory: 1 },
+      { name: "No Mercy", type: "no-mercy", glory: 1 },
+      { name: "Take Down", type: "take-down", glory: 1 },
+      { name: "Hold Center", type: "hold-center", glory: 1 },
+      { name: "Take Down", type: "take-down", glory: 1 },
+      { name: "No Mercy", type: "no-mercy", glory: 1 },
+    ],
+    power: [
+      { name: "Sidestep", type: "sidestep" },
+      { name: "Sidestep", type: "sidestep" },
+      { name: "Ferocious Strike", type: "ferocious-strike" },
+      { name: "Sidestep", type: "sidestep" },
+      { name: "Healing Potion", type: "healing-potion" },
+      { name: "Ferocious Strike", type: "ferocious-strike" },
+      { name: "Sidestep", type: "sidestep" },
+    ],
+  },
+  "grave-math": {
+    name: "Grave Math",
+    summary: "Balanced list with steady scoring and utility.",
+    objectives: [
+      { name: "Hold Center", type: "hold-center", glory: 1 },
+      { name: "Take Down", type: "take-down", glory: 1 },
+      { name: "No Mercy", type: "no-mercy", glory: 1 },
+      { name: "Hold Center", type: "hold-center", glory: 1 },
+      { name: "Take Down", type: "take-down", glory: 1 },
+      { name: "No Mercy", type: "no-mercy", glory: 1 },
+    ],
+    power: [
+      { name: "Sidestep", type: "sidestep" },
+      { name: "Ferocious Strike", type: "ferocious-strike" },
+      { name: "Healing Potion", type: "healing-potion" },
+      { name: "Sidestep", type: "sidestep" },
+      { name: "Ferocious Strike", type: "ferocious-strike" },
+      { name: "Healing Potion", type: "healing-potion" },
+      { name: "Sidestep", type: "sidestep" },
+    ],
+  },
+};
+
+const rivalsDeckOrder: RivalsDeckId[] = ["blazing-assault", "emberstone-hold", "nightfall-raids", "grave-math"];
+
+export const rivalsDeckOptions: RivalsDeckOption[] = rivalsDeckOrder.map((id) => ({
+  id,
+  name: rivalsDecksById[id].name,
+  summary: rivalsDecksById[id].summary,
+}));
 
 const emberguard: WarbandData = {
   name: "Emberguard",
@@ -125,14 +215,21 @@ export function starterWarbandById(id: WarbandId): WarbandData {
   return warbandsById[id];
 }
 
+export function opposingRivalsDeckId(id: RivalsDeckId): RivalsDeckId {
+  const idx = rivalsDeckOrder.indexOf(id);
+  return rivalsDeckOrder[(idx + 1) % rivalsDeckOrder.length];
+}
+
+export function rivalsObjectiveDeckById(id: RivalsDeckId): ObjectiveCard[] {
+  const data = rivalsDecksById[id];
+  return data.objectives.map((c, i) => ({ ...c, id: `${id}-obj-${i}` }));
+}
+
+export function rivalsPowerDeckById(id: RivalsDeckId): PowerCard[] {
+  const data = rivalsDecksById[id];
+  return data.power.map((c, i) => ({ ...c, id: `${id}-pow-${i}` }));
+}
+
 export function starterWarband(team: TeamId): WarbandData {
   return team === "red" ? emberguard : duskraiders;
-}
-
-export function starterObjectiveDeck(): ObjectiveCard[] {
-  return objectiveCards.map((c, i) => ({ ...c, id: `${c.id}-${i}` }));
-}
-
-export function starterPowerDeck(): PowerCard[] {
-  return powerCards.map((c, i) => ({ ...c, id: `${c.id}-${i}` }));
 }

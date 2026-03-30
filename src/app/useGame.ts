@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { chooseAiAction } from "../ai/randomPolicy";
-import { oppositeWarbandId } from "../engine/data/starterData";
+import { opposingRivalsDeckId, oppositeWarbandId } from "../engine/data/starterData";
 import { getLegal } from "../engine/engine";
 import { initialState } from "../engine/state";
 import type { GameAction, LegalAction } from "../engine/types";
-import type { WarbandId } from "../engine/data/starterData";
+import type { RivalsDeckId, WarbandId } from "../engine/data/starterData";
 import { LocalHostAdapter } from "../network/localHostAdapter";
 
-export function useGame(playerWarbandId: WarbandId) {
+export function useGame(playerWarbandId: WarbandId, playerRivalsDeckId: RivalsDeckId) {
   const [seed, setSeed] = useState(424242);
 
   const adapter = useMemo(
@@ -16,9 +16,11 @@ export function useGame(playerWarbandId: WarbandId) {
         initialState(seed, {
           redWarbandId: playerWarbandId,
           blueWarbandId: oppositeWarbandId(playerWarbandId),
+          redRivalsDeckId: playerRivalsDeckId,
+          blueRivalsDeckId: opposingRivalsDeckId(playerRivalsDeckId),
         }),
       ),
-    [playerWarbandId, seed],
+    [playerWarbandId, playerRivalsDeckId, seed],
   );
 
   const state = useSyncExternalStore(adapter.subscribe.bind(adapter), adapter.getState.bind(adapter));

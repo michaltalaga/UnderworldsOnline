@@ -4,10 +4,9 @@ type WarbandPickerProps = {
   options: WarbandOption[];
   selectedId: WarbandId;
   onSelect: (id: WarbandId) => void;
-  onStart: () => void;
 };
 
-export function WarbandPicker({ options, selectedId, onSelect, onStart }: WarbandPickerProps) {
+export function WarbandPicker({ options, selectedId, onSelect }: WarbandPickerProps) {
   return (
     <section className="panel picker-panel">
       <h3>Step 1: Pick Your Warband</h3>
@@ -33,10 +32,6 @@ export function WarbandPicker({ options, selectedId, onSelect, onStart }: Warban
           );
         })}
       </div>
-
-      <button type="button" className="start-btn" onClick={onStart}>
-        Start Match
-      </button>
     </section>
   );
 }
