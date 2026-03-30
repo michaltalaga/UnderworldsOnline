@@ -15,6 +15,7 @@ export * from "./definitions/WarbandDefinition";
 export * from "./definitions/WarscrollDefinition";
 export * from "./definitions/WeaponAbilityDefinition";
 export * from "./definitions/WeaponDefinition";
+export * from "./factories/GameFactory";
 export * from "./rules/CombatContext";
 export * from "./rules/CombatResolver";
 export * from "./rules/CombatResult";
