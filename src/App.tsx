@@ -35,9 +35,9 @@ function readSavedRivalsDeck(): RivalsDeckId {
 function actionReferencesFighter(action: LegalAction, fighterId: string): boolean {
   const a = action.action;
   return (
-    ("fighterId" in a && a.fighterId === fighterId) ||
-    ("attackerId" in a && a.attackerId === fighterId) ||
-    ("targetId" in a && a.targetId === fighterId)
+    ("fighter" in a && a.fighter?.id === fighterId) ||
+    ("attacker" in a && a.attacker.id === fighterId) ||
+    ("target" in a && a.target.id === fighterId)
   );
 }
 
@@ -60,7 +60,7 @@ function App() {
   };
 
   const firstAliveActiveTeam = useMemo(
-    () => state.teams[state.activeTeam].fighterIds.find((id) => fighterHealth(state, id).hp > 0) ?? null,
+    () => state.teams[state.activeTeam].fighters.find((fighter) => fighter.hp > 0)?.id ?? null,
     [state],
   );
 

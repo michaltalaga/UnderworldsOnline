@@ -3,12 +3,18 @@ import { rivalsObjectiveDeckById, rivalsPowerDeckById, starterWarbandById } from
 import { hexKey } from "./hex";
 import {
   Card,
-  type CardId,
+  CardPool,
+  Deck,
+  DiscardPile,
   Fighter,
-  FighterCombatProfile,
+  type FighterStatus,
+  Hand,
   ObjectiveCardModel,
-  PlayerAreas,
+  PlayerCardPools,
   PowerCardModel,
+  ScoredPile,
+  SetAsidePile,
+  Weapon,
 } from "./model";
 import { rollD6, shuffleWithSeed } from "./rng";
 import type { RivalsDeckId, WarbandId } from "./data/starterData";
@@ -67,164 +73,169 @@ function determineFirstTeam(rngState: number): {
   }
 }
 
-function addFighter(fighters: Record<FighterId, Fighter>, fighter: Fighter): void {
-  fighters[fighter.id] = fighter;
+function addFighter(roster: Fighter[], fighter: Fighter): void {
+  roster.push(fighter);
 }
 
-function addCard(cards: Record<CardId, Card>, areas: PlayerAreas, card: Card): void {
-  cards[card.id] = card;
-  areas.area(card.zone).add(card.id);
+function addCard(cards: Card[], pool: CardPool, card: Card): void {
+  cards.push(card);
+  pool.add(card);
 }
 
-function spawnFighter(team: TeamId, src: FighterArchetype, fighters: Record<FighterId, Fighter>): FighterId {
-  const id = `${team}-${src.id}`;
-  addFighter(
-    fighters,
-    new Fighter(
-      id,
-      team,
-      src.name,
-      src.pos,
-      src.hp,
-      src.stats.maxHp,
-      new FighterCombatProfile(
-        src.stats.move,
-        src.stats.attackDice,
-        src.stats.attackTrait,
-        src.stats.attackRange,
-        src.stats.attackDamage,
-        src.stats.saveDice,
-        src.stats.saveTrait,
-      ),
+function poolsFor(state: GameState, team: TeamId): PlayerCardPools {
+  return state.cardPools[team];
+}
+
+function fighterById(state: GameState, fighterId: FighterId): Fighter {
+  const found = state.fighters.find((fighter) => fighter.id === fighterId);
+  if (!found) throw new Error(`Missing fighter: ${fighterId}`);
+  return found;
+}
+
+function spawnFighter(team: TeamId, src: FighterArchetype, fighters: Fighter[]): Fighter {
+  const fighter = new Fighter(
+    `${team}-${src.id}`,
+    team,
+    src.name,
+    src.pos,
+    src.hp,
+    src.stats.maxHp,
+    new Weapon(
+      src.stats.move,
+      src.stats.attackDice,
+      src.stats.attackTrait,
+      src.stats.attackRange,
+      src.stats.attackDamage,
+      src.stats.saveDice,
+      src.stats.saveTrait,
     ),
   );
-  return id;
+  addFighter(fighters, fighter);
+  return fighter;
 }
 
 function spawnCards(
   team: TeamId,
   kind: "objective" | "power",
   zone: CardZone,
-  cards: ObjectiveCard[] | PowerCard[],
-  cardMap: Record<CardId, Card>,
-  areas: PlayerAreas,
-  idCounter: { value: number },
-): CardId[] {
-  return cards.map((card, idx) => {
-    const id = `${team}-${kind}-${zone}-${idx}-${idCounter.value}`;
-    idCounter.value += 1;
+  sourceCards: ObjectiveCard[] | PowerCard[],
+  cards: Card[],
+  pools: PlayerCardPools,
+): Card[] {
+  return sourceCards.map((sourceCard) => {
     const gameCard =
       kind === "objective"
-        ? new ObjectiveCardModel(id, team, card.name, zone, (card as ObjectiveCard).type, (card as ObjectiveCard).glory)
-        : new PowerCardModel(id, team, card.name, zone, (card as PowerCard).type);
-    addCard(cardMap, areas, gameCard);
-    return id;
+        ? new ObjectiveCardModel(team, sourceCard.name, zone, (sourceCard as ObjectiveCard).type, (sourceCard as ObjectiveCard).glory)
+        : new PowerCardModel(team, sourceCard.name, zone, (sourceCard as PowerCard).type);
+    addCard(cards, pools.pool(zone), gameCard);
+    return gameCard;
   });
-}
-
-function fighter(state: GameState, fighterId: FighterId): Fighter {
-  const found = state.fighters[fighterId];
-  if (!found) throw new Error(`Missing fighter: ${fighterId}`);
-  return found;
-}
-
-function card(state: GameState, cardId: CardId): Card {
-  const found = state.cards[cardId];
-  if (!found) throw new Error(`Missing card: ${cardId}`);
-  return found;
 }
 
 export function fighterIds(state: GameState, team?: TeamId): FighterId[] {
-  if (team) return [...state.teams[team].fighterIds];
-  return [...state.teams.red.fighterIds, ...state.teams.blue.fighterIds];
+  if (team) return state.teams[team].fighters.map((fighter) => fighter.id);
+  return state.fighters.map((fighter) => fighter.id);
 }
 
-export function isAlive(state: GameState, fighterId: FighterId): boolean {
-  return fighter(state, fighterId).hp > 0;
+export function fightersForTeam(state: GameState, team?: TeamId): Fighter[] {
+  if (team) return [...state.teams[team].fighters];
+  return [...state.fighters];
 }
 
-export function fighterName(state: GameState, fighterId: FighterId): string {
-  return fighter(state, fighterId).name;
+export function isAlive(state: GameState, fighterOrId: Fighter | FighterId): boolean {
+  const fighter = typeof fighterOrId === "string" ? fighterById(state, fighterOrId) : fighterOrId;
+  return fighter.hp > 0;
 }
 
-export function fighterTeam(state: GameState, fighterId: FighterId): TeamId {
-  return fighter(state, fighterId).team;
+export function fighterName(state: GameState, fighterOrId: Fighter | FighterId): string {
+  return (typeof fighterOrId === "string" ? fighterById(state, fighterOrId) : fighterOrId).name;
 }
 
-export function fighterPos(state: GameState, fighterId: FighterId) {
-  return fighter(state, fighterId).position;
+export function fighterTeam(state: GameState, fighterOrId: Fighter | FighterId): TeamId {
+  return (typeof fighterOrId === "string" ? fighterById(state, fighterOrId) : fighterOrId).team;
 }
 
-export function fighterHealth(state: GameState, fighterId: FighterId) {
-  return fighter(state, fighterId);
+export function fighterPos(state: GameState, fighterOrId: Fighter | FighterId) {
+  return (typeof fighterOrId === "string" ? fighterById(state, fighterOrId) : fighterOrId).position;
 }
 
-export function fighterCombat(state: GameState, fighterId: FighterId) {
-  return fighter(state, fighterId).combat;
+export function fighterHealth(state: GameState, fighterOrId: Fighter | FighterId) {
+  return typeof fighterOrId === "string" ? fighterById(state, fighterOrId) : fighterOrId;
 }
 
-export function fighterStatus(state: GameState, fighterId: FighterId) {
-  return fighter(state, fighterId).status;
+export function fighterWeapon(state: GameState, fighterOrId: Fighter | FighterId) {
+  return (typeof fighterOrId === "string" ? fighterById(state, fighterOrId) : fighterOrId).weapon;
 }
 
-export function cardName(state: GameState, cardId: CardId): string {
-  return card(state, cardId).name;
+export function fighterStatuses(state: GameState, fighterOrId: Fighter | FighterId) {
+  return (typeof fighterOrId === "string" ? fighterById(state, fighterOrId) : fighterOrId).statuses;
 }
 
-export function cardIsObjective(state: GameState, cardId: CardId): boolean {
-  return card(state, cardId) instanceof ObjectiveCardModel;
+export function hasStatus(state: GameState, fighterOrId: Fighter | FighterId, status: FighterStatus): boolean {
+  return fighterStatuses(state, fighterOrId).includes(status);
 }
 
-export function cardIsPower(state: GameState, cardId: CardId): boolean {
-  return card(state, cardId) instanceof PowerCardModel;
+export function addStatus(state: GameState, fighterOrId: Fighter | FighterId, status: FighterStatus): void {
+  const statuses = fighterStatuses(state, fighterOrId);
+  if (!statuses.includes(status)) statuses.push(status);
 }
 
-export function cardObjectiveType(state: GameState, cardId: CardId) {
-  const found = card(state, cardId);
-  return found instanceof ObjectiveCardModel ? found.cardType : undefined;
+export function removeStatus(state: GameState, fighterOrId: Fighter | FighterId, status: FighterStatus): void {
+  const statuses = fighterStatuses(state, fighterOrId);
+  const index = statuses.indexOf(status);
+  if (index >= 0) statuses.splice(index, 1);
 }
 
-export function cardPowerType(state: GameState, cardId: CardId) {
-  const found = card(state, cardId);
-  return found instanceof PowerCardModel ? found.cardType : undefined;
+export function cardName(_state: GameState, card: Card): string {
+  return card.name;
 }
 
-export function cardGloryValue(state: GameState, cardId: CardId): number {
-  const found = card(state, cardId);
-  return found instanceof ObjectiveCardModel ? found.glory : 0;
+export function cardIsObjective(_state: GameState, card: Card): boolean {
+  return card instanceof ObjectiveCardModel;
 }
 
-export function cardIdsInZone(state: GameState, team: TeamId, zone: CardZone): CardId[] {
-  return [...state.areas[team].area(zone).cardIds];
+export function cardIsPower(_state: GameState, card: Card): boolean {
+  return card instanceof PowerCardModel;
 }
 
-export function moveCardToZone(state: GameState, cardId: CardId, zone: CardZone): void {
-  const found = card(state, cardId);
-  const ownerAreas = state.areas[found.owner];
-  ownerAreas.area(found.zone).remove(cardId);
-  found.zone = zone;
-  ownerAreas.area(zone).add(cardId);
+export function cardObjectiveType(_state: GameState, card: Card) {
+  return card instanceof ObjectiveCardModel ? card.goal : undefined;
 }
 
-export function occupiedBy(state: GameState, q: number, r: number): FighterId | null {
-  const found = fighterIds(state).find((id) => {
-    if (!isAlive(state, id)) return false;
-    const pos = fighterPos(state, id);
-    return pos.q === q && pos.r === r;
-  });
+export function cardPowerType(_state: GameState, card: Card) {
+  return card instanceof PowerCardModel ? card.effect : undefined;
+}
+
+export function cardGloryValue(_state: GameState, card: Card): number {
+  return card instanceof ObjectiveCardModel ? card.glory : 0;
+}
+
+export function cardsInZone(state: GameState, team: TeamId, zone: CardZone): Card[] {
+  return [...poolsFor(state, team).pool(zone).cards];
+}
+
+export function moveCardToZone(state: GameState, card: Card, zone: CardZone): void {
+  const pools = poolsFor(state, card.owner);
+  pools.pool(card.zone).remove(card);
+  card.zone = zone;
+  pools.pool(zone).add(card);
+}
+
+export function occupiedBy(state: GameState, q: number, r: number): Fighter | null {
+  const found = state.fighters.find((fighter) => isAlive(state, fighter) && fighter.position.q === q && fighter.position.r === r);
   return found ?? null;
 }
 
 export function objectiveOccupancy(state: GameState): Record<string, string | null> {
   const out: Record<string, string | null> = {};
-  state.objectiveHexes.forEach((h) => {
-    out[hexKey(h)] = occupiedBy(state, h.q, h.r);
+  state.objectiveHexes.forEach((hex) => {
+    out[hexKey(hex)] = occupiedBy(state, hex.q, hex.r)?.id ?? null;
   });
   return out;
 }
 
 export function isBoardHex(state: GameState, q: number, r: number): boolean {
-  return state.boardHexes.some((h) => h.q === q && h.r === r);
+  return state.boardHexes.some((hex) => hex.q === q && hex.r === r);
 }
 
 export function initialState(
@@ -236,16 +247,15 @@ export function initialState(
     blueRivalsDeckId: "emberstone-hold",
   },
 ): GameState {
-  const fighters: Record<FighterId, Fighter> = {};
-  const cards: Record<CardId, Card> = {};
-  const areas: Record<TeamId, PlayerAreas> = {
-    red: new PlayerAreas(),
-    blue: new PlayerAreas(),
+  const fighters: Fighter[] = [];
+  const cards: Card[] = [];
+  const cardPools: Record<TeamId, PlayerCardPools> = {
+    red: new PlayerCardPools(),
+    blue: new PlayerCardPools(),
   };
-  const idCounter = { value: 1 };
 
-  const redRoster = starterWarbandById(setup.redWarbandId).fighters.map((src) => spawnFighter("red", src, fighters));
-  const blueRoster = starterWarbandById(setup.blueWarbandId).fighters.map((src) => spawnFighter("blue", src, fighters));
+  const redRoster = starterWarbandById(setup.redWarbandId).fighters.map((source) => spawnFighter("red", source, fighters));
+  const blueRoster = starterWarbandById(setup.blueWarbandId).fighters.map((source) => spawnFighter("blue", source, fighters));
 
   const redObj = shuffleWithSeed(rivalsObjectiveDeckById(setup.redRivalsDeckId), seed);
   const redPow = shuffleWithSeed(rivalsPowerDeckById(setup.redRivalsDeckId), redObj.seed);
@@ -257,15 +267,14 @@ export function initialState(
   const blueObjDraw = drawN(blueObj.result, 3);
   const bluePowDraw = drawN(bluePow.result, 5);
 
-  spawnCards("red", "objective", "objective-hand", redObjDraw.hand, cards, areas.red, idCounter);
-  spawnCards("red", "objective", "objective-deck", redObjDraw.deck, cards, areas.red, idCounter);
-  spawnCards("red", "power", "power-hand", redPowDraw.hand, cards, areas.red, idCounter);
-  spawnCards("red", "power", "power-deck", redPowDraw.deck, cards, areas.red, idCounter);
-
-  spawnCards("blue", "objective", "objective-hand", blueObjDraw.hand, cards, areas.blue, idCounter);
-  spawnCards("blue", "objective", "objective-deck", blueObjDraw.deck, cards, areas.blue, idCounter);
-  spawnCards("blue", "power", "power-hand", bluePowDraw.hand, cards, areas.blue, idCounter);
-  spawnCards("blue", "power", "power-deck", bluePowDraw.deck, cards, areas.blue, idCounter);
+  spawnCards("red", "objective", "objective-hand", redObjDraw.hand, cards, cardPools.red);
+  spawnCards("red", "objective", "objective-deck", redObjDraw.deck, cards, cardPools.red);
+  spawnCards("red", "power", "power-hand", redPowDraw.hand, cards, cardPools.red);
+  spawnCards("red", "power", "power-deck", redPowDraw.deck, cards, cardPools.red);
+  spawnCards("blue", "objective", "objective-hand", blueObjDraw.hand, cards, cardPools.blue);
+  spawnCards("blue", "objective", "objective-deck", blueObjDraw.deck, cards, cardPools.blue);
+  spawnCards("blue", "power", "power-hand", bluePowDraw.hand, cards, cardPools.blue);
+  spawnCards("blue", "power", "power-deck", bluePowDraw.deck, cards, cardPools.blue);
 
   const firstRoll = determineFirstTeam(bluePow.seed);
 
@@ -286,18 +295,18 @@ export function initialState(
     diceRollEvent: null,
     fighters,
     cards,
-    areas,
+    cardPools,
     teams: {
       red: {
         glory: 0,
-        fighterIds: redRoster,
+        fighters: redRoster,
         mulliganUsed: false,
         roundTakedowns: 0,
         roundSuccessfulAttacks: 0,
       },
       blue: {
         glory: 0,
-        fighterIds: blueRoster,
+        fighters: blueRoster,
         mulliganUsed: false,
         roundTakedowns: 0,
         roundSuccessfulAttacks: 0,
@@ -319,17 +328,60 @@ export function boardHexes(state: GameState) {
   return state.boardHexes;
 }
 
+function clonePool(pool: CardPool, cards: Map<Card, Card>): CardPool {
+  const clonedCards = pool.cards.map((card) => cards.get(card)!);
+  if (pool instanceof Deck) return new Deck(pool.zone, clonedCards);
+  if (pool instanceof Hand) return new Hand(pool.zone, clonedCards);
+  if (pool instanceof DiscardPile) return new DiscardPile(pool.zone, clonedCards);
+  if (pool instanceof SetAsidePile) return new SetAsidePile(pool.zone, clonedCards);
+  if (pool instanceof ScoredPile) return new ScoredPile(pool.zone, clonedCards);
+  return new CardPool(pool.zone, clonedCards);
+}
+
+function cloneCardPools(source: PlayerCardPools, cards: Map<Card, Card>): PlayerCardPools {
+  const next = new PlayerCardPools();
+  next.objectiveDeck = clonePool(source.objectiveDeck, cards) as Deck;
+  next.objectiveHand = clonePool(source.objectiveHand, cards) as Hand;
+  next.objectiveDiscard = clonePool(source.objectiveDiscard, cards) as DiscardPile;
+  next.objectiveTempDiscard = clonePool(source.objectiveTempDiscard, cards) as SetAsidePile;
+  next.objectiveScored = clonePool(source.objectiveScored, cards) as ScoredPile;
+  next.powerDeck = clonePool(source.powerDeck, cards) as Deck;
+  next.powerHand = clonePool(source.powerHand, cards) as Hand;
+  next.powerDiscard = clonePool(source.powerDiscard, cards) as DiscardPile;
+  next.powerTempDiscard = clonePool(source.powerTempDiscard, cards) as SetAsidePile;
+  return next;
+}
+
 export function cloneState(state: GameState): GameState {
-  const fighters: Record<FighterId, Fighter> = {};
-  const cards: Record<CardId, Card> = {};
-
-  Object.entries(state.fighters).forEach(([id, fighterValue]) => {
-    fighters[id] = fighterValue.clone();
-  });
-
-  Object.entries(state.cards).forEach(([id, cardValue]) => {
-    cards[id] = cardValue.clone();
-  });
+  const fighters = state.fighters.map(
+    (fighter) =>
+      new Fighter(
+        fighter.id,
+        fighter.team,
+        fighter.name,
+        { ...fighter.position },
+        fighter.hp,
+        fighter.maxHp,
+        new Weapon(
+          fighter.weapon.move,
+          fighter.weapon.attackDice,
+          fighter.weapon.attackTrait,
+          fighter.weapon.attackRange,
+          fighter.weapon.attackDamage,
+          fighter.weapon.saveDice,
+          fighter.weapon.saveTrait,
+          fighter.weapon.nextAttackBonusDamage,
+        ),
+        [...fighter.statuses],
+      ),
+  );
+  const fighterMap = new Map(state.fighters.map((fighter, index) => [fighter, fighters[index]]));
+  const cards = state.cards.map((card) =>
+    card instanceof ObjectiveCardModel
+      ? new ObjectiveCardModel(card.owner, card.name, card.zone, card.goal, card.glory)
+      : new PowerCardModel(card.owner, card.name, card.zone, (card as PowerCardModel).effect),
+  );
+  const cardMap = new Map(state.cards.map((card, index) => [card, cards[index]]));
 
   return {
     seed: state.seed,
@@ -354,13 +406,13 @@ export function cloneState(state: GameState): GameState {
       : null,
     fighters,
     cards,
-    areas: {
-      red: state.areas.red.clone(),
-      blue: state.areas.blue.clone(),
+    cardPools: {
+      red: cloneCardPools(state.cardPools.red, cardMap),
+      blue: cloneCardPools(state.cardPools.blue, cardMap),
     },
     teams: {
-      red: { ...state.teams.red, fighterIds: [...state.teams.red.fighterIds] },
-      blue: { ...state.teams.blue, fighterIds: [...state.teams.blue.fighterIds] },
+      red: { ...state.teams.red, fighters: state.teams.red.fighters.map((fighter) => fighterMap.get(fighter)!) },
+      blue: { ...state.teams.blue, fighters: state.teams.blue.fighters.map((fighter) => fighterMap.get(fighter)!) },
     },
     log: state.log.map((entry) => ({ ...entry })),
   };

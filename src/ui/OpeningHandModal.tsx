@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { cardIdsInZone } from "../engine/state";
+import { cardsInZone } from "../engine/state";
 import type { GameAction, GameState } from "../engine/types";
 import { CardTile } from "./CardTile";
 
@@ -8,20 +8,20 @@ type OpeningHandModalProps = {
   onDispatch: (action: GameAction) => void;
 };
 
-function cardList(state: GameState, cardIds: string[], emptyLabel: string) {
-  if (cardIds.length === 0) {
+function cardList(state: GameState, cards: ReturnType<typeof cardsInZone>, emptyLabel: string) {
+  if (cards.length === 0) {
     return <p className="muted">{emptyLabel}</p>;
   }
 
-  return cardIds.map((cardId) => <CardTile key={cardId} state={state} cardId={cardId} />);
+  return cards.map((card) => <CardTile key={`${card.owner}-${card.name}-${card.zone}`} state={state} card={card} />);
 }
 
 export function OpeningHandModal({ state, onDispatch }: OpeningHandModalProps) {
   const [isResolvingMulligan, setIsResolvingMulligan] = useState(false);
-  const objectiveHand = cardIdsInZone(state, "red", "objective-hand");
-  const powerHand = cardIdsInZone(state, "red", "power-hand");
-  const objectiveTemp = cardIdsInZone(state, "red", "objective-temp-discard");
-  const powerTemp = cardIdsInZone(state, "red", "power-temp-discard");
+  const objectiveHand = cardsInZone(state, "red", "objective-hand");
+  const powerHand = cardsInZone(state, "red", "power-hand");
+  const objectiveTemp = cardsInZone(state, "red", "objective-temp-discard");
+  const powerTemp = cardsInZone(state, "red", "power-temp-discard");
   const mulliganPending = objectiveTemp.length > 0 || powerTemp.length > 0;
   const canChooseMulligan =
     state.round === 1 &&
@@ -118,11 +118,11 @@ export function OpeningHandModal({ state, onDispatch }: OpeningHandModalProps) {
           <div className="opening-review-card">
             <h3>{isResolvingMulligan ? "Drawing Replacement Hand" : "Set Aside For Mulligan"}</h3>
             <div className={`card-fan compact ${isResolvingMulligan ? "drawing" : ""}`}>
-              {objectiveTemp.map((cardId) => (
-                <CardTile key={cardId} state={state} cardId={cardId} compact />
+              {objectiveTemp.map((card) => (
+                <CardTile key={`${card.owner}-${card.name}-${card.zone}`} state={state} card={card} compact />
               ))}
-              {powerTemp.map((cardId) => (
-                <CardTile key={cardId} state={state} cardId={cardId} compact />
+              {powerTemp.map((card) => (
+                <CardTile key={`${card.owner}-${card.name}-${card.zone}`} state={state} card={card} compact />
               ))}
             </div>
           </div>

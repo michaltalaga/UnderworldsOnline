@@ -1,44 +1,45 @@
+import type { Fighter } from "../model";
 import { boardCoordLabel } from "../coords";
 import { hexDistance, neighbors } from "../hex";
 import {
-  cardIdsInZone,
+  cardsInZone,
   cardName,
   cardPowerType,
-  fighterCombat,
-  fighterIds,
+  fightersForTeam,
   fighterHealth,
   fighterName,
   fighterPos,
-  fighterStatus,
+  fighterWeapon,
+  hasStatus,
   fighterTeam,
   isAlive,
   occupiedBy,
 } from "../state";
 import { canStartMulligan, isMulliganPending } from "./mulligan";
-import type { FighterId, GameAction, GameState, Hex, LegalAction, TeamId } from "../types";
+import type { GameAction, GameState, Hex, LegalAction, TeamId } from "../types";
 
-function aliveTeamFighters(state: GameState, team: TeamId): FighterId[] {
-  return fighterIds(state, team).filter((id) => isAlive(state, id));
+function aliveTeamFighters(state: GameState, team: TeamId): Fighter[] {
+  return fightersForTeam(state, team).filter((fighter) => isAlive(state, fighter));
 }
 
-function enemiesInRange(state: GameState, fighterId: FighterId, from = fighterPos(state, fighterId)): FighterId[] {
-  const attackRange = fighterCombat(state, fighterId).attackRange;
-  return fighterIds(state).filter((otherId) => {
-    if (otherId === fighterId) return false;
-    if (!isAlive(state, otherId)) return false;
-    if (fighterTeam(state, otherId) === fighterTeam(state, fighterId)) return false;
-    return hexDistance(from, fighterPos(state, otherId)) <= attackRange;
+function enemiesInRange(state: GameState, fighter: Fighter, from = fighterPos(state, fighter)): Fighter[] {
+  const attackRange = fighterWeapon(state, fighter).attackRange;
+  return fightersForTeam(state).filter((other) => {
+    if (other === fighter) return false;
+    if (!isAlive(state, other)) return false;
+    if (fighterTeam(state, other) === fighterTeam(state, fighter)) return false;
+    return hexDistance(from, fighterPos(state, other)) <= attackRange;
   });
 }
 
 function allFriendlyCharged(state: GameState, team: TeamId): boolean {
   const alive = aliveTeamFighters(state, team);
-  return alive.length > 0 && alive.every((id) => fighterStatus(state, id).charged);
+  return alive.length > 0 && alive.every((fighter) => hasStatus(state, fighter, "charged"));
 }
 
-function legalMoves(state: GameState, fighterId: FighterId): Hex[] {
-  const from = fighterPos(state, fighterId);
-  const move = fighterCombat(state, fighterId).move;
+function legalMoves(state: GameState, fighter: Fighter): Hex[] {
+  const from = fighterPos(state, fighter);
+  const move = fighterWeapon(state, fighter).move;
   return state.boardHexes
     .filter((h) => occupiedBy(state, h.q, h.r) === null)
     .filter((h) => hexDistance(from, h) > 0)
@@ -73,39 +74,38 @@ export function getLegalActions(state: GameState, team: TeamId): LegalAction[] {
     }
 
     const canBreakChargeLock = allFriendlyCharged(state, team);
-    fighters.forEach((fighterId) => {
-      const status = fighterStatus(state, fighterId);
-      const chargeLocked = status.charged && !canBreakChargeLock;
+    fighters.forEach((fighter) => {
+      const chargeLocked = hasStatus(state, fighter, "charged") && !canBreakChargeLock;
 
       if (!chargeLocked) {
-        legalMoves(state, fighterId).forEach((to) => {
+        legalMoves(state, fighter).forEach((to) => {
           out.push({
-            label: `Move ${fighterName(state, fighterId)} -> ${boardCoordLabel(to)}`,
-            action: { type: "move", actorTeam: team, fighterId, to },
+            label: `Move ${fighterName(state, fighter)} -> ${boardCoordLabel(to)}`,
+            action: { type: "move", actorTeam: team, fighter, to },
           });
         });
 
-        enemiesInRange(state, fighterId).forEach((targetId) => {
+        enemiesInRange(state, fighter).forEach((target) => {
           out.push({
-            label: `Attack ${fighterName(state, fighterId)} -> ${fighterName(state, targetId)}`,
-            action: { type: "attack", actorTeam: team, attackerId: fighterId, targetId },
+            label: `Attack ${fighterName(state, fighter)} -> ${fighterName(state, target)}`,
+            action: { type: "attack", actorTeam: team, attacker: fighter, target },
           });
         });
 
-        if (!status.charged) {
-          legalMoves(state, fighterId).forEach((to) => {
-            enemiesInRange(state, fighterId, to).forEach((targetId) => {
+        if (!hasStatus(state, fighter, "charged")) {
+          legalMoves(state, fighter).forEach((to) => {
+            enemiesInRange(state, fighter, to).forEach((target) => {
               out.push({
-                label: `Charge ${fighterName(state, fighterId)} -> ${boardCoordLabel(to)} then ${fighterName(state, targetId)}`,
-                action: { type: "charge", actorTeam: team, fighterId, to, targetId },
+                label: `Charge ${fighterName(state, fighter)} -> ${boardCoordLabel(to)} then ${fighterName(state, target)}`,
+                action: { type: "charge", actorTeam: team, fighter, to, target },
               });
             });
           });
         }
 
         out.push({
-          label: `Guard ${fighterName(state, fighterId)}`,
-          action: { type: "guard", actorTeam: team, fighterId },
+          label: `Guard ${fighterName(state, fighter)}`,
+          action: { type: "guard", actorTeam: team, fighter },
         });
       }
     });
@@ -114,40 +114,40 @@ export function getLegalActions(state: GameState, team: TeamId): LegalAction[] {
     return out;
   }
 
-  const hand = cardIdsInZone(state, team, "power-hand");
-  hand.forEach((cardId) => {
-    const powerType = cardPowerType(state, cardId);
+  const hand = cardsInZone(state, team, "power-hand");
+  hand.forEach((card) => {
+    const powerType = cardPowerType(state, card);
     if (!powerType) return;
-    const name = cardName(state, cardId);
+    const name = cardName(state, card);
 
     if (powerType === "ferocious-strike") {
-      fighters.forEach((fighterId) => {
+      fighters.forEach((fighter) => {
         out.push({
-          label: `Play ${name} on ${fighterName(state, fighterId)}`,
-          action: { type: "play-power", actorTeam: team, cardId, fighterId },
+          label: `Play ${name} on ${fighterName(state, fighter)}`,
+          action: { type: "play-power", actorTeam: team, card, fighter },
         });
       });
     }
 
     if (powerType === "healing-potion") {
       fighters
-        .filter((fighterId) => fighterHealth(state, fighterId).hp < fighterHealth(state, fighterId).maxHp)
-        .forEach((fighterId) => {
+        .filter((fighter) => fighterHealth(state, fighter).hp < fighterHealth(state, fighter).maxHp)
+        .forEach((fighter) => {
           out.push({
-            label: `Play ${name} on ${fighterName(state, fighterId)}`,
-            action: { type: "play-power", actorTeam: team, cardId, fighterId },
+            label: `Play ${name} on ${fighterName(state, fighter)}`,
+            action: { type: "play-power", actorTeam: team, card, fighter },
           });
         });
     }
 
     if (powerType === "sidestep") {
-      fighters.forEach((fighterId) => {
-        neighbors(fighterPos(state, fighterId))
+      fighters.forEach((fighter) => {
+        neighbors(fighterPos(state, fighter))
           .filter((h) => occupiedBy(state, h.q, h.r) === null)
           .forEach((targetHex) => {
             out.push({
-              label: `Play ${name}: ${fighterName(state, fighterId)} -> ${boardCoordLabel(targetHex)}`,
-              action: { type: "play-power", actorTeam: team, cardId, fighterId, targetHex },
+              label: `Play ${name}: ${fighterName(state, fighter)} -> ${boardCoordLabel(targetHex)}`,
+              action: { type: "play-power", actorTeam: team, card, fighter, targetHex },
             });
           });
       });

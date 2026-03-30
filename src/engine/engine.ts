@@ -1,15 +1,24 @@
-import { cloneState, fighterName, fighterPos, fighterStatus, objectiveOccupancy, occupiedBy } from "./state";
+import { addStatus, cloneState, fighterName, fighterPos, objectiveOccupancy, occupiedBy, removeStatus } from "./state";
 import { getLegalActions } from "./systems/legalActions";
 import { resolveAttack } from "./systems/combat";
 import { resolvePowerCard } from "./systems/cards";
 import { resolveMulligan, startMulligan } from "./systems/mulligan";
 import { advanceAfterPower, rotatePowerPriority, startPowerStep } from "./systems/turn";
 import type { GameAction, GameState, LegalAction } from "./types";
+import { ObjectiveCardModel, PowerCardModel } from "./model";
 
 function sameHex(a?: { q: number; r: number }, b?: { q: number; r: number }): boolean {
   if (!a && !b) return true;
   if (!a || !b) return false;
   return a.q === b.q && a.r === b.r;
+}
+
+function sameCard(a: GameAction extends never ? never : import("./model").Card, b: import("./model").Card): boolean {
+  if (a.constructor !== b.constructor) return false;
+  if (a.owner !== b.owner || a.name !== b.name) return false;
+  if (a instanceof ObjectiveCardModel && b instanceof ObjectiveCardModel) return a.goal === b.goal && a.glory === b.glory;
+  if (a instanceof PowerCardModel && b instanceof PowerCardModel) return a.effect === b.effect;
+  return true;
 }
 
 function actionsEqual(a: GameAction, b: GameAction): boolean {
@@ -18,23 +27,23 @@ function actionsEqual(a: GameAction, b: GameAction): boolean {
 
   switch (a.type) {
     case "move":
-      return b.type === "move" && a.fighterId === b.fighterId && sameHex(a.to, b.to);
+      return b.type === "move" && a.fighter.id === b.fighter.id && sameHex(a.to, b.to);
     case "guard":
-      return b.type === "guard" && a.fighterId === b.fighterId;
+      return b.type === "guard" && a.fighter.id === b.fighter.id;
     case "attack":
-      return b.type === "attack" && a.attackerId === b.attackerId && a.targetId === b.targetId;
+      return b.type === "attack" && a.attacker.id === b.attacker.id && a.target.id === b.target.id;
     case "charge":
       return (
         b.type === "charge" &&
-        a.fighterId === b.fighterId &&
-        a.targetId === b.targetId &&
+        a.fighter.id === b.fighter.id &&
+        a.target.id === b.target.id &&
         sameHex(a.to, b.to)
       );
     case "play-power":
       return (
         b.type === "play-power" &&
-        a.cardId === b.cardId &&
-        a.fighterId === b.fighterId &&
+        sameCard(a.card, b.card) &&
+        a.fighter?.id === b.fighter?.id &&
         sameHex(a.targetHex, b.targetHex)
       );
     case "pass":
@@ -70,27 +79,27 @@ function applyActionStep(state: GameState, action: GameAction): void {
   }
 
   if (action.type === "move") {
-    fighterPos(state, action.fighterId).q = action.to.q;
-    fighterPos(state, action.fighterId).r = action.to.r;
-    fighterStatus(state, action.fighterId).guard = false;
-    state.log.push({ turn: state.turnInRound, text: `${fighterName(state, action.fighterId)} moves` });
+    fighterPos(state, action.fighter).q = action.to.q;
+    fighterPos(state, action.fighter).r = action.to.r;
+    removeStatus(state, action.fighter, "guard");
+    state.log.push({ turn: state.turnInRound, text: `${fighterName(state, action.fighter)} moves` });
   }
 
   if (action.type === "guard") {
-    fighterStatus(state, action.fighterId).guard = true;
-    state.log.push({ turn: state.turnInRound, text: `${fighterName(state, action.fighterId)} guards` });
+    addStatus(state, action.fighter, "guard");
+    state.log.push({ turn: state.turnInRound, text: `${fighterName(state, action.fighter)} guards` });
   }
 
   if (action.type === "attack") {
-    resolveAttack(state, action.attackerId, action.targetId);
+    resolveAttack(state, action.attacker, action.target);
   }
 
   if (action.type === "charge") {
-    fighterPos(state, action.fighterId).q = action.to.q;
-    fighterPos(state, action.fighterId).r = action.to.r;
-    fighterStatus(state, action.fighterId).charged = true;
-    fighterStatus(state, action.fighterId).guard = false;
-    resolveAttack(state, action.fighterId, action.targetId);
+    fighterPos(state, action.fighter).q = action.to.q;
+    fighterPos(state, action.fighter).r = action.to.r;
+    addStatus(state, action.fighter, "charged");
+    removeStatus(state, action.fighter, "guard");
+    resolveAttack(state, action.fighter, action.target);
   }
 
   if (action.type === "pass") {

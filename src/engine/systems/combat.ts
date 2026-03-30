@@ -1,29 +1,30 @@
+import type { Fighter } from "../model";
 import { hexDistance, neighbors } from "../hex";
 import { rollD6 } from "../rng";
 import {
-  fighterCombat,
+  fighterWeapon,
   fighterHealth,
   fighterName,
   fighterPos,
-  fighterStatus,
+  hasStatus,
   fighterTeam,
   isAlive,
   isBoardHex,
   objectiveOccupancy,
   occupiedBy,
 } from "../state";
-import type { AttackDieFace, DiceFace, FighterId, GameState, SaveDieFace, TeamId } from "../types";
+import type { AttackDieFace, DiceFace, GameState, SaveDieFace, TeamId } from "../types";
 
 function adjacentAlliesExcluding(
   state: GameState,
-  centerId: FighterId,
+  centerFighter: Fighter,
   team: TeamId,
-  excludeId: FighterId,
+  excludeFighter: Fighter,
 ): number {
-  return neighbors(fighterPos(state, centerId))
+  return neighbors(fighterPos(state, centerFighter))
     .map((h) => occupiedBy(state, h.q, h.r))
-    .filter((id): id is FighterId => Boolean(id) && id !== excludeId)
-    .filter((id) => isAlive(state, id) && fighterTeam(state, id) === team).length;
+    .filter((fighter): fighter is Fighter => Boolean(fighter) && fighter !== excludeFighter)
+    .filter((fighter) => isAlive(state, fighter) && fighterTeam(state, fighter) === team).length;
 }
 
 function rollAttackFace(rngState: number): { state: number; face: AttackDieFace } {
@@ -117,9 +118,9 @@ function countSaveSuccesses(
   return { rngState: state, successes, crits, faces };
 }
 
-function driveBack(state: GameState, attackerId: FighterId, targetId: FighterId): void {
-  const attackerPos = fighterPos(state, attackerId);
-  const targetPos = fighterPos(state, targetId);
+function driveBack(state: GameState, attacker: Fighter, target: Fighter): void {
+  const attackerPos = fighterPos(state, attacker);
+  const targetPos = fighterPos(state, target);
 
   const opts = neighbors(targetPos)
     .filter((h) => hexDistance(h, attackerPos) > hexDistance(targetPos, attackerPos))
@@ -127,51 +128,51 @@ function driveBack(state: GameState, attackerId: FighterId, targetId: FighterId)
     .filter((h) => isBoardHex(state, h.q, h.r));
 
   if (opts.length > 0) {
-    fighterPos(state, targetId).q = opts[0].q;
-    fighterPos(state, targetId).r = opts[0].r;
+    fighterPos(state, target).q = opts[0].q;
+    fighterPos(state, target).r = opts[0].r;
   }
 }
 
-export function resolveAttack(state: GameState, attackerId: FighterId, targetId: FighterId): void {
-  if (!isAlive(state, attackerId) || !isAlive(state, targetId)) return;
+export function resolveAttack(state: GameState, attacker: Fighter, target: Fighter): void {
+  if (!isAlive(state, attacker) || !isAlive(state, target)) return;
 
-  const atkTeam = fighterTeam(state, attackerId);
-  const defTeam = fighterTeam(state, targetId);
+  const atkTeam = fighterTeam(state, attacker);
+  const defTeam = fighterTeam(state, target);
 
-  const flankAtk = adjacentAlliesExcluding(state, targetId, atkTeam, attackerId);
-  const flankDef = adjacentAlliesExcluding(state, attackerId, defTeam, targetId);
+  const flankAtk = adjacentAlliesExcluding(state, target, atkTeam, attacker);
+  const flankDef = adjacentAlliesExcluding(state, attacker, defTeam, target);
 
   const targetFlanked = flankAtk >= 1;
   const targetSurrounded = flankAtk >= 2;
   const attackerFlanked = flankDef >= 1;
   const attackerSurrounded = flankDef >= 2;
 
-  const attackerCombat = fighterCombat(state, attackerId);
-  const targetCombat = fighterCombat(state, targetId);
-  const targetStatus = fighterStatus(state, targetId);
+  const attackerWeapon = fighterWeapon(state, attacker);
+  const targetWeapon = fighterWeapon(state, target);
+  const targetHasGuard = hasStatus(state, target, "guard");
 
   const atkRoll = countAttackSuccesses(
-    attackerCombat.attackDice,
+    attackerWeapon.attackDice,
     state.rngState,
-    attackerCombat.attackTrait,
+    attackerWeapon.attackTrait,
     targetFlanked,
     targetSurrounded,
   );
 
   const defRoll = countSaveSuccesses(
-    targetCombat.saveDice,
+    targetWeapon.saveDice,
     atkRoll.rngState,
-    targetCombat.saveTrait,
+    targetWeapon.saveTrait,
     attackerFlanked,
     attackerSurrounded,
-    targetStatus.guard,
+    targetHasGuard,
   );
 
   state.rngState = defRoll.rngState;
   state.diceRollEvent = {
     turn: state.turnInRound,
-    attackerName: fighterName(state, attackerId),
-    defenderName: fighterName(state, targetId),
+    attackerName: fighterName(state, attacker),
+    defenderName: fighterName(state, target),
     attackFaces: atkRoll.faces,
     defenseFaces: defRoll.faces,
   };
@@ -181,14 +182,14 @@ export function resolveAttack(state: GameState, attackerId: FighterId, targetId:
 
   state.log.push({
     turn: state.turnInRound,
-    text: `${fighterName(state, attackerId)} attacks ${fighterName(state, targetId)} (${atkTotal} vs ${defTotal})`,
+    text: `${fighterName(state, attacker)} attacks ${fighterName(state, target)} (${atkTotal} vs ${defTotal})`,
   });
 
   if (atkTotal > defTotal) {
-    const damage = attackerCombat.attackDamage + attackerCombat.nextAttackBonusDamage;
-    attackerCombat.nextAttackBonusDamage = 0;
+    const damage = attackerWeapon.attackDamage + attackerWeapon.nextAttackBonusDamage;
+    attackerWeapon.nextAttackBonusDamage = 0;
 
-    const targetHealth = fighterHealth(state, targetId);
+    const targetHealth = fighterHealth(state, target);
     targetHealth.hp -= damage;
 
     state.teams[atkTeam].roundSuccessfulAttacks += 1;
@@ -196,16 +197,16 @@ export function resolveAttack(state: GameState, attackerId: FighterId, targetId:
 
     if (targetHealth.hp <= 0) {
       state.teams[atkTeam].roundTakedowns += 1;
-      state.log.push({ turn: state.turnInRound, text: `${fighterName(state, targetId)} is taken down` });
-    } else if (!targetStatus.guard) {
-      driveBack(state, attackerId, targetId);
+      state.log.push({ turn: state.turnInRound, text: `${fighterName(state, target)} is taken down` });
+    } else if (!targetHasGuard) {
+      driveBack(state, attacker, target);
     }
   } else if (atkTotal === defTotal) {
-    if (!targetStatus.guard) driveBack(state, attackerId, targetId);
-    attackerCombat.nextAttackBonusDamage = 0;
+    if (!targetHasGuard) driveBack(state, attacker, target);
+    attackerWeapon.nextAttackBonusDamage = 0;
     state.log.push({ turn: state.turnInRound, text: "Drawn attack" });
   } else {
-    attackerCombat.nextAttackBonusDamage = 0;
+    attackerWeapon.nextAttackBonusDamage = 0;
     state.log.push({ turn: state.turnInRound, text: "Attack failed" });
   }
 

@@ -1,4 +1,4 @@
-import type { Card, CardId, Fighter, PlayerAreas } from "./model";
+import type { Card, Fighter, PlayerCardPools } from "./model";
 
 export type FighterId = string;
 
@@ -63,7 +63,7 @@ export type CardZone =
 
 export type TeamState = {
   glory: number;
-  fighterIds: FighterId[];
+  fighters: Fighter[];
   mulliganUsed: boolean;
   roundTakedowns: number;
   roundSuccessfulAttacks: number;
@@ -102,9 +102,9 @@ export type GameState = {
   objectiveHexes: Hex[];
   occupiedObjectives: Record<string, string | null>;
   diceRollEvent: DiceRollEvent | null;
-  fighters: Record<FighterId, Fighter>;
-  cards: Record<CardId, Card>;
-  areas: Record<TeamId, PlayerAreas>;
+  fighters: Fighter[];
+  cards: Card[];
+  cardPools: Record<TeamId, PlayerCardPools>;
   teams: Record<TeamId, TeamState>;
   log: EventLogEntry[];
 };
@@ -113,32 +113,32 @@ export type ActionBase = { actorTeam: TeamId };
 
 export type MoveAction = ActionBase & {
   type: "move";
-  fighterId: FighterId;
+  fighter: Fighter;
   to: Hex;
 };
 
 export type GuardAction = ActionBase & {
   type: "guard";
-  fighterId: FighterId;
+  fighter: Fighter;
 };
 
 export type AttackAction = ActionBase & {
   type: "attack";
-  attackerId: FighterId;
-  targetId: FighterId;
+  attacker: Fighter;
+  target: Fighter;
 };
 
 export type ChargeAction = ActionBase & {
   type: "charge";
-  fighterId: FighterId;
+  fighter: Fighter;
   to: Hex;
-  targetId: FighterId;
+  target: Fighter;
 };
 
 export type PlayPowerCardAction = ActionBase & {
   type: "play-power";
-  cardId: CardId;
-  fighterId?: FighterId;
+  card: Card;
+  fighter?: Fighter;
   targetHex?: Hex;
 };
 

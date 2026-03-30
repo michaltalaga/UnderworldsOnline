@@ -1,4 +1,4 @@
-import { boardHexes, fighterHealth, fighterIds, fighterName, fighterPos, fighterTeam } from "../engine/state";
+import { boardHexes, fighterHealth, fightersForTeam, fighterName, fighterPos, fighterTeam } from "../engine/state";
 import { hexKey } from "../engine/hex";
 import { qStartForR, rowCountForR } from "../engine/boardShape";
 import { boardCoordLabel } from "../engine/coords";
@@ -60,25 +60,25 @@ export function Board({ state, selectedFighterId, onSelectFighter }: BoardProps)
           })}
         </svg>
 
-        {fighterIds(state)
-          .filter((id) => fighterHealth(state, id).hp > 0)
-          .map((id) => {
-            const pos = fighterPos(state, id);
+        {fightersForTeam(state)
+          .filter((fighter) => fighterHealth(state, fighter).hp > 0)
+          .map((fighter) => {
+            const pos = fighterPos(state, fighter);
             const p = toPixel(pos.q, pos.r);
-            const selected = selectedFighterId === id;
-            const team = fighterTeam(state, id);
-            const name = fighterName(state, id);
-            const hp = fighterHealth(state, id).hp;
-            const maxHp = fighterHealth(state, id).maxHp;
+            const selected = selectedFighterId === fighter.id;
+            const team = fighterTeam(state, fighter);
+            const name = fighterName(state, fighter);
+            const hp = fighterHealth(state, fighter).hp;
+            const maxHp = fighterHealth(state, fighter).maxHp;
             return (
               <button
-                key={id}
+                key={fighter.id}
                 className={`fighter ${team} ${selected ? "selected" : ""}`}
                 style={{
                   left: `${(p.x / BOARD_WIDTH) * 100}%`,
                   top: `${(p.y / BOARD_HEIGHT) * 100}%`,
                 }}
-                onClick={() => onSelectFighter(selected ? null : id)}
+                onClick={() => onSelectFighter(selected ? null : fighter.id)}
                 title={`${name} (${hp}/${maxHp})`}
               >
                 <span className="name">{name}</span>

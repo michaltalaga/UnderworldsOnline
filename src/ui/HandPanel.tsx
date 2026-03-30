@@ -1,5 +1,5 @@
 import type { GameAction, GameState } from "../engine/types";
-import { cardIdsInZone } from "../engine/state";
+import { cardsInZone } from "../engine/state";
 import { CardTile } from "./CardTile";
 
 type HandPanelProps = {
@@ -36,37 +36,37 @@ function DeckTrack({
 export function HandPanel({ state, onDispatch }: HandPanelProps) {
   const myTeam = state.teams.red;
 
-  const myObjectiveDeck = cardIdsInZone(state, "red", "objective-deck");
-  const myObjectiveHand = cardIdsInZone(state, "red", "objective-hand");
-  const myObjectiveDiscard = cardIdsInZone(state, "red", "objective-discard");
-  const myObjectiveTemp = cardIdsInZone(state, "red", "objective-temp-discard");
+  const myObjectiveDeck = cardsInZone(state, "red", "objective-deck");
+  const myObjectiveHand = cardsInZone(state, "red", "objective-hand");
+  const myObjectiveDiscard = cardsInZone(state, "red", "objective-discard");
+  const myObjectiveTemp = cardsInZone(state, "red", "objective-temp-discard");
 
-  const myPowerDeck = cardIdsInZone(state, "red", "power-deck");
-  const myPowerHand = cardIdsInZone(state, "red", "power-hand");
-  const myPowerDiscard = cardIdsInZone(state, "red", "power-discard");
-  const myPowerTemp = cardIdsInZone(state, "red", "power-temp-discard");
+  const myPowerDeck = cardsInZone(state, "red", "power-deck");
+  const myPowerHand = cardsInZone(state, "red", "power-hand");
+  const myPowerDiscard = cardsInZone(state, "red", "power-discard");
+  const myPowerTemp = cardsInZone(state, "red", "power-temp-discard");
 
-  const enemyObjectiveDeck = cardIdsInZone(state, "blue", "objective-deck");
-  const enemyObjectiveHand = cardIdsInZone(state, "blue", "objective-hand");
-  const enemyObjectiveDiscard = cardIdsInZone(state, "blue", "objective-discard");
-  const enemyObjectiveTemp = cardIdsInZone(state, "blue", "objective-temp-discard");
+  const enemyObjectiveDeck = cardsInZone(state, "blue", "objective-deck");
+  const enemyObjectiveHand = cardsInZone(state, "blue", "objective-hand");
+  const enemyObjectiveDiscard = cardsInZone(state, "blue", "objective-discard");
+  const enemyObjectiveTemp = cardsInZone(state, "blue", "objective-temp-discard");
 
-  const enemyPowerDeck = cardIdsInZone(state, "blue", "power-deck");
-  const enemyPowerHand = cardIdsInZone(state, "blue", "power-hand");
-  const enemyPowerDiscard = cardIdsInZone(state, "blue", "power-discard");
-  const enemyPowerTemp = cardIdsInZone(state, "blue", "power-temp-discard");
+  const enemyPowerDeck = cardsInZone(state, "blue", "power-deck");
+  const enemyPowerHand = cardsInZone(state, "blue", "power-hand");
+  const enemyPowerDiscard = cardsInZone(state, "blue", "power-discard");
+  const enemyPowerTemp = cardsInZone(state, "blue", "power-temp-discard");
 
   const mulliganPending = myObjectiveTemp.length > 0 || myPowerTemp.length > 0;
   const canMulligan = state.round === 1 && state.turnInRound === 1 && !myTeam.mulliganUsed && !state.winner;
-  const renderCards = (cardIds: string[], emptyLabel: string) => {
-    if (cardIds.length === 0) {
+  const renderCards = (cards: typeof myObjectiveHand, emptyLabel: string) => {
+    if (cards.length === 0) {
       return <p className="muted">{emptyLabel}</p>;
     }
 
     return (
       <div className="card-fan compact side-hand">
-        {cardIds.map((cardId) => (
-          <CardTile key={cardId} state={state} cardId={cardId} compact />
+        {cards.map((card) => (
+          <CardTile key={`${card.owner}-${card.name}-${card.zone}`} state={state} card={card} compact />
         ))}
       </div>
     );

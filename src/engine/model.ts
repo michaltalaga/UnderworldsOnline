@@ -1,17 +1,8 @@
-import type {
-  AttackTrait,
-  CardZone,
-  FighterId,
-  Hex,
-  ObjectiveCardType,
-  PowerCardType,
-  SaveTrait,
-  TeamId,
-} from "./types";
+import type { AttackTrait, CardZone, FighterId, Hex, ObjectiveCardType, PowerCardType, SaveTrait, TeamId } from "./types";
 
-export type CardId = string;
+export type FighterStatus = "guard" | "charged";
 
-export class FighterCombatProfile {
+export class Weapon {
   move: number;
   attackDice: number;
   attackTrait: AttackTrait;
@@ -40,33 +31,6 @@ export class FighterCombatProfile {
     this.saveTrait = saveTrait;
     this.nextAttackBonusDamage = nextAttackBonusDamage;
   }
-
-  clone(): FighterCombatProfile {
-    return new FighterCombatProfile(
-      this.move,
-      this.attackDice,
-      this.attackTrait,
-      this.attackRange,
-      this.attackDamage,
-      this.saveDice,
-      this.saveTrait,
-      this.nextAttackBonusDamage,
-    );
-  }
-}
-
-export class FighterStatus {
-  guard: boolean;
-  charged: boolean;
-
-  constructor(guard = false, charged = false) {
-    this.guard = guard;
-    this.charged = charged;
-  }
-
-  clone(): FighterStatus {
-    return new FighterStatus(this.guard, this.charged);
-  }
 }
 
 export class Fighter {
@@ -76,8 +40,8 @@ export class Fighter {
   position: Hex;
   hp: number;
   maxHp: number;
-  combat: FighterCombatProfile;
-  status: FighterStatus;
+  weapon: Weapon;
+  statuses: FighterStatus[];
 
   constructor(
     id: FighterId,
@@ -86,8 +50,8 @@ export class Fighter {
     position: Hex,
     hp: number,
     maxHp: number,
-    combat: FighterCombatProfile,
-    status = new FighterStatus(),
+    weapon: Weapon,
+    statuses: FighterStatus[] = [],
   ) {
     this.id = id;
     this.team = team;
@@ -95,136 +59,75 @@ export class Fighter {
     this.position = { ...position };
     this.hp = hp;
     this.maxHp = maxHp;
-    this.combat = combat;
-    this.status = status;
-  }
-
-  clone(): Fighter {
-    return new Fighter(
-      this.id,
-      this.team,
-      this.name,
-      { ...this.position },
-      this.hp,
-      this.maxHp,
-      this.combat.clone(),
-      this.status.clone(),
-    );
+    this.weapon = weapon;
+    this.statuses = [...statuses];
   }
 }
 
 export abstract class Card {
-  id: CardId;
   owner: TeamId;
   name: string;
   zone: CardZone;
 
-  constructor(id: CardId, owner: TeamId, name: string, zone: CardZone) {
-    this.id = id;
+  constructor(owner: TeamId, name: string, zone: CardZone) {
     this.owner = owner;
     this.name = name;
     this.zone = zone;
   }
-
-  abstract clone(): Card;
 }
 
 export class ObjectiveCardModel extends Card {
-  cardType: ObjectiveCardType;
+  goal: ObjectiveCardType;
   glory: number;
 
-  constructor(id: CardId, owner: TeamId, name: string, zone: CardZone, cardType: ObjectiveCardType, glory: number) {
-    super(id, owner, name, zone);
-    this.cardType = cardType;
+  constructor(owner: TeamId, name: string, zone: CardZone, goal: ObjectiveCardType, glory: number) {
+    super(owner, name, zone);
+    this.goal = goal;
     this.glory = glory;
-  }
-
-  clone(): ObjectiveCardModel {
-    return new ObjectiveCardModel(this.id, this.owner, this.name, this.zone, this.cardType, this.glory);
   }
 }
 
 export class PowerCardModel extends Card {
-  cardType: PowerCardType;
+  effect: PowerCardType;
 
-  constructor(id: CardId, owner: TeamId, name: string, zone: CardZone, cardType: PowerCardType) {
-    super(id, owner, name, zone);
-    this.cardType = cardType;
-  }
-
-  clone(): PowerCardModel {
-    return new PowerCardModel(this.id, this.owner, this.name, this.zone, this.cardType);
+  constructor(owner: TeamId, name: string, zone: CardZone, effect: PowerCardType) {
+    super(owner, name, zone);
+    this.effect = effect;
   }
 }
 
-export class CardArea {
+export class CardPool {
   zone: CardZone;
-  cardIds: CardId[];
+  cards: Card[];
 
-  constructor(zone: CardZone, cardIds: CardId[] = []) {
+  constructor(zone: CardZone, cards: Card[] = []) {
     this.zone = zone;
-    this.cardIds = [...cardIds];
+    this.cards = [...cards];
   }
 
-  has(cardId: CardId): boolean {
-    return this.cardIds.includes(cardId);
+  has(card: Card): boolean {
+    return this.cards.includes(card);
   }
 
-  add(cardId: CardId): void {
-    this.cardIds.push(cardId);
+  add(card: Card): void {
+    this.cards.push(card);
   }
 
-  addMany(cardIds: CardId[]): void {
-    this.cardIds.push(...cardIds);
-  }
-
-  remove(cardId: CardId): boolean {
-    const index = this.cardIds.indexOf(cardId);
+  remove(card: Card): boolean {
+    const index = this.cards.indexOf(card);
     if (index < 0) return false;
-    this.cardIds.splice(index, 1);
+    this.cards.splice(index, 1);
     return true;
   }
-
-  draw(count: number): CardId[] {
-    return this.cardIds.splice(0, count);
-  }
-
-  clone(): CardArea {
-    return new CardArea(this.zone, this.cardIds);
-  }
 }
 
-export class Deck extends CardArea {
-  clone(): Deck {
-    return new Deck(this.zone, this.cardIds);
-  }
-}
+export class Deck extends CardPool {}
+export class Hand extends CardPool {}
+export class DiscardPile extends CardPool {}
+export class SetAsidePile extends CardPool {}
+export class ScoredPile extends CardPool {}
 
-export class Hand extends CardArea {
-  clone(): Hand {
-    return new Hand(this.zone, this.cardIds);
-  }
-}
-
-export class DiscardPile extends CardArea {
-  clone(): DiscardPile {
-    return new DiscardPile(this.zone, this.cardIds);
-  }
-}
-
-export class SetAsidePile extends CardArea {
-  clone(): SetAsidePile {
-    return new SetAsidePile(this.zone, this.cardIds);
-  }
-}
-
-export class ScoredPile extends CardArea {
-  clone(): ScoredPile {
-    return new ScoredPile(this.zone, this.cardIds);
-  }
-}
-
-export class PlayerAreas {
+export class PlayerCardPools {
   objectiveDeck: Deck;
   objectiveHand: Hand;
   objectiveDiscard: DiscardPile;
@@ -247,7 +150,7 @@ export class PlayerAreas {
     this.powerTempDiscard = new SetAsidePile("power-temp-discard");
   }
 
-  area(zone: CardZone): CardArea {
+  pool(zone: CardZone): CardPool {
     switch (zone) {
       case "objective-deck":
         return this.objectiveDeck;
@@ -268,19 +171,5 @@ export class PlayerAreas {
       case "power-temp-discard":
         return this.powerTempDiscard;
     }
-  }
-
-  clone(): PlayerAreas {
-    const next = new PlayerAreas();
-    next.objectiveDeck = this.objectiveDeck.clone();
-    next.objectiveHand = this.objectiveHand.clone();
-    next.objectiveDiscard = this.objectiveDiscard.clone();
-    next.objectiveTempDiscard = this.objectiveTempDiscard.clone();
-    next.objectiveScored = this.objectiveScored.clone();
-    next.powerDeck = this.powerDeck.clone();
-    next.powerHand = this.powerHand.clone();
-    next.powerDiscard = this.powerDiscard.clone();
-    next.powerTempDiscard = this.powerTempDiscard.clone();
-    return next;
   }
 }
