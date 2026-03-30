@@ -1,13 +1,53 @@
 import { objectiveOccupancy, occupiedBy } from "./state";
-import { getLegalActions, actionSignature } from "./systems/legalActions";
+import { getLegalActions } from "./systems/legalActions";
 import { resolveAttack } from "./systems/combat";
 import { resolvePowerCard } from "./systems/cards";
 import { advanceAfterPower } from "./systems/turn";
 import type { GameAction, GameState, LegalAction } from "./types";
 
+function sameHex(a?: { q: number; r: number }, b?: { q: number; r: number }): boolean {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  return a.q === b.q && a.r === b.r;
+}
+
+function actionsEqual(a: GameAction, b: GameAction): boolean {
+  if (a.type !== b.type) return false;
+  if (a.actorTeam !== b.actorTeam) return false;
+
+  switch (a.type) {
+    case "move":
+      return b.type === "move" && a.fighterId === b.fighterId && sameHex(a.to, b.to);
+    case "guard":
+      return b.type === "guard" && a.fighterId === b.fighterId;
+    case "attack":
+      return b.type === "attack" && a.attackerId === b.attackerId && a.targetId === b.targetId;
+    case "charge":
+      return (
+        b.type === "charge" &&
+        a.fighterId === b.fighterId &&
+        a.targetId === b.targetId &&
+        sameHex(a.to, b.to)
+      );
+    case "play-power":
+      return (
+        b.type === "play-power" &&
+        a.cardId === b.cardId &&
+        a.fighterId === b.fighterId &&
+        sameHex(a.targetHex, b.targetHex)
+      );
+    case "pass":
+      return b.type === "pass";
+    case "end-power":
+      return b.type === "end-power";
+    default:
+      return false;
+  }
+}
+
 function isActionLegal(state: GameState, action: GameAction): boolean {
-  const legal = getLegalActions(state, action.actorTeam).map((l) => actionSignature(l.action));
-  return legal.includes(actionSignature(action));
+  const legal = getLegalActions(state, action.actorTeam).map((l) => l.action);
+  return legal.some((la) => actionsEqual(la, action));
 }
 
 function applyActionStep(state: GameState, action: GameAction): void {

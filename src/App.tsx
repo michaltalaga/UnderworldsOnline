@@ -21,16 +21,22 @@ function App() {
   const [selectedFighterId, setSelectedFighterId] = useState<string | null>(null);
   const [showAllActions, setShowAllActions] = useState(false);
 
-  const firstAliveRed = useMemo(
-    () => state.teams.red.fighters.find((id) => state.components.fighters[id].hp > 0) ?? null,
+  const firstAliveActiveTeam = useMemo(
+    () => state.teams[state.activeTeam].fighters.find((id) => state.components.fighters[id].hp > 0) ?? null,
     [state],
   );
 
+  const selectedIsActiveTeam =
+    selectedFighterId !== null && state.components.fighters[selectedFighterId]?.team === state.activeTeam;
+
   const effectiveSelectedFighterId =
-    !showAllActions && selectedFighterId && state.components.fighters[selectedFighterId]?.hp > 0
+    !showAllActions &&
+    selectedFighterId &&
+    state.components.fighters[selectedFighterId]?.hp > 0 &&
+    selectedIsActiveTeam
       ? selectedFighterId
       : !showAllActions
-        ? firstAliveRed
+        ? firstAliveActiveTeam
         : selectedFighterId;
 
   const visibleActions = useMemo(() => {
@@ -63,6 +69,20 @@ function App() {
     ? state.components.fighters[effectiveSelectedFighterId]
     : null;
 
+  const handleSelectFighter = (id: string | null) => {
+    if (!id) {
+      setSelectedFighterId(null);
+      return;
+    }
+
+    const fighter = state.components.fighters[id];
+    if (!showAllActions && fighter.team !== state.activeTeam) {
+      return;
+    }
+
+    setSelectedFighterId(id);
+  };
+
   return (
     <div className="app-root">
       <header className="hero">
@@ -86,7 +106,7 @@ function App() {
           <Board
             state={state}
             selectedFighterId={effectiveSelectedFighterId}
-            onSelectFighter={setSelectedFighterId}
+            onSelectFighter={handleSelectFighter}
           />
         </section>
 
