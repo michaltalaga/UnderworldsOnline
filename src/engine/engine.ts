@@ -1,4 +1,4 @@
-import { objectiveOccupancy, occupiedBy } from "./state";
+import { fighterName, fighterPos, fighterStatus, objectiveOccupancy, occupiedBy } from "./state";
 import { getLegalActions } from "./systems/legalActions";
 import { resolveAttack } from "./systems/combat";
 import { resolvePowerCard } from "./systems/cards";
@@ -69,16 +69,15 @@ function applyActionStep(state: GameState, action: GameAction): void {
   }
 
   if (action.type === "move") {
-    const fighter = state.components.fighters[action.fighterId];
-    fighter.pos = action.to;
-    fighter.guard = false;
-    state.log.push({ turn: state.turnInRound, text: `${fighter.name} moves` });
+    fighterPos(state, action.fighterId).q = action.to.q;
+    fighterPos(state, action.fighterId).r = action.to.r;
+    fighterStatus(state, action.fighterId).guard = false;
+    state.log.push({ turn: state.turnInRound, text: `${fighterName(state, action.fighterId)} moves` });
   }
 
   if (action.type === "guard") {
-    const fighter = state.components.fighters[action.fighterId];
-    fighter.guard = true;
-    state.log.push({ turn: state.turnInRound, text: `${fighter.name} guards` });
+    fighterStatus(state, action.fighterId).guard = true;
+    state.log.push({ turn: state.turnInRound, text: `${fighterName(state, action.fighterId)} guards` });
   }
 
   if (action.type === "attack") {
@@ -86,10 +85,10 @@ function applyActionStep(state: GameState, action: GameAction): void {
   }
 
   if (action.type === "charge") {
-    const fighter = state.components.fighters[action.fighterId];
-    fighter.pos = action.to;
-    fighter.charged = true;
-    fighter.guard = false;
+    fighterPos(state, action.fighterId).q = action.to.q;
+    fighterPos(state, action.fighterId).r = action.to.r;
+    fighterStatus(state, action.fighterId).charged = true;
+    fighterStatus(state, action.fighterId).guard = false;
     resolveAttack(state, action.fighterId, action.targetId);
   }
 
@@ -145,7 +144,7 @@ export function applyAction(state: GameState, action: GameAction): GameState {
 
 export function getFighterAt(state: GameState, q: number, r: number) {
   const id = occupiedBy(state, q, r);
-  return id ? state.components.fighters[id] : null;
+  return id;
 }
 
 export function getLegal(state: GameState): LegalAction[] {

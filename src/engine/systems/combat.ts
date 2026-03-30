@@ -1,19 +1,29 @@
 import { hexDistance, neighbors } from "../hex";
 import { rollD6 } from "../rng";
-import { isAlive, isBoardHex, objectiveOccupancy, occupiedBy } from "../state";
-import type { AttackDieFace, DiceFace, FighterEntity, GameState, SaveDieFace, TeamId } from "../types";
+import {
+  fighterCombat,
+  fighterHealth,
+  fighterName,
+  fighterPos,
+  fighterStatus,
+  fighterTeam,
+  isAlive,
+  isBoardHex,
+  objectiveOccupancy,
+  occupiedBy,
+} from "../state";
+import type { AttackDieFace, DiceFace, EntityId, GameState, SaveDieFace, TeamId } from "../types";
 
 function adjacentAlliesExcluding(
   state: GameState,
-  center: FighterEntity,
+  centerId: EntityId,
   team: TeamId,
-  excludeId: string,
+  excludeId: EntityId,
 ): number {
-  return neighbors(center.pos)
+  return neighbors(fighterPos(state, centerId))
     .map((h) => occupiedBy(state, h.q, h.r))
-    .filter((id) => id && id !== excludeId)
-    .map((id) => state.components.fighters[id as string])
-    .filter((f) => isAlive(f) && f.team === team).length;
+    .filter((id): id is EntityId => Boolean(id) && id !== excludeId)
+    .filter((id) => isAlive(state, id) && fighterTeam(state, id) === team).length;
 }
 
 function rollAttackFace(rngState: number): { state: number; face: AttackDieFace } {
@@ -39,7 +49,7 @@ function rollSaveFace(rngState: number): { state: number; face: SaveDieFace } {
 function countAttackSuccesses(
   dice: number,
   rngState: number,
-  attackTrait: FighterEntity["stats"]["attackTrait"],
+  attackTrait: "hammer" | "sword",
   supportEnabled: boolean,
   criticalSupportEnabled: boolean,
 ): { rngState: number; successes: number; crits: number; faces: DiceFace[] } {
@@ -47,6 +57,7 @@ function countAttackSuccesses(
   let successes = 0;
   let crits = 0;
   const faces: DiceFace[] = [];
+
   for (let i = 0; i < dice; i += 1) {
     const roll = rollAttackFace(state);
     state = roll.state;
@@ -65,13 +76,14 @@ function countAttackSuccesses(
 
     faces.push({ face: roll.face, result: isCrit ? "crit" : isMatch || isSupport || isCritSupport ? "success" : "fail" });
   }
+
   return { rngState: state, successes, crits, faces };
 }
 
 function countSaveSuccesses(
   dice: number,
   rngState: number,
-  saveTrait: FighterEntity["stats"]["saveTrait"],
+  saveTrait: "shield" | "dodge",
   supportEnabled: boolean,
   criticalSupportEnabled: boolean,
   guardEnabled: boolean,
@@ -105,87 +117,95 @@ function countSaveSuccesses(
   return { rngState: state, successes, crits, faces };
 }
 
-function driveBack(state: GameState, attackerId: string, targetId: string): void {
-  const attacker = state.components.fighters[attackerId];
-  const target = state.components.fighters[targetId];
-  const opts = neighbors(target.pos)
-    .filter((h) => hexDistance(h, attacker.pos) > hexDistance(target.pos, attacker.pos))
+function driveBack(state: GameState, attackerId: EntityId, targetId: EntityId): void {
+  const attackerPos = fighterPos(state, attackerId);
+  const targetPos = fighterPos(state, targetId);
+
+  const opts = neighbors(targetPos)
+    .filter((h) => hexDistance(h, attackerPos) > hexDistance(targetPos, attackerPos))
     .filter((h) => occupiedBy(state, h.q, h.r) === null)
     .filter((h) => isBoardHex(state, h.q, h.r));
+
   if (opts.length > 0) {
-    target.pos = opts[0];
+    fighterPos(state, targetId).q = opts[0].q;
+    fighterPos(state, targetId).r = opts[0].r;
   }
 }
 
-export function resolveAttack(state: GameState, attackerId: string, targetId: string): void {
-  const attacker = state.components.fighters[attackerId];
-  const target = state.components.fighters[targetId];
-  if (!isAlive(attacker) || !isAlive(target)) return;
+export function resolveAttack(state: GameState, attackerId: EntityId, targetId: EntityId): void {
+  if (!isAlive(state, attackerId) || !isAlive(state, targetId)) return;
 
-  const atkTeam = attacker.team;
-  const defTeam = target.team;
+  const atkTeam = fighterTeam(state, attackerId);
+  const defTeam = fighterTeam(state, targetId);
 
-  const flankAtk = adjacentAlliesExcluding(state, target, atkTeam, attackerId);
-  const flankDef = adjacentAlliesExcluding(state, attacker, defTeam, targetId);
+  const flankAtk = adjacentAlliesExcluding(state, targetId, atkTeam, attackerId);
+  const flankDef = adjacentAlliesExcluding(state, attackerId, defTeam, targetId);
 
   const targetFlanked = flankAtk >= 1;
   const targetSurrounded = flankAtk >= 2;
   const attackerFlanked = flankDef >= 1;
   const attackerSurrounded = flankDef >= 2;
 
-  const atkDice = attacker.stats.attackDice;
-  const defDice = target.stats.saveDice;
+  const attackerCombat = fighterCombat(state, attackerId);
+  const targetCombat = fighterCombat(state, targetId);
+  const targetStatus = fighterStatus(state, targetId);
 
   const atkRoll = countAttackSuccesses(
-    atkDice,
+    attackerCombat.attackDice,
     state.rngState,
-    attacker.stats.attackTrait,
+    attackerCombat.attackTrait,
     targetFlanked,
     targetSurrounded,
   );
+
   const defRoll = countSaveSuccesses(
-    defDice,
+    targetCombat.saveDice,
     atkRoll.rngState,
-    target.stats.saveTrait,
+    targetCombat.saveTrait,
     attackerFlanked,
     attackerSurrounded,
-    target.guard,
+    targetStatus.guard,
   );
+
   state.rngState = defRoll.rngState;
   state.diceRollEvent = {
     turn: state.turnInRound,
-    attackerName: attacker.name,
-    defenderName: target.name,
+    attackerName: fighterName(state, attackerId),
+    defenderName: fighterName(state, targetId),
     attackFaces: atkRoll.faces,
     defenseFaces: defRoll.faces,
   };
 
-  const atkTotal = atkRoll.successes + atkRoll.crits;
-  const defTotal = defRoll.successes + defRoll.crits;
+  const atkTotal = atkRoll.successes;
+  const defTotal = defRoll.successes;
 
   state.log.push({
     turn: state.turnInRound,
-    text: `${attacker.name} attacks ${target.name} (${atkTotal} vs ${defTotal})`,
+    text: `${fighterName(state, attackerId)} attacks ${fighterName(state, targetId)} (${atkTotal} vs ${defTotal})`,
   });
 
   if (atkTotal > defTotal) {
-    const damage = attacker.stats.attackDamage + attacker.nextAttackBonusDamage;
-    attacker.nextAttackBonusDamage = 0;
-    target.hp -= damage;
+    const damage = attackerCombat.attackDamage + attackerCombat.nextAttackBonusDamage;
+    attackerCombat.nextAttackBonusDamage = 0;
+
+    const targetHealth = fighterHealth(state, targetId);
+    targetHealth.hp -= damage;
+
     state.teams[atkTeam].roundSuccessfulAttacks += 1;
     state.log.push({ turn: state.turnInRound, text: `Hit for ${damage} damage` });
-    if (target.hp <= 0) {
+
+    if (targetHealth.hp <= 0) {
       state.teams[atkTeam].roundTakedowns += 1;
-      state.log.push({ turn: state.turnInRound, text: `${target.name} is taken down` });
-    } else {
-      if (!target.guard) driveBack(state, attackerId, targetId);
+      state.log.push({ turn: state.turnInRound, text: `${fighterName(state, targetId)} is taken down` });
+    } else if (!targetStatus.guard) {
+      driveBack(state, attackerId, targetId);
     }
   } else if (atkTotal === defTotal) {
-    if (!target.guard) driveBack(state, attackerId, targetId);
-    attacker.nextAttackBonusDamage = 0;
+    if (!targetStatus.guard) driveBack(state, attackerId, targetId);
+    attackerCombat.nextAttackBonusDamage = 0;
     state.log.push({ turn: state.turnInRound, text: "Drawn attack" });
   } else {
-    attacker.nextAttackBonusDamage = 0;
+    attackerCombat.nextAttackBonusDamage = 0;
     state.log.push({ turn: state.turnInRound, text: "Attack failed" });
   }
 

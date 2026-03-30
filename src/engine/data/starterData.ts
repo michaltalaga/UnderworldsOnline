@@ -135,9 +135,6 @@ const emberguard: WarbandData = {
         saveDice: 1,
         saveTrait: "shield",
       },
-      guard: false,
-      charged: false,
-      nextAttackBonusDamage: 0,
     },
     {
       id: "blade",
@@ -154,9 +151,6 @@ const emberguard: WarbandData = {
         saveDice: 1,
         saveTrait: "dodge",
       },
-      guard: false,
-      charged: false,
-      nextAttackBonusDamage: 0,
     },
     {
       id: "marksman",
@@ -173,9 +167,6 @@ const emberguard: WarbandData = {
         saveDice: 1,
         saveTrait: "dodge",
       },
-      guard: false,
-      charged: false,
-      nextAttackBonusDamage: 0,
     },
   ],
 };
@@ -198,9 +189,6 @@ const duskraiders: WarbandData = {
         saveDice: 1,
         saveTrait: "shield",
       },
-      guard: false,
-      charged: false,
-      nextAttackBonusDamage: 0,
     },
     {
       id: "hound",
@@ -217,9 +205,6 @@ const duskraiders: WarbandData = {
         saveDice: 1,
         saveTrait: "dodge",
       },
-      guard: false,
-      charged: false,
-      nextAttackBonusDamage: 0,
     },
     {
       id: "shade",
@@ -236,9 +221,6 @@ const duskraiders: WarbandData = {
         saveDice: 1,
         saveTrait: "shield",
       },
-      guard: false,
-      charged: false,
-      nextAttackBonusDamage: 0,
     },
   ],
 };
@@ -276,12 +258,12 @@ export function opposingRivalsDeckId(id: RivalsDeckId): RivalsDeckId {
 
 export function rivalsObjectiveDeckById(id: RivalsDeckId): ObjectiveCard[] {
   const data = rivalsDecksById[id];
-  return data.objectives.map((c, i) => ({ ...c, id: `${id}-obj-${i}` }));
+  return data.objectives.map((c) => ({ ...c }));
 }
 
 export function rivalsPowerDeckById(id: RivalsDeckId): PowerCard[] {
   const data = rivalsDecksById[id];
-  return data.power.map((c, i) => ({ ...c, id: `${id}-pow-${i}` }));
+  return data.power.map((c) => ({ ...c }));
 }
 
 export function starterWarband(team: TeamId): WarbandData {

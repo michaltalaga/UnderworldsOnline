@@ -60,24 +60,28 @@ export function Board({ state, selectedFighterId, onSelectFighter }: BoardProps)
           })}
         </svg>
 
-        {Object.values(state.components.fighters)
-          .filter((f) => f.hp > 0)
-          .map((f) => {
-            const p = toPixel(f.pos.q, f.pos.r);
-            const selected = selectedFighterId === f.id;
+        {Object.keys(state.components.fighter)
+          .filter((id) => state.components.health[id].hp > 0)
+          .map((id) => {
+            const p = toPixel(state.components.position[id].pos.q, state.components.position[id].pos.r);
+            const selected = selectedFighterId === id;
+            const team = state.components.fighter[id].team;
+            const name = state.components.name[id].value;
+            const hp = state.components.health[id].hp;
+            const maxHp = state.components.health[id].maxHp;
             return (
               <button
-                key={f.id}
-                className={`fighter ${f.team} ${selected ? "selected" : ""}`}
+                key={id}
+                className={`fighter ${team} ${selected ? "selected" : ""}`}
                 style={{
                   left: `${(p.x / BOARD_WIDTH) * 100}%`,
                   top: `${(p.y / BOARD_HEIGHT) * 100}%`,
                 }}
-                onClick={() => onSelectFighter(selected ? null : f.id)}
-                title={`${f.name} (${f.hp}/${f.stats.maxHp})`}
+                onClick={() => onSelectFighter(selected ? null : id)}
+                title={`${name} (${hp}/${maxHp})`}
               >
-                <span className="name">{f.name}</span>
-                <span className="hp">{f.hp}</span>
+                <span className="name">{name}</span>
+                <span className="hp">{hp}</span>
               </button>
             );
           })}

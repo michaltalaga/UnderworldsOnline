@@ -1,44 +1,58 @@
 import { hexDistance } from "../hex";
-import { objectiveOccupancy, occupiedBy } from "../state";
+import {
+  cardById,
+  fighterCombat,
+  fighterHealth,
+  fighterName,
+  fighterPos,
+  fighterTeam,
+  isAlive,
+  moveCardEntityToZone,
+  objectiveOccupancy,
+  occupiedBy,
+} from "../state";
 import type { GameState, PlayPowerCardAction } from "../types";
 
 function removeCardFromHand(state: GameState, team: "red" | "blue", cardId: string) {
-  const idx = state.teams[team].powerHand.findIndex((c) => c.id === cardId);
-  if (idx < 0) return null;
-  const [card] = state.teams[team].powerHand.splice(idx, 1);
-  state.teams[team].discardPower.push(card);
+  const card = cardById(state, cardId);
+  if (!card) return null;
+  if (card.owner !== team || card.zone !== "power-hand") return null;
+
+  moveCardEntityToZone(state, cardId, "power-discard");
   return card;
 }
 
 export function resolvePowerCard(state: GameState, action: PlayPowerCardAction): void {
   const team = action.actorTeam;
   const card = removeCardFromHand(state, team, action.cardId);
-  if (!card) return;
+  if (!card || card.kind !== "power" || !card.powerType) return;
 
-  if (card.type === "ferocious-strike" && action.fighterId) {
-    const fighter = state.components.fighters[action.fighterId];
-    if (fighter && fighter.team === team && fighter.hp > 0) {
-      fighter.nextAttackBonusDamage += 1;
-      state.log.push({ turn: state.turnInRound, text: `${fighter.name} gains +1 damage on next attack` });
+  if (card.powerType === "ferocious-strike" && action.fighterId) {
+    const fighterId = action.fighterId;
+    if (fighterTeam(state, fighterId) === team && isAlive(state, fighterId)) {
+      fighterCombat(state, fighterId).nextAttackBonusDamage += 1;
+      state.log.push({ turn: state.turnInRound, text: `${fighterName(state, fighterId)} gains +1 damage on next attack` });
     }
   }
 
-  if (card.type === "healing-potion" && action.fighterId) {
-    const fighter = state.components.fighters[action.fighterId];
-    if (fighter && fighter.team === team && fighter.hp > 0) {
-      fighter.hp = Math.min(fighter.stats.maxHp, fighter.hp + 1);
-      state.log.push({ turn: state.turnInRound, text: `${fighter.name} heals 1` });
+  if (card.powerType === "healing-potion" && action.fighterId) {
+    const fighterId = action.fighterId;
+    if (fighterTeam(state, fighterId) === team && isAlive(state, fighterId)) {
+      const health = fighterHealth(state, fighterId);
+      health.hp = Math.min(health.maxHp, health.hp + 1);
+      state.log.push({ turn: state.turnInRound, text: `${fighterName(state, fighterId)} heals 1` });
     }
   }
 
-  if (card.type === "sidestep" && action.fighterId && action.targetHex) {
-    const fighter = state.components.fighters[action.fighterId];
-    if (fighter && fighter.team === team && fighter.hp > 0) {
+  if (card.powerType === "sidestep" && action.fighterId && action.targetHex) {
+    const fighterId = action.fighterId;
+    if (fighterTeam(state, fighterId) === team && isAlive(state, fighterId)) {
       const occupied = occupiedBy(state, action.targetHex.q, action.targetHex.r);
-      const dist = hexDistance(fighter.pos, action.targetHex);
+      const dist = hexDistance(fighterPos(state, fighterId), action.targetHex);
       if (dist === 1 && occupied === null) {
-        fighter.pos = action.targetHex;
-        state.log.push({ turn: state.turnInRound, text: `${fighter.name} sidesteps` });
+        fighterPos(state, fighterId).q = action.targetHex.q;
+        fighterPos(state, fighterId).r = action.targetHex.r;
+        state.log.push({ turn: state.turnInRound, text: `${fighterName(state, fighterId)} sidesteps` });
       }
     }
   }

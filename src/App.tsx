@@ -58,17 +58,18 @@ function App() {
   };
 
   const firstAliveActiveTeam = useMemo(
-    () => state.teams[state.activeTeam].fighters.find((id) => state.components.fighters[id].hp > 0) ?? null,
+    () =>
+      state.teams[state.activeTeam].fighterEntities.find((id) => state.components.health[id].hp > 0) ?? null,
     [state],
   );
 
   const selectedIsActiveTeam =
-    selectedFighterId !== null && state.components.fighters[selectedFighterId]?.team === state.activeTeam;
+    selectedFighterId !== null && state.components.fighter[selectedFighterId]?.team === state.activeTeam;
 
   const effectiveSelectedFighterId =
     !showAllActions &&
     selectedFighterId &&
-    state.components.fighters[selectedFighterId]?.hp > 0 &&
+    state.components.health[selectedFighterId]?.hp > 0 &&
     selectedIsActiveTeam
       ? selectedFighterId
       : !showAllActions
@@ -102,7 +103,11 @@ function App() {
   }, [visibleActions]);
 
   const selectedFighter = effectiveSelectedFighterId
-    ? state.components.fighters[effectiveSelectedFighterId]
+    ? {
+        name: state.components.name[effectiveSelectedFighterId].value,
+        hp: state.components.health[effectiveSelectedFighterId].hp,
+        maxHp: state.components.health[effectiveSelectedFighterId].maxHp,
+      }
     : null;
 
   const handleSelectFighter = (id: string | null) => {
@@ -111,7 +116,7 @@ function App() {
       return;
     }
 
-    const fighter = state.components.fighters[id];
+    const fighter = state.components.fighter[id];
     if (!showAllActions && fighter.team !== state.activeTeam) {
       return;
     }
@@ -191,7 +196,7 @@ function App() {
 
                 {!showAllActions && selectedFighter && (
                   <div className="focus-box">
-                    Focus: <strong>{selectedFighter.name}</strong> ({selectedFighter.hp}/{selectedFighter.stats.maxHp} HP)
+                    Focus: <strong>{selectedFighter.name}</strong> ({selectedFighter.hp}/{selectedFighter.maxHp} HP)
                   </div>
                 )}
 
