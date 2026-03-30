@@ -5,6 +5,7 @@ import type { LegalAction } from "./engine/types";
 import type { RivalsDeckId, WarbandId } from "./engine/data/starterData";
 import { Board } from "./ui/Board";
 import { DeckPicker } from "./ui/DeckPicker";
+import { DiceTray } from "./ui/DiceTray";
 import { EventLog } from "./ui/EventLog";
 import { HandPanel } from "./ui/HandPanel";
 import { Hud } from "./ui/Hud";
@@ -175,6 +176,8 @@ function App() {
             </section>
 
             <aside className="side-col">
+              <DiceTray event={state.diceRollEvent} />
+
               <div className="panel action-panel">
                 <h3>Actions ({state.activeTeam})</h3>
                 <label className="toggle-row">

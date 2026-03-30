@@ -1,7 +1,7 @@
 import { hexDistance, neighbors } from "../hex";
 import { rollD6 } from "../rng";
 import { isAlive, isBoardHex, objectiveOccupancy, occupiedBy } from "../state";
-import type { FighterEntity, GameState, TeamId } from "../types";
+import type { DiceFace, FighterEntity, GameState, TeamId } from "../types";
 
 function adjacentAlliesExcluding(
   state: GameState,
@@ -16,17 +16,26 @@ function adjacentAlliesExcluding(
     .filter((f) => isAlive(f) && f.team === team).length;
 }
 
-function countSuccesses(dice: number, rngState: number): { rngState: number; successes: number; crits: number } {
+function countSuccesses(
+  dice: number,
+  rngState: number,
+): { rngState: number; successes: number; crits: number; faces: DiceFace[] } {
   let state = rngState;
   let successes = 0;
   let crits = 0;
+  const faces: DiceFace[] = [];
   for (let i = 0; i < dice; i += 1) {
     const roll = rollD6(state);
     state = roll.state;
     if (roll.value >= 4) successes += 1;
     if (roll.value === 6) crits += 1;
+
+    faces.push({
+      value: roll.value,
+      result: roll.value === 6 ? "crit" : roll.value >= 4 ? "success" : "fail",
+    });
   }
-  return { rngState: state, successes, crits };
+  return { rngState: state, successes, crits, faces };
 }
 
 function driveBack(state: GameState, attackerId: string, targetId: string): void {
@@ -58,6 +67,13 @@ export function resolveAttack(state: GameState, attackerId: string, targetId: st
   const atkRoll = countSuccesses(atkDice, state.rngState);
   const defRoll = countSuccesses(defDice, atkRoll.rngState);
   state.rngState = defRoll.rngState;
+  state.diceRollEvent = {
+    turn: state.turnInRound,
+    attackerName: attacker.name,
+    defenderName: target.name,
+    attackFaces: atkRoll.faces,
+    defenseFaces: defRoll.faces,
+  };
 
   const atkTotal = atkRoll.successes + atkRoll.crits;
   const defTotal = defRoll.successes + defRoll.crits;

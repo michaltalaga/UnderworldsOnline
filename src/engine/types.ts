@@ -71,6 +71,19 @@ export type EventLogEntry = {
   text: string;
 };
 
+export type DiceFace = {
+  value: number;
+  result: "crit" | "success" | "fail";
+};
+
+export type DiceRollEvent = {
+  turn: number;
+  attackerName: string;
+  defenderName: string;
+  attackFaces: DiceFace[];
+  defenseFaces: DiceFace[];
+};
+
 export type GameState = {
   seed: number;
   rngState: number;
@@ -85,6 +98,7 @@ export type GameState = {
   boardHexes: Hex[];
   objectiveHexes: Hex[];
   occupiedObjectives: Record<string, string | null>;
+  diceRollEvent: DiceRollEvent | null;
   components: Components;
   teams: Record<TeamId, TeamState>;
   log: EventLogEntry[];

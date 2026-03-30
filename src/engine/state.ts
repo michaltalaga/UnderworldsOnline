@@ -110,6 +110,7 @@ export function initialState(
     boardHexes: createBoardHexes(),
     objectiveHexes: [{ q: 0, r: 0 }, { q: -1, r: 0 }, { q: 1, r: 0 }],
     occupiedObjectives: {},
+    diceRollEvent: null,
     components: {
       fighters: allFighters,
     },

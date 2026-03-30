@@ -271,6 +271,57 @@
   font-size: 0.86rem;
 }
 
+.dice-tray {
+  background: linear-gradient(160deg, #fff8ec, #fff2df);
+}
+
+.dice-caption {
+  margin: 0.2rem 0 0.45rem;
+  font-size: 0.8rem;
+  color: #5b4f4a;
+}
+
+.dice-row {
+  margin-bottom: 0.45rem;
+}
+
+.dice-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 0.28rem;
+}
+
+.die {
+  aspect-ratio: 1;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  border: 1px solid rgba(20, 17, 15, 0.2);
+  font-size: 0.84rem;
+}
+
+.die.fail {
+  background: #ffe4e6;
+  color: #9f1239;
+}
+
+.die.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.die.crit {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.die.empty {
+  background: #f7efe0;
+  border-style: dashed;
+  color: transparent;
+}
+
 .deck-section {
   border: 1px solid rgba(20, 17, 15, 0.12);
   border-radius: 10px;
