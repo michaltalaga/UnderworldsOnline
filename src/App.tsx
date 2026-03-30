@@ -10,6 +10,14 @@ import { Hud } from "./ui/Hud";
 import { WarbandPicker } from "./ui/WarbandPicker";
 import "./App.css";
 
+const WAR_BAND_STORAGE_KEY = "underworlds:selected-warband";
+
+function readSavedWarband(): WarbandId {
+  if (typeof window === "undefined") return "emberguard";
+  const saved = window.localStorage.getItem(WAR_BAND_STORAGE_KEY);
+  return saved === "duskraiders" ? "duskraiders" : "emberguard";
+}
+
 function actionReferencesFighter(action: LegalAction, fighterId: string): boolean {
   const a = action.action;
   return (
@@ -20,11 +28,16 @@ function actionReferencesFighter(action: LegalAction, fighterId: string): boolea
 }
 
 function App() {
-  const [playerWarbandId, setPlayerWarbandId] = useState<WarbandId>("emberguard");
+  const [playerWarbandId, setPlayerWarbandId] = useState<WarbandId>(() => readSavedWarband());
   const [matchStarted, setMatchStarted] = useState(false);
   const { state, legal, dispatch, mode, reset } = useGame(playerWarbandId);
   const [selectedFighterId, setSelectedFighterId] = useState<string | null>(null);
   const [showAllActions, setShowAllActions] = useState(false);
+
+  const handleWarbandSelect = (id: WarbandId) => {
+    setPlayerWarbandId(id);
+    window.localStorage.setItem(WAR_BAND_STORAGE_KEY, id);
+  };
 
   const firstAliveActiveTeam = useMemo(
     () => state.teams[state.activeTeam].fighters.find((id) => state.components.fighters[id].hp > 0) ?? null,
@@ -101,7 +114,7 @@ function App() {
         <WarbandPicker
           options={starterWarbandOptions}
           selectedId={playerWarbandId}
-          onSelect={setPlayerWarbandId}
+          onSelect={handleWarbandSelect}
           onStart={() => setMatchStarted(true)}
         />
       )}
@@ -111,6 +124,19 @@ function App() {
       {matchStarted && (
         <>
           <Hud state={state} mode={mode} />
+
+          <div className="match-controls">
+            <button
+              type="button"
+              onClick={() => {
+                reset();
+                setSelectedFighterId(null);
+                setShowAllActions(false);
+              }}
+            >
+              Restart Match
+            </button>
+          </div>
 
           {state.winner && (
             <div className="winner-banner">

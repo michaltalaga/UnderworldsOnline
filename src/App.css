@@ -50,6 +50,20 @@
   background: #fef3c7;
 }
 
+.match-controls {
+  margin-bottom: 0.8rem;
+}
+
+.match-controls button {
+  border: 1px solid #14532d;
+  background: #15803d;
+  color: #fff;
+  border-radius: 9px;
+  padding: 0.35rem 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .winner-banner {
   margin: 0.8rem 0;
   padding: 0.65rem 0.85rem;
