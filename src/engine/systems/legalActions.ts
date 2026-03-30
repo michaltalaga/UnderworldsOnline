@@ -1,11 +1,11 @@
 import { boardCoordLabel } from "../coords";
 import { hexDistance, neighbors } from "../hex";
 import {
-  cardEntityIdsInZone,
+  cardIdsInZone,
   cardName,
   cardPowerType,
   fighterCombat,
-  fighterEntityIds,
+  fighterIds,
   fighterHealth,
   fighterName,
   fighterPos,
@@ -15,15 +15,15 @@ import {
   occupiedBy,
 } from "../state";
 import { canStartMulligan, isMulliganPending } from "./mulligan";
-import type { EntityId, GameAction, GameState, Hex, LegalAction, TeamId } from "../types";
+import type { FighterId, GameAction, GameState, Hex, LegalAction, TeamId } from "../types";
 
-function aliveTeamFighters(state: GameState, team: TeamId): EntityId[] {
-  return fighterEntityIds(state, team).filter((id) => isAlive(state, id));
+function aliveTeamFighters(state: GameState, team: TeamId): FighterId[] {
+  return fighterIds(state, team).filter((id) => isAlive(state, id));
 }
 
-function enemiesInRange(state: GameState, fighterId: EntityId, from = fighterPos(state, fighterId)): EntityId[] {
+function enemiesInRange(state: GameState, fighterId: FighterId, from = fighterPos(state, fighterId)): FighterId[] {
   const attackRange = fighterCombat(state, fighterId).attackRange;
-  return fighterEntityIds(state).filter((otherId) => {
+  return fighterIds(state).filter((otherId) => {
     if (otherId === fighterId) return false;
     if (!isAlive(state, otherId)) return false;
     if (fighterTeam(state, otherId) === fighterTeam(state, fighterId)) return false;
@@ -36,7 +36,7 @@ function allFriendlyCharged(state: GameState, team: TeamId): boolean {
   return alive.length > 0 && alive.every((id) => fighterStatus(state, id).charged);
 }
 
-function legalMoves(state: GameState, fighterId: EntityId): Hex[] {
+function legalMoves(state: GameState, fighterId: FighterId): Hex[] {
   const from = fighterPos(state, fighterId);
   const move = fighterCombat(state, fighterId).move;
   return state.boardHexes
@@ -114,7 +114,7 @@ export function getLegalActions(state: GameState, team: TeamId): LegalAction[] {
     return out;
   }
 
-  const hand = cardEntityIdsInZone(state, team, "power-hand");
+  const hand = cardIdsInZone(state, team, "power-hand");
   hand.forEach((cardId) => {
     const powerType = cardPowerType(state, cardId);
     if (!powerType) return;

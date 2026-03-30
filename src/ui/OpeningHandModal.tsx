@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { cardEntityIdsInZone } from "../engine/state";
+import { cardIdsInZone } from "../engine/state";
 import type { GameAction, GameState } from "../engine/types";
 import { CardTile } from "./CardTile";
 
@@ -18,10 +18,10 @@ function cardList(state: GameState, cardIds: string[], emptyLabel: string) {
 
 export function OpeningHandModal({ state, onDispatch }: OpeningHandModalProps) {
   const [isResolvingMulligan, setIsResolvingMulligan] = useState(false);
-  const objectiveHand = cardEntityIdsInZone(state, "red", "objective-hand");
-  const powerHand = cardEntityIdsInZone(state, "red", "power-hand");
-  const objectiveTemp = cardEntityIdsInZone(state, "red", "objective-temp-discard");
-  const powerTemp = cardEntityIdsInZone(state, "red", "power-temp-discard");
+  const objectiveHand = cardIdsInZone(state, "red", "objective-hand");
+  const powerHand = cardIdsInZone(state, "red", "power-hand");
+  const objectiveTemp = cardIdsInZone(state, "red", "objective-temp-discard");
+  const powerTemp = cardIdsInZone(state, "red", "power-temp-discard");
   const mulliganPending = objectiveTemp.length > 0 || powerTemp.length > 0;
   const canChooseMulligan =
     state.round === 1 &&

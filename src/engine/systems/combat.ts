@@ -12,17 +12,17 @@ import {
   objectiveOccupancy,
   occupiedBy,
 } from "../state";
-import type { AttackDieFace, DiceFace, EntityId, GameState, SaveDieFace, TeamId } from "../types";
+import type { AttackDieFace, DiceFace, FighterId, GameState, SaveDieFace, TeamId } from "../types";
 
 function adjacentAlliesExcluding(
   state: GameState,
-  centerId: EntityId,
+  centerId: FighterId,
   team: TeamId,
-  excludeId: EntityId,
+  excludeId: FighterId,
 ): number {
   return neighbors(fighterPos(state, centerId))
     .map((h) => occupiedBy(state, h.q, h.r))
-    .filter((id): id is EntityId => Boolean(id) && id !== excludeId)
+    .filter((id): id is FighterId => Boolean(id) && id !== excludeId)
     .filter((id) => isAlive(state, id) && fighterTeam(state, id) === team).length;
 }
 
@@ -117,7 +117,7 @@ function countSaveSuccesses(
   return { rngState: state, successes, crits, faces };
 }
 
-function driveBack(state: GameState, attackerId: EntityId, targetId: EntityId): void {
+function driveBack(state: GameState, attackerId: FighterId, targetId: FighterId): void {
   const attackerPos = fighterPos(state, attackerId);
   const targetPos = fighterPos(state, targetId);
 
@@ -132,7 +132,7 @@ function driveBack(state: GameState, attackerId: EntityId, targetId: EntityId): 
   }
 }
 
-export function resolveAttack(state: GameState, attackerId: EntityId, targetId: EntityId): void {
+export function resolveAttack(state: GameState, attackerId: FighterId, targetId: FighterId): void {
   if (!isAlive(state, attackerId) || !isAlive(state, targetId)) return;
 
   const atkTeam = fighterTeam(state, attackerId);

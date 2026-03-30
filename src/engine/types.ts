@@ -1,4 +1,6 @@
-export type EntityId = string;
+import type { Card, CardId, Fighter, PlayerAreas } from "./model";
+
+export type FighterId = string;
 
 export type TeamId = "red" | "blue";
 export type TurnStep = "action" | "power";
@@ -48,63 +50,6 @@ export type WarbandData = {
   fighters: FighterArchetype[];
 };
 
-export type Entity = {
-  id: EntityId;
-  components: Component[];
-};
-
-export type Component =
-  | FighterComponent
-  | NameComponent
-  | PositionComponent
-  | HealthComponent
-  | CombatComponent
-  | StatusComponent
-  | CardOwnerComponent
-  | CardZoneComponent
-  | ObjectiveCardComponent
-  | PowerCardComponent
-  | GloryComponent;
-
-export type FighterComponent = {
-  type: "fighter";
-  team: TeamId;
-};
-
-export type NameComponent = {
-  type: "name";
-  value: string;
-};
-
-export type PositionComponent = {
-  type: "position";
-  pos: Hex;
-};
-
-export type HealthComponent = {
-  type: "health";
-  hp: number;
-  maxHp: number;
-};
-
-export type CombatComponent = {
-  type: "combat";
-  move: number;
-  attackDice: number;
-  attackTrait: AttackTrait;
-  attackRange: number;
-  attackDamage: number;
-  saveDice: number;
-  saveTrait: SaveTrait;
-  nextAttackBonusDamage: number;
-};
-
-export type StatusComponent = {
-  type: "status";
-  guard: boolean;
-  charged: boolean;
-};
-
 export type CardZone =
   | "objective-deck"
   | "objective-hand"
@@ -116,47 +61,9 @@ export type CardZone =
   | "power-discard"
   | "power-temp-discard";
 
-export type CardOwnerComponent = {
-  type: "cardOwner";
-  owner: TeamId;
-};
-
-export type CardZoneComponent = {
-  type: "cardZone";
-  zone: CardZone;
-};
-
-export type ObjectiveCardComponent = {
-  type: "objectiveCard";
-  cardType: ObjectiveCardType;
-};
-
-export type PowerCardComponent = {
-  type: "powerCard";
-  cardType: PowerCardType;
-};
-
-export type GloryComponent = {
-  type: "glory";
-  value: number;
-};
-
-export type ComponentType =
-  | "fighter"
-  | "name"
-  | "position"
-  | "health"
-  | "combat"
-  | "status"
-  | "cardOwner"
-  | "cardZone"
-  | "objectiveCard"
-  | "powerCard"
-  | "glory";
-
 export type TeamState = {
   glory: number;
-  fighterEntities: EntityId[];
+  fighterIds: FighterId[];
   mulliganUsed: boolean;
   roundTakedowns: number;
   roundSuccessfulAttacks: number;
@@ -195,7 +102,9 @@ export type GameState = {
   objectiveHexes: Hex[];
   occupiedObjectives: Record<string, string | null>;
   diceRollEvent: DiceRollEvent | null;
-  entities: Record<EntityId, Entity>;
+  fighters: Record<FighterId, Fighter>;
+  cards: Record<CardId, Card>;
+  areas: Record<TeamId, PlayerAreas>;
   teams: Record<TeamId, TeamState>;
   log: EventLogEntry[];
 };
@@ -204,32 +113,32 @@ export type ActionBase = { actorTeam: TeamId };
 
 export type MoveAction = ActionBase & {
   type: "move";
-  fighterId: EntityId;
+  fighterId: FighterId;
   to: Hex;
 };
 
 export type GuardAction = ActionBase & {
   type: "guard";
-  fighterId: EntityId;
+  fighterId: FighterId;
 };
 
 export type AttackAction = ActionBase & {
   type: "attack";
-  attackerId: EntityId;
-  targetId: EntityId;
+  attackerId: FighterId;
+  targetId: FighterId;
 };
 
 export type ChargeAction = ActionBase & {
   type: "charge";
-  fighterId: EntityId;
+  fighterId: FighterId;
   to: Hex;
-  targetId: EntityId;
+  targetId: FighterId;
 };
 
 export type PlayPowerCardAction = ActionBase & {
   type: "play-power";
-  cardId: EntityId;
-  fighterId?: EntityId;
+  cardId: CardId;
+  fighterId?: FighterId;
   targetHex?: Hex;
 };
 

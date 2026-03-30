@@ -1,12 +1,12 @@
 import { nextRng } from "../rng";
-import { cardEntityIdsInZone, moveCardEntityToZone } from "../state";
-import type { EntityId, GameState, TeamId } from "../types";
+import { cardIdsInZone, moveCardToZone } from "../state";
+import type { GameState, TeamId } from "../types";
 
 function canMulliganWindow(state: GameState): boolean {
   return state.round === 1 && state.turnInRound === 1;
 }
 
-function shuffleEntityIds(ids: EntityId[], seed: number): { seed: number; result: EntityId[] } {
+function shuffleCardIds(ids: string[], seed: number): { seed: number; result: string[] } {
   const out = [...ids];
   let state = seed;
   for (let i = out.length - 1; i > 0; i -= 1) {
@@ -19,25 +19,25 @@ function shuffleEntityIds(ids: EntityId[], seed: number): { seed: number; result
 }
 
 function drawObjectivesToThree(state: GameState, team: TeamId): void {
-  const hand = cardEntityIdsInZone(state, team, "objective-hand");
+  const hand = cardIdsInZone(state, team, "objective-hand");
   if (hand.length >= 3) return;
-  const deck = cardEntityIdsInZone(state, team, "objective-deck");
+  const deck = cardIdsInZone(state, team, "objective-deck");
   const toDraw = Math.min(3 - hand.length, deck.length);
-  deck.slice(0, toDraw).forEach((cardId) => moveCardEntityToZone(state, cardId, "objective-hand"));
+  deck.slice(0, toDraw).forEach((cardId) => moveCardToZone(state, cardId, "objective-hand"));
 }
 
 function drawPowerToFive(state: GameState, team: TeamId): void {
-  const hand = cardEntityIdsInZone(state, team, "power-hand");
+  const hand = cardIdsInZone(state, team, "power-hand");
   if (hand.length >= 5) return;
-  const deck = cardEntityIdsInZone(state, team, "power-deck");
+  const deck = cardIdsInZone(state, team, "power-deck");
   const toDraw = Math.min(5 - hand.length, deck.length);
-  deck.slice(0, toDraw).forEach((cardId) => moveCardEntityToZone(state, cardId, "power-hand"));
+  deck.slice(0, toDraw).forEach((cardId) => moveCardToZone(state, cardId, "power-hand"));
 }
 
 export function isMulliganPending(state: GameState, team: TeamId): boolean {
   return (
-    cardEntityIdsInZone(state, team, "objective-temp-discard").length > 0 ||
-    cardEntityIdsInZone(state, team, "power-temp-discard").length > 0
+    cardIdsInZone(state, team, "objective-temp-discard").length > 0 ||
+    cardIdsInZone(state, team, "power-temp-discard").length > 0
   );
 }
 
@@ -53,14 +53,14 @@ export function startMulligan(state: GameState, team: TeamId, options: { objecti
   if (!options.objective && !options.power) return;
 
   if (options.objective) {
-    cardEntityIdsInZone(state, team, "objective-hand").forEach((cardId) =>
-      moveCardEntityToZone(state, cardId, "objective-temp-discard"),
+    cardIdsInZone(state, team, "objective-hand").forEach((cardId) =>
+      moveCardToZone(state, cardId, "objective-temp-discard"),
     );
   }
 
   if (options.power) {
-    cardEntityIdsInZone(state, team, "power-hand").forEach((cardId) =>
-      moveCardEntityToZone(state, cardId, "power-temp-discard"),
+    cardIdsInZone(state, team, "power-hand").forEach((cardId) =>
+      moveCardToZone(state, cardId, "power-temp-discard"),
     );
   }
 }
@@ -71,20 +71,20 @@ export function resolveMulligan(state: GameState, team: TeamId): void {
   drawObjectivesToThree(state, team);
   drawPowerToFive(state, team);
 
-  const objectiveDeck = cardEntityIdsInZone(state, team, "objective-deck");
-  const objectiveTemp = cardEntityIdsInZone(state, team, "objective-temp-discard");
+  const objectiveDeck = cardIdsInZone(state, team, "objective-deck");
+  const objectiveTemp = cardIdsInZone(state, team, "objective-temp-discard");
   if (objectiveTemp.length > 0) {
-    const shuffled = shuffleEntityIds([...objectiveDeck, ...objectiveTemp], state.rngState);
+    const shuffled = shuffleCardIds([...objectiveDeck, ...objectiveTemp], state.rngState);
     state.rngState = shuffled.seed;
-    shuffled.result.forEach((cardId) => moveCardEntityToZone(state, cardId, "objective-deck"));
+    shuffled.result.forEach((cardId) => moveCardToZone(state, cardId, "objective-deck"));
   }
 
-  const powerDeck = cardEntityIdsInZone(state, team, "power-deck");
-  const powerTemp = cardEntityIdsInZone(state, team, "power-temp-discard");
+  const powerDeck = cardIdsInZone(state, team, "power-deck");
+  const powerTemp = cardIdsInZone(state, team, "power-temp-discard");
   if (powerTemp.length > 0) {
-    const shuffled = shuffleEntityIds([...powerDeck, ...powerTemp], state.rngState);
+    const shuffled = shuffleCardIds([...powerDeck, ...powerTemp], state.rngState);
     state.rngState = shuffled.seed;
-    shuffled.result.forEach((cardId) => moveCardEntityToZone(state, cardId, "power-deck"));
+    shuffled.result.forEach((cardId) => moveCardToZone(state, cardId, "power-deck"));
   }
 
   state.teams[team].mulliganUsed = true;

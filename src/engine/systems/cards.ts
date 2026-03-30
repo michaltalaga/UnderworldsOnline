@@ -1,6 +1,6 @@
 import { hexDistance } from "../hex";
 import {
-  cardEntityIdsInZone,
+  cardIdsInZone,
   cardName,
   cardPowerType,
   fighterCombat,
@@ -9,17 +9,17 @@ import {
   fighterPos,
   fighterTeam,
   isAlive,
-  moveCardEntityToZone,
+  moveCardToZone,
   objectiveOccupancy,
   occupiedBy,
 } from "../state";
 import type { GameState, PlayPowerCardAction } from "../types";
 
 function removeCardFromHand(state: GameState, team: "red" | "blue", cardId: string) {
-  const inHand = cardEntityIdsInZone(state, team, "power-hand").includes(cardId);
+  const inHand = cardIdsInZone(state, team, "power-hand").includes(cardId);
   if (!inHand) return null;
 
-  moveCardEntityToZone(state, cardId, "power-discard");
+  moveCardToZone(state, cardId, "power-discard");
   return cardId;
 }
 

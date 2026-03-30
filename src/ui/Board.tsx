@@ -1,4 +1,4 @@
-import { boardHexes, entityIdsWithComponents, fighterHealth, fighterName, fighterPos, fighterTeam } from "../engine/state";
+import { boardHexes, fighterHealth, fighterIds, fighterName, fighterPos, fighterTeam } from "../engine/state";
 import { hexKey } from "../engine/hex";
 import { qStartForR, rowCountForR } from "../engine/boardShape";
 import { boardCoordLabel } from "../engine/coords";
@@ -60,7 +60,7 @@ export function Board({ state, selectedFighterId, onSelectFighter }: BoardProps)
           })}
         </svg>
 
-        {entityIdsWithComponents(state, ["fighter", "health", "position", "name"])
+        {fighterIds(state)
           .filter((id) => fighterHealth(state, id).hp > 0)
           .map((id) => {
             const pos = fighterPos(state, id);

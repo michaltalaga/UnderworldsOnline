@@ -1,5 +1,5 @@
 import type { GameAction, GameState } from "../engine/types";
-import { cardEntityIdsInZone } from "../engine/state";
+import { cardIdsInZone } from "../engine/state";
 import { CardTile } from "./CardTile";
 
 type HandPanelProps = {
@@ -36,25 +36,25 @@ function DeckTrack({
 export function HandPanel({ state, onDispatch }: HandPanelProps) {
   const myTeam = state.teams.red;
 
-  const myObjectiveDeck = cardEntityIdsInZone(state, "red", "objective-deck");
-  const myObjectiveHand = cardEntityIdsInZone(state, "red", "objective-hand");
-  const myObjectiveDiscard = cardEntityIdsInZone(state, "red", "objective-discard");
-  const myObjectiveTemp = cardEntityIdsInZone(state, "red", "objective-temp-discard");
+  const myObjectiveDeck = cardIdsInZone(state, "red", "objective-deck");
+  const myObjectiveHand = cardIdsInZone(state, "red", "objective-hand");
+  const myObjectiveDiscard = cardIdsInZone(state, "red", "objective-discard");
+  const myObjectiveTemp = cardIdsInZone(state, "red", "objective-temp-discard");
 
-  const myPowerDeck = cardEntityIdsInZone(state, "red", "power-deck");
-  const myPowerHand = cardEntityIdsInZone(state, "red", "power-hand");
-  const myPowerDiscard = cardEntityIdsInZone(state, "red", "power-discard");
-  const myPowerTemp = cardEntityIdsInZone(state, "red", "power-temp-discard");
+  const myPowerDeck = cardIdsInZone(state, "red", "power-deck");
+  const myPowerHand = cardIdsInZone(state, "red", "power-hand");
+  const myPowerDiscard = cardIdsInZone(state, "red", "power-discard");
+  const myPowerTemp = cardIdsInZone(state, "red", "power-temp-discard");
 
-  const enemyObjectiveDeck = cardEntityIdsInZone(state, "blue", "objective-deck");
-  const enemyObjectiveHand = cardEntityIdsInZone(state, "blue", "objective-hand");
-  const enemyObjectiveDiscard = cardEntityIdsInZone(state, "blue", "objective-discard");
-  const enemyObjectiveTemp = cardEntityIdsInZone(state, "blue", "objective-temp-discard");
+  const enemyObjectiveDeck = cardIdsInZone(state, "blue", "objective-deck");
+  const enemyObjectiveHand = cardIdsInZone(state, "blue", "objective-hand");
+  const enemyObjectiveDiscard = cardIdsInZone(state, "blue", "objective-discard");
+  const enemyObjectiveTemp = cardIdsInZone(state, "blue", "objective-temp-discard");
 
-  const enemyPowerDeck = cardEntityIdsInZone(state, "blue", "power-deck");
-  const enemyPowerHand = cardEntityIdsInZone(state, "blue", "power-hand");
-  const enemyPowerDiscard = cardEntityIdsInZone(state, "blue", "power-discard");
-  const enemyPowerTemp = cardEntityIdsInZone(state, "blue", "power-temp-discard");
+  const enemyPowerDeck = cardIdsInZone(state, "blue", "power-deck");
+  const enemyPowerHand = cardIdsInZone(state, "blue", "power-hand");
+  const enemyPowerDiscard = cardIdsInZone(state, "blue", "power-discard");
+  const enemyPowerTemp = cardIdsInZone(state, "blue", "power-temp-discard");
 
   const mulliganPending = myObjectiveTemp.length > 0 || myPowerTemp.length > 0;
   const canMulligan = state.round === 1 && state.turnInRound === 1 && !myTeam.mulliganUsed && !state.winner;

@@ -60,7 +60,7 @@ function App() {
   };
 
   const firstAliveActiveTeam = useMemo(
-    () => state.teams[state.activeTeam].fighterEntities.find((id) => fighterHealth(state, id).hp > 0) ?? null,
+    () => state.teams[state.activeTeam].fighterIds.find((id) => fighterHealth(state, id).hp > 0) ?? null,
     [state],
   );
 

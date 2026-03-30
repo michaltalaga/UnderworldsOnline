@@ -1,18 +1,19 @@
 import { hexKey } from "../hex";
 import {
   cardGloryValue,
-  cardEntityIdsInZone,
+  cardIdsInZone,
   cardName,
   cardObjectiveType,
   fighterCombat,
-  fighterEntityIds,
+  fighterIds,
   fighterHealth,
   fighterStatus,
   fighterTeam,
-  moveCardEntityToZone,
+  moveCardToZone,
   objectiveOccupancy,
 } from "../state";
-import type { EntityId, GameState, TeamId } from "../types";
+import type { GameState, TeamId } from "../types";
+import type { CardId } from "../model";
 
 function oppositeTeam(team: TeamId): TeamId {
   return team === "red" ? "blue" : "red";
@@ -23,20 +24,20 @@ function actionTeamForTurn(firstTeam: TeamId, turnInRound: number): TeamId {
 }
 
 function drawObjectivesToThree(state: GameState, team: TeamId): void {
-  const hand = cardEntityIdsInZone(state, team, "objective-hand");
-  const deck = cardEntityIdsInZone(state, team, "objective-deck");
+  const hand = cardIdsInZone(state, team, "objective-hand");
+  const deck = cardIdsInZone(state, team, "objective-deck");
   const drawCount = Math.max(0, Math.min(3 - hand.length, deck.length));
-  deck.slice(0, drawCount).forEach((cardId) => moveCardEntityToZone(state, cardId, "objective-hand"));
+  deck.slice(0, drawCount).forEach((cardId) => moveCardToZone(state, cardId, "objective-hand"));
 }
 
 function drawPowerToFive(state: GameState, team: TeamId): void {
-  const hand = cardEntityIdsInZone(state, team, "power-hand");
-  const deck = cardEntityIdsInZone(state, team, "power-deck");
+  const hand = cardIdsInZone(state, team, "power-hand");
+  const deck = cardIdsInZone(state, team, "power-deck");
   const drawCount = Math.max(0, Math.min(5 - hand.length, deck.length));
-  deck.slice(0, drawCount).forEach((cardId) => moveCardEntityToZone(state, cardId, "power-hand"));
+  deck.slice(0, drawCount).forEach((cardId) => moveCardToZone(state, cardId, "power-hand"));
 }
 
-function scoreObjective(state: GameState, team: TeamId, cardId: EntityId): boolean {
+function scoreObjective(state: GameState, team: TeamId, cardId: CardId): boolean {
   const objectiveType = cardObjectiveType(state, cardId);
   if (!objectiveType) return false;
 
@@ -59,12 +60,12 @@ function scoreObjective(state: GameState, team: TeamId, cardId: EntityId): boole
 }
 
 function scoreEndPhase(state: GameState, team: TeamId): void {
-  const hand = cardEntityIdsInZone(state, team, "objective-hand");
+  const hand = cardIdsInZone(state, team, "objective-hand");
   hand.forEach((cardId) => {
     if (scoreObjective(state, team, cardId)) {
       const glory = cardGloryValue(state, cardId);
       state.teams[team].glory += glory;
-      moveCardEntityToZone(state, cardId, "objective-scored");
+      moveCardToZone(state, cardId, "objective-scored");
       state.log.push({ turn: state.turnInRound, text: `${team} scores ${cardName(state, cardId)} (+${glory} glory)` });
     }
   });
@@ -78,10 +79,10 @@ function finalizeWinner(state: GameState): void {
   } else if (blue > red) {
     state.winner = "blue";
   } else {
-    const hpRed = state.teams.red.fighterEntities
+    const hpRed = state.teams.red.fighterIds
       .map((id) => fighterHealth(state, id).hp)
       .reduce((a, b) => a + Math.max(0, b), 0);
-    const hpBlue = state.teams.blue.fighterEntities
+    const hpBlue = state.teams.blue.fighterIds
       .map((id) => fighterHealth(state, id).hp)
       .reduce((a, b) => a + Math.max(0, b), 0);
     if (hpRed > hpBlue) state.winner = "red";
@@ -105,7 +106,7 @@ function endRound(state: GameState): void {
   state.teams.blue.roundSuccessfulAttacks = 0;
   state.teams.blue.roundTakedowns = 0;
 
-  fighterEntityIds(state).forEach((id) => {
+  fighterIds(state).forEach((id) => {
     fighterStatus(state, id).guard = false;
     fighterStatus(state, id).charged = false;
     fighterCombat(state, id).nextAttackBonusDamage = 0;
@@ -126,8 +127,8 @@ function endRound(state: GameState): void {
   state.turnStep = "action";
 
   const secondTeam: TeamId = oppositeTeam(state.firstTeam);
-  const bonus = cardEntityIdsInZone(state, secondTeam, "power-deck")[0];
-  if (bonus) moveCardEntityToZone(state, bonus, "power-hand");
+  const bonus = cardIdsInZone(state, secondTeam, "power-deck")[0];
+  if (bonus) moveCardToZone(state, bonus, "power-hand");
 }
 
 export function advanceAfterPower(state: GameState): void {
