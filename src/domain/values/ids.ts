@@ -1,0 +1,12 @@
+export type GameId = string;
+export type PlayerId = string;
+export type WarbandDefinitionId = string;
+export type WarscrollDefinitionId = string;
+export type FighterDefinitionId = string;
+export type FighterId = string;
+export type WeaponDefinitionId = string;
+export type CardDefinitionId = string;
+export type CardId = string;
+export type HexId = string;
+export type TerritoryId = string;
+export type FeatureTokenId = string;
