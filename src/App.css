@@ -221,6 +221,33 @@
   gap: 0.35rem;
 }
 
+.focus-box {
+  margin-bottom: 0.55rem;
+  font-size: 0.82rem;
+  background: #ecfeff;
+  border: 1px solid #99d9df;
+  border-radius: 8px;
+  padding: 0.35rem 0.45rem;
+}
+
+.action-group {
+  display: grid;
+  gap: 0.28rem;
+  margin-bottom: 0.3rem;
+}
+
+.action-group h4 {
+  margin: 0.1rem 0 0.15rem;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #5b4f4a;
+}
+
+.action-group h4 span {
+  color: #0f766e;
+}
+
 .action-btn {
   border: 1px solid #b45309;
   background: #f59e0b;

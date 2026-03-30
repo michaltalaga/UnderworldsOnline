@@ -21,10 +21,47 @@ function App() {
   const [selectedFighterId, setSelectedFighterId] = useState<string | null>(null);
   const [showAllActions, setShowAllActions] = useState(false);
 
+  const firstAliveRed = useMemo(
+    () => state.teams.red.fighters.find((id) => state.components.fighters[id].hp > 0) ?? null,
+    [state],
+  );
+
+  const effectiveSelectedFighterId =
+    !showAllActions && selectedFighterId && state.components.fighters[selectedFighterId]?.hp > 0
+      ? selectedFighterId
+      : !showAllActions
+        ? firstAliveRed
+        : selectedFighterId;
+
   const visibleActions = useMemo(() => {
-    if (showAllActions || !selectedFighterId) return legal;
-    return legal.filter((a) => actionReferencesFighter(a, selectedFighterId));
-  }, [legal, selectedFighterId, showAllActions]);
+    if (showAllActions || !effectiveSelectedFighterId) return legal;
+    return legal.filter((a) => actionReferencesFighter(a, effectiveSelectedFighterId));
+  }, [effectiveSelectedFighterId, legal, showAllActions]);
+
+  const groupedActions = useMemo(() => {
+    const groups: Record<string, LegalAction[]> = {
+      Move: [],
+      Attack: [],
+      Charge: [],
+      Power: [],
+      Other: [],
+    };
+
+    visibleActions.forEach((l) => {
+      const t = l.action.type;
+      if (t === "move") groups.Move.push(l);
+      else if (t === "attack") groups.Attack.push(l);
+      else if (t === "charge") groups.Charge.push(l);
+      else if (t === "play-power") groups.Power.push(l);
+      else groups.Other.push(l);
+    });
+
+    return groups;
+  }, [visibleActions]);
+
+  const selectedFighter = effectiveSelectedFighterId
+    ? state.components.fighters[effectiveSelectedFighterId]
+    : null;
 
   return (
     <div className="app-root">
@@ -46,7 +83,11 @@ function App() {
 
       <main className="layout">
         <section className="board-col">
-          <Board state={state} selectedFighterId={selectedFighterId} onSelectFighter={setSelectedFighterId} />
+          <Board
+            state={state}
+            selectedFighterId={effectiveSelectedFighterId}
+            onSelectFighter={setSelectedFighterId}
+          />
         </section>
 
         <aside className="side-col">
@@ -60,20 +101,36 @@ function App() {
               />
               Show all actions
             </label>
+
+            {!showAllActions && selectedFighter && (
+              <div className="focus-box">
+                Focus: <strong>{selectedFighter.name}</strong> ({selectedFighter.hp}/{selectedFighter.stats.maxHp} HP)
+              </div>
+            )}
+
             <div className="actions">
-              {visibleActions.map((l, idx) => (
-                <button
-                  key={`${l.label}-${idx}`}
-                  className="action-btn"
-                  onClick={() => {
-                    dispatch(l.action);
-                    setSelectedFighterId(null);
-                  }}
-                  disabled={state.activeTeam !== "red" || Boolean(state.winner)}
-                >
-                  {l.label}
-                </button>
-              ))}
+              {Object.entries(groupedActions).map(([groupName, actions]) => {
+                if (actions.length === 0) return null;
+                return (
+                  <div className="action-group" key={groupName}>
+                    <h4>
+                      {groupName} <span>({actions.length})</span>
+                    </h4>
+                    {actions.map((l, idx) => (
+                      <button
+                        key={`${groupName}-${l.label}-${idx}`}
+                        className="action-btn"
+                        onClick={() => {
+                          dispatch(l.action);
+                        }}
+                        disabled={state.activeTeam !== "red" || Boolean(state.winner)}
+                      >
+                        {l.label}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })}
               {visibleActions.length === 0 && <p className="muted">No legal actions.</p>}
             </div>
           </div>
