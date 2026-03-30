@@ -14,22 +14,20 @@ const BOARD_HEIGHT = 1368;
 // Projection calibration for the Embergard board art in public/embergard-board-1.jpg.
 // These values align logical hex centers to printed map hex centers.
 const PROJECTION = {
-  hexSize: 62,
-  scaleX: 0.965,
-  scaleY: 0.965,
-  offsetX: 0,
-  offsetY: 6,
+  // Affine projection (origin + q-vector + r-vector) allows better fit than idealized hex math.
+  originX: 748,
+  originY: 681,
+  qVecX: 103.2,
+  qVecY: 1.6,
+  rVecX: 51.0,
+  rVecY: 89.6,
+  tokenOffsetX: 0,
+  tokenOffsetY: -2,
 };
 
 function toPixel(q: number, r: number) {
-  const x =
-    BOARD_WIDTH / 2 +
-    PROJECTION.offsetX +
-    PROJECTION.scaleX * PROJECTION.hexSize * (Math.sqrt(3) * q + (Math.sqrt(3) / 2) * r);
-  const y =
-    BOARD_HEIGHT / 2 +
-    PROJECTION.offsetY +
-    PROJECTION.scaleY * PROJECTION.hexSize * ((3 / 2) * r);
+  const x = PROJECTION.originX + q * PROJECTION.qVecX + r * PROJECTION.rVecX;
+  const y = PROJECTION.originY + q * PROJECTION.qVecY + r * PROJECTION.rVecY;
   return { x, y };
 }
 
@@ -65,8 +63,8 @@ export function Board({ state, selectedFighterId, onSelectFighter }: BoardProps)
                 key={f.id}
                 className={`fighter ${f.team} ${selected ? "selected" : ""}`}
                 style={{
-                  left: `${(p.x / BOARD_WIDTH) * 100}%`,
-                  top: `${(p.y / BOARD_HEIGHT) * 100}%`,
+                  left: `${((p.x + PROJECTION.tokenOffsetX) / BOARD_WIDTH) * 100}%`,
+                  top: `${((p.y + PROJECTION.tokenOffsetY) / BOARD_HEIGHT) * 100}%`,
                 }}
                 onClick={() => onSelectFighter(selected ? null : f.id)}
                 title={`${f.name} (${f.hp}/${f.stats.maxHp})`}
