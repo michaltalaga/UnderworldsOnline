@@ -59,13 +59,13 @@ function applyActionStep(state: GameState, action: GameAction): void {
   if (action.type === "start-mulligan") {
     startMulligan(state, action.actorTeam, { objective: action.objective, power: action.power });
     const redrawTarget = action.objective && action.power ? "objective and power hands" : action.objective ? "objective hand" : "power hand";
-    state.log.push({ turn: state.turnInRound, text: `${action.actorTeam} redraws ${redrawTarget}` });
+    state.log.push({ turn: state.turnInRound, text: `${action.actorTeam} sets aside ${redrawTarget} for mulligan` });
     return;
   }
 
   if (action.type === "resolve-mulligan") {
     resolveMulligan(state, action.actorTeam);
-    state.log.push({ turn: state.turnInRound, text: `${action.actorTeam} finalizes mulligan` });
+    state.log.push({ turn: state.turnInRound, text: `${action.actorTeam} draws a replacement hand and shuffles set-aside cards back` });
     return;
   }
 

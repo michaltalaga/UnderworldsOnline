@@ -64,7 +64,7 @@ export function HandPanel({ state, onDispatch }: HandPanelProps) {
     }
 
     return (
-      <div className="card-grid compact">
+      <div className="card-fan compact side-hand">
         {cardIds.map((cardId) => (
           <CardTile key={cardId} state={state} cardId={cardId} compact />
         ))}

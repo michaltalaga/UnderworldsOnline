@@ -458,6 +458,87 @@
   font-size: 0.72rem;
 }
 
+.card-fan {
+  display: flex;
+  align-items: end;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 0.35rem 0.35rem 0.7rem;
+  margin: 0 -0.1rem;
+}
+
+.card-fan > * {
+  flex: 0 0 min(170px, 34%);
+}
+
+.card-fan > * + * {
+  margin-left: -2.8rem;
+}
+
+.card-fan .card-tile {
+  transform-origin: center bottom;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.card-fan > *:nth-child(odd) .card-tile {
+  transform: rotate(-4deg) translateY(5px);
+}
+
+.card-fan > *:nth-child(even) .card-tile {
+  transform: rotate(3deg);
+}
+
+.card-fan > *:hover .card-tile {
+  transform: translateY(-10px) rotate(0deg);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    0 18px 32px rgba(20, 17, 15, 0.22);
+}
+
+.card-fan.compact > * {
+  flex-basis: min(132px, 48%);
+}
+
+.card-fan.compact > * + * {
+  margin-left: -2.15rem;
+}
+
+.card-fan.side-hand {
+  padding-top: 0.15rem;
+}
+
+.card-fan.drawing .card-tile {
+  animation: draw-card 650ms ease both;
+}
+
+.card-fan.drawing > *:nth-child(2) .card-tile {
+  animation-delay: 40ms;
+}
+
+.card-fan.drawing > *:nth-child(3) .card-tile {
+  animation-delay: 80ms;
+}
+
+.card-fan.drawing > *:nth-child(4) .card-tile {
+  animation-delay: 120ms;
+}
+
+.card-fan.drawing > *:nth-child(5) .card-tile {
+  animation-delay: 160ms;
+}
+
+.card-fan.drawing > *:nth-child(6) .card-tile {
+  animation-delay: 200ms;
+}
+
+.card-fan.drawing > *:nth-child(7) .card-tile {
+  animation-delay: 240ms;
+}
+
+.card-fan.drawing > *:nth-child(8) .card-tile {
+  animation-delay: 280ms;
+}
+
 .mulligan-controls button {
   border: 1px solid #14532d;
   background: #15803d;
@@ -680,5 +761,25 @@
 
   .opening-hand-grid {
     grid-template-columns: 1fr;
+  }
+
+  .card-fan > * + *,
+  .card-fan.compact > * + * {
+    margin-left: -1.45rem;
+  }
+}
+
+@keyframes draw-card {
+  0% {
+    opacity: 0.45;
+    transform: translateX(-34px) translateY(-8px) rotate(-10deg) scale(0.96);
+  }
+  65% {
+    opacity: 1;
+    transform: translateX(10px) translateY(-14px) rotate(4deg) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
   }
 }

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { cardEntityIdsInZone } from "../engine/state";
 import type { GameAction, GameState } from "../engine/types";
 import { CardTile } from "./CardTile";
@@ -16,6 +17,7 @@ function cardList(state: GameState, cardIds: string[], emptyLabel: string) {
 }
 
 export function OpeningHandModal({ state, onDispatch }: OpeningHandModalProps) {
+  const [isResolvingMulligan, setIsResolvingMulligan] = useState(false);
   const objectiveHand = cardEntityIdsInZone(state, "red", "objective-hand");
   const powerHand = cardEntityIdsInZone(state, "red", "power-hand");
   const objectiveTemp = cardEntityIdsInZone(state, "red", "objective-temp-discard");
@@ -28,6 +30,14 @@ export function OpeningHandModal({ state, onDispatch }: OpeningHandModalProps) {
     state.activeTeam === "red" &&
     !state.teams.red.mulliganUsed &&
     !state.winner;
+
+  const finishMulligan = () => {
+    setIsResolvingMulligan(true);
+    window.setTimeout(() => {
+      onDispatch({ type: "resolve-mulligan", actorTeam: "red" });
+      setIsResolvingMulligan(false);
+    }, 650);
+  };
 
   if (!canChooseMulligan && !mulliganPending) {
     return null;
@@ -50,7 +60,7 @@ export function OpeningHandModal({ state, onDispatch }: OpeningHandModalProps) {
             <h3>Objectives</h3>
             <span>{objectiveHand.length} cards</span>
           </div>
-          <div className="card-grid">{cardList(state, objectiveHand, "No objectives in hand")}</div>
+          <div className="card-fan">{cardList(state, objectiveHand, "No objectives in hand")}</div>
           {!mulliganPending && (
             <button
               type="button"
@@ -68,7 +78,7 @@ export function OpeningHandModal({ state, onDispatch }: OpeningHandModalProps) {
             <h3>Power</h3>
             <span>{powerHand.length} cards</span>
           </div>
-          <div className="card-grid">{cardList(state, powerHand, "No power cards in hand")}</div>
+          <div className="card-fan">{cardList(state, powerHand, "No power cards in hand")}</div>
           {!mulliganPending && (
             <button
               type="button"
@@ -106,8 +116,8 @@ export function OpeningHandModal({ state, onDispatch }: OpeningHandModalProps) {
       {mulliganPending && (
         <div className="opening-hand-review">
           <div className="opening-review-card">
-            <h3>Set Aside For Mulligan</h3>
-            <div className="card-grid compact">
+            <h3>{isResolvingMulligan ? "Drawing Replacement Hand" : "Set Aside For Mulligan"}</h3>
+            <div className={`card-fan compact ${isResolvingMulligan ? "drawing" : ""}`}>
               {objectiveTemp.map((cardId) => (
                 <CardTile key={cardId} state={state} cardId={cardId} compact />
               ))}
@@ -120,10 +130,10 @@ export function OpeningHandModal({ state, onDispatch }: OpeningHandModalProps) {
           <button
             type="button"
             className="opening-action-btn"
-            onClick={() => onDispatch({ type: "resolve-mulligan", actorTeam: "red" })}
-            disabled={state.activeTeam !== "red"}
+            onClick={finishMulligan}
+            disabled={state.activeTeam !== "red" || isResolvingMulligan}
           >
-            Shuffle Set-Aside Cards Back In
+            {isResolvingMulligan ? "Drawing..." : "Draw Replacement Hand"}
           </button>
         </div>
       )}
