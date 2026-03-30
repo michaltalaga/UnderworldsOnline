@@ -50,7 +50,21 @@ export type WarbandData = {
 
 export type Entity = {
   id: EntityId;
-  components: string[];
+  components: EntityComponents;
+};
+
+export type EntityComponents = {
+  fighter?: FighterComponent;
+  name?: NameComponent;
+  position?: PositionComponent;
+  health?: HealthComponent;
+  combat?: CombatComponent;
+  status?: StatusComponent;
+  cardOwner?: CardOwnerComponent;
+  cardZone?: CardZoneComponent;
+  objectiveCard?: ObjectiveCardComponent;
+  powerCard?: PowerCardComponent;
+  glory?: GloryComponent;
 };
 
 export type FighterComponent = {
@@ -117,20 +131,6 @@ export type GloryComponent = {
   value: number;
 };
 
-export type Components = {
-  fighter: Record<EntityId, FighterComponent>;
-  name: Record<EntityId, NameComponent>;
-  position: Record<EntityId, PositionComponent>;
-  health: Record<EntityId, HealthComponent>;
-  combat: Record<EntityId, CombatComponent>;
-  status: Record<EntityId, StatusComponent>;
-  cardOwner: Record<EntityId, CardOwnerComponent>;
-  cardZone: Record<EntityId, CardZoneComponent>;
-  objectiveCard: Record<EntityId, ObjectiveCardComponent>;
-  powerCard: Record<EntityId, PowerCardComponent>;
-  glory: Record<EntityId, GloryComponent>;
-};
-
 export type TeamState = {
   glory: number;
   fighterEntities: EntityId[];
@@ -173,7 +173,6 @@ export type GameState = {
   occupiedObjectives: Record<string, string | null>;
   diceRollEvent: DiceRollEvent | null;
   entities: Record<EntityId, Entity>;
-  components: Components;
   teams: Record<TeamId, TeamState>;
   log: EventLogEntry[];
 };

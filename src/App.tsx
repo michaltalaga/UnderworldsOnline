@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useGame } from "./app/useGame";
 import { rivalsDeckOptions, starterWarbandOptions } from "./engine/data/starterData";
+import { fighterHealth, fighterName, fighterTeam } from "./engine/state";
 import type { LegalAction } from "./engine/types";
 import type { RivalsDeckId, WarbandId } from "./engine/data/starterData";
 import { Board } from "./ui/Board";
@@ -58,18 +59,17 @@ function App() {
   };
 
   const firstAliveActiveTeam = useMemo(
-    () =>
-      state.teams[state.activeTeam].fighterEntities.find((id) => state.components.health[id].hp > 0) ?? null,
+    () => state.teams[state.activeTeam].fighterEntities.find((id) => fighterHealth(state, id).hp > 0) ?? null,
     [state],
   );
 
   const selectedIsActiveTeam =
-    selectedFighterId !== null && state.components.fighter[selectedFighterId]?.team === state.activeTeam;
+    selectedFighterId !== null && fighterTeam(state, selectedFighterId) === state.activeTeam;
 
   const effectiveSelectedFighterId =
     !showAllActions &&
     selectedFighterId &&
-    state.components.health[selectedFighterId]?.hp > 0 &&
+    fighterHealth(state, selectedFighterId).hp > 0 &&
     selectedIsActiveTeam
       ? selectedFighterId
       : !showAllActions
@@ -104,9 +104,9 @@ function App() {
 
   const selectedFighter = effectiveSelectedFighterId
     ? {
-        name: state.components.name[effectiveSelectedFighterId].value,
-        hp: state.components.health[effectiveSelectedFighterId].hp,
-        maxHp: state.components.health[effectiveSelectedFighterId].maxHp,
+        name: fighterName(state, effectiveSelectedFighterId),
+        hp: fighterHealth(state, effectiveSelectedFighterId).hp,
+        maxHp: fighterHealth(state, effectiveSelectedFighterId).maxHp,
       }
     : null;
 
@@ -116,8 +116,7 @@ function App() {
       return;
     }
 
-    const fighter = state.components.fighter[id];
-    if (!showAllActions && fighter.team !== state.activeTeam) {
+    if (!showAllActions && fighterTeam(state, id) !== state.activeTeam) {
       return;
     }
 

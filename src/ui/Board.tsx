@@ -1,4 +1,4 @@
-import { boardHexes } from "../engine/state";
+import { boardHexes, entityIdsWithComponents, fighterHealth, fighterName, fighterPos, fighterTeam } from "../engine/state";
 import { hexKey } from "../engine/hex";
 import { qStartForR, rowCountForR } from "../engine/boardShape";
 import { boardCoordLabel } from "../engine/coords";
@@ -60,15 +60,16 @@ export function Board({ state, selectedFighterId, onSelectFighter }: BoardProps)
           })}
         </svg>
 
-        {Object.keys(state.components.fighter)
-          .filter((id) => state.components.health[id].hp > 0)
+        {entityIdsWithComponents(state, ["fighter", "health", "position", "name"])
+          .filter((id) => fighterHealth(state, id).hp > 0)
           .map((id) => {
-            const p = toPixel(state.components.position[id].pos.q, state.components.position[id].pos.r);
+            const pos = fighterPos(state, id);
+            const p = toPixel(pos.q, pos.r);
             const selected = selectedFighterId === id;
-            const team = state.components.fighter[id].team;
-            const name = state.components.name[id].value;
-            const hp = state.components.health[id].hp;
-            const maxHp = state.components.health[id].maxHp;
+            const team = fighterTeam(state, id);
+            const name = fighterName(state, id);
+            const hp = fighterHealth(state, id).hp;
+            const maxHp = fighterHealth(state, id).maxHp;
             return (
               <button
                 key={id}
