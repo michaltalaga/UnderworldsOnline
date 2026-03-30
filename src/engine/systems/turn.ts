@@ -1,13 +1,10 @@
-import type { Card } from "../model";
-import { hexKey } from "../hex";
+import { ObjectiveCard } from "../model";
 import {
   cardGloryValue,
   cardsInZone,
   cardName,
-  cardObjectiveType,
   fightersForTeam,
   fighterHealth,
-  fighterTeam,
   fighterWeapon,
   moveCardToZone,
   removeStatus,
@@ -37,32 +34,10 @@ function drawPowerToFive(state: GameState, team: TeamId): void {
   deck.slice(0, drawCount).forEach((card) => moveCardToZone(state, card, "power-hand"));
 }
 
-function scoreObjective(state: GameState, team: TeamId, card: Card): boolean {
-  const objectiveType = cardObjectiveType(state, card);
-  if (!objectiveType) return false;
-
-  if (objectiveType === "hold-center") {
-    const centerKey = hexKey({ q: 0, r: 0 });
-    const holder = state.occupiedObjectives[centerKey];
-    if (!holder) return false;
-    return fighterTeam(state, holder) === team;
-  }
-
-  if (objectiveType === "take-down") {
-    return state.teams[team].roundTakedowns > 0;
-  }
-
-  if (objectiveType === "no-mercy") {
-    return state.teams[team].roundSuccessfulAttacks >= 2;
-  }
-
-  return false;
-}
-
 function scoreEndPhase(state: GameState, team: TeamId): void {
   const hand = cardsInZone(state, team, "objective-hand");
   hand.forEach((card) => {
-    if (scoreObjective(state, team, card)) {
+    if (card instanceof ObjectiveCard && card.isScored(state, team)) {
       const glory = cardGloryValue(state, card);
       state.teams[team].glory += glory;
       moveCardToZone(state, card, "objective-scored");

@@ -7,11 +7,12 @@ import {
   Deck,
   DiscardPile,
   Fighter,
+  createObjectiveCard,
+  createPowerCard,
   type FighterStatus,
   Hand,
   ObjectiveCard,
   PlayerCardPools,
-  PowerCard,
   ScoredPile,
   SetAsidePile,
   Weapon,
@@ -133,14 +134,8 @@ function spawnCards(
   return sourceCards.map((sourceCard) => {
     const gameCard =
       kind === "objective"
-        ? new ObjectiveCard(
-            team,
-            sourceCard.name,
-            zone,
-            (sourceCard as ObjectiveCardSpec).type,
-            (sourceCard as ObjectiveCardSpec).glory,
-          )
-        : new PowerCard(team, sourceCard.name, zone, (sourceCard as PowerCardSpec).type);
+        ? createObjectiveCard(team, zone, sourceCard as ObjectiveCardSpec)
+        : createPowerCard(team, zone, sourceCard as PowerCardSpec);
     addCard(cards, pools.pool(zone), gameCard);
     return gameCard;
   });
@@ -203,12 +198,8 @@ export function cardIsObjective(_state: GameState, card: Card): boolean {
   return card instanceof ObjectiveCard;
 }
 
-export function cardObjectiveType(_state: GameState, card: Card) {
-  return card instanceof ObjectiveCard ? card.goal : undefined;
-}
-
-export function cardPowerType(_state: GameState, card: Card) {
-  return card instanceof PowerCard ? card.effect : undefined;
+export function cardRuleText(_state: GameState, card: Card): string {
+  return card.ruleText();
 }
 
 export function cardGloryValue(_state: GameState, card: Card): number {
@@ -381,11 +372,7 @@ export function cloneState(state: GameState): GameState {
       ),
   );
   const fighterMap = new Map(state.fighters.map((fighter, index) => [fighter, fighters[index]]));
-  const cards = state.cards.map((card) =>
-    card instanceof ObjectiveCard
-      ? new ObjectiveCard(card.owner, card.name, card.zone, card.goal, card.glory)
-      : new PowerCard(card.owner, card.name, card.zone, (card as PowerCard).effect),
-  );
+  const cards = state.cards.map((card) => card.clone());
   const cardMap = new Map(state.cards.map((card, index) => [card, cards[index]]));
 
   return {

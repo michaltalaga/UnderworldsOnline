@@ -1,4 +1,16 @@
-import type { AttackTrait, CardZone, Hex, ObjectiveCardType, PowerCardType, SaveTrait, TeamId } from "./types";
+import { boardCoordLabel } from "./coords";
+import { hexKey, hexDistance, neighbors } from "./hex";
+import type {
+  AttackTrait,
+  CardZone,
+  GameState,
+  Hex,
+  ObjectiveCardKind,
+  PlayPowerCardAction,
+  PowerCardKind,
+  SaveTrait,
+  TeamId,
+} from "./types";
 
 export type FighterStatus = "guard" | "charged";
 
@@ -62,6 +74,26 @@ export class Fighter {
     this.weapon = weapon;
     this.statuses = [...statuses];
   }
+
+  heal(amount: number): void {
+    this.hp = Math.min(this.maxHp, this.hp + amount);
+  }
+
+  hurt(amount: number): void {
+    this.hp = Math.max(0, this.hp - amount);
+  }
+}
+
+function fighterById(state: GameState, fighterId: string): Fighter | undefined {
+  return state.fighters.find((fighter) => fighter.id === fighterId);
+}
+
+function occupantAt(state: GameState, hex: Hex): Fighter | undefined {
+  return state.fighters.find((fighter) => fighter.hp > 0 && fighter.position.q === hex.q && fighter.position.r === hex.r);
+}
+
+function liveTeamFighters(state: GameState, team: TeamId): Fighter[] {
+  return state.teams[team].fighters.filter((fighter) => fighter.hp > 0);
 }
 
 export abstract class Card {
@@ -74,25 +106,211 @@ export abstract class Card {
     this.name = name;
     this.zone = zone;
   }
-}
 
-export class ObjectiveCard extends Card {
-  goal: ObjectiveCardType;
-  glory: number;
+  abstract cardFamily(): "objective" | "power";
+  abstract ruleText(): string;
+  abstract clone(): Card;
 
-  constructor(owner: TeamId, name: string, zone: CardZone, goal: ObjectiveCardType, glory: number) {
-    super(owner, name, zone);
-    this.goal = goal;
-    this.glory = glory;
+  sameDefinition(other: Card): boolean {
+    return this.constructor === other.constructor && this.owner === other.owner && this.name === other.name;
   }
 }
 
-export class PowerCard extends Card {
-  effect: PowerCardType;
+export abstract class ObjectiveCard extends Card {
+  glory: number;
 
-  constructor(owner: TeamId, name: string, zone: CardZone, effect: PowerCardType) {
+  constructor(owner: TeamId, name: string, zone: CardZone, glory: number) {
     super(owner, name, zone);
-    this.effect = effect;
+    this.glory = glory;
+  }
+
+  cardFamily(): "objective" {
+    return "objective";
+  }
+
+  sameDefinition(other: Card): boolean {
+    return super.sameDefinition(other) && other instanceof ObjectiveCard && this.glory === other.glory;
+  }
+
+  abstract isScored(state: GameState, team: TeamId): boolean;
+}
+
+export class HoldCenterObjectiveCard extends ObjectiveCard {
+  ruleText(): string {
+    return "Score this in an end phase if you hold the center objective.";
+  }
+
+  isScored(state: GameState, team: TeamId): boolean {
+    const holderId = state.occupiedObjectives[hexKey({ q: 0, r: 0 })];
+    const holder = holderId ? fighterById(state, holderId) : undefined;
+    return !!holder && holder.hp > 0 && holder.team === team;
+  }
+
+  clone(): HoldCenterObjectiveCard {
+    return new HoldCenterObjectiveCard(this.owner, this.name, this.zone, this.glory);
+  }
+}
+
+export class TakeDownObjectiveCard extends ObjectiveCard {
+  ruleText(): string {
+    return "Score this in an end phase if your warband made a takedown this round.";
+  }
+
+  isScored(state: GameState, team: TeamId): boolean {
+    return state.teams[team].roundTakedowns > 0;
+  }
+
+  clone(): TakeDownObjectiveCard {
+    return new TakeDownObjectiveCard(this.owner, this.name, this.zone, this.glory);
+  }
+}
+
+export class NoMercyObjectiveCard extends ObjectiveCard {
+  ruleText(): string {
+    return "Score this in an end phase if your warband made 2 or more successful attacks this round.";
+  }
+
+  isScored(state: GameState, team: TeamId): boolean {
+    return state.teams[team].roundSuccessfulAttacks >= 2;
+  }
+
+  clone(): NoMercyObjectiveCard {
+    return new NoMercyObjectiveCard(this.owner, this.name, this.zone, this.glory);
+  }
+}
+
+export abstract class PowerCard extends Card {
+  cardFamily(): "power" {
+    return "power";
+  }
+
+  abstract legalActions(state: GameState, team: TeamId): PlayPowerCardAction[];
+  abstract describeAction(state: GameState, action: PlayPowerCardAction): string;
+  abstract play(state: GameState, action: PlayPowerCardAction): void;
+}
+
+export class FerociousStrikeCard extends PowerCard {
+  ruleText(): string {
+    return "Pick a friendly fighter. Their next attack has +1 Damage.";
+  }
+
+  legalActions(state: GameState, team: TeamId): PlayPowerCardAction[] {
+    return liveTeamFighters(state, team).map((fighter) => ({
+      type: "play-power",
+      actorTeam: team,
+      card: this,
+      fighter,
+    }));
+  }
+
+  describeAction(_state: GameState, action: PlayPowerCardAction): string {
+    return `Play ${this.name} on ${action.fighter?.name ?? "fighter"}`;
+  }
+
+  play(state: GameState, action: PlayPowerCardAction): void {
+    const fighter = action.fighter ? fighterById(state, action.fighter.id) : undefined;
+    if (!fighter || fighter.team !== action.actorTeam || fighter.hp <= 0) return;
+    fighter.weapon.nextAttackBonusDamage += 1;
+    state.log.push({ turn: state.turnInRound, text: `${fighter.name} gains +1 damage on next attack` });
+  }
+
+  clone(): FerociousStrikeCard {
+    return new FerociousStrikeCard(this.owner, this.name, this.zone);
+  }
+}
+
+export class HealingPotionCard extends PowerCard {
+  ruleText(): string {
+    return "Pick a friendly fighter. Heal 1.";
+  }
+
+  legalActions(state: GameState, team: TeamId): PlayPowerCardAction[] {
+    return liveTeamFighters(state, team)
+      .filter((fighter) => fighter.hp < fighter.maxHp)
+      .map((fighter) => ({
+        type: "play-power",
+        actorTeam: team,
+        card: this,
+        fighter,
+      }));
+  }
+
+  describeAction(_state: GameState, action: PlayPowerCardAction): string {
+    return `Play ${this.name} on ${action.fighter?.name ?? "fighter"}`;
+  }
+
+  play(state: GameState, action: PlayPowerCardAction): void {
+    const fighter = action.fighter ? fighterById(state, action.fighter.id) : undefined;
+    if (!fighter || fighter.team !== action.actorTeam || fighter.hp <= 0) return;
+    fighter.heal(1);
+    state.log.push({ turn: state.turnInRound, text: `${fighter.name} heals 1` });
+  }
+
+  clone(): HealingPotionCard {
+    return new HealingPotionCard(this.owner, this.name, this.zone);
+  }
+}
+
+export class SidestepCard extends PowerCard {
+  ruleText(): string {
+    return "Pick a friendly fighter. Push them 1 hex.";
+  }
+
+  legalActions(state: GameState, team: TeamId): PlayPowerCardAction[] {
+    return liveTeamFighters(state, team).flatMap((fighter) =>
+      neighbors(fighter.position)
+        .filter((hex) => state.boardHexes.some((boardHex) => boardHex.q === hex.q && boardHex.r === hex.r))
+        .filter((hex) => occupantAt(state, hex) === undefined)
+        .map((targetHex) => ({
+          type: "play-power",
+          actorTeam: team,
+          card: this,
+          fighter,
+          targetHex,
+        })),
+    );
+  }
+
+  describeAction(_state: GameState, action: PlayPowerCardAction): string {
+    return `Play ${this.name}: ${action.fighter?.name ?? "fighter"} -> ${action.targetHex ? boardCoordLabel(action.targetHex) : "hex"}`;
+  }
+
+  play(state: GameState, action: PlayPowerCardAction): void {
+    const fighter = action.fighter ? fighterById(state, action.fighter.id) : undefined;
+    const targetHex = action.targetHex;
+    if (!fighter || !targetHex || fighter.team !== action.actorTeam || fighter.hp <= 0) return;
+    if (!state.boardHexes.some((hex) => hex.q === targetHex.q && hex.r === targetHex.r)) return;
+    if (hexDistance(fighter.position, targetHex) !== 1) return;
+    if (occupantAt(state, targetHex)) return;
+    fighter.position.q = targetHex.q;
+    fighter.position.r = targetHex.r;
+    state.log.push({ turn: state.turnInRound, text: `${fighter.name} uses ${this.name}` });
+  }
+
+  clone(): SidestepCard {
+    return new SidestepCard(this.owner, this.name, this.zone);
+  }
+}
+
+export function createObjectiveCard(owner: TeamId, zone: CardZone, spec: { name: string; kind: ObjectiveCardKind; glory: number }): ObjectiveCard {
+  switch (spec.kind) {
+    case "hold-center":
+      return new HoldCenterObjectiveCard(owner, spec.name, zone, spec.glory);
+    case "take-down":
+      return new TakeDownObjectiveCard(owner, spec.name, zone, spec.glory);
+    case "no-mercy":
+      return new NoMercyObjectiveCard(owner, spec.name, zone, spec.glory);
+  }
+}
+
+export function createPowerCard(owner: TeamId, zone: CardZone, spec: { name: string; kind: PowerCardKind }): PowerCard {
+  switch (spec.kind) {
+    case "sidestep":
+      return new SidestepCard(owner, spec.name, zone);
+    case "ferocious-strike":
+      return new FerociousStrikeCard(owner, spec.name, zone);
+    case "healing-potion":
+      return new HealingPotionCard(owner, spec.name, zone);
   }
 }
 

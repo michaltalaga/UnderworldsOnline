@@ -5,7 +5,7 @@ import { resolvePowerCard } from "./systems/cards";
 import { resolveMulligan, startMulligan } from "./systems/mulligan";
 import { advanceAfterPower, rotatePowerPriority, startPowerStep } from "./systems/turn";
 import type { GameAction, GameState, LegalAction } from "./types";
-import { ObjectiveCard, PowerCard } from "./model";
+import type { Card } from "./model";
 
 function sameHex(a?: { q: number; r: number }, b?: { q: number; r: number }): boolean {
   if (!a && !b) return true;
@@ -13,12 +13,8 @@ function sameHex(a?: { q: number; r: number }, b?: { q: number; r: number }): bo
   return a.q === b.q && a.r === b.r;
 }
 
-function sameCard(a: GameAction extends never ? never : import("./model").Card, b: import("./model").Card): boolean {
-  if (a.constructor !== b.constructor) return false;
-  if (a.owner !== b.owner || a.name !== b.name) return false;
-  if (a instanceof ObjectiveCard && b instanceof ObjectiveCard) return a.goal === b.goal && a.glory === b.glory;
-  if (a instanceof PowerCard && b instanceof PowerCard) return a.effect === b.effect;
-  return true;
+function sameCard(a: Card, b: Card): boolean {
+  return a.sameDefinition(b);
 }
 
 function actionsEqual(a: GameAction, b: GameAction): boolean {

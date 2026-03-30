@@ -10,18 +10,18 @@ export type SaveDieFace = "crit-save" | "shield" | "dodge" | "support" | "double
 
 export type Hex = { q: number; r: number };
 
-export type ObjectiveCardType = "hold-center" | "take-down" | "no-mercy";
-export type PowerCardType = "sidestep" | "ferocious-strike" | "healing-potion";
+export type ObjectiveCardKind = "hold-center" | "take-down" | "no-mercy";
+export type PowerCardKind = "sidestep" | "ferocious-strike" | "healing-potion";
 
 export type ObjectiveCardSpec = {
   name: string;
-  type: ObjectiveCardType;
+  kind: ObjectiveCardKind;
   glory: number;
 };
 
 export type PowerCardSpec = {
   name: string;
-  type: PowerCardType;
+  kind: PowerCardKind;
 };
 
 export type FighterStats = {

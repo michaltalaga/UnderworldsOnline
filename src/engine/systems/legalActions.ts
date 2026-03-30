@@ -1,12 +1,9 @@
-import type { Fighter } from "../model";
+import { PowerCard, type Fighter } from "../model";
 import { boardCoordLabel } from "../coords";
-import { hexDistance, neighbors } from "../hex";
+import { hexDistance } from "../hex";
 import {
   cardsInZone,
-  cardName,
-  cardPowerType,
   fightersForTeam,
-  fighterHealth,
   fighterName,
   fighterPos,
   fighterWeapon,
@@ -116,42 +113,10 @@ export function getLegalActions(state: GameState, team: TeamId): LegalAction[] {
 
   const hand = cardsInZone(state, team, "power-hand");
   hand.forEach((card) => {
-    const powerType = cardPowerType(state, card);
-    if (!powerType) return;
-    const name = cardName(state, card);
-
-    if (powerType === "ferocious-strike") {
-      fighters.forEach((fighter) => {
-        out.push({
-          label: `Play ${name} on ${fighterName(state, fighter)}`,
-          action: { type: "play-power", actorTeam: team, card, fighter },
-        });
-      });
-    }
-
-    if (powerType === "healing-potion") {
-      fighters
-        .filter((fighter) => fighterHealth(state, fighter).hp < fighterHealth(state, fighter).maxHp)
-        .forEach((fighter) => {
-          out.push({
-            label: `Play ${name} on ${fighterName(state, fighter)}`,
-            action: { type: "play-power", actorTeam: team, card, fighter },
-          });
-        });
-    }
-
-    if (powerType === "sidestep") {
-      fighters.forEach((fighter) => {
-        neighbors(fighterPos(state, fighter))
-          .filter((h) => occupiedBy(state, h.q, h.r) === null)
-          .forEach((targetHex) => {
-            out.push({
-              label: `Play ${name}: ${fighterName(state, fighter)} -> ${boardCoordLabel(targetHex)}`,
-              action: { type: "play-power", actorTeam: team, card, fighter, targetHex },
-            });
-          });
-      });
-    }
+    if (!(card instanceof PowerCard)) return;
+    card.legalActions(state, team).forEach((action) => {
+      out.push({ label: card.describeAction(state, action), action });
+    });
   });
 
   out.push({ label: "Pass power", action: { type: "pass", actorTeam: team } });

@@ -1,5 +1,5 @@
 import type { Card } from "../engine/model";
-import { cardGloryValue, cardIsObjective, cardName, cardObjectiveType, cardPowerType } from "../engine/state";
+import { cardGloryValue, cardIsObjective, cardName, cardRuleText } from "../engine/state";
 import type { GameState } from "../engine/types";
 
 type CardTileProps = {
@@ -17,13 +17,7 @@ function formatCardFamily(state: GameState, card: Card): string {
 }
 
 function formatCardRule(state: GameState, card: Card): string {
-  const objectiveType = cardObjectiveType(state, card);
-  if (objectiveType) {
-    return objectiveType.replaceAll("-", " ");
-  }
-
-  const powerType = cardPowerType(state, card);
-  return powerType ? powerType.replaceAll("-", " ") : "utility";
+  return cardRuleText(state, card);
 }
 
 export function CardTile({ state, card, compact = false }: CardTileProps) {
