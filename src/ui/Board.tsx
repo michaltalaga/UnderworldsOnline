@@ -32,7 +32,10 @@ export function Board({ state, selectedFighterId, onSelectFighter }: BoardProps)
             <div
               key={key}
               className={`hex ${isObjective ? "objective" : ""}`}
-              style={{ left: `${p.x}px`, top: `${p.y}px` }}
+              style={{
+                left: `${(p.x / BOARD_WIDTH) * 100}%`,
+                top: `${(p.y / BOARD_HEIGHT) * 100}%`,
+              }}
             />
           );
         })}
@@ -46,7 +49,10 @@ export function Board({ state, selectedFighterId, onSelectFighter }: BoardProps)
               <button
                 key={f.id}
                 className={`fighter ${f.team} ${selected ? "selected" : ""}`}
-                style={{ left: `${p.x}px`, top: `${p.y}px` }}
+                style={{
+                  left: `${(p.x / BOARD_WIDTH) * 100}%`,
+                  top: `${(p.y / BOARD_HEIGHT) * 100}%`,
+                }}
                 onClick={() => onSelectFighter(selected ? null : f.id)}
                 title={`${f.name} (${f.hp}/${f.stats.maxHp})`}
               >
