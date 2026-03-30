@@ -128,8 +128,8 @@
 .fighter {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 56px;
-  height: 56px;
+  width: clamp(34px, 6.2%, 56px);
+  aspect-ratio: 1;
   border-radius: 50%;
   border: 2px solid transparent;
   cursor: pointer;
@@ -158,8 +158,8 @@
 }
 
 .fighter .name {
-  font-size: clamp(0.38rem, 0.8vw, 0.52rem);
-  max-width: 80%;
+  font-size: clamp(0.34rem, 0.75vw, 0.52rem);
+  max-width: 78%;
   text-align: center;
   line-height: 1.1;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
@@ -167,13 +167,13 @@
 
 .fighter .hp {
   position: absolute;
-  bottom: -8px;
-  right: -2px;
-  width: 22px;
-  height: 22px;
+  bottom: -14%;
+  right: -4%;
+  width: clamp(14px, 38%, 22px);
+  aspect-ratio: 1;
   border-radius: 50%;
   background: #14110f;
-  font-size: 0.75rem;
+  font-size: clamp(0.52rem, 1.2vw, 0.75rem);
   font-weight: 700;
   display: grid;
   place-items: center;
