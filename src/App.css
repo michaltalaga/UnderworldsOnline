@@ -82,13 +82,14 @@
 }
 
 .board-wrap {
-  overflow: hidden;
+  overflow: auto;
   width: 100%;
+  max-height: calc(100svh - 220px);
 }
 
 .board-surface {
   position: relative;
-  width: 100%;
+  width: min(100%, calc((100svh - 240px) * (900 / 760)));
   max-width: 900px;
   aspect-ratio: 900 / 760;
   margin: 0 auto;
@@ -108,10 +109,10 @@
   transform: translate(-50%, -50%);
   background: rgba(255, 255, 255, 0.38);
   clip-path: polygon(24% 6%, 76% 6%, 100% 50%, 76% 94%, 24% 94%, 0% 50%);
-  border: 2px solid rgba(51, 65, 85, 0.95);
+  border: 2px solid #000;
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.55) inset,
-    0 1px 0 rgba(17, 24, 39, 0.28);
+    0 0 0 1px rgba(255, 255, 255, 0.45) inset,
+    0 1px 0 rgba(0, 0, 0, 0.45);
 }
 
 .hex:nth-child(odd) {
@@ -316,5 +317,13 @@
 @media (max-width: 980px) {
   .layout {
     grid-template-columns: 1fr;
+  }
+
+  .board-wrap {
+    max-height: calc(100svh - 160px);
+  }
+
+  .board-surface {
+    width: min(100%, calc((100svh - 180px) * (900 / 760)));
   }
 }
