@@ -89,8 +89,8 @@
 .board-surface {
   position: relative;
   width: 100%;
-  max-width: 864px;
-  aspect-ratio: 864 / 768;
+  max-width: 960px;
+  aspect-ratio: 1500 / 1368;
   margin: 0 auto;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.2);
