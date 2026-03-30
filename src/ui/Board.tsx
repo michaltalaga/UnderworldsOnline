@@ -1,6 +1,7 @@
 import { boardHexes } from "../engine/state";
 import { hexKey } from "../engine/hex";
 import { qStartForR, rowCountForR } from "../engine/boardShape";
+import { boardCoordLabel } from "../engine/coords";
 import type { GameState } from "../engine/types";
 
 type BoardProps = {
@@ -52,7 +53,9 @@ export function Board({ state, selectedFighterId, onSelectFighter }: BoardProps)
                 key={key}
                 className={`hex ${isObjective ? "objective" : ""}`}
                 points={hexPolygonPoints(p.x, p.y)}
-              />
+              >
+                <title>{boardCoordLabel(h)}</title>
+              </polygon>
             );
           })}
         </svg>

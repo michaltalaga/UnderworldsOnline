@@ -1,4 +1,5 @@
 import { hexDistance, neighbors } from "../hex";
+import { boardCoordLabel } from "../coords";
 import { isAlive, occupiedBy } from "../state";
 import type { FighterEntity, GameAction, GameState, LegalAction, TeamId } from "../types";
 
@@ -43,7 +44,7 @@ export function getLegalActions(state: GameState, team: TeamId): LegalAction[] {
       if (!chargeLocked) {
         legalMoves(state, f).forEach((to) => {
           out.push({
-            label: `Move ${f.name} -> ${to.q},${to.r}`,
+            label: `Move ${f.name} -> ${boardCoordLabel(to)}`,
             action: { type: "move", actorTeam: team, fighterId: f.id, to },
           });
         });
@@ -59,7 +60,7 @@ export function getLegalActions(state: GameState, team: TeamId): LegalAction[] {
           legalMoves(state, f).forEach((to) => {
             enemiesInRange(state, f, to).forEach((t) => {
               out.push({
-                label: `Charge ${f.name} -> ${to.q},${to.r} then ${t.name}`,
+                label: `Charge ${f.name} -> ${boardCoordLabel(to)} then ${t.name}`,
                 action: { type: "charge", actorTeam: team, fighterId: f.id, to, targetId: t.id },
               });
             });
@@ -105,7 +106,7 @@ export function getLegalActions(state: GameState, team: TeamId): LegalAction[] {
           .filter((h) => occupiedBy(state, h.q, h.r) === null)
           .forEach((targetHex) => {
             out.push({
-              label: `Play ${card.name}: ${f.name} -> ${targetHex.q},${targetHex.r}`,
+              label: `Play ${card.name}: ${f.name} -> ${boardCoordLabel(targetHex)}`,
               action: { type: "play-power", actorTeam: team, cardId: card.id, fighterId: f.id, targetHex },
             });
           });
