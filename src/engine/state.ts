@@ -1,6 +1,6 @@
 import { hexKey } from "./hex";
 import { starterObjectiveDeck, starterPowerDeck, starterWarband } from "./data/starterData";
-import { shuffleWithSeed } from "./rng";
+import { rollD6, shuffleWithSeed } from "./rng";
 import { createBoardHexes } from "./boardShape";
 import type { FighterEntity, GameState, TeamId } from "./types";
 
@@ -16,6 +16,30 @@ function prefixedFighters(team: TeamId): Record<string, FighterEntity> {
 
 function drawN<T>(arr: T[], n: number): { hand: T[]; deck: T[] } {
   return { hand: arr.slice(0, n), deck: arr.slice(n) };
+}
+
+function determineFirstTeam(rngState: number): {
+  rngState: number;
+  firstTeam: TeamId;
+  redRoll: number;
+  blueRoll: number;
+} {
+  let state = rngState;
+
+  // Embergard uses a roll-off to decide who has the first activation.
+  while (true) {
+    const red = rollD6(state);
+    const blue = rollD6(red.state);
+    state = blue.state;
+    if (red.value === blue.value) continue;
+
+    return {
+      rngState: state,
+      firstTeam: red.value > blue.value ? "red" : "blue",
+      redRoll: red.value,
+      blueRoll: blue.value,
+    };
+  }
 }
 
 export function isAlive(f: FighterEntity): boolean {
@@ -54,14 +78,17 @@ export function initialState(seed = 1337): GameState {
   const redPowDraw = drawN(redPow.result, 5);
   const blueObjDraw = drawN(blueObj.result, 3);
   const bluePowDraw = drawN(bluePow.result, 5);
+  const firstRoll = determineFirstTeam(bluePow.seed);
 
   const state: GameState = {
     seed,
-    rngState: bluePow.seed,
+    rngState: firstRoll.rngState,
     round: 1,
     turnInRound: 1,
-    activeTeam: "red",
-    firstTeam: "red",
+    activeTeam: firstRoll.firstTeam,
+    firstTeam: firstRoll.firstTeam,
+    powerPriorityTeam: firstRoll.firstTeam,
+    powerPassCount: 0,
     turnStep: "action",
     winner: null,
     boardHexes: createBoardHexes(),
@@ -96,7 +123,12 @@ export function initialState(seed = 1337): GameState {
         roundSuccessfulAttacks: 0,
       },
     },
-    log: [{ turn: 1, text: "Match started" }],
+    log: [
+      {
+        turn: 1,
+        text: `Match started (roll-off red ${firstRoll.redRoll} vs blue ${firstRoll.blueRoll}; ${firstRoll.firstTeam} starts)`,
+      },
+    ],
   };
 
   state.occupiedObjectives = objectiveOccupancy(state);

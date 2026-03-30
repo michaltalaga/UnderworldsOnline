@@ -74,6 +74,8 @@ export type GameState = {
   turnInRound: number;
   activeTeam: TeamId;
   firstTeam: TeamId;
+  powerPriorityTeam: TeamId;
+  powerPassCount: number;
   turnStep: TurnStep;
   winner: TeamId | "draw" | null;
   boardHexes: Hex[];

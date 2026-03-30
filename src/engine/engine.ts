@@ -2,7 +2,7 @@ import { objectiveOccupancy, occupiedBy } from "./state";
 import { getLegalActions } from "./systems/legalActions";
 import { resolveAttack } from "./systems/combat";
 import { resolvePowerCard } from "./systems/cards";
-import { advanceAfterPower } from "./systems/turn";
+import { advanceAfterPower, rotatePowerPriority, startPowerStep } from "./systems/turn";
 import type { GameAction, GameState, LegalAction } from "./types";
 
 function sameHex(a?: { q: number; r: number }, b?: { q: number; r: number }): boolean {
@@ -81,20 +81,28 @@ function applyActionStep(state: GameState, action: GameAction): void {
   }
 
   state.occupiedObjectives = objectiveOccupancy(state);
-  state.turnStep = "power";
+  startPowerStep(state, action.actorTeam);
 }
 
 function applyPowerStep(state: GameState, action: GameAction): void {
   if (action.type === "play-power") {
     resolvePowerCard(state, action);
     state.log.push({ turn: state.turnInRound, text: `${action.actorTeam} plays a power card` });
-    advanceAfterPower(state);
+    state.powerPassCount = 0;
+    rotatePowerPriority(state);
     return;
   }
 
   if (action.type === "end-power" || action.type === "pass") {
-    state.log.push({ turn: state.turnInRound, text: `${action.actorTeam} ends power step` });
-    advanceAfterPower(state);
+    state.powerPassCount += 1;
+    state.log.push({ turn: state.turnInRound, text: `${action.actorTeam} passes power` });
+
+    if (state.powerPassCount >= 2) {
+      advanceAfterPower(state);
+      return;
+    }
+
+    rotatePowerPriority(state);
   }
 }
 

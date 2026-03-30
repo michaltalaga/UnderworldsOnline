@@ -2,6 +2,14 @@ import { hexKey } from "../hex";
 import { objectiveOccupancy } from "../state";
 import type { GameState, ObjectiveCard, TeamId } from "../types";
 
+function oppositeTeam(team: TeamId): TeamId {
+  return team === "red" ? "blue" : "red";
+}
+
+function actionTeamForTurn(firstTeam: TeamId, turnInRound: number): TeamId {
+  return turnInRound % 2 === 1 ? firstTeam : oppositeTeam(firstTeam);
+}
+
 function drawTo<T>(deck: T[], hand: T[], target: number): void {
   while (hand.length < target && deck.length > 0) {
     const next = deck.shift();
@@ -92,21 +100,37 @@ function endRound(state: GameState): void {
 
   state.round += 1;
   state.turnInRound = 1;
-  state.firstTeam = state.firstTeam === "red" ? "blue" : "red";
+  state.firstTeam = oppositeTeam(state.firstTeam);
   state.activeTeam = state.firstTeam;
+  state.powerPriorityTeam = state.firstTeam;
+  state.powerPassCount = 0;
   state.turnStep = "action";
 
-  const secondTeam: TeamId = state.firstTeam === "red" ? "blue" : "red";
+  const secondTeam: TeamId = oppositeTeam(state.firstTeam);
   const bonus = state.teams[secondTeam].powerDeck.shift();
   if (bonus) state.teams[secondTeam].powerHand.push(bonus);
 }
 
 export function advanceAfterPower(state: GameState): void {
   state.turnInRound += 1;
-  state.activeTeam = state.activeTeam === "red" ? "blue" : "red";
+  state.activeTeam = actionTeamForTurn(state.firstTeam, state.turnInRound);
+  state.powerPriorityTeam = state.activeTeam;
+  state.powerPassCount = 0;
   state.turnStep = "action";
 
   if (state.turnInRound > 8) {
     endRound(state);
   }
+}
+
+export function startPowerStep(state: GameState, actionTeam: TeamId): void {
+  state.turnStep = "power";
+  state.powerPriorityTeam = actionTeam;
+  state.activeTeam = actionTeam;
+  state.powerPassCount = 0;
+}
+
+export function rotatePowerPriority(state: GameState): void {
+  state.powerPriorityTeam = oppositeTeam(state.powerPriorityTeam);
+  state.activeTeam = state.powerPriorityTeam;
 }

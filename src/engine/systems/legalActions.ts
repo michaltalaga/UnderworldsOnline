@@ -115,8 +115,8 @@ export function getLegalActions(state: GameState, team: TeamId): LegalAction[] {
   });
 
   out.push({
-    label: "End power step",
-    action: { type: "end-power", actorTeam: team },
+    label: "Pass power",
+    action: { type: "pass", actorTeam: team },
   });
 
   return out;
