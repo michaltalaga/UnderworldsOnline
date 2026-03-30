@@ -1,4 +1,4 @@
-import { allHexes, hexDistance, neighbors } from "../hex";
+import { hexDistance, neighbors } from "../hex";
 import { isAlive, occupiedBy } from "../state";
 import type { FighterEntity, GameAction, GameState, LegalAction, TeamId } from "../types";
 
@@ -23,7 +23,7 @@ function allFriendlyCharged(state: GameState, team: TeamId): boolean {
 }
 
 function legalMoves(state: GameState, fighter: FighterEntity) {
-  return allHexes(state.boardRadius)
+  return state.boardHexes
     .filter((h) => occupiedBy(state, h.q, h.r) === null)
     .filter((h) => hexDistance(fighter.pos, h) > 0)
     .filter((h) => hexDistance(fighter.pos, h) <= fighter.stats.move);

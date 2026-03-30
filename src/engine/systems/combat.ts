@@ -1,6 +1,6 @@
 import { hexDistance, neighbors } from "../hex";
 import { rollD6 } from "../rng";
-import { isAlive, objectiveOccupancy, occupiedBy } from "../state";
+import { isAlive, isBoardHex, objectiveOccupancy, occupiedBy } from "../state";
 import type { FighterEntity, GameState, TeamId } from "../types";
 
 function adjacentAlliesExcluding(
@@ -35,10 +35,7 @@ function driveBack(state: GameState, attackerId: string, targetId: string): void
   const opts = neighbors(target.pos)
     .filter((h) => hexDistance(h, attacker.pos) > hexDistance(target.pos, attacker.pos))
     .filter((h) => occupiedBy(state, h.q, h.r) === null)
-    .filter((h) => {
-      const s = -h.q - h.r;
-      return Math.max(Math.abs(h.q), Math.abs(h.r), Math.abs(s)) <= state.boardRadius;
-    });
+    .filter((h) => isBoardHex(state, h.q, h.r));
   if (opts.length > 0) {
     target.pos = opts[0];
   }

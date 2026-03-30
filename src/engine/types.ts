@@ -76,7 +76,7 @@ export type GameState = {
   firstTeam: TeamId;
   turnStep: TurnStep;
   winner: TeamId | "draw" | null;
-  boardRadius: number;
+  boardHexes: Hex[];
   objectiveHexes: Hex[];
   occupiedObjectives: Record<string, string | null>;
   components: Components;
