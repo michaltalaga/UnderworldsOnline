@@ -4,6 +4,7 @@ import { WarbandDefinition } from "../definitions/WarbandDefinition";
 import { CardInstance } from "./CardInstance";
 import { DeckState } from "./DeckState";
 import { FighterState } from "./FighterState";
+import { WarscrollState } from "./WarscrollState";
 
 export class PlayerState {
   public readonly id: PlayerId;
@@ -21,6 +22,7 @@ export class PlayerState {
   public powerHand: CardInstance[];
   public scoredObjectives: CardInstance[];
   public equippedUpgrades: CardInstance[];
+  public warscrollState: WarscrollState;
 
   public constructor(
     id: PlayerId,
@@ -38,6 +40,7 @@ export class PlayerState {
     powerHand: CardInstance[] = [],
     scoredObjectives: CardInstance[] = [],
     equippedUpgrades: CardInstance[] = [],
+    warscrollState: WarscrollState = new WarscrollState(id, warband.warscroll.id),
   ) {
     this.id = id;
     this.name = name;
@@ -54,6 +57,7 @@ export class PlayerState {
     this.powerHand = powerHand;
     this.scoredObjectives = scoredObjectives;
     this.equippedUpgrades = equippedUpgrades;
+    this.warscrollState = warscrollState;
   }
 
   public getFighter(fighterId: FighterId): FighterState | undefined {
@@ -75,5 +79,11 @@ export class PlayerState {
       ...this.scoredObjectives,
       ...this.equippedUpgrades,
     ];
+  }
+
+  public getUndeployedFighters(): FighterState[] {
+    return this.fighters.filter(
+      (fighter) => fighter.currentHexId === null && !fighter.isSlain,
+    );
   }
 }

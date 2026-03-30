@@ -8,6 +8,7 @@ import { Game } from "../state/Game";
 import { HexCell } from "../state/HexCell";
 import { PlayerState } from "../state/PlayerState";
 import { Territory } from "../state/Territory";
+import { WarscrollState } from "../state/WarscrollState";
 import {
   CardKind,
   CardZone,
@@ -107,6 +108,11 @@ export class GameFactory {
       [],
       [],
       [],
+      new WarscrollState(
+        config.id,
+        config.warband.warscroll.id,
+        { ...config.warband.warscroll.startingTokens },
+      ),
     );
   }
 
@@ -182,6 +188,10 @@ export class GameFactory {
   }
 
   private validateWarband(warband: WarbandDefinition, playerName: string): void {
+    if (warband.fighters.length === 0) {
+      throw new Error(`${playerName}'s warband must provide at least one fighter.`);
+    }
+
     if (warband.objectiveCards.length !== 12) {
       throw new Error(
         `${playerName}'s warband must provide exactly 12 objective cards.`,
@@ -218,6 +228,14 @@ export class GameFactory {
       ],
       `${playerName}'s card definition ids`,
     );
+
+    for (const [tokenName, tokenCount] of Object.entries(warband.warscroll.startingTokens)) {
+      if (!Number.isInteger(tokenCount) || tokenCount < 0) {
+        throw new Error(
+          `${playerName}'s warscroll token '${tokenName}' must have a non-negative integer count.`,
+        );
+      }
+    }
   }
 
   private validateUniqueValues(values: readonly string[], label: string): void {
