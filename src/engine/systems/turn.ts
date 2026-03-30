@@ -1,7 +1,9 @@
 import { hexKey } from "../hex";
 import {
-  cardById,
+  cardGloryValue,
   cardEntityIdsInZone,
+  cardName,
+  cardObjectiveType,
   fighterCombat,
   fighterEntityIds,
   fighterHealth,
@@ -35,21 +37,21 @@ function drawPowerToFive(state: GameState, team: TeamId): void {
 }
 
 function scoreObjective(state: GameState, team: TeamId, cardId: EntityId): boolean {
-  const card = cardById(state, cardId);
-  if (!card || card.kind !== "objective" || !card.objectiveType) return false;
+  const objectiveType = cardObjectiveType(state, cardId);
+  if (!objectiveType) return false;
 
-  if (card.objectiveType === "hold-center") {
+  if (objectiveType === "hold-center") {
     const centerKey = hexKey({ q: 0, r: 0 });
     const holder = state.occupiedObjectives[centerKey];
     if (!holder) return false;
     return fighterTeam(state, holder) === team;
   }
 
-  if (card.objectiveType === "take-down") {
+  if (objectiveType === "take-down") {
     return state.teams[team].roundTakedowns > 0;
   }
 
-  if (card.objectiveType === "no-mercy") {
+  if (objectiveType === "no-mercy") {
     return state.teams[team].roundSuccessfulAttacks >= 2;
   }
 
@@ -59,13 +61,11 @@ function scoreObjective(state: GameState, team: TeamId, cardId: EntityId): boole
 function scoreEndPhase(state: GameState, team: TeamId): void {
   const hand = cardEntityIdsInZone(state, team, "objective-hand");
   hand.forEach((cardId) => {
-    const card = cardById(state, cardId);
-    if (!card || card.kind !== "objective") return;
-
     if (scoreObjective(state, team, cardId)) {
-      state.teams[team].glory += card.glory ?? 0;
+      const glory = cardGloryValue(state, cardId);
+      state.teams[team].glory += glory;
       moveCardEntityToZone(state, cardId, "objective-scored");
-      state.log.push({ turn: state.turnInRound, text: `${team} scores ${card.name} (+${card.glory ?? 0} glory)` });
+      state.log.push({ turn: state.turnInRound, text: `${team} scores ${cardName(state, cardId)} (+${glory} glory)` });
     }
   });
 }

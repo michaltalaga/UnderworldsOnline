@@ -5,7 +5,6 @@ import { rollD6, shuffleWithSeed } from "./rng";
 import type { RivalsDeckId, WarbandId } from "./data/starterData";
 import type {
   AttackDieFace,
-  CardComponent,
   CardZone,
   Components,
   Entity,
@@ -119,25 +118,25 @@ function spawnCards(
   return cards.map((card, idx) => {
     const id = `${team}-${kind}-${zone}-${idx}-${idCounter.value}`;
     idCounter.value += 1;
-    addEntity(entities, id, ["card"]);
+    const componentNames = ["card", "name", "cardOwner", "cardZone"];
+    if (kind === "objective") componentNames.push("objectiveCard", "glory");
+    if (kind === "power") componentNames.push("powerCard");
+    addEntity(entities, id, componentNames);
 
-    const base: CardComponent = {
-      owner: team,
-      zone,
-      kind,
-      name: card.name,
-    };
+    components.card[id] = { tag: "card" };
+    components.name[id] = { value: card.name };
+    components.cardOwner[id] = { owner: team };
+    components.cardZone[id] = { zone };
 
     if (kind === "objective") {
       const obj = card as ObjectiveCard;
-      base.objectiveType = obj.type;
-      base.glory = obj.glory;
+      components.objectiveCard[id] = { type: obj.type };
+      components.glory[id] = { value: obj.glory };
     } else {
       const power = card as PowerCard;
-      base.powerType = power.type;
+      components.powerCard[id] = { type: power.type };
     }
 
-    components.card[id] = base;
     return id;
   });
 }
@@ -176,21 +175,42 @@ export function fighterStatus(state: GameState, fighterId: EntityId) {
   return state.components.status[fighterId];
 }
 
-export function cardById(state: GameState, cardId: EntityId): CardComponent | null {
-  return state.components.card[cardId] ?? null;
+export function cardName(state: GameState, cardId: EntityId): string {
+  return state.components.name[cardId]?.value ?? cardId;
+}
+
+export function cardIsObjective(state: GameState, cardId: EntityId): boolean {
+  return Boolean(state.components.objectiveCard[cardId]);
+}
+
+export function cardIsPower(state: GameState, cardId: EntityId): boolean {
+  return Boolean(state.components.powerCard[cardId]);
+}
+
+export function cardObjectiveType(state: GameState, cardId: EntityId) {
+  return state.components.objectiveCard[cardId]?.type;
+}
+
+export function cardPowerType(state: GameState, cardId: EntityId) {
+  return state.components.powerCard[cardId]?.type;
+}
+
+export function cardGloryValue(state: GameState, cardId: EntityId): number {
+  return state.components.glory[cardId]?.value ?? 0;
 }
 
 export function cardEntityIdsInZone(state: GameState, team: TeamId, zone: CardZone): EntityId[] {
   return Object.keys(state.components.card).filter((id) => {
-    const card = state.components.card[id];
-    return card.owner === team && card.zone === zone;
+    const owner = state.components.cardOwner[id];
+    const zoneComp = state.components.cardZone[id];
+    return owner?.owner === team && zoneComp?.zone === zone;
   });
 }
 
 export function moveCardEntityToZone(state: GameState, cardId: EntityId, zone: CardZone): void {
-  const card = state.components.card[cardId];
-  if (!card) return;
-  card.zone = zone;
+  const zoneComp = state.components.cardZone[cardId];
+  if (!zoneComp) return;
+  zoneComp.zone = zone;
 }
 
 export function occupiedBy(state: GameState, q: number, r: number): EntityId | null {
@@ -234,6 +254,11 @@ export function initialState(
     combat: {},
     status: {},
     card: {},
+    cardOwner: {},
+    cardZone: {},
+    objectiveCard: {},
+    powerCard: {},
+    glory: {},
   };
 
   const redRoster = starterWarbandById(setup.redWarbandId).fighters.map((src) =>

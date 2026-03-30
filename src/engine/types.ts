@@ -98,13 +98,27 @@ export type CardZone =
   | "power-temp-discard";
 
 export type CardComponent = {
+  tag: "card";
+};
+
+export type CardOwnerComponent = {
   owner: TeamId;
+};
+
+export type CardZoneComponent = {
   zone: CardZone;
-  kind: "objective" | "power";
-  name: string;
-  objectiveType?: ObjectiveCardType;
-  glory?: number;
-  powerType?: PowerCardType;
+};
+
+export type ObjectiveCardComponent = {
+  type: ObjectiveCardType;
+};
+
+export type PowerCardComponent = {
+  type: PowerCardType;
+};
+
+export type GloryComponent = {
+  value: number;
 };
 
 export type Components = {
@@ -115,6 +129,11 @@ export type Components = {
   combat: Record<EntityId, CombatComponent>;
   status: Record<EntityId, StatusComponent>;
   card: Record<EntityId, CardComponent>;
+  cardOwner: Record<EntityId, CardOwnerComponent>;
+  cardZone: Record<EntityId, CardZoneComponent>;
+  objectiveCard: Record<EntityId, ObjectiveCardComponent>;
+  powerCard: Record<EntityId, PowerCardComponent>;
+  glory: Record<EntityId, GloryComponent>;
 };
 
 export type TeamState = {

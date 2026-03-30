@@ -1,6 +1,8 @@
 import { hexDistance } from "../hex";
 import {
-  cardById,
+  cardEntityIdsInZone,
+  cardName,
+  cardPowerType,
   fighterCombat,
   fighterHealth,
   fighterName,
@@ -14,20 +16,22 @@ import {
 import type { GameState, PlayPowerCardAction } from "../types";
 
 function removeCardFromHand(state: GameState, team: "red" | "blue", cardId: string) {
-  const card = cardById(state, cardId);
-  if (!card) return null;
-  if (card.owner !== team || card.zone !== "power-hand") return null;
+  const inHand = cardEntityIdsInZone(state, team, "power-hand").includes(cardId);
+  if (!inHand) return null;
 
   moveCardEntityToZone(state, cardId, "power-discard");
-  return card;
+  return cardId;
 }
 
 export function resolvePowerCard(state: GameState, action: PlayPowerCardAction): void {
   const team = action.actorTeam;
-  const card = removeCardFromHand(state, team, action.cardId);
-  if (!card || card.kind !== "power" || !card.powerType) return;
+  const cardId = removeCardFromHand(state, team, action.cardId);
+  if (!cardId) return;
 
-  if (card.powerType === "ferocious-strike" && action.fighterId) {
+  const powerType = cardPowerType(state, cardId);
+  if (!powerType) return;
+
+  if (powerType === "ferocious-strike" && action.fighterId) {
     const fighterId = action.fighterId;
     if (fighterTeam(state, fighterId) === team && isAlive(state, fighterId)) {
       fighterCombat(state, fighterId).nextAttackBonusDamage += 1;
@@ -35,7 +39,7 @@ export function resolvePowerCard(state: GameState, action: PlayPowerCardAction):
     }
   }
 
-  if (card.powerType === "healing-potion" && action.fighterId) {
+  if (powerType === "healing-potion" && action.fighterId) {
     const fighterId = action.fighterId;
     if (fighterTeam(state, fighterId) === team && isAlive(state, fighterId)) {
       const health = fighterHealth(state, fighterId);
@@ -44,7 +48,7 @@ export function resolvePowerCard(state: GameState, action: PlayPowerCardAction):
     }
   }
 
-  if (card.powerType === "sidestep" && action.fighterId && action.targetHex) {
+  if (powerType === "sidestep" && action.fighterId && action.targetHex) {
     const fighterId = action.fighterId;
     if (fighterTeam(state, fighterId) === team && isAlive(state, fighterId)) {
       const occupied = occupiedBy(state, action.targetHex.q, action.targetHex.r);
@@ -52,7 +56,7 @@ export function resolvePowerCard(state: GameState, action: PlayPowerCardAction):
       if (dist === 1 && occupied === null) {
         fighterPos(state, fighterId).q = action.targetHex.q;
         fighterPos(state, fighterId).r = action.targetHex.r;
-        state.log.push({ turn: state.turnInRound, text: `${fighterName(state, fighterId)} sidesteps` });
+        state.log.push({ turn: state.turnInRound, text: `${fighterName(state, fighterId)} uses ${cardName(state, cardId)}` });
       }
     }
   }

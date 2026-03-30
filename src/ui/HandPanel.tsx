@@ -1,5 +1,5 @@
 import type { GameAction, GameState } from "../engine/types";
-import { cardById, cardEntityIdsInZone } from "../engine/state";
+import { cardEntityIdsInZone, cardName } from "../engine/state";
 
 type HandPanelProps = {
   state: GameState;
@@ -125,7 +125,7 @@ export function HandPanel({ state, onDispatch }: HandPanelProps) {
         <h4>Objectives</h4>
         <ul>
           {myObjectiveHand.map((cardId) => (
-            <li key={cardId}>{cardById(state, cardId)?.name ?? cardId}</li>
+            <li key={cardId}>{cardName(state, cardId)}</li>
           ))}
           {myObjectiveHand.length === 0 && <li className="muted">No objectives in hand</li>}
         </ul>
@@ -134,7 +134,7 @@ export function HandPanel({ state, onDispatch }: HandPanelProps) {
         <h4>Power Cards</h4>
         <ul>
           {myPowerHand.map((cardId) => (
-            <li key={cardId}>{cardById(state, cardId)?.name ?? cardId}</li>
+            <li key={cardId}>{cardName(state, cardId)}</li>
           ))}
           {myPowerHand.length === 0 && <li className="muted">No power cards in hand</li>}
         </ul>
@@ -145,10 +145,10 @@ export function HandPanel({ state, onDispatch }: HandPanelProps) {
           <h4>Temp Discard (During Mulligan)</h4>
           <ul>
             {myObjectiveTemp.map((cardId) => (
-              <li key={cardId}>Objective: {cardById(state, cardId)?.name ?? cardId}</li>
+              <li key={cardId}>Objective: {cardName(state, cardId)}</li>
             ))}
             {myPowerTemp.map((cardId) => (
-              <li key={cardId}>Power: {cardById(state, cardId)?.name ?? cardId}</li>
+              <li key={cardId}>Power: {cardName(state, cardId)}</li>
             ))}
             {myObjectiveTemp.length + myPowerTemp.length === 0 && (
               <li className="muted">No cards in temp discard</li>

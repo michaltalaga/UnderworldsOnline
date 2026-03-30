@@ -1,8 +1,9 @@
 import { boardCoordLabel } from "../coords";
 import { hexDistance, neighbors } from "../hex";
 import {
-  cardById,
   cardEntityIdsInZone,
+  cardName,
+  cardPowerType,
   fighterCombat,
   fighterEntityIds,
   fighterHealth,
@@ -104,36 +105,37 @@ export function getLegalActions(state: GameState, team: TeamId): LegalAction[] {
 
   const hand = cardEntityIdsInZone(state, team, "power-hand");
   hand.forEach((cardId) => {
-    const card = cardById(state, cardId);
-    if (!card || card.kind !== "power" || !card.powerType) return;
+    const powerType = cardPowerType(state, cardId);
+    if (!powerType) return;
+    const name = cardName(state, cardId);
 
-    if (card.powerType === "ferocious-strike") {
+    if (powerType === "ferocious-strike") {
       fighters.forEach((fighterId) => {
         out.push({
-          label: `Play ${card.name} on ${fighterName(state, fighterId)}`,
+          label: `Play ${name} on ${fighterName(state, fighterId)}`,
           action: { type: "play-power", actorTeam: team, cardId, fighterId },
         });
       });
     }
 
-    if (card.powerType === "healing-potion") {
+    if (powerType === "healing-potion") {
       fighters
         .filter((fighterId) => fighterHealth(state, fighterId).hp < fighterHealth(state, fighterId).maxHp)
         .forEach((fighterId) => {
           out.push({
-            label: `Play ${card.name} on ${fighterName(state, fighterId)}`,
+            label: `Play ${name} on ${fighterName(state, fighterId)}`,
             action: { type: "play-power", actorTeam: team, cardId, fighterId },
           });
         });
     }
 
-    if (card.powerType === "sidestep") {
+    if (powerType === "sidestep") {
       fighters.forEach((fighterId) => {
         neighbors(fighterPos(state, fighterId))
           .filter((h) => occupiedBy(state, h.q, h.r) === null)
           .forEach((targetHex) => {
             out.push({
-              label: `Play ${card.name}: ${fighterName(state, fighterId)} -> ${boardCoordLabel(targetHex)}`,
+              label: `Play ${name}: ${fighterName(state, fighterId)} -> ${boardCoordLabel(targetHex)}`,
               action: { type: "play-power", actorTeam: team, cardId, fighterId, targetHex },
             });
           });
