@@ -1,0 +1,202 @@
+1. Game State and Components
+Game Length: The game is played over exactly 3 battle rounds.
+
+
+Warbands: Each player commands a warband consisting of a specific set of fighters, their fighter cards, a warscroll, and a 32-card Rivals deck.
+
+
+Rivals Deck: The deck must be separated into a 12-card Objective deck (gold cards) and a 20-card Power deck (red cards). Power cards are subdivided into Ploys and Upgrades.
+
+
+The Battlefield: The game board is divided into hexes, which can be starting hexes, edge hexes, blocked hexes, stagger hexes, and empty hexes.
+
+
+Tokens: The game tracks state using Glory point tokens, Turn tokens, Damage tokens, Move/Charge tokens, Guard/Stagger tokens, and Feature tokens (Treasure/Cover).
+
+
+Dice: There are two types of dice used. Attack dice contain Critical Attack, Hammer, X Swords, Support, and Double Support symbols. Save dice contain Critical Save, Shield, Dodge, Support, and Double Support symbols.
+
+
+2. Setup Phase
+Muster Warbands: Players reveal their warband choices, place their decks face down, and set up generic tokens on their warscrolls as required by abilities.
+
+
+Starting Hand: Players shuffle their decks and draw a hand of 3 Objective cards and 5 Power cards. Each player is allowed exactly one "mulligan" (redraw) where they place all Objective and/or Power cards to the side, draw replacements, and shuffle the discarded cards back into the respective decks.
+
+
+Roll-Offs: When rules require a roll-off, both players roll an Attack die. Critical beats Hammer/Swords; Hammer/Swords beat Support; Support beats blanks. If tied, players roll again.
+
+
+Determine Territories: Players roll off. The winner chooses the board layout (side of the game board) and picks their territory. The other territory belongs to the loser.
+
+
+Place Feature Tokens: The loser of the territory roll-off places the first feature token face-down in an empty neutral hex (cannot be a blocked, stagger, or edge hex). Players alternate placing 5 tokens. Tokens cannot be placed in starting, blocked, stagger, edge hexes, or within 2 hexes of another token. If standard placement is impossible, it can be placed in an edge hex. After 5 tokens are placed, there must be at least 1 in each territory. Once all are placed, they are flipped to their numbered (Treasure) side.
+
+
+Deploy Fighters: Starting with the player who placed the final feature token, players alternate placing 1 fighter into an empty starting hex in their friendly territory until all fighters are deployed.
+
+
+3. Battle Round Structure
+Each of the 3 battle rounds consists of a Combat Phase followed by an End Phase.
+
+
+Determine First Turn: At the start of each battle round, players roll off. The winner decides who takes the first turn in the combat phase. The loser immediately draws 1 Power card. In battle rounds 2 and 3, ties go to the "underdog" (the player with fewer Glory points).
+
+
+Combat Phase Sequence: The combat phase consists of players taking alternating turns until each player has taken 4 turns.
+
+
+Turn Structure: A player's turn consists of an Action step followed by a Power step.
+
+
+4. The Action Step & Core Abilities
+During the Action step, the active player picks exactly one Core Ability to resolve.
+
+
+Move: Pick a friendly fighter to move into an adjacent empty hex up to their Move characteristic limit. The fighter must end in a different hex than they started. Assign the fighter a Move token.
+
+
+Attack: Pick a friendly fighter (the attacker), select one of their weapons, and pick a visible enemy fighter within the weapon's range. Resolve the combat sequence.
+
+
+Charge: Pick a friendly fighter with no Move or Charge tokens. Remove any Guard tokens from them. The fighter resolves a Move ability, receives a Charge token (instead of a Move token), and then must resolve an Attack ability. If a player's fighter has a Charge token, they cannot Move, Attack, or Guard unless all friendly fighters have Charge tokens.
+
+
+Guard: Pick a friendly fighter and give them a Guard token.
+
+
+Focus: Discard any number of cards, draw a replacement card of the exact same type for each discarded card, and then draw 1 additional Power card.
+
+
+5. Combat Sequence
+1. Pick Weapon Ability: If the weapon has abilities, the attacker picks 1 to use.
+
+
+2. Make Attack Roll: Attacker rolls Attack dice equal to the weapon's Dice characteristic.
+
+
+3. Make Save Roll: Target rolls Save dice equal to the target's Save characteristic.
+
+
+4. Count Successes:
+Attack Successes: Critical hits, symbols matching the weapon's dice symbol (Hammer or X Swords). If the target is Flanked/Surrounded, count Support symbols.
+
+
+Save Successes: Critical saves, symbols matching the target's save symbol (Shield or Dodge). If the attacker is Flanked/Surrounded, count Support symbols.
+
+
+Note on Guard: If the target has a Guard token, both Shield and Dodge symbols count as successes, and they cannot be driven back.
+
+
+Note on Stagger: If the target has a Stagger token, the attacker can re-roll 1 Attack die.
+
+
+5. Determine Outcome:
+Attack Successful: Attack successes > Save successes. Inflict damage equal to the weapon's Damage characteristic. Check if the target is slain. If not slain, they can be driven back.
+
+
+Drawn Attack: Attack successes = Save successes. The attack fails, but the target can still be driven back.
+
+
+Failed Attack: Attack successes < Save successes. Nothing happens.
+
+
+Drive Back: Attacker pushes the target 1 hex away.
+
+
+Overrun: If Attack criticals > Save criticals, the attacker can push themselves 1 hex into the hex the target was in (after the target is slain or driven back).
+
+
+Stand Fast: If Save criticals > Attack criticals, the target takes -1 Damage and cannot be driven back.
+
+
+6. Positioning Modifiers & Visibility
+Visibility: Draw a straight line from hex center to hex center. If the line touches/passes through a blocked hex, it is not visible. Fighters do not block visibility.
+
+
+Flanked: A fighter is Flanked if there is 1 enemy fighter (other than their opponent in the combat) adjacent to them. Grants standard Support successes.
+
+
+Surrounded: A fighter is Surrounded if there are 2 or more enemy fighters (other than their opponent) adjacent to them. Grants standard Support AND Critical Support successes. A Surrounded fighter is also considered Flanked.
+
+
+7. Weapon Abilities & Damage
+Critical Abilities: Weapon abilities marked with a Critical symbol only trigger if the Attack roll contains 1 or more Criticals.
+
+
+Specific Abilities:
+Grievous: +1 Damage for the Attack.
+
+
+Brutal: Shield and Dodge do not count as Save successes.
+
+
+Ensnare: Dodge does not count as a Save success.
+
+
+Cleave: Shield does not count as a Save success.
+
+
+Stagger: If successful, give the target a Stagger token.
+
+
+Grapple: Instead of driving back, the target is pushed 1 hex.
+
+
+Damage & Slain: Give the target damage tokens equal to the attack/ability's damage. If damage tokens >= Health characteristic, the fighter is slain. Remove the slain fighter, discard their Upgrades, and Uninspire them. The enemy player gains Glory points equal to the slain fighter's Bounty characteristic.
+
+
+8. The Power Step
+After the Action step, players alternate resolving one of the following until both players pass in succession:
+
+
+Play a Ploy: Discard a Ploy card from the hand and resolve its text immediately.
+
+
+Play an Upgrade: Equip an Upgrade card to a friendly fighter. The total Glory value of equipped Upgrades across the warband cannot exceed the player's currently held Glory points.
+
+
+Use a Warscroll Ability: Trigger an ability printed on the warband's card.
+
+
+Delve: Pick a friendly fighter on a feature token. Flip the token (Treasure becomes Cover, Cover becomes Treasure) and give that fighter a Stagger token. A warband can only use Delve once per Power step.
+
+
+Pass: Do nothing.
+
+
+9. The End Phase
+Once both players have taken 4 turns, resolve the following in order starting with the player who went first in the combat phase:
+
+Score Objectives: Reveal and score any Objective cards whose conditions are met. Gain the corresponding Glory points and move the card to the scored pile.
+
+
+Equip Upgrades: Play Upgrades subject to standard restrictions.
+
+
+Discard: Discard any number of cards from the hand.
+
+
+Draw Objectives: Draw Objective cards until holding exactly 3.
+
+
+Draw Power Cards: Draw Power cards until holding exactly 5.
+
+
+Cleanup: Clear all Move, Charge, Guard, and Stagger tokens from the board. Flip turn tokens face up.
+
+
+10. Game End and Victory Conditions
+In the Final End Phase (end of Battle Round 3), players only resolve Step 1 (Score Objectives) and Step 2 (Equip Upgrades).
+
+
+The player with the most Glory points wins.
+
+
+Tiebreakers:
+
+
+If only one player has fighters remaining, they win.
+Highest combined value of held treasure tokens.
+Highest total combined Bounty characteristics of surviving fighters.
+Draw.
