@@ -106,15 +106,24 @@
   width: 90px;
   height: 78px;
   transform: translate(-50%, -50%);
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.38);
   clip-path: polygon(24% 6%, 76% 6%, 100% 50%, 76% 94%, 24% 94%, 0% 50%);
-  border: 1px solid rgba(148, 163, 184, 0.95);
-  box-shadow: 0 1px 0 rgba(17, 24, 39, 0.15);
+  border: 2px solid rgba(51, 65, 85, 0.95);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.55) inset,
+    0 1px 0 rgba(17, 24, 39, 0.28);
+}
+
+.hex:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .hex.objective {
-  background: rgba(245, 158, 11, 0.3);
-  border-color: rgba(180, 83, 9, 0.95);
+  background: rgba(251, 191, 36, 0.5);
+  border-color: rgba(120, 53, 15, 0.98);
+  box-shadow:
+    0 0 0 2px rgba(251, 191, 36, 0.45),
+    0 0 0 1px rgba(120, 53, 15, 0.65) inset;
 }
 
 .fighter {
