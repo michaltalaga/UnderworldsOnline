@@ -1,5 +1,6 @@
 import { boardHexes } from "../engine/state";
 import { hexKey } from "../engine/hex";
+import { qStartForR, rowCountForR } from "../engine/boardShape";
 import type { GameState } from "../engine/types";
 
 type BoardProps = {
@@ -10,11 +11,15 @@ type BoardProps = {
 
 const BOARD_WIDTH = 900;
 const BOARD_HEIGHT = 760;
-const HEX_SIZE = 52;
+const HEX_X_STEP = 90;
+const HEX_Y_STEP = 78;
 
 function toPixel(q: number, r: number) {
-  const x = BOARD_WIDTH / 2 + HEX_SIZE * (Math.sqrt(3) * q + (Math.sqrt(3) / 2) * r);
-  const y = BOARD_HEIGHT / 2 + HEX_SIZE * ((3 / 2) * r);
+  const rowCount = rowCountForR(r);
+  const qStart = qStartForR(r);
+  const col = q - qStart;
+  const x = BOARD_WIDTH / 2 + (col - (rowCount - 1) / 2) * HEX_X_STEP;
+  const y = BOARD_HEIGHT / 2 + r * HEX_Y_STEP;
   return { x, y };
 }
 

@@ -1,25 +1,8 @@
 import { hexKey } from "./hex";
 import { starterObjectiveDeck, starterPowerDeck, starterWarband } from "./data/starterData";
 import { shuffleWithSeed } from "./rng";
+import { createBoardHexes } from "./boardShape";
 import type { FighterEntity, GameState, TeamId } from "./types";
-
-const BOARD_ROW_COUNTS = [6, 7, 8, 9, 8, 9, 8, 9, 8, 7, 6] as const;
-
-function createBoardHexes() {
-  const rows = BOARD_ROW_COUNTS.length;
-  const centerRow = Math.floor(rows / 2);
-  const out: Array<{ q: number; r: number }> = [];
-
-  BOARD_ROW_COUNTS.forEach((count, rowIndex) => {
-    const r = rowIndex - centerRow;
-    const qStart = -Math.floor(count / 2);
-    for (let i = 0; i < count; i += 1) {
-      out.push({ q: qStart + i, r });
-    }
-  });
-
-  return out;
-}
 
 function prefixedFighters(team: TeamId): Record<string, FighterEntity> {
   const wb = starterWarband(team);
