@@ -101,6 +101,13 @@ function App() {
     setSelectedFighterId(id);
   };
 
+  const returnToWarbandSelection = () => {
+    reset();
+    setSelectedFighterId(null);
+    setShowAllActions(false);
+    setMatchStarted(false);
+  };
+
   return (
     <div className="app-root">
       <header className="hero">
@@ -126,14 +133,7 @@ function App() {
           <Hud state={state} mode={mode} />
 
           <div className="match-controls">
-            <button
-              type="button"
-              onClick={() => {
-                reset();
-                setSelectedFighterId(null);
-                setShowAllActions(false);
-              }}
-            >
+            <button type="button" onClick={returnToWarbandSelection}>
               Restart Match
             </button>
           </div>
@@ -141,7 +141,7 @@ function App() {
           {state.winner && (
             <div className="winner-banner">
               Winner: {state.winner.toUpperCase()} &nbsp;
-              <button onClick={reset}>New Match</button>
+              <button onClick={returnToWarbandSelection}>New Match</button>
             </div>
           )}
 
