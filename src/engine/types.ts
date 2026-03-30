@@ -48,43 +48,48 @@ export type WarbandData = {
   fighters: FighterArchetype[];
 };
 
+
 export type Entity = {
   id: EntityId;
-  components: EntityComponents;
+  components: Component[];
 };
 
-export type EntityComponents = {
-  fighter?: FighterComponent;
-  name?: NameComponent;
-  position?: PositionComponent;
-  health?: HealthComponent;
-  combat?: CombatComponent;
-  status?: StatusComponent;
-  cardOwner?: CardOwnerComponent;
-  cardZone?: CardZoneComponent;
-  objectiveCard?: ObjectiveCardComponent;
-  powerCard?: PowerCardComponent;
-  glory?: GloryComponent;
-};
+export type Component =
+  | FighterComponent
+  | NameComponent
+  | PositionComponent
+  | HealthComponent
+  | CombatComponent
+  | StatusComponent
+  | CardOwnerComponent
+  | CardZoneComponent
+  | ObjectiveCardComponent
+  | PowerCardComponent
+  | GloryComponent;
 
 export type FighterComponent = {
+  type: "fighter";
   team: TeamId;
 };
 
 export type NameComponent = {
+  type: "name";
   value: string;
 };
 
 export type PositionComponent = {
+  type: "position";
   pos: Hex;
 };
 
 export type HealthComponent = {
+  type: "health";
   hp: number;
   maxHp: number;
 };
 
 export type CombatComponent = {
+  type: "combat";
   move: number;
   attackDice: number;
   attackTrait: AttackTrait;
@@ -96,6 +101,7 @@ export type CombatComponent = {
 };
 
 export type StatusComponent = {
+  type: "status";
   guard: boolean;
   charged: boolean;
 };
@@ -112,22 +118,27 @@ export type CardZone =
   | "power-temp-discard";
 
 export type CardOwnerComponent = {
+  type: "cardOwner";
   owner: TeamId;
 };
 
 export type CardZoneComponent = {
+  type: "cardZone";
   zone: CardZone;
 };
 
 export type ObjectiveCardComponent = {
-  type: ObjectiveCardType;
+  type: "objectiveCard";
+  cardType: ObjectiveCardType;
 };
 
 export type PowerCardComponent = {
-  type: PowerCardType;
+  type: "powerCard";
+  cardType: PowerCardType;
 };
 
 export type GloryComponent = {
+  type: "glory";
   value: number;
 };
 
