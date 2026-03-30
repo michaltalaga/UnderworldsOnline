@@ -78,10 +78,6 @@ export class Fighter {
   heal(amount: number): void {
     this.hp = Math.min(this.maxHp, this.hp + amount);
   }
-
-  hurt(amount: number): void {
-    this.hp = Math.max(0, this.hp - amount);
-  }
 }
 
 function fighterById(state: GameState, fighterId: string): Fighter | undefined {
@@ -107,9 +103,7 @@ export abstract class Card {
     this.zone = zone;
   }
 
-  abstract cardFamily(): "objective" | "power";
   abstract ruleText(): string;
-  abstract clone(): Card;
 
   sameDefinition(other: Card): boolean {
     return this.constructor === other.constructor && this.owner === other.owner && this.name === other.name;
@@ -122,10 +116,6 @@ export abstract class ObjectiveCard extends Card {
   constructor(owner: TeamId, name: string, zone: CardZone, glory: number) {
     super(owner, name, zone);
     this.glory = glory;
-  }
-
-  cardFamily(): "objective" {
-    return "objective";
   }
 
   sameDefinition(other: Card): boolean {
@@ -145,10 +135,6 @@ export class HoldCenterObjectiveCard extends ObjectiveCard {
     const holder = holderId ? fighterById(state, holderId) : undefined;
     return !!holder && holder.hp > 0 && holder.team === team;
   }
-
-  clone(): HoldCenterObjectiveCard {
-    return new HoldCenterObjectiveCard(this.owner, this.name, this.zone, this.glory);
-  }
 }
 
 export class TakeDownObjectiveCard extends ObjectiveCard {
@@ -158,10 +144,6 @@ export class TakeDownObjectiveCard extends ObjectiveCard {
 
   isScored(state: GameState, team: TeamId): boolean {
     return state.teams[team].roundTakedowns > 0;
-  }
-
-  clone(): TakeDownObjectiveCard {
-    return new TakeDownObjectiveCard(this.owner, this.name, this.zone, this.glory);
   }
 }
 
@@ -173,17 +155,9 @@ export class NoMercyObjectiveCard extends ObjectiveCard {
   isScored(state: GameState, team: TeamId): boolean {
     return state.teams[team].roundSuccessfulAttacks >= 2;
   }
-
-  clone(): NoMercyObjectiveCard {
-    return new NoMercyObjectiveCard(this.owner, this.name, this.zone, this.glory);
-  }
 }
 
 export abstract class PowerCard extends Card {
-  cardFamily(): "power" {
-    return "power";
-  }
-
   abstract legalActions(state: GameState, team: TeamId): PlayPowerCardAction[];
   abstract describeAction(state: GameState, action: PlayPowerCardAction): string;
   abstract play(state: GameState, action: PlayPowerCardAction): void;
@@ -213,10 +187,6 @@ export class FerociousStrikeCard extends PowerCard {
     fighter.weapon.nextAttackBonusDamage += 1;
     state.log.push({ turn: state.turnInRound, text: `${fighter.name} gains +1 damage on next attack` });
   }
-
-  clone(): FerociousStrikeCard {
-    return new FerociousStrikeCard(this.owner, this.name, this.zone);
-  }
 }
 
 export class HealingPotionCard extends PowerCard {
@@ -244,10 +214,6 @@ export class HealingPotionCard extends PowerCard {
     if (!fighter || fighter.team !== action.actorTeam || fighter.hp <= 0) return;
     fighter.heal(1);
     state.log.push({ turn: state.turnInRound, text: `${fighter.name} heals 1` });
-  }
-
-  clone(): HealingPotionCard {
-    return new HealingPotionCard(this.owner, this.name, this.zone);
   }
 }
 
@@ -286,10 +252,6 @@ export class SidestepCard extends PowerCard {
     fighter.position.r = targetHex.r;
     state.log.push({ turn: state.turnInRound, text: `${fighter.name} uses ${this.name}` });
   }
-
-  clone(): SidestepCard {
-    return new SidestepCard(this.owner, this.name, this.zone);
-  }
 }
 
 export function createObjectiveCard(owner: TeamId, zone: CardZone, spec: { name: string; kind: ObjectiveCardKind; glory: number }): ObjectiveCard {
@@ -321,10 +283,6 @@ export class CardPool {
   constructor(zone: CardZone, cards: Card[] = []) {
     this.zone = zone;
     this.cards = [...cards];
-  }
-
-  has(card: Card): boolean {
-    return this.cards.includes(card);
   }
 
   add(card: Card): void {

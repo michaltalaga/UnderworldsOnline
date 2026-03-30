@@ -6,7 +6,11 @@ import {
   CardPool,
   Deck,
   DiscardPile,
+  FerociousStrikeCard,
   Fighter,
+  HealingPotionCard,
+  HoldCenterObjectiveCard,
+  NoMercyObjectiveCard,
   createObjectiveCard,
   createPowerCard,
   type FighterStatus,
@@ -14,7 +18,9 @@ import {
   ObjectiveCard,
   PlayerCardPools,
   ScoredPile,
+  SidestepCard,
   SetAsidePile,
+  TakeDownObjectiveCard,
   Weapon,
 } from "./model";
 import { rollD6, shuffleWithSeed } from "./rng";
@@ -348,6 +354,16 @@ function cloneCardPools(source: PlayerCardPools, cards: Map<Card, Card>): Player
   return next;
 }
 
+function cloneCard(card: Card): Card {
+  if (card instanceof HoldCenterObjectiveCard) return new HoldCenterObjectiveCard(card.owner, card.name, card.zone, card.glory);
+  if (card instanceof TakeDownObjectiveCard) return new TakeDownObjectiveCard(card.owner, card.name, card.zone, card.glory);
+  if (card instanceof NoMercyObjectiveCard) return new NoMercyObjectiveCard(card.owner, card.name, card.zone, card.glory);
+  if (card instanceof SidestepCard) return new SidestepCard(card.owner, card.name, card.zone);
+  if (card instanceof FerociousStrikeCard) return new FerociousStrikeCard(card.owner, card.name, card.zone);
+  if (card instanceof HealingPotionCard) return new HealingPotionCard(card.owner, card.name, card.zone);
+  throw new Error(`Unsupported card class: ${card.constructor.name}`);
+}
+
 export function cloneState(state: GameState): GameState {
   const fighters = state.fighters.map(
     (fighter) =>
@@ -372,7 +388,7 @@ export function cloneState(state: GameState): GameState {
       ),
   );
   const fighterMap = new Map(state.fighters.map((fighter, index) => [fighter, fighters[index]]));
-  const cards = state.cards.map((card) => card.clone());
+  const cards = state.cards.map(cloneCard);
   const cardMap = new Map(state.cards.map((card, index) => [card, cards[index]]));
 
   return {
