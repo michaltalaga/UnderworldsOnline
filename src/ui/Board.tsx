@@ -9,10 +9,12 @@ type BoardProps = {
 };
 
 const HEX_SIZE = 38;
+const BOARD_WIDTH = 864;
+const BOARD_HEIGHT = 768;
 
 function toPixel(q: number, r: number) {
-  const x = HEX_SIZE * (Math.sqrt(3) * q + (Math.sqrt(3) / 2) * r);
-  const y = HEX_SIZE * ((3 / 2) * r);
+  const x = BOARD_WIDTH / 2 + HEX_SIZE * (Math.sqrt(3) * q + (Math.sqrt(3) / 2) * r);
+  const y = BOARD_HEIGHT / 2 + HEX_SIZE * ((3 / 2) * r);
   return { x, y };
 }
 
@@ -21,7 +23,7 @@ export function Board({ state, selectedFighterId, onSelectFighter }: BoardProps)
 
   return (
     <div className="board-wrap">
-      <div className="board-surface">
+      <div className="board-surface" role="img" aria-label="Underworlds tactical board">
         {hexes.map((h) => {
           const p = toPixel(h.q, h.r);
           const key = hexKey(h);

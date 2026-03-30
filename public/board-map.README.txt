@@ -1,0 +1,8 @@
+Place the real battlefield image here as:
+
+public/board-map.png
+
+Recommended source dimensions (used by current board surface):
+- 864 x 768
+
+The app now renders this image automatically behind the hex overlay.

@@ -83,37 +83,44 @@
 
 .board-wrap {
   overflow: auto;
-  min-height: 520px;
+  min-height: 768px;
 }
 
 .board-surface {
   position: relative;
-  width: 660px;
-  height: 540px;
+  width: 864px;
+  height: 768px;
   margin: 0 auto;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background-image: linear-gradient(rgba(12, 10, 9, 0.12), rgba(12, 10, 9, 0.18)), url("/board-map.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .hex {
   position: absolute;
-  width: 62px;
-  height: 54px;
+  width: 66px;
+  height: 58px;
   transform: translate(-50%, -50%);
-  background: linear-gradient(180deg, #fefce8, #fef3c7);
+  background: rgba(255, 255, 255, 0.03);
   clip-path: polygon(24% 6%, 76% 6%, 100% 50%, 76% 94%, 24% 94%, 0% 50%);
-  border: 1px solid #d6c7a3;
-  box-shadow: 0 2px 0 rgba(20, 17, 15, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  box-shadow: 0 0 0 1px rgba(17, 24, 39, 0.35);
 }
 
 .hex.objective {
-  background: linear-gradient(180deg, #dbeafe, #c7d2fe);
-  border-color: #93c5fd;
+  background: rgba(245, 158, 11, 0.24);
+  border-color: rgba(251, 191, 36, 0.95);
 }
 
 .fighter {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 66px;
-  height: 66px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   border: 2px solid transparent;
   cursor: pointer;
@@ -142,8 +149,8 @@
 }
 
 .fighter .name {
-  font-size: 0.58rem;
-  max-width: 56px;
+  font-size: 0.52rem;
+  max-width: 46px;
   text-align: center;
   line-height: 1.1;
 }
@@ -273,7 +280,11 @@
   }
 
   .board-surface {
-    width: 560px;
-    height: 500px;
+    width: 760px;
+    height: 675px;
+  }
+
+  .board-wrap {
+    min-height: 675px;
   }
 }
