@@ -1,10 +1,13 @@
 import { useMemo, useState } from "react";
 import { useGame } from "./app/useGame";
+import { starterWarbandOptions } from "./engine/data/starterData";
 import type { LegalAction } from "./engine/types";
+import type { WarbandId } from "./engine/data/starterData";
 import { Board } from "./ui/Board";
 import { EventLog } from "./ui/EventLog";
 import { HandPanel } from "./ui/HandPanel";
 import { Hud } from "./ui/Hud";
+import { WarbandPicker } from "./ui/WarbandPicker";
 import "./App.css";
 
 function actionReferencesFighter(action: LegalAction, fighterId: string): boolean {
@@ -17,7 +20,9 @@ function actionReferencesFighter(action: LegalAction, fighterId: string): boolea
 }
 
 function App() {
-  const { state, legal, dispatch, mode, reset } = useGame();
+  const [playerWarbandId, setPlayerWarbandId] = useState<WarbandId>("emberguard");
+  const [matchStarted, setMatchStarted] = useState(false);
+  const { state, legal, dispatch, mode, reset } = useGame(playerWarbandId);
   const [selectedFighterId, setSelectedFighterId] = useState<string | null>(null);
   const [showAllActions, setShowAllActions] = useState(false);
 
@@ -92,73 +97,88 @@ function App() {
         </p>
       </header>
 
-      <Hud state={state} mode={mode} />
-
-      {state.winner && (
-        <div className="winner-banner">
-          Winner: {state.winner.toUpperCase()} &nbsp;
-          <button onClick={reset}>New Match</button>
-        </div>
+      {!matchStarted && (
+        <WarbandPicker
+          options={starterWarbandOptions}
+          selectedId={playerWarbandId}
+          onSelect={setPlayerWarbandId}
+          onStart={() => setMatchStarted(true)}
+        />
       )}
 
-      <main className="layout">
-        <section className="board-col">
-          <Board
-            state={state}
-            selectedFighterId={effectiveSelectedFighterId}
-            onSelectFighter={handleSelectFighter}
-          />
-        </section>
+      {!matchStarted && <p className="muted">Pick a warband, then start the match.</p>}
 
-        <aside className="side-col">
-          <div className="panel action-panel">
-            <h3>Actions ({state.activeTeam})</h3>
-            <label className="toggle-row">
-              <input
-                type="checkbox"
-                checked={showAllActions}
-                onChange={(e) => setShowAllActions(e.target.checked)}
-              />
-              Show all actions
-            </label>
+      {matchStarted && (
+        <>
+          <Hud state={state} mode={mode} />
 
-            {!showAllActions && selectedFighter && (
-              <div className="focus-box">
-                Focus: <strong>{selectedFighter.name}</strong> ({selectedFighter.hp}/{selectedFighter.stats.maxHp} HP)
-              </div>
-            )}
-
-            <div className="actions">
-              {Object.entries(groupedActions).map(([groupName, actions]) => {
-                if (actions.length === 0) return null;
-                return (
-                  <div className="action-group" key={groupName}>
-                    <h4>
-                      {groupName} <span>({actions.length})</span>
-                    </h4>
-                    {actions.map((l, idx) => (
-                      <button
-                        key={`${groupName}-${l.label}-${idx}`}
-                        className="action-btn"
-                        onClick={() => {
-                          dispatch(l.action);
-                        }}
-                        disabled={state.activeTeam !== "red" || Boolean(state.winner)}
-                      >
-                        {l.label}
-                      </button>
-                    ))}
-                  </div>
-                );
-              })}
-              {visibleActions.length === 0 && <p className="muted">No legal actions.</p>}
+          {state.winner && (
+            <div className="winner-banner">
+              Winner: {state.winner.toUpperCase()} &nbsp;
+              <button onClick={reset}>New Match</button>
             </div>
-          </div>
+          )}
 
-          <HandPanel state={state} />
-          <EventLog entries={state.log} />
-        </aside>
-      </main>
+          <main className="layout">
+            <section className="board-col">
+              <Board
+                state={state}
+                selectedFighterId={effectiveSelectedFighterId}
+                onSelectFighter={handleSelectFighter}
+              />
+            </section>
+
+            <aside className="side-col">
+              <div className="panel action-panel">
+                <h3>Actions ({state.activeTeam})</h3>
+                <label className="toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={showAllActions}
+                    onChange={(e) => setShowAllActions(e.target.checked)}
+                  />
+                  Show all actions
+                </label>
+
+                {!showAllActions && selectedFighter && (
+                  <div className="focus-box">
+                    Focus: <strong>{selectedFighter.name}</strong> ({selectedFighter.hp}/{selectedFighter.stats.maxHp} HP)
+                  </div>
+                )}
+
+                <div className="actions">
+                  {Object.entries(groupedActions).map(([groupName, actions]) => {
+                    if (actions.length === 0) return null;
+                    return (
+                      <div className="action-group" key={groupName}>
+                        <h4>
+                          {groupName} <span>({actions.length})</span>
+                        </h4>
+                        {actions.map((l, idx) => (
+                          <button
+                            key={`${groupName}-${l.label}-${idx}`}
+                            className="action-btn"
+                            onClick={() => {
+                              dispatch(l.action);
+                            }}
+                            disabled={state.activeTeam !== "red" || Boolean(state.winner)}
+                          >
+                            {l.label}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })}
+                  {visibleActions.length === 0 && <p className="muted">No legal actions.</p>}
+                </div>
+              </div>
+
+              <HandPanel state={state} />
+              <EventLog entries={state.log} />
+            </aside>
+          </main>
+        </>
+      )}
     </div>
   );
 }

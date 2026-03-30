@@ -1,11 +1,17 @@
 import { hexKey } from "./hex";
-import { starterObjectiveDeck, starterPowerDeck, starterWarband } from "./data/starterData";
+import { starterObjectiveDeck, starterPowerDeck, starterWarbandById } from "./data/starterData";
 import { rollD6, shuffleWithSeed } from "./rng";
 import { createBoardHexes } from "./boardShape";
+import type { WarbandId } from "./data/starterData";
 import type { FighterEntity, GameState, TeamId } from "./types";
 
-function prefixedFighters(team: TeamId): Record<string, FighterEntity> {
-  const wb = starterWarband(team);
+type InitialStateSetup = {
+  redWarbandId: WarbandId;
+  blueWarbandId: WarbandId;
+};
+
+function prefixedFighters(team: TeamId, warbandId: WarbandId): Record<string, FighterEntity> {
+  const wb = starterWarbandById(warbandId);
   const out: Record<string, FighterEntity> = {};
   wb.fighters.forEach((f) => {
     const id = `${team}-${f.id}`;
@@ -64,9 +70,12 @@ export function isBoardHex(state: GameState, q: number, r: number): boolean {
   return state.boardHexes.some((h) => h.q === q && h.r === r);
 }
 
-export function initialState(seed = 1337): GameState {
-  const redFighters = prefixedFighters("red");
-  const blueFighters = prefixedFighters("blue");
+export function initialState(
+  seed = 1337,
+  setup: InitialStateSetup = { redWarbandId: "emberguard", blueWarbandId: "duskraiders" },
+): GameState {
+  const redFighters = prefixedFighters("red", setup.redWarbandId);
+  const blueFighters = prefixedFighters("blue", setup.blueWarbandId);
   const allFighters = { ...redFighters, ...blueFighters };
 
   const redObj = shuffleWithSeed(starterObjectiveDeck(), seed);

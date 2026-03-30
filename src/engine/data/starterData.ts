@@ -1,5 +1,13 @@
 import type { ObjectiveCard, PowerCard, TeamId, WarbandData } from "../types";
 
+export type WarbandId = "emberguard" | "duskraiders";
+
+export type WarbandOption = {
+  id: WarbandId;
+  name: string;
+  fighterNames: string[];
+};
+
 const objectiveCards: ObjectiveCard[] = [
   { id: "o1", name: "Hold Center", type: "hold-center", glory: 1 },
   { id: "o2", name: "Take Down", type: "take-down", glory: 1 },
@@ -90,6 +98,32 @@ const duskraiders: WarbandData = {
     },
   ],
 };
+
+const warbandsById: Record<WarbandId, WarbandData> = {
+  emberguard,
+  duskraiders,
+};
+
+export const starterWarbandOptions: WarbandOption[] = [
+  {
+    id: "emberguard",
+    name: emberguard.name,
+    fighterNames: emberguard.fighters.map((f) => f.name),
+  },
+  {
+    id: "duskraiders",
+    name: duskraiders.name,
+    fighterNames: duskraiders.fighters.map((f) => f.name),
+  },
+];
+
+export function oppositeWarbandId(id: WarbandId): WarbandId {
+  return id === "emberguard" ? "duskraiders" : "emberguard";
+}
+
+export function starterWarbandById(id: WarbandId): WarbandData {
+  return warbandsById[id];
+}
 
 export function starterWarband(team: TeamId): WarbandData {
   return team === "red" ? emberguard : duskraiders;

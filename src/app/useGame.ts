@@ -1,18 +1,27 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { chooseAiAction } from "../ai/randomPolicy";
+import { oppositeWarbandId } from "../engine/data/starterData";
 import { getLegal } from "../engine/engine";
 import { initialState } from "../engine/state";
-import type { GameAction, GameState, LegalAction } from "../engine/types";
+import type { GameAction, LegalAction } from "../engine/types";
+import type { WarbandId } from "../engine/data/starterData";
 import { LocalHostAdapter } from "../network/localHostAdapter";
 
-export function useGame() {
-  const [adapter, setAdapter] = useState(() => new LocalHostAdapter(initialState(424242)));
-  const [state, setState] = useState<GameState>(adapter.getState());
+export function useGame(playerWarbandId: WarbandId) {
+  const [seed, setSeed] = useState(424242);
 
-  useEffect(() => {
-    const unsub = adapter.subscribe((next) => setState(next));
-    return unsub;
-  }, [adapter]);
+  const adapter = useMemo(
+    () =>
+      new LocalHostAdapter(
+        initialState(seed, {
+          redWarbandId: playerWarbandId,
+          blueWarbandId: oppositeWarbandId(playerWarbandId),
+        }),
+      ),
+    [playerWarbandId, seed],
+  );
+
+  const state = useSyncExternalStore(adapter.subscribe.bind(adapter), adapter.getState.bind(adapter));
 
   const legal = useMemo<LegalAction[]>(() => getLegal(state), [state]);
 
@@ -35,10 +44,7 @@ export function useGame() {
   }, [adapter, state]);
 
   const reset = () => {
-    const fresh = initialState(424242 + Math.floor(Math.random() * 99999));
-    const resetAdapter = new LocalHostAdapter(fresh);
-    setAdapter(resetAdapter);
-    setState(resetAdapter.getState());
+    setSeed(424242 + Math.floor(Math.random() * 99999));
   };
 
   return {
