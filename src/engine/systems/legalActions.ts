@@ -58,7 +58,18 @@ export function getLegalActions(state: GameState, team: TeamId): LegalAction[] {
     }
 
     if (canStartMulligan(state, team)) {
-      out.push({ label: "Mulligan hand", action: { type: "start-mulligan", actorTeam: team } });
+      out.push({
+        label: "Redraw objective hand",
+        action: { type: "start-mulligan", actorTeam: team, objective: true, power: false },
+      });
+      out.push({
+        label: "Redraw power hand",
+        action: { type: "start-mulligan", actorTeam: team, objective: false, power: true },
+      });
+      out.push({
+        label: "Redraw both hands",
+        action: { type: "start-mulligan", actorTeam: team, objective: true, power: true },
+      });
     }
 
     const canBreakChargeLock = allFriendlyCharged(state, team);

@@ -100,15 +100,7 @@ export function HandPanel({ state, onDispatch }: HandPanelProps) {
 
       <div className="section mulligan-controls">
         <h4>Mulligan</h4>
-        {!mulliganPending && (
-          <button
-            type="button"
-            onClick={() => onDispatch({ type: "start-mulligan", actorTeam: "red" })}
-            disabled={!canMulligan || state.activeTeam !== "red"}
-          >
-            Mulligan My Hand
-          </button>
-        )}
+        {!mulliganPending && <p className="muted">Choose your opening redraw from the board overlay.</p>}
         {mulliganPending && (
           <button
             type="button"
@@ -118,6 +110,7 @@ export function HandPanel({ state, onDispatch }: HandPanelProps) {
             Finalize Mulligan
           </button>
         )}
+        {!mulliganPending && !canMulligan && <p className="muted">Opening mulligan already used or no longer available.</p>}
       </div>
 
       <h3>Your Hand (Red)</h3>

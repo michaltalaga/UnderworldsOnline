@@ -57,8 +57,9 @@ function isActionLegal(state: GameState, action: GameAction): boolean {
 
 function applyActionStep(state: GameState, action: GameAction): void {
   if (action.type === "start-mulligan") {
-    startMulligan(state, action.actorTeam);
-    state.log.push({ turn: state.turnInRound, text: `${action.actorTeam} starts mulligan` });
+    startMulligan(state, action.actorTeam, { objective: action.objective, power: action.power });
+    const redrawTarget = action.objective && action.power ? "objective and power hands" : action.objective ? "objective hand" : "power hand";
+    state.log.push({ turn: state.turnInRound, text: `${action.actorTeam} redraws ${redrawTarget}` });
     return;
   }
 

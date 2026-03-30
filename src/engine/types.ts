@@ -330,6 +330,8 @@ export type EndPowerStepAction = ActionBase & {
 
 export type StartMulliganAction = ActionBase & {
   type: "start-mulligan";
+  objective: boolean;
+  power: boolean;
 };
 
 export type ResolveMulliganAction = ActionBase & {

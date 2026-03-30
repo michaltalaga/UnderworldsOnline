@@ -10,6 +10,7 @@ import { DiceTray } from "./ui/DiceTray";
 import { EventLog } from "./ui/EventLog";
 import { HandPanel } from "./ui/HandPanel";
 import { Hud } from "./ui/Hud";
+import { OpeningHandModal } from "./ui/OpeningHandModal";
 import { WarbandPicker } from "./ui/WarbandPicker";
 import "./App.css";
 
@@ -172,6 +173,7 @@ function App() {
 
           <main className="layout">
             <section className="board-col">
+              <OpeningHandModal state={state} onDispatch={dispatch} />
               <Board
                 state={state}
                 selectedFighterId={effectiveSelectedFighterId}

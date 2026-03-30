@@ -48,18 +48,23 @@ export function canStartMulligan(state: GameState, team: TeamId): boolean {
   return !t.mulliganUsed && !isMulliganPending(state, team);
 }
 
-export function startMulligan(state: GameState, team: TeamId): void {
+export function startMulligan(state: GameState, team: TeamId, options: { objective: boolean; power: boolean }): void {
   if (!canStartMulligan(state, team)) return;
+  if (!options.objective && !options.power) return;
 
-  cardEntityIdsInZone(state, team, "objective-hand").forEach((cardId) =>
-    moveCardEntityToZone(state, cardId, "objective-temp-discard"),
-  );
-  cardEntityIdsInZone(state, team, "power-hand").forEach((cardId) =>
-    moveCardEntityToZone(state, cardId, "power-temp-discard"),
-  );
+  if (options.objective) {
+    cardEntityIdsInZone(state, team, "objective-hand").forEach((cardId) =>
+      moveCardEntityToZone(state, cardId, "objective-temp-discard"),
+    );
+    drawObjectivesToThree(state, team);
+  }
 
-  drawObjectivesToThree(state, team);
-  drawPowerToFive(state, team);
+  if (options.power) {
+    cardEntityIdsInZone(state, team, "power-hand").forEach((cardId) =>
+      moveCardEntityToZone(state, cardId, "power-temp-discard"),
+    );
+    drawPowerToFive(state, team);
+  }
 }
 
 export function resolveMulligan(state: GameState, team: TeamId): void {
