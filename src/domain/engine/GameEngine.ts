@@ -41,6 +41,7 @@ import { ResolveTerritoryRollOffAction } from "../setup/ResolveTerritoryRollOffA
 import { SetupAction } from "../setup/SetupAction";
 import { ResolveDiscardCardsAction } from "../endPhase/ResolveDiscardCardsAction";
 import { ResolveDrawObjectivesAction } from "../endPhase/ResolveDrawObjectivesAction";
+import { ResolveDrawPowerCardsAction } from "../endPhase/ResolveDrawPowerCardsAction";
 import { ResolveEquipUpgradesAction } from "../endPhase/ResolveEquipUpgradesAction";
 import { ResolveScoreObjectivesAction } from "../endPhase/ResolveScoreObjectivesAction";
 import { CombatActionService } from "../rules/CombatActionService";
@@ -55,6 +56,7 @@ export type GameEngineShuffleCards = (cards: readonly CardInstance[]) => CardIns
 
 export class GameEngine {
   private static readonly objectiveHandSize = 3;
+  private static readonly powerHandSize = 5;
   private static readonly turnsPerRound = 4;
   private readonly shuffleCards: GameEngineShuffleCards;
   private readonly rollOffResolver: RollOffResolver;
@@ -144,6 +146,11 @@ export class GameEngine {
 
     if (action instanceof ResolveDrawObjectivesAction) {
       this.applyResolveDrawObjectives(game);
+      return game;
+    }
+
+    if (action instanceof ResolveDrawPowerCardsAction) {
+      this.applyResolveDrawPowerCards(game);
       return game;
     }
 
@@ -581,6 +588,34 @@ export class GameEngine {
       ),
     );
     game.eventLog.push("Objective drawing complete.");
+  }
+
+  private applyResolveDrawPowerCards(game: Game): void {
+    this.assertEndPhaseStep(game, EndPhaseStep.DrawPowerCards);
+
+    for (const player of game.players) {
+      const cardsToDraw = Math.max(0, GameEngine.powerHandSize - player.powerHand.length);
+      if (cardsToDraw === 0) {
+        continue;
+      }
+
+      this.drawCards(
+        player.powerDeck.drawPile,
+        player.powerHand,
+        cardsToDraw,
+        CardZone.PowerHand,
+      );
+      game.eventLog.push(`${player.name} drew ${cardsToDraw} power card${cardsToDraw === 1 ? "" : "s"}.`);
+    }
+
+    game.transitionTo(
+      createEndPhaseGameState(
+        EndPhaseStep.Cleanup,
+        null,
+        game.firstPlayerId,
+      ),
+    );
+    game.eventLog.push("Power card drawing complete.");
   }
 
   private drawCards(

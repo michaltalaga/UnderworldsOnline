@@ -22,6 +22,7 @@ export * from "./endPhase/EndPhaseAction";
 export * from "./endPhase/EndPhaseActionService";
 export * from "./endPhase/ResolveDiscardCardsAction";
 export * from "./endPhase/ResolveDrawObjectivesAction";
+export * from "./endPhase/ResolveDrawPowerCardsAction";
 export * from "./endPhase/ResolveEquipUpgradesAction";
 export * from "./endPhase/ResolveScoreObjectivesAction";
 export * from "./engine/GameEngine";

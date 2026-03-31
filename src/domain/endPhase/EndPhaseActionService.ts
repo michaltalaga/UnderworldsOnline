@@ -3,6 +3,7 @@ import { EndPhaseStep, Phase } from "../values/enums";
 import { EndPhaseAction } from "./EndPhaseAction";
 import { ResolveDiscardCardsAction } from "./ResolveDiscardCardsAction";
 import { ResolveDrawObjectivesAction } from "./ResolveDrawObjectivesAction";
+import { ResolveDrawPowerCardsAction } from "./ResolveDrawPowerCardsAction";
 import { ResolveEquipUpgradesAction } from "./ResolveEquipUpgradesAction";
 import { ResolveScoreObjectivesAction } from "./ResolveScoreObjectivesAction";
 
@@ -22,6 +23,7 @@ export class EndPhaseActionService {
       case EndPhaseStep.DrawObjectives:
         return [new ResolveDrawObjectivesAction()];
       case EndPhaseStep.DrawPowerCards:
+        return [new ResolveDrawPowerCardsAction()];
       case EndPhaseStep.Cleanup:
         return [];
       default: {
