@@ -661,28 +661,23 @@ export class GameEngine {
       const uniqueObjectiveIds = new Set(scorableObjectives.map((card) => card.id));
 
       for (const objectiveId of uniqueObjectiveIds) {
-        const objectiveCard = player.getCard(objectiveId);
-        if (objectiveCard === undefined || objectiveCard.zone !== CardZone.ObjectiveHand) {
+        const objective = player.getCardWithDefinition(objectiveId);
+        if (objective === undefined || objective.card.zone !== CardZone.ObjectiveHand) {
           throw new Error(`Objective card ${objectiveId} is not available to score for ${player.name}.`);
         }
 
-        const objectiveDefinition = player.getCardDefinition(objectiveCard.id);
-        if (objectiveDefinition === undefined) {
-          throw new Error(`Missing card definition for objective ${objectiveCard.definitionId}.`);
-        }
-
-        const handIndex = player.objectiveHand.findIndex((card) => card.id === objectiveCard.id);
+        const handIndex = player.objectiveHand.findIndex((card) => card.id === objective.card.id);
         if (handIndex === -1) {
-          throw new Error(`Could not find objective ${objectiveCard.id} in ${player.name}'s hand.`);
+          throw new Error(`Could not find objective ${objective.card.id} in ${player.name}'s hand.`);
         }
 
         player.objectiveHand.splice(handIndex, 1);
-        objectiveCard.zone = CardZone.ScoredObjectives;
-        objectiveCard.revealed = true;
-        player.scoredObjectives.push(objectiveCard);
-        player.glory += objectiveDefinition.gloryValue;
+        objective.card.zone = CardZone.ScoredObjectives;
+        objective.card.revealed = true;
+        player.scoredObjectives.push(objective.card);
+        player.glory += objective.definition.gloryValue;
         game.eventLog.push(
-          `${player.name} scored ${objectiveDefinition.name} for ${objectiveDefinition.gloryValue} glory.`,
+          `${player.name} scored ${objective.definition.name} for ${objective.definition.gloryValue} glory.`,
         );
       }
     }

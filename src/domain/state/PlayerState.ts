@@ -1,4 +1,11 @@
-import type { CardId, FighterId, PlayerId, TerritoryId, WeaponDefinitionId } from "../values/ids";
+import type {
+  CardDefinitionId,
+  CardId,
+  FighterId,
+  PlayerId,
+  TerritoryId,
+  WeaponDefinitionId,
+} from "../values/ids";
 import { DeckKind } from "../values/enums";
 import { CardDefinition } from "../definitions/CardDefinition";
 import { FighterDefinition } from "../definitions/FighterDefinition";
@@ -8,6 +15,11 @@ import { CardInstance } from "./CardInstance";
 import { DeckState } from "./DeckState";
 import { FighterState } from "./FighterState";
 import { WarscrollState } from "./WarscrollState";
+
+export type PlayerCardWithDefinition = {
+  card: CardInstance;
+  definition: CardDefinition;
+};
 
 export class PlayerState {
   public readonly id: PlayerId;
@@ -95,9 +107,21 @@ export class PlayerState {
       return undefined;
     }
 
-    return [...this.warband.objectiveCards, ...this.warband.powerCards].find(
-      (definition) => definition.id === card.definitionId,
-    );
+    return this.findCardDefinition(card.definitionId);
+  }
+
+  public getCardWithDefinition(cardId: CardId): PlayerCardWithDefinition | undefined {
+    const card = this.getCard(cardId);
+    if (card === undefined) {
+      return undefined;
+    }
+
+    const definition = this.findCardDefinition(card.definitionId);
+    if (definition === undefined) {
+      return undefined;
+    }
+
+    return { card, definition };
   }
 
   public getAllCards(): CardInstance[] {
@@ -116,6 +140,12 @@ export class PlayerState {
   public getUndeployedFighters(): FighterState[] {
     return this.fighters.filter(
       (fighter) => fighter.currentHexId === null && !fighter.isSlain,
+    );
+  }
+
+  private findCardDefinition(cardDefinitionId: CardDefinitionId): CardDefinition | undefined {
+    return [...this.warband.objectiveCards, ...this.warband.powerCards].find(
+      (definition) => definition.id === cardDefinitionId,
     );
   }
 }
