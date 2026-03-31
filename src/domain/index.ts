@@ -30,6 +30,7 @@ export * from "./engine/GameEngine";
 export * from "./factories/GameFactory";
 export * from "./rules/CombatContext";
 export * from "./rules/CombatActionService";
+export * from "./rules/DefaultCombatResolver";
 export * from "./rules/DefaultScoringResolver";
 export * from "./rules/CombatResolver";
 export * from "./rules/CombatResult";

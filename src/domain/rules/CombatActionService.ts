@@ -1,3 +1,4 @@
+import { AttackAction } from "../actions/AttackAction";
 import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
@@ -45,9 +46,54 @@ export class CombatActionService extends LegalActionService {
 
     return [
       ...player.fighters.flatMap((fighter) => this.getLegalMoveActionsForFighter(game, player, fighter.id)),
+      ...player.fighters.flatMap((fighter) => this.getLegalAttackActionsForFighter(game, player, fighter.id)),
       ...player.fighters.flatMap((fighter) => this.getLegalGuardActionsForFighter(game, player, fighter.id)),
       new PassAction(playerId),
     ];
+  }
+
+  public isLegalAttackAction(game: Game, action: AttackAction): boolean {
+    if (!this.isCombatActionStep(game, action.playerId) || action.selectedAbility !== null) {
+      return false;
+    }
+
+    const player = game.getPlayer(action.playerId);
+    const opponent = game.getOpponent(action.playerId);
+    if (player === undefined || opponent === undefined) {
+      return false;
+    }
+
+    const attacker = player.getFighter(action.attackerId);
+    const attackerDefinition = player.getFighterDefinition(action.attackerId);
+    const target = opponent.getFighter(action.targetId);
+    if (
+      attacker === undefined ||
+      attackerDefinition === undefined ||
+      target === undefined ||
+      !this.canFighterAttack(attacker) ||
+      target.isSlain ||
+      target.currentHexId === null
+    ) {
+      return false;
+    }
+
+    const weapon = attackerDefinition.weapons.find((candidate) => candidate.id === action.weaponId);
+    if (weapon === undefined) {
+      return false;
+    }
+
+    const attackerHexId = attacker.currentHexId;
+    if (attackerHexId === null) {
+      return false;
+    }
+
+    const attackerHex = game.board.getHex(attackerHexId);
+    const targetHex = game.board.getHex(target.currentHexId);
+    if (attackerHex === undefined || targetHex === undefined) {
+      return false;
+    }
+
+    return this.getHexDistance(attackerHex, targetHex) <= weapon.range;
   }
 
   public isLegalGuardAction(game: Game, action: GuardAction): boolean {
@@ -122,6 +168,53 @@ export class CombatActionService extends LegalActionService {
     }
 
     return true;
+  }
+
+  private getLegalAttackActionsForFighter(
+    game: Game,
+    player: PlayerState,
+    fighterId: FighterId,
+  ): AttackAction[] {
+    const fighter = player.getFighter(fighterId);
+    const fighterDefinition = player.getFighterDefinition(fighterId);
+    if (
+      fighter === undefined ||
+      fighterDefinition === undefined ||
+      !this.canFighterAttack(fighter) ||
+      !this.isCombatActionStep(game, player.id)
+    ) {
+      return [];
+    }
+
+    const opponent = game.getOpponent(player.id);
+    if (opponent === undefined) {
+      return [];
+    }
+
+    const attackerHexId = fighter.currentHexId;
+    if (attackerHexId === null) {
+      return [];
+    }
+
+    const attackerHex = game.board.getHex(attackerHexId);
+    if (attackerHex === undefined) {
+      return [];
+    }
+
+    return fighterDefinition.weapons.flatMap((weapon) =>
+      opponent.fighters.flatMap((target) => {
+        if (target.isSlain || target.currentHexId === null) {
+          return [];
+        }
+
+        const targetHex = game.board.getHex(target.currentHexId);
+        if (targetHex === undefined || this.getHexDistance(attackerHex, targetHex) > weapon.range) {
+          return [];
+        }
+
+        return [new AttackAction(player.id, fighter.id, target.id, weapon.id)];
+      }),
+    );
   }
 
   private getLegalGuardActionsForFighter(
@@ -210,6 +303,14 @@ export class CombatActionService extends LegalActionService {
     );
   }
 
+  private canFighterAttack(fighter: FighterState): boolean {
+    return !(
+      fighter.isSlain ||
+      fighter.currentHexId === null ||
+      fighter.hasChargeToken
+    );
+  }
+
   private isCombatActionStep(game: Game, playerId: PlayerId): boolean {
     return (
       game.state.kind === "combatTurn" &&
@@ -232,6 +333,13 @@ export class CombatActionService extends LegalActionService {
     return neighborDirections.some(
       ([qOffset, rOffset]) => a.q + qOffset === b.q && a.r + rOffset === b.r,
     );
+  }
+
+  private getHexDistance(a: HexCell, b: HexCell): number {
+    const qDistance = a.q - b.q;
+    const rDistance = a.r - b.r;
+    const sDistance = (a.q + a.r) - (b.q + b.r);
+    return (Math.abs(qDistance) + Math.abs(rDistance) + Math.abs(sDistance)) / 2;
   }
 
   private isTraversableMoveHex(hex: HexCell): boolean {

@@ -33,6 +33,7 @@ import { CompleteMusterAction } from "../setup/CompleteMusterAction";
 import { DeployFighterAction } from "../setup/DeployFighterAction";
 import { DrawStartingHandsAction } from "../setup/DrawStartingHandsAction";
 import { EndPhaseAction } from "../endPhase/EndPhaseAction";
+import { AttackAction } from "../actions/AttackAction";
 import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
@@ -48,6 +49,9 @@ import { ResolveDrawPowerCardsAction } from "../endPhase/ResolveDrawPowerCardsAc
 import { ResolveEquipUpgradesAction } from "../endPhase/ResolveEquipUpgradesAction";
 import { ResolveScoreObjectivesAction } from "../endPhase/ResolveScoreObjectivesAction";
 import { CombatActionService } from "../rules/CombatActionService";
+import { CombatContext } from "../rules/CombatContext";
+import { CombatResolver } from "../rules/CombatResolver";
+import { DefaultCombatResolver } from "../rules/DefaultCombatResolver";
 import { DefaultScoringResolver } from "../rules/DefaultScoringResolver";
 import { DefaultVictoryResolver } from "../rules/DefaultVictoryResolver";
 import { RollOffContext } from "../rules/RollOffContext";
@@ -66,6 +70,7 @@ export class GameEngine {
   private readonly shuffleCards: GameEngineShuffleCards;
   private readonly rollOffResolver: RollOffResolver;
   private readonly combatActionService: CombatActionService;
+  private readonly combatResolver: CombatResolver;
   private readonly scoringResolver: ScoringResolver;
   private readonly victoryResolver: VictoryResolver;
 
@@ -73,12 +78,14 @@ export class GameEngine {
     shuffleCards: GameEngineShuffleCards = GameEngine.copyCards,
     rollOffResolver: RollOffResolver = new RollOffResolver(),
     combatActionService: CombatActionService = new CombatActionService(),
+    combatResolver: CombatResolver = new DefaultCombatResolver(),
     scoringResolver: ScoringResolver = new DefaultScoringResolver(),
     victoryResolver: VictoryResolver = new DefaultVictoryResolver(),
   ) {
     this.shuffleCards = shuffleCards;
     this.rollOffResolver = rollOffResolver;
     this.combatActionService = combatActionService;
+    this.combatResolver = combatResolver;
     this.scoringResolver = scoringResolver;
     this.victoryResolver = victoryResolver;
   }
@@ -123,6 +130,11 @@ export class GameEngine {
   }
 
   public applyGameAction(game: Game, action: GameAction): Game {
+    if (action instanceof AttackAction) {
+      this.applyAttackAction(game, action);
+      return game;
+    }
+
     if (action instanceof MoveAction) {
       this.applyMoveAction(game, action);
       return game;
@@ -479,6 +491,84 @@ export class GameEngine {
     game.consecutivePasses = 0;
     game.transitionTo(createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power));
     game.eventLog.push(`${player.name} moved fighter ${fighter.id} to ${destinationHex.id}.`);
+  }
+
+  private applyAttackAction(game: Game, action: AttackAction): void {
+    this.assertCombatTurnStep(game, TurnStep.Action);
+    if (!this.combatActionService.isLegalAttackAction(game, action)) {
+      throw new Error(`Attack action is not legal for fighter ${action.attackerId} against ${action.targetId}.`);
+    }
+
+    const attackerPlayer = this.requirePlayer(game, action.playerId);
+    this.assertActivePlayer(game, attackerPlayer.id);
+
+    const defenderPlayer = this.requireOpponent(game, attackerPlayer.id);
+    const attacker = this.requireOwnedDeployedFighter(attackerPlayer, action.attackerId);
+    const attackerDefinition = attackerPlayer.getFighterDefinition(attacker.id);
+    const target = defenderPlayer.getFighter(action.targetId);
+    const targetDefinition = defenderPlayer.getFighterDefinition(action.targetId);
+    if (
+      attackerDefinition === undefined ||
+      target === undefined ||
+      targetDefinition === undefined ||
+      target.currentHexId === null ||
+      target.isSlain
+    ) {
+      throw new Error(`Attack target ${action.targetId} is not available.`);
+    }
+
+    const weapon = attackerDefinition.weapons.find((candidate) => candidate.id === action.weaponId);
+    if (weapon === undefined) {
+      throw new Error(`Fighter ${attacker.id} does not have weapon ${action.weaponId}.`);
+    }
+
+    const combatResult = this.combatResolver.resolve(
+      game,
+      new CombatContext(
+        attackerPlayer.id,
+        defenderPlayer.id,
+        attacker.id,
+        target.id,
+        weapon.id,
+        action.selectedAbility,
+      ),
+    );
+
+    if (combatResult.targetMoved || combatResult.attackerMoved) {
+      throw new Error("Driven back movement is not yet supported.");
+    }
+
+    target.damage += combatResult.damageInflicted;
+    if (combatResult.staggerApplied) {
+      target.hasStaggerToken = true;
+    }
+
+    const targetSlain = combatResult.targetSlain || target.damage >= targetDefinition.health;
+    if (targetSlain) {
+      const targetHex = this.requireHex(game, target.currentHexId);
+      targetHex.occupantFighterId = null;
+      target.currentHexId = null;
+      target.isSlain = true;
+      attackerPlayer.glory += targetDefinition.bounty;
+    }
+
+    const firstPlayerId = game.firstPlayerId;
+    if (firstPlayerId === null) {
+      throw new Error("Combat turn state requires a first player id.");
+    }
+
+    game.consecutivePasses = 0;
+    game.transitionTo(createCombatTurnGameState(firstPlayerId, attackerPlayer.id, TurnStep.Power));
+
+    const damageText = combatResult.damageInflicted === 0
+      ? "dealt no damage"
+      : `dealt ${combatResult.damageInflicted} damage`;
+    const slayText = targetSlain
+      ? ` and slew fighter ${target.id} for ${targetDefinition.bounty} glory`
+      : "";
+    game.eventLog.push(
+      `${attackerPlayer.name} attacked fighter ${target.id} with ${weapon.name} and ${damageText}${slayText}.`,
+    );
   }
 
   private applyGuardAction(game: Game, action: GuardAction): void {
