@@ -518,8 +518,8 @@ export class GameEngine {
       throw new Error(`Attack target ${action.targetId} is not available.`);
     }
 
-    const weapon = attackerDefinition.weapons.find((candidate) => candidate.id === action.weaponId);
-    if (weapon === undefined) {
+    const weapon = attackerDefinition.getWeapon(action.weaponId);
+    if (weapon === null) {
       throw new Error(`Fighter ${attacker.id} does not have weapon ${action.weaponId}.`);
     }
 

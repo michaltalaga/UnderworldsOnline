@@ -1,4 +1,4 @@
-import type { FighterDefinitionId } from "../values/ids";
+import type { FighterDefinitionId, WeaponDefinitionId } from "../values/ids";
 import { SaveSymbol } from "../values/enums";
 import { WeaponDefinition } from "./WeaponDefinition";
 
@@ -30,5 +30,13 @@ export class FighterDefinition {
     this.health = health;
     this.bounty = bounty;
     this.weapons = weapons;
+  }
+
+  public getWeapon(weaponId: WeaponDefinitionId | null): WeaponDefinition | null {
+    if (weaponId === null) {
+      return null;
+    }
+
+    return this.weapons.find((weapon) => weapon.id === weaponId) ?? null;
   }
 }

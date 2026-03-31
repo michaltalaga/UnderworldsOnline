@@ -77,8 +77,8 @@ export class CombatActionService extends LegalActionService {
       return false;
     }
 
-    const weapon = attackerDefinition.weapons.find((candidate) => candidate.id === action.weaponId);
-    if (weapon === undefined) {
+    const weapon = attackerDefinition.getWeapon(action.weaponId);
+    if (weapon === null) {
       return false;
     }
 
