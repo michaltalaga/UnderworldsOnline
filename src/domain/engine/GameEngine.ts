@@ -567,13 +567,15 @@ export class GameEngine {
     const damageText = combatResult.damageInflicted === 0
       ? "dealt no damage"
       : `dealt ${combatResult.damageInflicted} damage`;
+    const abilitySuffix =
+      action.selectedAbility === null ? "" : ` using ${GameEngine.formatWeaponAbilityName(action.selectedAbility)}`;
     const effectText = [
       combatResult.staggerApplied ? `staggered fighter ${target.id}` : null,
       targetSlain ? `slew fighter ${target.id} for ${targetDefinition.bounty} glory` : null,
     ].filter((text): text is string => text !== null);
     const effectSuffix = effectText.length === 0 ? "" : ` and ${effectText.join(" and ")}`;
     game.eventLog.push(
-      `${attackerPlayer.name} attacked fighter ${target.id} with ${weapon.name} and ${damageText}${effectSuffix}.`,
+      `${attackerPlayer.name} attacked fighter ${target.id} with ${weapon.name}${abilitySuffix} and ${damageText}${effectSuffix}.`,
     );
   }
 
@@ -1067,5 +1069,9 @@ export class GameEngine {
 
   private static copyCards(cards: readonly CardInstance[]): CardInstance[] {
     return [...cards];
+  }
+
+  private static formatWeaponAbilityName(ability: string): string {
+    return ability.charAt(0).toUpperCase() + ability.slice(1);
   }
 }

@@ -28,7 +28,10 @@ const fighters = [
         2,
         WeaponAccuracy.Hammer,
         1,
-        [new WeaponAbilityDefinition(WeaponAbilityKind.Stagger)],
+        [
+          new WeaponAbilityDefinition(WeaponAbilityKind.Stagger),
+          new WeaponAbilityDefinition(WeaponAbilityKind.Grievous),
+        ],
       ),
     ],
   ),

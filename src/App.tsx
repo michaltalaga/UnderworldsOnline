@@ -16,7 +16,10 @@ import {
 } from "./debug/createCombatDebugGame";
 
 const debugAbilityKinds = Object.values(WeaponAbilityKind);
-const supportedDebugAbilities = new Set<WeaponAbilityKind>([WeaponAbilityKind.Stagger]);
+const supportedDebugAbilities = new Set<WeaponAbilityKind>([
+  WeaponAbilityKind.Stagger,
+  WeaponAbilityKind.Grievous,
+]);
 
 function App() {
   const [scenarioId, setScenarioId] = useState<CombatDebugScenarioId>("success");
@@ -115,8 +118,8 @@ function App() {
           </div>
           <p className="token-description">{formatSelectedAbilityDescription(debugSnapshot)}</p>
           <p className="token-note">
-            Current end-to-end support covers the base attack plus <code>Stagger</code> when the
-            weapon defines it.
+            Current end-to-end support covers the base attack plus <code>Stagger</code> and
+            <code> Grievous</code> when the weapon defines them.
           </p>
         </div>
         <dl className="overview-grid">
@@ -265,6 +268,8 @@ function CombatResultCard({
   const attackerPlayerName = getPlayerName(game, result.context.attackerPlayerId);
   const defenderPlayerName = getPlayerName(game, result.context.defenderPlayerId);
   const weaponName = getWeaponName(game, result.context.attackerFighterId, result.context.weaponId);
+  const selectedAbilityText =
+    result.context.selectedAbility === null ? "" : ` using ${formatAbilityLabel(result.context.selectedAbility)}`;
 
   return (
     <article className={`combat-card${isLatest ? " combat-card-latest" : ""}`}>
@@ -279,7 +284,7 @@ function CombatResultCard({
       </div>
 
       <p className="combat-meta">
-        {attackerPlayerName} used {weaponName} into {defenderPlayerName}.
+        {attackerPlayerName} used {weaponName}{selectedAbilityText} into {defenderPlayerName}.
       </p>
 
       <dl className="combat-grid">

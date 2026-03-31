@@ -97,6 +97,7 @@ export class DefaultCombatResolver extends CombatResolver {
     if (
       context.selectedAbility !== null &&
       context.selectedAbility !== WeaponAbilityKind.Stagger
+      && context.selectedAbility !== WeaponAbilityKind.Grievous
     ) {
       throw new Error(`Weapon ability ${context.selectedAbility} is not supported by the default combat resolver.`);
     }
@@ -127,11 +128,17 @@ export class DefaultCombatResolver extends CombatResolver {
       defenderIsGuarded,
     );
     const outcome = this.getCombatOutcome(attackStats, saveStats);
-    const damageInflicted = outcome === CombatOutcome.Success ? weapon.damage : 0;
-    const targetSlain = target.damage + damageInflicted >= targetDefinition.health;
     const canTriggerSelectedAbility =
       selectedAbilityDefinition !== null &&
       (!selectedAbilityDefinition.requiresCritical || attackStats.criticals > 0);
+    const grievousDamageBonus =
+      context.selectedAbility === WeaponAbilityKind.Grievous &&
+      canTriggerSelectedAbility &&
+      outcome === CombatOutcome.Success
+        ? 1
+        : 0;
+    const damageInflicted = outcome === CombatOutcome.Success ? weapon.damage + grievousDamageBonus : 0;
+    const targetSlain = target.damage + damageInflicted >= targetDefinition.health;
     const staggerApplied =
       context.selectedAbility === WeaponAbilityKind.Stagger &&
       canTriggerSelectedAbility &&
