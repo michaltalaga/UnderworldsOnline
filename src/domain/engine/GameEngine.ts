@@ -568,8 +568,18 @@ export class GameEngine {
       ? "dealt no damage"
       : `dealt ${combatResult.damageInflicted} damage`;
     const abilitySuffix =
-      action.selectedAbility === null ? "" : ` using ${GameEngine.formatWeaponAbilityName(action.selectedAbility)}`;
+      action.selectedAbility === null
+        ? ""
+        : ` using ${GameEngine.formatWeaponAbilityName(
+          action.selectedAbility,
+          combatResult.selectedAbilityRequiresCritical,
+        )}`;
     const effectText = [
+      action.selectedAbility !== null &&
+      combatResult.selectedAbilityRequiresCritical &&
+      !combatResult.selectedAbilityTriggered
+        ? `did not trigger ${GameEngine.formatWeaponAbilityName(action.selectedAbility, true)}`
+        : null,
       combatResult.staggerApplied ? `staggered fighter ${target.id}` : null,
       targetSlain ? `slew fighter ${target.id} for ${targetDefinition.bounty} glory` : null,
     ].filter((text): text is string => text !== null);
@@ -1071,7 +1081,8 @@ export class GameEngine {
     return [...cards];
   }
 
-  private static formatWeaponAbilityName(ability: string): string {
-    return ability.charAt(0).toUpperCase() + ability.slice(1);
+  private static formatWeaponAbilityName(ability: string, requiresCritical: boolean = false): string {
+    const formattedAbility = ability.charAt(0).toUpperCase() + ability.slice(1);
+    return requiresCritical ? `Critical ${formattedAbility}` : formattedAbility;
   }
 }

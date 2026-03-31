@@ -3,6 +3,8 @@ import { CombatContext } from "./CombatContext";
 
 export class CombatResult {
   public readonly context: CombatContext;
+  public readonly selectedAbilityRequiresCritical: boolean;
+  public readonly selectedAbilityTriggered: boolean;
   public readonly attackRoll: AttackDieFace[];
   public readonly saveRoll: SaveDieFace[];
   public readonly outcome: CombatOutcome;
@@ -18,6 +20,8 @@ export class CombatResult {
 
   public constructor(
     context: CombatContext,
+    selectedAbilityRequiresCritical: boolean,
+    selectedAbilityTriggered: boolean,
     attackRoll: AttackDieFace[],
     saveRoll: SaveDieFace[],
     outcome: CombatOutcome,
@@ -32,6 +36,8 @@ export class CombatResult {
     staggerApplied: boolean,
   ) {
     this.context = context;
+    this.selectedAbilityRequiresCritical = selectedAbilityRequiresCritical;
+    this.selectedAbilityTriggered = selectedAbilityTriggered;
     this.attackRoll = attackRoll;
     this.saveRoll = saveRoll;
     this.outcome = outcome;

@@ -30,7 +30,7 @@ const fighters = [
         1,
         [
           new WeaponAbilityDefinition(WeaponAbilityKind.Stagger),
-          new WeaponAbilityDefinition(WeaponAbilityKind.Grievous),
+          new WeaponAbilityDefinition(WeaponAbilityKind.Grievous, true),
           new WeaponAbilityDefinition(WeaponAbilityKind.Cleave),
           new WeaponAbilityDefinition(WeaponAbilityKind.Ensnare),
           new WeaponAbilityDefinition(WeaponAbilityKind.Brutal),

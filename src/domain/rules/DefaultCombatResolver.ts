@@ -164,6 +164,8 @@ export class DefaultCombatResolver extends CombatResolver {
 
     return new CombatResult(
       context,
+      selectedAbilityDefinition?.requiresCritical ?? false,
+      canTriggerSelectedAbility,
       [...attackRoll],
       [...saveRoll],
       outcome,

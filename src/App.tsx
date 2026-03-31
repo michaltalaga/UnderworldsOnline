@@ -115,7 +115,12 @@ function App() {
                 onClick={() => setSelectedAbility(ability)}
                 aria-pressed={selectedAbility === ability}
               >
-                {formatAbilityLabel(ability)}
+                {formatAbilityLabel(
+                  ability,
+                  debugSnapshot.attackerWeaponAbilities.some(
+                    (candidate) => candidate.kind === ability && candidate.requiresCritical,
+                  ),
+                )}
               </button>
             ))}
           </div>
@@ -123,7 +128,8 @@ function App() {
           <p className="token-note">
             Current end-to-end support covers the base attack plus <code>Stagger</code> and
             <code> Grievous</code> and <code> Cleave</code> and <code> Ensnare</code> and
-            <code> Brutal</code> when the weapon defines them.
+            <code> Brutal</code>, and any of those can now be marked critical on the weapon
+            definition.
           </p>
         </div>
         <dl className="overview-grid">
@@ -179,17 +185,26 @@ function App() {
         </div>
         <div className="ability-status-list">
           {debugAbilityKinds.map((ability) => {
-            const definedOnWeapon = debugSnapshot.attackerWeaponAbilities.includes(ability);
+            const definedAbility = debugSnapshot.attackerWeaponAbilities.find(
+              (candidate) => candidate.kind === ability,
+            );
+            const definedOnWeapon = definedAbility !== undefined;
             const supported = definedOnWeapon && supportedDebugAbilities.has(ability);
 
             return (
               <article className="ability-status-card" key={ability}>
                 <div>
-                  <p className="combat-label">{formatAbilityLabel(ability)}</p>
+                  <p className="combat-label">
+                    {formatAbilityLabel(ability, definedAbility?.requiresCritical ?? false)}
+                  </p>
                   <h3>{debugSnapshot.attackerWeaponName}</h3>
                 </div>
                 <p className="fighter-meta">
-                  {definedOnWeapon ? "Defined on weapon" : "Not defined on weapon"}
+                  {definedOnWeapon
+                    ? definedAbility?.requiresCritical
+                      ? "Defined on weapon as critical"
+                      : "Defined on weapon"
+                    : "Not defined on weapon"}
                 </p>
                 <span className={`status-badge ${supported ? "status-supported" : "status-unsupported"}`}>
                   {supported ? "supported" : "unsupported"}
@@ -273,7 +288,12 @@ function CombatResultCard({
   const defenderPlayerName = getPlayerName(game, result.context.defenderPlayerId);
   const weaponName = getWeaponName(game, result.context.attackerFighterId, result.context.weaponId);
   const selectedAbilityText =
-    result.context.selectedAbility === null ? "" : ` using ${formatAbilityLabel(result.context.selectedAbility)}`;
+    result.context.selectedAbility === null
+      ? ""
+      : ` using ${formatAbilityLabel(
+        result.context.selectedAbility,
+        result.selectedAbilityRequiresCritical,
+      )}`;
 
   return (
     <article className={`combat-card${isLatest ? " combat-card-latest" : ""}`}>
@@ -363,6 +383,14 @@ function formatRoll(roll: readonly string[]): string {
 function formatCombatEffects(result: CombatResult): string {
   const effects: string[] = [];
 
+  if (
+    result.context.selectedAbility !== null &&
+    result.selectedAbilityRequiresCritical &&
+    !result.selectedAbilityTriggered
+  ) {
+    effects.push("critical ability not triggered");
+  }
+
   if (result.targetSlain) {
     effects.push("target slain");
   }
@@ -427,11 +455,18 @@ function formatSelectedAbilityDescription(debugSnapshot: CombatDebugSnapshot): s
     debugSnapshot.selectedAbilityDefinedOnWeapon &&
     supportedDebugAbilities.has(debugSnapshot.selectedAbility)
   ) {
+    if (debugSnapshot.selectedAbilityRequiresCritical) {
+      return `${formatAbilityLabel(debugSnapshot.selectedAbility, true)} is defined on ${debugSnapshot.attackerWeaponName} and will only trigger if the attack roll includes a critical.`;
+    }
+
     return `${formatAbilityLabel(debugSnapshot.selectedAbility)} is defined on ${debugSnapshot.attackerWeaponName} and now resolves through the current attack flow.`;
   }
 
   if (debugSnapshot.selectedAbilityDefinedOnWeapon) {
-    return `${formatAbilityLabel(debugSnapshot.selectedAbility)} is defined on ${debugSnapshot.attackerWeaponName}, but it is still unsupported in the current attack flow.`;
+    return `${formatAbilityLabel(
+      debugSnapshot.selectedAbility,
+      debugSnapshot.selectedAbilityRequiresCritical,
+    )} is defined on ${debugSnapshot.attackerWeaponName}, but it is still unsupported in the current attack flow.`;
   }
 
   if (debugSnapshot.attackerWeaponAbilities.length === 0) {
@@ -441,12 +476,15 @@ function formatSelectedAbilityDescription(debugSnapshot: CombatDebugSnapshot): s
   return `${formatAbilityLabel(debugSnapshot.selectedAbility)} is not defined on ${debugSnapshot.attackerWeaponName}. Defined abilities: ${formatAbilityList(debugSnapshot.attackerWeaponAbilities)}.`;
 }
 
-function formatAbilityLabel(ability: WeaponAbilityKind): string {
-  return ability.charAt(0).toUpperCase() + ability.slice(1);
+function formatAbilityLabel(ability: WeaponAbilityKind, requiresCritical: boolean = false): string {
+  const formattedAbility = ability.charAt(0).toUpperCase() + ability.slice(1);
+  return requiresCritical ? `Critical ${formattedAbility}` : formattedAbility;
 }
 
-function formatAbilityList(abilities: readonly WeaponAbilityKind[]): string {
-  return abilities.map(formatAbilityLabel).join(", ");
+function formatAbilityList(
+  abilities: readonly { kind: WeaponAbilityKind; requiresCritical: boolean }[],
+): string {
+  return abilities.map((ability) => formatAbilityLabel(ability.kind, ability.requiresCritical)).join(", ");
 }
 
 export default App;

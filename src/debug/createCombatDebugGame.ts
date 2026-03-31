@@ -34,9 +34,15 @@ export type CombatDebugSnapshot = {
   game: Game;
   attackError: string | null;
   attackerWeaponName: string;
-  attackerWeaponAbilities: readonly WeaponAbilityKind[];
+  attackerWeaponAbilities: readonly CombatDebugWeaponAbility[];
   selectedAbility: WeaponAbilityKind | null;
   selectedAbilityDefinedOnWeapon: boolean;
+  selectedAbilityRequiresCritical: boolean;
+};
+
+export type CombatDebugWeaponAbility = {
+  kind: WeaponAbilityKind;
+  requiresCritical: boolean;
 };
 
 export const combatDebugScenarios: readonly CombatDebugScenario[] = [
@@ -163,9 +169,15 @@ export function createCombatDebugSnapshot(
     throw new Error(`Could not find debug weapon ${practiceBladeWeaponId}.`);
   }
 
-  const attackerWeaponAbilities = attackerWeapon.abilities.map((ability) => ability.kind);
-  const selectedAbilityDefinedOnWeapon =
-    selectedAbility !== null && attackerWeaponAbilities.includes(selectedAbility);
+  const attackerWeaponAbilities = attackerWeapon.abilities.map((ability) => ({
+    kind: ability.kind,
+    requiresCritical: ability.requiresCritical,
+  }));
+  const selectedAbilityDefinition =
+    selectedAbility === null
+      ? null
+      : attackerWeaponAbilities.find((ability) => ability.kind === selectedAbility) ?? null;
+  const selectedAbilityDefinedOnWeapon = selectedAbilityDefinition !== null;
 
   let attackError: string | null = null;
   try {
@@ -193,5 +205,6 @@ export function createCombatDebugSnapshot(
     attackerWeaponAbilities,
     selectedAbility,
     selectedAbilityDefinedOnWeapon,
+    selectedAbilityRequiresCritical: selectedAbilityDefinition?.requiresCritical ?? false,
   };
 }
