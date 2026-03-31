@@ -10,7 +10,7 @@ import { PlaceFeatureTokenAction } from "../../setup/PlaceFeatureTokenAction";
 import { DeployFighterAction } from "../../setup/DeployFighterAction";
 import { Game } from "../../state/Game";
 import type { SetupAction } from "../../setup/SetupAction";
-import { AttackDieFace, BoardSide, Phase, SetupStep } from "../../values/enums";
+import { AttackDieFace, BoardSide } from "../../values/enums";
 import type { GameId } from "../../values/ids";
 import { centeredBattlefield } from "../boards/CenteredBattlefield";
 import { setupPracticeWarband } from "../warbands/SetupPracticeWarband";
@@ -70,17 +70,17 @@ export function createCombatReadySetupPracticeGame(
     new ChooseTerritoryAction(territoryChooserId, BoardSide.Front, northTerritoryId),
   );
 
-  while (game.setupStep === SetupStep.PlaceFeatureTokens) {
+  while (game.state.kind === "setupPlaceFeatureTokens") {
     const action = chooseFeaturePlacementAction(game, setupActionService.getLegalActions(game));
     engine.applySetupAction(game, action);
   }
 
-  while (game.setupStep === SetupStep.DeployFighters) {
+  while (game.state.kind === "setupDeployFighters") {
     const action = chooseDeploymentAction(setupActionService.getLegalActions(game));
     engine.applySetupAction(game, action);
   }
 
-  if (game.phase !== Phase.Combat || game.setupStep !== SetupStep.Complete) {
+  if (game.state.kind !== "combatReady") {
     throw new Error("Practice setup did not reach a combat-ready game state.");
   }
 

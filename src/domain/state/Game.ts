@@ -3,6 +3,11 @@ import { EndPhaseStep, Phase, SetupStep, TurnStep } from "../values/enums";
 import { BoardState } from "./BoardState";
 import { CardInstance } from "./CardInstance";
 import { FighterState } from "./FighterState";
+import {
+  canTransitionGameState,
+  createGameStateFromLegacyFields,
+  type GameState,
+} from "./GameState";
 import { PlayerState } from "./PlayerState";
 
 export class Game {
@@ -11,16 +16,10 @@ export class Game {
   public players: PlayerState[];
   public roundNumber: number;
   public maxRounds: number;
-  public phase: Phase;
-  public setupStep: SetupStep | null;
-  public turnStep: TurnStep | null;
-  public endPhaseStep: EndPhaseStep | null;
-  public activePlayerId: PlayerId | null;
-  public firstPlayerId: PlayerId | null;
-  public priorityPlayerId: PlayerId | null;
   public consecutivePasses: number;
   public winnerPlayerId: PlayerId | null;
   public eventLog: string[];
+  private flowState: GameState;
 
   public constructor(
     id: GameId,
@@ -44,16 +43,50 @@ export class Game {
     this.players = players;
     this.roundNumber = roundNumber;
     this.maxRounds = maxRounds;
-    this.phase = phase;
-    this.setupStep = setupStep;
-    this.turnStep = turnStep;
-    this.endPhaseStep = endPhaseStep;
-    this.activePlayerId = activePlayerId;
-    this.firstPlayerId = firstPlayerId;
-    this.priorityPlayerId = priorityPlayerId;
     this.consecutivePasses = consecutivePasses;
     this.winnerPlayerId = winnerPlayerId;
     this.eventLog = eventLog;
+    this.flowState = createGameStateFromLegacyFields({
+      phase,
+      setupStep,
+      turnStep,
+      endPhaseStep,
+      activePlayerId,
+      firstPlayerId,
+      priorityPlayerId,
+    });
+  }
+
+  public get state(): GameState {
+    return this.flowState;
+  }
+
+  public get phase(): Phase {
+    return this.flowState.phase;
+  }
+
+  public get setupStep(): SetupStep | null {
+    return this.flowState.setupStep;
+  }
+
+  public get turnStep(): TurnStep | null {
+    return this.flowState.turnStep;
+  }
+
+  public get endPhaseStep(): EndPhaseStep | null {
+    return this.flowState.endPhaseStep;
+  }
+
+  public get activePlayerId(): PlayerId | null {
+    return this.flowState.activePlayerId;
+  }
+
+  public get firstPlayerId(): PlayerId | null {
+    return this.flowState.firstPlayerId;
+  }
+
+  public get priorityPlayerId(): PlayerId | null {
+    return this.flowState.priorityPlayerId;
   }
 
   public getPlayer(playerId: PlayerId): PlayerState | undefined {
@@ -78,5 +111,34 @@ export class Game {
 
   public isFinalRound(): boolean {
     return this.roundNumber >= this.maxRounds;
+  }
+
+  public transitionTo(nextState: GameState): void {
+    if (!canTransitionGameState(this.flowState, nextState)) {
+      throw new Error(`Invalid game state transition from ${this.flowState.kind} to ${nextState.kind}.`);
+    }
+
+    this.flowState = nextState;
+  }
+
+  public toJSON(): object {
+    return {
+      id: this.id,
+      board: this.board,
+      players: this.players,
+      roundNumber: this.roundNumber,
+      maxRounds: this.maxRounds,
+      state: this.state,
+      phase: this.phase,
+      setupStep: this.setupStep,
+      turnStep: this.turnStep,
+      endPhaseStep: this.endPhaseStep,
+      activePlayerId: this.activePlayerId,
+      firstPlayerId: this.firstPlayerId,
+      priorityPlayerId: this.priorityPlayerId,
+      consecutivePasses: this.consecutivePasses,
+      winnerPlayerId: this.winnerPlayerId,
+      eventLog: this.eventLog,
+    };
   }
 }

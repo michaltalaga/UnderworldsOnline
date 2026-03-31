@@ -2,6 +2,17 @@ import { CardInstance } from "../state/CardInstance";
 import { FeatureTokenState } from "../state/FeatureTokenState";
 import { FighterState } from "../state/FighterState";
 import { Game } from "../state/Game";
+import {
+  createCombatChooseFirstPlayerGameState,
+  createCombatReadyGameState,
+  createCombatTurnGameState,
+  createSetupDeployFightersGameState,
+  createSetupDetermineTerritoriesChoiceGameState,
+  createSetupDetermineTerritoriesRollOffGameState,
+  createSetupDrawStartingHandsGameState,
+  createSetupMulliganGameState,
+  createSetupPlaceFeatureTokensGameState,
+} from "../state/GameState";
 import { HexCell } from "../state/HexCell";
 import { PlayerState } from "../state/PlayerState";
 import { Territory } from "../state/Territory";
@@ -10,8 +21,6 @@ import {
   CardZone,
   FeatureTokenSide,
   HexKind,
-  Phase,
-  SetupStep,
   TurnStep,
 } from "../values/enums";
 import type { CardZone as CardZoneType } from "../values/enums";
@@ -86,9 +95,7 @@ export class GameEngine {
     game: Game,
     rounds: readonly RollOffRoundInput[],
   ): RollOffResult {
-    if (game.phase !== Phase.Combat) {
-      throw new Error(`Expected combat phase, got ${game.phase}.`);
-    }
+    this.assertStateKind(game, "combatReady");
 
     const [playerOne, playerTwo] = this.requireTwoPlayers(game);
     const tieWinnerPlayerId =
@@ -104,10 +111,7 @@ export class GameEngine {
       rounds,
     );
 
-    game.priorityPlayerId = result.winnerPlayerId;
-    game.activePlayerId = null;
-    game.firstPlayerId = null;
-    game.turnStep = null;
+    game.transitionTo(createCombatChooseFirstPlayerGameState(result.winnerPlayerId));
     game.eventLog.push(this.describeRollOff(game, result));
 
     return result;
@@ -118,9 +122,7 @@ export class GameEngine {
     chooserPlayerId: PlayerId,
     firstPlayerId: PlayerId,
   ): Game {
-    if (game.phase !== Phase.Combat) {
-      throw new Error(`Expected combat phase, got ${game.phase}.`);
-    }
+    this.assertStateKind(game, "combatChooseFirstPlayer");
 
     if (game.priorityPlayerId !== chooserPlayerId) {
       throw new Error(
@@ -139,10 +141,7 @@ export class GameEngine {
       player.hasDelvedThisPowerStep = false;
     }
 
-    game.firstPlayerId = firstPlayer.id;
-    game.activePlayerId = firstPlayer.id;
-    game.priorityPlayerId = null;
-    game.turnStep = TurnStep.Action;
+    game.transitionTo(createCombatTurnGameState(firstPlayer.id, firstPlayer.id, TurnStep.Action));
     game.consecutivePasses = 0;
     game.eventLog.push(
       `${chooser.name} chose ${firstPlayer.name} to take the first turn. ${rollOffLoser.name} drew 1 power card.`,
@@ -152,13 +151,13 @@ export class GameEngine {
   }
 
   private applyCompleteMuster(game: Game): void {
-    this.assertSetupStep(game, SetupStep.MusterWarbands);
-    game.setupStep = SetupStep.DrawStartingHands;
+    this.assertStateKind(game, "setupMusterWarbands");
+    game.transitionTo(createSetupDrawStartingHandsGameState());
     game.eventLog.push("Warbands mustered.");
   }
 
   private applyDrawStartingHands(game: Game): void {
-    this.assertSetupStep(game, SetupStep.DrawStartingHands);
+    this.assertStateKind(game, "setupDrawStartingHands");
 
     for (const player of game.players) {
       if (player.objectiveHand.length > 0 || player.powerHand.length > 0) {
@@ -169,13 +168,17 @@ export class GameEngine {
       this.drawCards(player.powerDeck.drawPile, player.powerHand, 5, CardZone.PowerHand);
     }
 
-    game.setupStep = SetupStep.Mulligan;
-    game.activePlayerId = game.players[0]?.id ?? null;
+    const firstPlayerId = game.players[0]?.id ?? null;
+    if (firstPlayerId === null) {
+      throw new Error("Expected at least one player when drawing starting hands.");
+    }
+
+    game.transitionTo(createSetupMulliganGameState(firstPlayerId));
     game.eventLog.push("Starting hands drawn.");
   }
 
   private applyResolveMulligan(game: Game, action: ResolveMulliganAction): void {
-    this.assertSetupStep(game, SetupStep.Mulligan);
+    this.assertStateKind(game, "setupMulligan");
     const player = this.requirePlayer(game, action.playerId);
     this.assertActivePlayer(game, player.id);
 
@@ -198,20 +201,24 @@ export class GameEngine {
     const isLastPlayer = currentPlayerIndex === game.players.length - 1;
 
     if (isLastPlayer) {
-      game.setupStep = SetupStep.DetermineTerritories;
-      game.activePlayerId = null;
+      game.transitionTo(createSetupDetermineTerritoriesRollOffGameState());
       game.eventLog.push("Mulligan step complete.");
       return;
     }
 
-    game.activePlayerId = game.players[currentPlayerIndex + 1]?.id ?? null;
+    const nextPlayerId = game.players[currentPlayerIndex + 1]?.id ?? null;
+    if (nextPlayerId === null) {
+      throw new Error("Expected the next player to resolve their mulligan.");
+    }
+
+    game.transitionTo(createSetupMulliganGameState(nextPlayerId));
   }
 
   private applyResolveTerritoryRollOff(
     game: Game,
     action: ResolveTerritoryRollOffAction,
   ): void {
-    this.assertSetupStep(game, SetupStep.DetermineTerritories);
+    this.assertStateKind(game, "setupDetermineTerritoriesRollOff");
     const [playerOne, playerTwo] = this.requireTwoPlayers(game);
 
     const result = this.rollOffResolver.resolve(
@@ -219,12 +226,12 @@ export class GameEngine {
       action.rounds,
     );
 
-    game.activePlayerId = result.winnerPlayerId;
+    game.transitionTo(createSetupDetermineTerritoriesChoiceGameState(result.winnerPlayerId));
     game.eventLog.push(this.describeRollOff(game, result));
   }
 
   private applyChooseTerritory(game: Game, action: ChooseTerritoryAction): void {
-    this.assertSetupStep(game, SetupStep.DetermineTerritories);
+    this.assertStateKind(game, "setupDetermineTerritoriesChoice");
     game.board.setSide(action.boardSide);
 
     if (game.board.territories.length !== 2) {
@@ -247,16 +254,14 @@ export class GameEngine {
     remainingTerritory.ownerPlayerId = losingPlayer.id;
     winningPlayer.territoryId = chosenTerritory.id;
     losingPlayer.territoryId = remainingTerritory.id;
-    game.setupStep = SetupStep.PlaceFeatureTokens;
-    game.activePlayerId = losingPlayer.id;
-    game.priorityPlayerId = null;
+    game.transitionTo(createSetupPlaceFeatureTokensGameState(losingPlayer.id));
     game.eventLog.push(
       `${winningPlayer.name} chose ${chosenTerritory.name} on the ${action.boardSide} board side.`,
     );
   }
 
   private applyPlaceFeatureToken(game: Game, action: PlaceFeatureTokenAction): void {
-    this.assertSetupStep(game, SetupStep.PlaceFeatureTokens);
+    this.assertStateKind(game, "setupPlaceFeatureTokens");
     const player = this.requirePlayer(game, action.playerId);
     this.assertActivePlayer(game, player.id);
 
@@ -298,17 +303,16 @@ export class GameEngine {
         token.side = FeatureTokenSide.Treasure;
       }
 
-      game.setupStep = SetupStep.DeployFighters;
-      game.activePlayerId = player.id;
+      game.transitionTo(createSetupDeployFightersGameState(player.id));
       game.eventLog.push("Feature placement complete.");
       return;
     }
 
-    game.activePlayerId = this.requireOpponent(game, player.id).id;
+    game.transitionTo(createSetupPlaceFeatureTokensGameState(this.requireOpponent(game, player.id).id));
   }
 
   private applyDeployFighter(game: Game, action: DeployFighterAction): void {
-    this.assertSetupStep(game, SetupStep.DeployFighters);
+    this.assertStateKind(game, "setupDeployFighters");
     const player = this.requirePlayer(game, action.playerId);
     this.assertActivePlayer(game, player.id);
 
@@ -334,15 +338,12 @@ export class GameEngine {
     game.eventLog.push(`${player.name} deployed fighter ${fighter.id} to ${hex.id}.`);
 
     if (this.areAllFightersDeployed(game)) {
-      game.setupStep = SetupStep.Complete;
-      game.phase = Phase.Combat;
-      game.activePlayerId = null;
-      game.priorityPlayerId = null;
+      game.transitionTo(createCombatReadyGameState());
       game.eventLog.push("Setup complete.");
       return;
     }
 
-    game.activePlayerId = this.getNextDeploymentPlayer(game, player.id).id;
+    game.transitionTo(createSetupDeployFightersGameState(this.getNextDeploymentPlayer(game, player.id).id));
   }
 
   private drawCards(
@@ -536,19 +537,15 @@ export class GameEngine {
     return hex;
   }
 
-  private assertSetupStep(game: Game, expectedStep: SetupStep): void {
-    if (game.phase !== Phase.Setup) {
-      throw new Error(`Expected setup phase, got ${game.phase}.`);
-    }
-
-    if (game.setupStep !== expectedStep) {
-      throw new Error(`Expected setup step ${expectedStep}, got ${game.setupStep}.`);
-    }
-  }
-
   private assertActivePlayer(game: Game, playerId: PlayerId): void {
     if (game.activePlayerId !== playerId) {
       throw new Error(`Expected active player ${game.activePlayerId}, got ${playerId}.`);
+    }
+  }
+
+  private assertStateKind(game: Game, expectedKind: Game["state"]["kind"]): void {
+    if (game.state.kind !== expectedKind) {
+      throw new Error(`Expected game state ${expectedKind}, got ${game.state.kind}.`);
     }
   }
 

@@ -1,4 +1,4 @@
-import { BoardSide, HexKind, Phase, SetupStep } from "../values/enums";
+import { BoardSide, HexKind, Phase } from "../values/enums";
 import type { TerritoryId } from "../values/ids";
 import { Game } from "../state/Game";
 import { HexCell } from "../state/HexCell";
@@ -13,38 +13,35 @@ import { SetupAction } from "./SetupAction";
 
 export class SetupActionService {
   public getLegalActions(game: Game): SetupAction[] {
-    if (game.phase !== Phase.Setup || game.setupStep === null) {
+    const state = game.state;
+    if (state.phase !== Phase.Setup) {
       return [];
     }
 
-    switch (game.setupStep) {
-      case SetupStep.MusterWarbands:
+    switch (state.kind) {
+      case "setupMusterWarbands":
         return [new CompleteMusterAction()];
-      case SetupStep.DrawStartingHands:
+      case "setupDrawStartingHands":
         return [new DrawStartingHandsAction()];
-      case SetupStep.Mulligan:
+      case "setupMulligan":
         return this.getLegalMulliganActions(game);
-      case SetupStep.DetermineTerritories:
-        return this.getLegalTerritoryChoiceActions(game);
-      case SetupStep.PlaceFeatureTokens:
-        return this.getLegalFeaturePlacementActions(game);
-      case SetupStep.DeployFighters:
-        return this.getLegalDeployActions(game);
-      case SetupStep.Complete:
+      case "setupDetermineTerritoriesRollOff":
         return [];
+      case "setupDetermineTerritoriesChoice":
+        return this.getLegalTerritoryChoiceActions(game);
+      case "setupPlaceFeatureTokens":
+        return this.getLegalFeaturePlacementActions(game);
+      case "setupDeployFighters":
+        return this.getLegalDeployActions(game);
       default: {
-        const exhaustiveStep: never = game.setupStep;
-        throw new Error(`Unsupported setup step ${exhaustiveStep}.`);
+        const exhaustiveState: never = state;
+        throw new Error(`Unsupported setup game state ${String(exhaustiveState)}.`);
       }
     }
   }
 
   public requiresTerritoryRollOff(game: Game): boolean {
-    return (
-      game.phase === Phase.Setup &&
-      game.setupStep === SetupStep.DetermineTerritories &&
-      game.activePlayerId === null
-    );
+    return game.state.kind === "setupDetermineTerritoriesRollOff";
   }
 
   private getLegalMulliganActions(game: Game): SetupAction[] {
