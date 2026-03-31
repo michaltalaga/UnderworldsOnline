@@ -2,11 +2,13 @@ import { CardDefinition } from "../../definitions/CardDefinition";
 import { FighterDefinition } from "../../definitions/FighterDefinition";
 import { WarbandDefinition } from "../../definitions/WarbandDefinition";
 import { WeaponAbilityDefinition } from "../../definitions/WeaponAbilityDefinition";
+import { WarscrollAbilityDefinition } from "../../definitions/WarscrollAbilityDefinition";
 import { WarscrollDefinition } from "../../definitions/WarscrollDefinition";
 import { WeaponDefinition } from "../../definitions/WeaponDefinition";
 import {
   CardKind,
   SaveSymbol,
+  TurnStep,
   WeaponAbilityKind,
   WeaponAccuracy,
 } from "../../values/enums";
@@ -73,6 +75,18 @@ const fighters = [
 const warscroll = new WarscrollDefinition(
   "warscroll-def:setup-practice",
   "Setup Practice Warscroll",
+  [],
+  [],
+  { signal: 1 },
+  [
+    new WarscrollAbilityDefinition(
+      "Signal Burst",
+      "Spend 1 signal token: draw 1 power card.",
+      TurnStep.Power,
+      { signal: 1 },
+      1,
+    ),
+  ],
 );
 
 export const setupPracticeWarband = new WarbandDefinition(

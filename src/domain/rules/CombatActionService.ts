@@ -3,6 +3,7 @@ import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
 import { PassAction } from "../actions/PassAction";
+import { UseWarscrollAbilityAction } from "../actions/UseWarscrollAbilityAction";
 import { Game } from "../state/Game";
 import { HexCell } from "../state/HexCell";
 import { FighterState } from "../state/FighterState";
@@ -37,7 +38,10 @@ export class CombatActionService extends LegalActionService {
     }
 
     if (game.turnStep === TurnStep.Power) {
-      return [new PassAction(playerId)];
+      return [
+        ...this.getLegalUseWarscrollAbilityActions(game, player),
+        new PassAction(playerId),
+      ];
     }
 
     if (game.turnStep !== TurnStep.Action) {
@@ -119,6 +123,31 @@ export class CombatActionService extends LegalActionService {
     }
 
     return this.canFighterGuard(fighter);
+  }
+
+  public isLegalUseWarscrollAbilityAction(game: Game, action: UseWarscrollAbilityAction): boolean {
+    if (!this.isCombatTurnStep(game, action.playerId, TurnStep.Power)) {
+      return false;
+    }
+
+    const player = game.getPlayer(action.playerId);
+    const warscrollDefinition = player?.getWarscrollDefinition();
+    const ability = warscrollDefinition?.getAbility(action.abilityIndex);
+    if (player === undefined || warscrollDefinition === undefined || ability === undefined) {
+      return false;
+    }
+
+    if (ability.timing !== TurnStep.Power || ability.drawPowerCards < 1) {
+      return false;
+    }
+
+    if (player.powerDeck.drawPile.length < ability.drawPowerCards) {
+      return false;
+    }
+
+    return Object.entries(ability.tokenCosts).every(
+      ([tokenName, tokenCost]) => (player.warscrollState.tokens[tokenName] ?? 0) >= tokenCost,
+    );
   }
 
   public isLegalMoveAction(game: Game, action: MoveAction): boolean {
@@ -248,6 +277,24 @@ export class CombatActionService extends LegalActionService {
     return [new GuardAction(player.id, fighter.id)];
   }
 
+  private getLegalUseWarscrollAbilityActions(
+    game: Game,
+    player: PlayerState,
+  ): UseWarscrollAbilityAction[] {
+    const warscrollDefinition = player.getWarscrollDefinition();
+    if (
+      warscrollDefinition === undefined ||
+      !this.isCombatTurnStep(game, player.id, TurnStep.Power)
+    ) {
+      return [];
+    }
+
+    return warscrollDefinition.abilities.flatMap((_, abilityIndex) => {
+      const action = new UseWarscrollAbilityAction(player.id, abilityIndex);
+      return this.isLegalUseWarscrollAbilityAction(game, action) ? [action] : [];
+    });
+  }
+
   private getLegalMoveActionsForFighter(
     game: Game,
     player: PlayerState,
@@ -326,9 +373,13 @@ export class CombatActionService extends LegalActionService {
   }
 
   private isCombatActionStep(game: Game, playerId: PlayerId): boolean {
+    return this.isCombatTurnStep(game, playerId, TurnStep.Action);
+  }
+
+  private isCombatTurnStep(game: Game, playerId: PlayerId, turnStep: TurnStep): boolean {
     return (
       game.state.kind === "combatTurn" &&
-      game.turnStep === TurnStep.Action &&
+      game.turnStep === turnStep &&
       game.activePlayerId === playerId
     );
   }

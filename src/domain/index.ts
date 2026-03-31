@@ -15,6 +15,7 @@ export * from "./content/warbands/SetupPracticeWarband";
 export * from "./definitions/CardDefinition";
 export * from "./definitions/FighterDefinition";
 export * from "./definitions/WarbandDefinition";
+export * from "./definitions/WarscrollAbilityDefinition";
 export * from "./definitions/WarscrollDefinition";
 export * from "./definitions/WeaponAbilityDefinition";
 export * from "./definitions/WeaponDefinition";

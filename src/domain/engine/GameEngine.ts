@@ -40,6 +40,7 @@ import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
 import { PassAction } from "../actions/PassAction";
 import { PlaceFeatureTokenAction } from "../setup/PlaceFeatureTokenAction";
+import { UseWarscrollAbilityAction } from "../actions/UseWarscrollAbilityAction";
 import { ResolveCleanupAction } from "../endPhase/ResolveCleanupAction";
 import { ResolveMulliganAction } from "../setup/ResolveMulliganAction";
 import { ResolveTerritoryRollOffAction } from "../setup/ResolveTerritoryRollOffAction";
@@ -143,6 +144,11 @@ export class GameEngine {
 
     if (action instanceof GuardAction) {
       this.applyGuardAction(game, action);
+      return game;
+    }
+
+    if (action instanceof UseWarscrollAbilityAction) {
+      this.applyUseWarscrollAbilityAction(game, action);
       return game;
     }
 
@@ -610,6 +616,45 @@ export class GameEngine {
     game.consecutivePasses = 0;
     game.transitionTo(createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power));
     game.eventLog.push(`${player.name} put fighter ${fighter.id} on guard.`);
+  }
+
+  private applyUseWarscrollAbilityAction(game: Game, action: UseWarscrollAbilityAction): void {
+    this.assertCombatTurnStep(game, TurnStep.Power);
+    if (!this.combatActionService.isLegalUseWarscrollAbilityAction(game, action)) {
+      throw new Error(`Warscroll ability ${action.abilityIndex} is not legal for player ${action.playerId}.`);
+    }
+
+    const player = this.requirePlayer(game, action.playerId);
+    this.assertActivePlayer(game, player.id);
+
+    const warscroll = player.getWarscrollWithDefinition();
+    const ability = warscroll?.definition.getAbility(action.abilityIndex);
+    if (warscroll === undefined || ability === undefined) {
+      throw new Error(`Player ${player.name} does not have warscroll ability ${action.abilityIndex}.`);
+    }
+
+    for (const [tokenName, tokenCost] of Object.entries(ability.tokenCosts)) {
+      const currentTokenCount = player.warscrollState.tokens[tokenName] ?? 0;
+      if (currentTokenCount < tokenCost) {
+        throw new Error(`${player.name} cannot pay ${tokenCost} ${tokenName} warscroll token(s).`);
+      }
+
+      player.warscrollState.tokens[tokenName] = currentTokenCount - tokenCost;
+    }
+
+    if (ability.drawPowerCards > 0) {
+      this.drawCards(
+        player.powerDeck.drawPile,
+        player.powerHand,
+        ability.drawPowerCards,
+        CardZone.PowerHand,
+      );
+    }
+
+    game.consecutivePasses = 0;
+    game.eventLog.push(
+      `${player.name} used warscroll ability ${ability.name} and drew ${ability.drawPowerCards} power card${ability.drawPowerCards === 1 ? "" : "s"}.`,
+    );
   }
 
   private applyPassAction(game: Game, action: PassAction): void {
