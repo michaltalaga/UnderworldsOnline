@@ -1,5 +1,6 @@
 import { GameAction } from "../actions/GameAction";
 import { MoveAction } from "../actions/MoveAction";
+import { PassAction } from "../actions/PassAction";
 import { Game } from "../state/Game";
 import { HexCell } from "../state/HexCell";
 import { PlayerState } from "../state/PlayerState";
@@ -23,7 +24,7 @@ type MovePathSearchNode = {
 
 export class CombatActionService extends LegalActionService {
   public getLegalActions(game: Game, playerId: PlayerId): GameAction[] {
-    if (!this.isCombatActionStep(game, playerId)) {
+    if (game.state.kind !== "combatTurn" || game.activePlayerId !== playerId) {
       return [];
     }
 
@@ -32,7 +33,18 @@ export class CombatActionService extends LegalActionService {
       return [];
     }
 
-    return player.fighters.flatMap((fighter) => this.getLegalMoveActionsForFighter(game, player, fighter.id));
+    if (game.turnStep === TurnStep.Power) {
+      return [new PassAction(playerId)];
+    }
+
+    if (game.turnStep !== TurnStep.Action) {
+      return [];
+    }
+
+    return [
+      ...player.fighters.flatMap((fighter) => this.getLegalMoveActionsForFighter(game, player, fighter.id)),
+      new PassAction(playerId),
+    ];
   }
 
   public isLegalMoveAction(game: Game, action: MoveAction): boolean {

@@ -31,6 +31,7 @@ import { DeployFighterAction } from "../setup/DeployFighterAction";
 import { DrawStartingHandsAction } from "../setup/DrawStartingHandsAction";
 import { GameAction } from "../actions/GameAction";
 import { MoveAction } from "../actions/MoveAction";
+import { PassAction } from "../actions/PassAction";
 import { PlaceFeatureTokenAction } from "../setup/PlaceFeatureTokenAction";
 import { ResolveMulliganAction } from "../setup/ResolveMulliganAction";
 import { ResolveTerritoryRollOffAction } from "../setup/ResolveTerritoryRollOffAction";
@@ -100,6 +101,11 @@ export class GameEngine {
   public applyGameAction(game: Game, action: GameAction): Game {
     if (action instanceof MoveAction) {
       this.applyMoveAction(game, action);
+      return game;
+    }
+
+    if (action instanceof PassAction) {
+      this.applyPassAction(game, action);
       return game;
     }
 
@@ -400,6 +406,40 @@ export class GameEngine {
     game.consecutivePasses = 0;
     game.transitionTo(createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power));
     game.eventLog.push(`${player.name} moved fighter ${fighter.id} to ${destinationHex.id}.`);
+  }
+
+  private applyPassAction(game: Game, action: PassAction): void {
+    this.assertStateKind(game, "combatTurn");
+
+    const player = this.requirePlayer(game, action.playerId);
+    this.assertActivePlayer(game, player.id);
+
+    const firstPlayerId = game.firstPlayerId;
+    if (firstPlayerId === null) {
+      throw new Error("Combat turn state requires a first player id.");
+    }
+
+    if (game.turnStep === TurnStep.Action) {
+      game.consecutivePasses += 1;
+      game.transitionTo(createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power));
+      game.eventLog.push(`${player.name} passed their action step.`);
+      return;
+    }
+
+    if (game.turnStep === TurnStep.Power) {
+      player.turnsTakenThisRound += 1;
+      player.hasDelvedThisPowerStep = false;
+
+      const nextPlayer = this.requireOpponent(game, player.id);
+      nextPlayer.hasDelvedThisPowerStep = false;
+
+      game.consecutivePasses += 1;
+      game.transitionTo(createCombatTurnGameState(firstPlayerId, nextPlayer.id, TurnStep.Action));
+      game.eventLog.push(`${player.name} passed their power step.`);
+      return;
+    }
+
+    throw new Error(`Unsupported combat turn step ${game.turnStep}.`);
   }
 
   private drawCards(
