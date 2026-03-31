@@ -363,9 +363,8 @@ function getFighterName(game: Game, fighterId: string): string {
 
 function getWeaponName(game: Game, fighterId: string, weaponId: string): string {
   for (const player of game.players) {
-    const fighterDefinition = player.getFighterDefinition(fighterId);
-    const weapon = fighterDefinition?.getWeapon(weaponId) ?? null;
-    if (weapon !== null) {
+    const weapon = player.getFighterWeaponDefinition(fighterId, weaponId);
+    if (weapon !== undefined) {
       return weapon.name;
     }
   }

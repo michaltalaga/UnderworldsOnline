@@ -77,8 +77,8 @@ export class CombatActionService extends LegalActionService {
       return false;
     }
 
-    const weapon = attackerDefinition.getWeapon(action.weaponId);
-    if (weapon === null) {
+    const weapon = player.getFighterWeaponDefinition(action.attackerId, action.weaponId);
+    if (weapon === undefined) {
       return false;
     }
 

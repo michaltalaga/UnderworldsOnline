@@ -154,10 +154,7 @@ export function createCombatDebugSnapshot(
   }
 
   const attackerPlayer = game.getPlayer("player:two");
-  const attackerDefinition = attackerPlayer?.getFighterDefinition(playerTwoFighterOneId);
-  const attackerWeapon = attackerDefinition?.weapons.find(
-    (candidate) => candidate.id === practiceBladeWeaponId,
-  );
+  const attackerWeapon = attackerPlayer?.getFighterWeaponDefinition(playerTwoFighterOneId, practiceBladeWeaponId);
   if (attackerWeapon === undefined) {
     throw new Error(`Could not find debug weapon ${practiceBladeWeaponId}.`);
   }

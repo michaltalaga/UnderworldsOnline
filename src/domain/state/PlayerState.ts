@@ -1,7 +1,8 @@
-import type { CardId, FighterId, PlayerId, TerritoryId } from "../values/ids";
+import type { CardId, FighterId, PlayerId, TerritoryId, WeaponDefinitionId } from "../values/ids";
 import { DeckKind } from "../values/enums";
 import { CardDefinition } from "../definitions/CardDefinition";
 import { FighterDefinition } from "../definitions/FighterDefinition";
+import { WeaponDefinition } from "../definitions/WeaponDefinition";
 import { WarbandDefinition } from "../definitions/WarbandDefinition";
 import { CardInstance } from "./CardInstance";
 import { DeckState } from "./DeckState";
@@ -75,6 +76,13 @@ export class PlayerState {
     return this.warband.fighters.find(
       (definition) => definition.id === fighter.definitionId,
     );
+  }
+
+  public getFighterWeaponDefinition(
+    fighterId: FighterId,
+    weaponId: WeaponDefinitionId | null,
+  ): WeaponDefinition | undefined {
+    return this.getFighterDefinition(fighterId)?.getWeapon(weaponId) ?? undefined;
   }
 
   public getCard(cardId: CardId): CardInstance | undefined {

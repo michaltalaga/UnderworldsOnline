@@ -78,9 +78,7 @@ export class DefaultCombatResolver extends CombatResolver {
       throw new Error(`Target ${context.targetFighterId} is not available to defend.`);
     }
 
-    const weapon = attackerDefinition.weapons.find(
-      (candidate) => candidate.id === context.weaponId,
-    );
+    const weapon = attackerPlayer.getFighterWeaponDefinition(context.attackerFighterId, context.weaponId);
     if (weapon === undefined) {
       throw new Error(`Attacker ${attacker.id} does not have weapon ${context.weaponId}.`);
     }
