@@ -1,5 +1,6 @@
 import type { CardId, FighterId, GameId, PlayerId } from "../values/ids";
 import { EndPhaseStep, Phase, SetupStep, TurnStep } from "../values/enums";
+import { CombatResult } from "../rules/CombatResult";
 import { BoardState } from "./BoardState";
 import { CardInstance } from "./CardInstance";
 import { FighterState } from "./FighterState";
@@ -18,6 +19,7 @@ export class Game {
   public maxRounds: number;
   public consecutivePasses: number;
   public winnerPlayerId: PlayerId | null;
+  public lastCombatResult: CombatResult | null;
   public eventLog: string[];
   private flowState: GameState;
 
@@ -36,6 +38,7 @@ export class Game {
     priorityPlayerId: PlayerId | null = null,
     consecutivePasses: number = 0,
     winnerPlayerId: PlayerId | null = null,
+    lastCombatResult: CombatResult | null = null,
     eventLog: string[] = [],
   ) {
     this.id = id;
@@ -45,6 +48,7 @@ export class Game {
     this.maxRounds = maxRounds;
     this.consecutivePasses = consecutivePasses;
     this.winnerPlayerId = winnerPlayerId;
+    this.lastCombatResult = lastCombatResult;
     this.eventLog = eventLog;
     this.flowState = createGameStateFromLegacyFields({
       phase,
@@ -138,6 +142,7 @@ export class Game {
       priorityPlayerId: this.priorityPlayerId,
       consecutivePasses: this.consecutivePasses,
       winnerPlayerId: this.winnerPlayerId,
+      lastCombatResult: this.lastCombatResult,
       eventLog: this.eventLog,
     };
   }

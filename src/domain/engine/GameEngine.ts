@@ -540,6 +540,7 @@ export class GameEngine {
       throw new Error("Driven back movement is not yet supported.");
     }
 
+    game.lastCombatResult = combatResult;
     target.damage += combatResult.damageInflicted;
     if (combatResult.staggerApplied) {
       target.hasStaggerToken = true;
