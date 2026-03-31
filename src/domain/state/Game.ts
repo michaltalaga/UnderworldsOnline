@@ -20,6 +20,7 @@ export class Game {
   public consecutivePasses: number;
   public winnerPlayerId: PlayerId | null;
   public lastCombatResult: CombatResult | null;
+  public combatHistory: CombatResult[];
   public eventLog: string[];
   private flowState: GameState;
 
@@ -49,6 +50,7 @@ export class Game {
     this.consecutivePasses = consecutivePasses;
     this.winnerPlayerId = winnerPlayerId;
     this.lastCombatResult = lastCombatResult;
+    this.combatHistory = [];
     this.eventLog = eventLog;
     this.flowState = createGameStateFromLegacyFields({
       phase,
@@ -143,6 +145,7 @@ export class Game {
       consecutivePasses: this.consecutivePasses,
       winnerPlayerId: this.winnerPlayerId,
       lastCombatResult: this.lastCombatResult,
+      combatHistory: this.combatHistory,
       eventLog: this.eventLog,
     };
   }

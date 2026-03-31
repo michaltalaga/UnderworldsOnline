@@ -541,6 +541,7 @@ export class GameEngine {
     }
 
     game.lastCombatResult = combatResult;
+    game.combatHistory.push(combatResult);
     target.damage += combatResult.damageInflicted;
     if (combatResult.staggerApplied) {
       target.hasStaggerToken = true;
