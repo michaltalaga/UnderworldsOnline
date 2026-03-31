@@ -29,10 +29,13 @@ import { ChooseTerritoryAction } from "../setup/ChooseTerritoryAction";
 import { CompleteMusterAction } from "../setup/CompleteMusterAction";
 import { DeployFighterAction } from "../setup/DeployFighterAction";
 import { DrawStartingHandsAction } from "../setup/DrawStartingHandsAction";
+import { GameAction } from "../actions/GameAction";
+import { MoveAction } from "../actions/MoveAction";
 import { PlaceFeatureTokenAction } from "../setup/PlaceFeatureTokenAction";
 import { ResolveMulliganAction } from "../setup/ResolveMulliganAction";
 import { ResolveTerritoryRollOffAction } from "../setup/ResolveTerritoryRollOffAction";
 import { SetupAction } from "../setup/SetupAction";
+import { CombatActionService } from "../rules/CombatActionService";
 import { RollOffContext } from "../rules/RollOffContext";
 import { RollOffResolver } from "../rules/RollOffResolver";
 import { type RollOffRoundInput } from "../rules/RollOffRound";
@@ -43,13 +46,16 @@ export type GameEngineShuffleCards = (cards: readonly CardInstance[]) => CardIns
 export class GameEngine {
   private readonly shuffleCards: GameEngineShuffleCards;
   private readonly rollOffResolver: RollOffResolver;
+  private readonly combatActionService: CombatActionService;
 
   public constructor(
     shuffleCards: GameEngineShuffleCards = GameEngine.copyCards,
     rollOffResolver: RollOffResolver = new RollOffResolver(),
+    combatActionService: CombatActionService = new CombatActionService(),
   ) {
     this.shuffleCards = shuffleCards;
     this.rollOffResolver = rollOffResolver;
+    this.combatActionService = combatActionService;
   }
 
   public applySetupAction(game: Game, action: SetupAction): Game {
@@ -89,6 +95,15 @@ export class GameEngine {
     }
 
     throw new Error(`Unsupported setup action: ${action.kind}.`);
+  }
+
+  public applyGameAction(game: Game, action: GameAction): Game {
+    if (action instanceof MoveAction) {
+      this.applyMoveAction(game, action);
+      return game;
+    }
+
+    throw new Error(`Unsupported game action: ${action.kind}.`);
   }
 
   public resolveFirstTurnRollOff(
@@ -346,6 +361,47 @@ export class GameEngine {
     game.transitionTo(createSetupDeployFightersGameState(this.getNextDeploymentPlayer(game, player.id).id));
   }
 
+  private applyMoveAction(game: Game, action: MoveAction): void {
+    this.assertCombatTurnStep(game, TurnStep.Action);
+    if (!this.combatActionService.isLegalMoveAction(game, action)) {
+      throw new Error(`Move path ${action.path.join(" -> ")} is not legal for fighter ${action.fighterId}.`);
+    }
+
+    const player = this.requirePlayer(game, action.playerId);
+    this.assertActivePlayer(game, player.id);
+
+    const fighter = this.requireOwnedDeployedFighter(player, action.fighterId);
+    const currentHexId = fighter.currentHexId;
+    if (currentHexId === null) {
+      throw new Error(`Fighter ${fighter.id} is not deployed on the board.`);
+    }
+
+    const currentHex = this.requireHex(game, currentHexId);
+    const destinationHexId = action.path[action.path.length - 1];
+    if (destinationHexId === undefined) {
+      throw new Error(`Move action for fighter ${fighter.id} requires a destination hex.`);
+    }
+
+    const destinationHex = this.requireHex(game, destinationHexId);
+
+    currentHex.occupantFighterId = null;
+    destinationHex.occupantFighterId = fighter.id;
+    fighter.currentHexId = destinationHex.id;
+    fighter.hasMoveToken = true;
+    if (destinationHex.kind === HexKind.Stagger) {
+      fighter.hasStaggerToken = true;
+    }
+
+    const firstPlayerId = game.firstPlayerId;
+    if (firstPlayerId === null) {
+      throw new Error("Combat turn state requires a first player id.");
+    }
+
+    game.consecutivePasses = 0;
+    game.transitionTo(createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power));
+    game.eventLog.push(`${player.name} moved fighter ${fighter.id} to ${destinationHex.id}.`);
+  }
+
   private drawCards(
     drawPile: CardInstance[],
     hand: CardInstance[],
@@ -480,6 +536,19 @@ export class GameEngine {
     return fighter;
   }
 
+  private requireOwnedDeployedFighter(player: PlayerState, fighterId: FighterId): FighterState {
+    const fighter = player.getFighter(fighterId);
+    if (fighter === undefined) {
+      throw new Error(`Player ${player.name} does not control fighter ${fighterId}.`);
+    }
+
+    if (fighter.currentHexId === null || fighter.isSlain) {
+      throw new Error(`Fighter ${fighter.id} is not deployed on the board.`);
+    }
+
+    return fighter;
+  }
+
   private requirePlayerTerritory(player: PlayerState): TerritoryId {
     if (player.territoryId === null) {
       throw new Error(`Player ${player.name} does not have an assigned territory.`);
@@ -546,6 +615,13 @@ export class GameEngine {
   private assertStateKind(game: Game, expectedKind: Game["state"]["kind"]): void {
     if (game.state.kind !== expectedKind) {
       throw new Error(`Expected game state ${expectedKind}, got ${game.state.kind}.`);
+    }
+  }
+
+  private assertCombatTurnStep(game: Game, expectedTurnStep: TurnStep): void {
+    this.assertStateKind(game, "combatTurn");
+    if (game.turnStep !== expectedTurnStep) {
+      throw new Error(`Expected combat turn step ${expectedTurnStep}, got ${game.turnStep}.`);
     }
   }
 

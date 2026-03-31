@@ -21,6 +21,7 @@ export * from "./definitions/WeaponDefinition";
 export * from "./engine/GameEngine";
 export * from "./factories/GameFactory";
 export * from "./rules/CombatContext";
+export * from "./rules/CombatActionService";
 export * from "./rules/CombatResolver";
 export * from "./rules/CombatResult";
 export * from "./rules/GameOutcome";
