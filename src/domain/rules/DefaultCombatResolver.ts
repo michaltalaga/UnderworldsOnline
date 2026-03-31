@@ -98,12 +98,21 @@ export class DefaultCombatResolver extends CombatResolver {
       context.selectedAbility !== null &&
       context.selectedAbility !== WeaponAbilityKind.Stagger
       && context.selectedAbility !== WeaponAbilityKind.Grievous
+      && context.selectedAbility !== WeaponAbilityKind.Cleave
     ) {
       throw new Error(`Weapon ability ${context.selectedAbility} is not supported by the default combat resolver.`);
     }
 
     const defenderIsStaggered = target.hasStaggerToken;
     const defenderIsGuarded = target.hasGuardToken && !defenderIsStaggered;
+    const selectedAbilityIsActive =
+      selectedAbilityDefinition !== null && !selectedAbilityDefinition.requiresCritical;
+    const effectiveSaveSymbol =
+      context.selectedAbility === WeaponAbilityKind.Cleave &&
+      selectedAbilityIsActive &&
+      targetDefinition.saveSymbol === SaveSymbol.Shield
+        ? null
+        : targetDefinition.saveSymbol;
     const attackRoll = this.resolveRoll(
       weapon.dice,
       attackRollInput,
@@ -124,7 +133,7 @@ export class DefaultCombatResolver extends CombatResolver {
     );
     const saveStats = this.getSaveRollStats(
       saveRoll,
-      targetDefinition.saveSymbol,
+      effectiveSaveSymbol,
       defenderIsGuarded,
     );
     const outcome = this.getCombatOutcome(attackStats, saveStats);
@@ -182,11 +191,14 @@ export class DefaultCombatResolver extends CombatResolver {
 
   private getSaveRollStats(
     saveRoll: readonly SaveDieFace[],
-    saveSymbol: SaveSymbol,
+    saveSymbol: SaveSymbol | null,
     defenderIsGuarded: boolean,
   ): CombatRollStats {
     const criticals = saveRoll.filter((face) => face === SaveDieFace.Critical).length;
-    const symbolSuccesses = saveRoll.filter((face) => face === saveSymbol).length;
+    const symbolSuccesses =
+      saveSymbol === null
+        ? 0
+        : saveRoll.filter((face) => face === saveSymbol).length;
     const supportSuccesses = defenderIsGuarded
       ? saveRoll.filter(DefaultCombatResolver.isSaveSupportFace).length
       : 0;

@@ -10,8 +10,7 @@ import {
   type Game,
 } from "../domain";
 
-const playerOneFighterOneId = "player:one:fighter:fighter-def:setup-practice:1:1";
-const playerOneFighterThreeId = "player:one:fighter:fighter-def:setup-practice:3:3";
+const playerOneFighterFourId = "player:one:fighter:fighter-def:setup-practice:4:4";
 const playerTwoFighterOneId = "player:two:fighter:fighter-def:setup-practice:1:1";
 const practiceBladeWeaponId = "weapon-def:setup-practice:1";
 
@@ -50,9 +49,9 @@ export const combatDebugScenarios: readonly CombatDebugScenario[] = [
   {
     id: "draw",
     label: "Stalemate",
-    description: "One hit meets one dodge, so the attack resolves as a draw.",
+    description: "One hit meets one shield, so Cleave can visibly change the outcome.",
     attackRoll: [AttackDieFace.Hammer, AttackDieFace.Blank],
-    saveRoll: [SaveDieFace.Dodge],
+    saveRoll: [SaveDieFace.Shield],
   },
   {
     id: "failure",
@@ -104,30 +103,22 @@ export function createCombatDebugSnapshot(
 
   engine.applyGameAction(
     game,
-    new MoveAction("player:one", playerOneFighterOneId, ["hex:r0:c2"]),
+    new MoveAction("player:one", playerOneFighterFourId, ["hex:r2:c3", "hex:r3:c3", "hex:r4:c3"]),
   );
   engine.applyGameAction(game, new PassAction("player:one"));
 
   engine.applyGameAction(
     game,
-    new MoveAction("player:two", playerTwoFighterOneId, ["hex:r7:c3", "hex:r6:c3"]),
+    new MoveAction("player:two", playerTwoFighterOneId, ["hex:r7:c3", "hex:r6:c3", "hex:r5:c3"]),
   );
   engine.applyGameAction(game, new PassAction("player:two"));
 
-  engine.applyGameAction(
-    game,
-    new MoveAction("player:one", playerOneFighterThreeId, [
-      "hex:r2:c1",
-      "hex:r3:c2",
-      "hex:r4:c2",
-      "hex:r5:c3",
-    ]),
-  );
+  engine.applyGameAction(game, new PassAction("player:one"));
   engine.applyGameAction(game, new PassAction("player:one"));
 
-  const defender = game.getFighter(playerOneFighterThreeId);
+  const defender = game.getFighter(playerOneFighterFourId);
   if (defender === undefined) {
-    throw new Error(`Could not find debug defender ${playerOneFighterThreeId}.`);
+    throw new Error(`Could not find debug defender ${playerOneFighterFourId}.`);
   }
 
   defender.hasGuardToken = defenderState.hasGuardToken ?? false;
@@ -166,7 +157,7 @@ export function createCombatDebugSnapshot(
       new AttackAction(
         "player:two",
         playerTwoFighterOneId,
-        playerOneFighterThreeId,
+        playerOneFighterFourId,
         practiceBladeWeaponId,
         selectedAbility,
         [...scenario.attackRoll],
