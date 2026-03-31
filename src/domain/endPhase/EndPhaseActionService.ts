@@ -1,6 +1,7 @@
 import { Game } from "../state/Game";
 import { EndPhaseStep, Phase } from "../values/enums";
 import { EndPhaseAction } from "./EndPhaseAction";
+import { ResolveCleanupAction } from "./ResolveCleanupAction";
 import { ResolveDiscardCardsAction } from "./ResolveDiscardCardsAction";
 import { ResolveDrawObjectivesAction } from "./ResolveDrawObjectivesAction";
 import { ResolveDrawPowerCardsAction } from "./ResolveDrawPowerCardsAction";
@@ -25,7 +26,7 @@ export class EndPhaseActionService {
       case EndPhaseStep.DrawPowerCards:
         return [new ResolveDrawPowerCardsAction()];
       case EndPhaseStep.Cleanup:
-        return [];
+        return [new ResolveCleanupAction()];
       default: {
         const exhaustiveStep: never = game.endPhaseStep;
         throw new Error(`Unsupported end phase step ${exhaustiveStep}.`);

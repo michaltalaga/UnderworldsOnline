@@ -7,6 +7,7 @@ import {
   createCombatReadyGameState,
   createCombatTurnGameState,
   createEndPhaseGameState,
+  createFinishedGameState,
   createSetupDeployFightersGameState,
   createSetupDetermineTerritoriesChoiceGameState,
   createSetupDetermineTerritoriesRollOffGameState,
@@ -36,6 +37,7 @@ import { GameAction } from "../actions/GameAction";
 import { MoveAction } from "../actions/MoveAction";
 import { PassAction } from "../actions/PassAction";
 import { PlaceFeatureTokenAction } from "../setup/PlaceFeatureTokenAction";
+import { ResolveCleanupAction } from "../endPhase/ResolveCleanupAction";
 import { ResolveMulliganAction } from "../setup/ResolveMulliganAction";
 import { ResolveTerritoryRollOffAction } from "../setup/ResolveTerritoryRollOffAction";
 import { SetupAction } from "../setup/SetupAction";
@@ -46,11 +48,13 @@ import { ResolveEquipUpgradesAction } from "../endPhase/ResolveEquipUpgradesActi
 import { ResolveScoreObjectivesAction } from "../endPhase/ResolveScoreObjectivesAction";
 import { CombatActionService } from "../rules/CombatActionService";
 import { DefaultScoringResolver } from "../rules/DefaultScoringResolver";
+import { DefaultVictoryResolver } from "../rules/DefaultVictoryResolver";
 import { RollOffContext } from "../rules/RollOffContext";
 import { RollOffResolver } from "../rules/RollOffResolver";
 import { type RollOffRoundInput } from "../rules/RollOffRound";
 import { RollOffResult } from "../rules/RollOffResult";
 import { ScoringResolver } from "../rules/ScoringResolver";
+import { VictoryResolver } from "../rules/VictoryResolver";
 
 export type GameEngineShuffleCards = (cards: readonly CardInstance[]) => CardInstance[];
 
@@ -62,17 +66,20 @@ export class GameEngine {
   private readonly rollOffResolver: RollOffResolver;
   private readonly combatActionService: CombatActionService;
   private readonly scoringResolver: ScoringResolver;
+  private readonly victoryResolver: VictoryResolver;
 
   public constructor(
     shuffleCards: GameEngineShuffleCards = GameEngine.copyCards,
     rollOffResolver: RollOffResolver = new RollOffResolver(),
     combatActionService: CombatActionService = new CombatActionService(),
     scoringResolver: ScoringResolver = new DefaultScoringResolver(),
+    victoryResolver: VictoryResolver = new DefaultVictoryResolver(),
   ) {
     this.shuffleCards = shuffleCards;
     this.rollOffResolver = rollOffResolver;
     this.combatActionService = combatActionService;
     this.scoringResolver = scoringResolver;
+    this.victoryResolver = victoryResolver;
   }
 
   public applySetupAction(game: Game, action: SetupAction): Game {
@@ -151,6 +158,11 @@ export class GameEngine {
 
     if (action instanceof ResolveDrawPowerCardsAction) {
       this.applyResolveDrawPowerCards(game);
+      return game;
+    }
+
+    if (action instanceof ResolveCleanupAction) {
+      this.applyResolveCleanup(game);
       return game;
     }
 
@@ -618,6 +630,39 @@ export class GameEngine {
     game.eventLog.push("Power card drawing complete.");
   }
 
+  private applyResolveCleanup(game: Game): void {
+    this.assertEndPhaseStep(game, EndPhaseStep.Cleanup);
+
+    this.resetRoundState(game);
+
+    if (game.isFinalRound()) {
+      const outcome = this.victoryResolver.getOutcome(game);
+      if (outcome === null) {
+        throw new Error("Final-round cleanup requires a game outcome.");
+      }
+
+      game.winnerPlayerId = outcome.winnerPlayerId;
+      game.transitionTo(createFinishedGameState());
+
+      if (outcome.winnerPlayerId === null) {
+        game.eventLog.push(`Cleanup complete. Game finished in a draw. ${outcome.reason}`);
+        return;
+      }
+
+      const winner = this.requirePlayer(game, outcome.winnerPlayerId);
+      game.eventLog.push(`Cleanup complete. ${winner.name} won the game. ${outcome.reason}`);
+      return;
+    }
+
+    const completedRoundNumber = game.roundNumber;
+    game.roundNumber += 1;
+    game.winnerPlayerId = null;
+    game.transitionTo(createCombatReadyGameState());
+    game.eventLog.push(
+      `Cleanup complete. Round ${completedRoundNumber + 1} is ready to begin.`,
+    );
+  }
+
   private drawCards(
     drawPile: CardInstance[],
     hand: CardInstance[],
@@ -860,6 +905,21 @@ export class GameEngine {
     return game.players.every(
       (player) => player.turnsTakenThisRound >= GameEngine.turnsPerRound,
     );
+  }
+
+  private resetRoundState(game: Game): void {
+    game.consecutivePasses = 0;
+
+    for (const player of game.players) {
+      player.turnsTakenThisRound = 0;
+      player.hasDelvedThisPowerStep = false;
+
+      for (const fighter of player.fighters) {
+        fighter.hasMoveToken = false;
+        fighter.hasChargeToken = false;
+        fighter.hasGuardToken = false;
+      }
+    }
   }
 
   private describeRollOff(game: Game, result: RollOffResult): string {
