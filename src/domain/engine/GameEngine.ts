@@ -195,6 +195,16 @@ export class GameEngine {
     return result;
   }
 
+  public startCombatRound(
+    game: Game,
+    rounds: readonly RollOffRoundInput[],
+    firstPlayerId: PlayerId,
+  ): RollOffResult {
+    const result = this.resolveFirstTurnRollOff(game, rounds);
+    this.chooseFirstPlayer(game, result.winnerPlayerId, firstPlayerId);
+    return result;
+  }
+
   public chooseFirstPlayer(
     game: Game,
     chooserPlayerId: PlayerId,
