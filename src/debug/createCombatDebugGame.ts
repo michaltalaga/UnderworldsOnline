@@ -10,11 +10,12 @@ import {
   type Game,
 } from "../domain";
 
+const playerOneFighterThreeId = "player:one:fighter:fighter-def:setup-practice:3:3";
 const playerOneFighterFourId = "player:one:fighter:fighter-def:setup-practice:4:4";
 const playerTwoFighterOneId = "player:two:fighter:fighter-def:setup-practice:1:1";
 const practiceBladeWeaponId = "weapon-def:setup-practice:1";
 
-export type CombatDebugScenarioId = "success" | "draw" | "failure" | "support";
+export type CombatDebugScenarioId = "success" | "draw" | "dodge" | "failure" | "support";
 
 export type CombatDebugScenario = {
   id: CombatDebugScenarioId;
@@ -61,6 +62,13 @@ export const combatDebugScenarios: readonly CombatDebugScenario[] = [
     saveRoll: [SaveDieFace.Critical],
   },
   {
+    id: "dodge",
+    label: "Dodge Check",
+    description: "One hit meets one dodge, so Ensnare can visibly change the outcome.",
+    attackRoll: [AttackDieFace.Hammer, AttackDieFace.Blank],
+    saveRoll: [SaveDieFace.Dodge],
+  },
+  {
     id: "support",
     label: "Support Check",
     description: "Support icons stay neutral until guard or stagger turns them into successes.",
@@ -94,6 +102,15 @@ export function createCombatDebugSnapshot(
   const scenario = getCombatDebugScenario(scenarioId);
   const game = createCombatReadySetupPracticeGame("game:setup-practice:combat-debug");
   const engine = new GameEngine();
+  const debugDefenderId = scenarioId === "dodge" ? playerOneFighterThreeId : playerOneFighterFourId;
+  const defenderMovePath =
+    scenarioId === "dodge"
+      ? ["hex:r2:c1", "hex:r3:c2", "hex:r4:c2"]
+      : ["hex:r2:c3", "hex:r3:c3", "hex:r4:c3"];
+  const attackerMovePath =
+    scenarioId === "dodge"
+      ? ["hex:r7:c3", "hex:r6:c3", "hex:r5:c3"]
+      : ["hex:r7:c3", "hex:r6:c3", "hex:r5:c3"];
 
   engine.startCombatRound(
     game,
@@ -103,22 +120,22 @@ export function createCombatDebugSnapshot(
 
   engine.applyGameAction(
     game,
-    new MoveAction("player:one", playerOneFighterFourId, ["hex:r2:c3", "hex:r3:c3", "hex:r4:c3"]),
+    new MoveAction("player:one", debugDefenderId, defenderMovePath),
   );
   engine.applyGameAction(game, new PassAction("player:one"));
 
   engine.applyGameAction(
     game,
-    new MoveAction("player:two", playerTwoFighterOneId, ["hex:r7:c3", "hex:r6:c3", "hex:r5:c3"]),
+    new MoveAction("player:two", playerTwoFighterOneId, attackerMovePath),
   );
   engine.applyGameAction(game, new PassAction("player:two"));
 
   engine.applyGameAction(game, new PassAction("player:one"));
   engine.applyGameAction(game, new PassAction("player:one"));
 
-  const defender = game.getFighter(playerOneFighterFourId);
+  const defender = game.getFighter(debugDefenderId);
   if (defender === undefined) {
-    throw new Error(`Could not find debug defender ${playerOneFighterFourId}.`);
+    throw new Error(`Could not find debug defender ${debugDefenderId}.`);
   }
 
   defender.hasGuardToken = defenderState.hasGuardToken ?? false;
@@ -157,7 +174,7 @@ export function createCombatDebugSnapshot(
       new AttackAction(
         "player:two",
         playerTwoFighterOneId,
-        playerOneFighterFourId,
+        debugDefenderId,
         practiceBladeWeaponId,
         selectedAbility,
         [...scenario.attackRoll],

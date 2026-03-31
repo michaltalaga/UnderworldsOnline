@@ -99,20 +99,13 @@ export class DefaultCombatResolver extends CombatResolver {
       context.selectedAbility !== WeaponAbilityKind.Stagger
       && context.selectedAbility !== WeaponAbilityKind.Grievous
       && context.selectedAbility !== WeaponAbilityKind.Cleave
+      && context.selectedAbility !== WeaponAbilityKind.Ensnare
     ) {
       throw new Error(`Weapon ability ${context.selectedAbility} is not supported by the default combat resolver.`);
     }
 
     const defenderIsStaggered = target.hasStaggerToken;
     const defenderIsGuarded = target.hasGuardToken && !defenderIsStaggered;
-    const selectedAbilityIsActive =
-      selectedAbilityDefinition !== null && !selectedAbilityDefinition.requiresCritical;
-    const effectiveSaveSymbol =
-      context.selectedAbility === WeaponAbilityKind.Cleave &&
-      selectedAbilityIsActive &&
-      targetDefinition.saveSymbol === SaveSymbol.Shield
-        ? null
-        : targetDefinition.saveSymbol;
     const attackRoll = this.resolveRoll(
       weapon.dice,
       attackRollInput,
@@ -131,15 +124,25 @@ export class DefaultCombatResolver extends CombatResolver {
       weapon.accuracy,
       defenderIsStaggered,
     );
+    const canTriggerSelectedAbility =
+      selectedAbilityDefinition !== null &&
+      (!selectedAbilityDefinition.requiresCritical || attackStats.criticals > 0);
+    const effectiveSaveSymbol =
+      context.selectedAbility === WeaponAbilityKind.Cleave &&
+      canTriggerSelectedAbility &&
+      targetDefinition.saveSymbol === SaveSymbol.Shield
+        ? null
+        : context.selectedAbility === WeaponAbilityKind.Ensnare &&
+            canTriggerSelectedAbility &&
+            targetDefinition.saveSymbol === SaveSymbol.Dodge
+          ? null
+          : targetDefinition.saveSymbol;
     const saveStats = this.getSaveRollStats(
       saveRoll,
       effectiveSaveSymbol,
       defenderIsGuarded,
     );
     const outcome = this.getCombatOutcome(attackStats, saveStats);
-    const canTriggerSelectedAbility =
-      selectedAbilityDefinition !== null &&
-      (!selectedAbilityDefinition.requiresCritical || attackStats.criticals > 0);
     const grievousDamageBonus =
       context.selectedAbility === WeaponAbilityKind.Grievous &&
       canTriggerSelectedAbility &&
