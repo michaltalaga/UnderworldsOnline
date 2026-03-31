@@ -34,6 +34,7 @@ import { DeployFighterAction } from "../setup/DeployFighterAction";
 import { DrawStartingHandsAction } from "../setup/DrawStartingHandsAction";
 import { EndPhaseAction } from "../endPhase/EndPhaseAction";
 import { GameAction } from "../actions/GameAction";
+import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
 import { PassAction } from "../actions/PassAction";
 import { PlaceFeatureTokenAction } from "../setup/PlaceFeatureTokenAction";
@@ -124,6 +125,11 @@ export class GameEngine {
   public applyGameAction(game: Game, action: GameAction): Game {
     if (action instanceof MoveAction) {
       this.applyMoveAction(game, action);
+      return game;
+    }
+
+    if (action instanceof GuardAction) {
+      this.applyGuardAction(game, action);
       return game;
     }
 
@@ -473,6 +479,28 @@ export class GameEngine {
     game.consecutivePasses = 0;
     game.transitionTo(createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power));
     game.eventLog.push(`${player.name} moved fighter ${fighter.id} to ${destinationHex.id}.`);
+  }
+
+  private applyGuardAction(game: Game, action: GuardAction): void {
+    this.assertCombatTurnStep(game, TurnStep.Action);
+    if (!this.combatActionService.isLegalGuardAction(game, action)) {
+      throw new Error(`Guard action is not legal for fighter ${action.fighterId}.`);
+    }
+
+    const player = this.requirePlayer(game, action.playerId);
+    this.assertActivePlayer(game, player.id);
+
+    const fighter = this.requireOwnedDeployedFighter(player, action.fighterId);
+    fighter.hasGuardToken = true;
+
+    const firstPlayerId = game.firstPlayerId;
+    if (firstPlayerId === null) {
+      throw new Error("Combat turn state requires a first player id.");
+    }
+
+    game.consecutivePasses = 0;
+    game.transitionTo(createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power));
+    game.eventLog.push(`${player.name} put fighter ${fighter.id} on guard.`);
   }
 
   private applyPassAction(game: Game, action: PassAction): void {

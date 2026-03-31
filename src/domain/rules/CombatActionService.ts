@@ -1,8 +1,10 @@
 import { GameAction } from "../actions/GameAction";
+import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
 import { PassAction } from "../actions/PassAction";
 import { Game } from "../state/Game";
 import { HexCell } from "../state/HexCell";
+import { FighterState } from "../state/FighterState";
 import { PlayerState } from "../state/PlayerState";
 import { HexKind, TurnStep } from "../values/enums";
 import type { FighterId, HexId, PlayerId } from "../values/ids";
@@ -43,8 +45,27 @@ export class CombatActionService extends LegalActionService {
 
     return [
       ...player.fighters.flatMap((fighter) => this.getLegalMoveActionsForFighter(game, player, fighter.id)),
+      ...player.fighters.flatMap((fighter) => this.getLegalGuardActionsForFighter(game, player, fighter.id)),
       new PassAction(playerId),
     ];
+  }
+
+  public isLegalGuardAction(game: Game, action: GuardAction): boolean {
+    if (!this.isCombatActionStep(game, action.playerId)) {
+      return false;
+    }
+
+    const player = game.getPlayer(action.playerId);
+    if (player === undefined) {
+      return false;
+    }
+
+    const fighter = player.getFighter(action.fighterId);
+    if (fighter === undefined) {
+      return false;
+    }
+
+    return this.canFighterGuard(fighter);
   }
 
   public isLegalMoveAction(game: Game, action: MoveAction): boolean {
@@ -101,6 +122,23 @@ export class CombatActionService extends LegalActionService {
     }
 
     return true;
+  }
+
+  private getLegalGuardActionsForFighter(
+    game: Game,
+    player: PlayerState,
+    fighterId: FighterId,
+  ): GuardAction[] {
+    const fighter = player.getFighter(fighterId);
+    if (fighter === undefined || !this.canFighterGuard(fighter)) {
+      return [];
+    }
+
+    if (!this.isCombatActionStep(game, player.id)) {
+      return [];
+    }
+
+    return [new GuardAction(player.id, fighter.id)];
   }
 
   private getLegalMoveActionsForFighter(
@@ -160,6 +198,16 @@ export class CombatActionService extends LegalActionService {
     }
 
     return legalActions;
+  }
+
+  private canFighterGuard(fighter: FighterState): boolean {
+    return !(
+      fighter.isSlain ||
+      fighter.currentHexId === null ||
+      fighter.hasMoveToken ||
+      fighter.hasChargeToken ||
+      fighter.hasGuardToken
+    );
   }
 
   private isCombatActionStep(game: Game, playerId: PlayerId): boolean {
