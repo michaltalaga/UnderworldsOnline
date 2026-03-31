@@ -532,6 +532,8 @@ export class GameEngine {
         weapon.id,
         action.selectedAbility,
       ),
+      action.attackRoll,
+      action.saveRoll,
     );
 
     if (combatResult.targetMoved || combatResult.attackerMoved) {

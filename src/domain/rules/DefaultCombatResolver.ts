@@ -49,7 +49,12 @@ export class DefaultCombatResolver extends CombatResolver {
     this.rollSaveDie = rollSaveDie;
   }
 
-  public resolve(game: Game, context: CombatContext): CombatResult {
+  public resolve(
+    game: Game,
+    context: CombatContext,
+    attackRollInput: readonly AttackDieFace[] | null = null,
+    saveRollInput: readonly SaveDieFace[] | null = null,
+  ): CombatResult {
     if (context.selectedAbility !== null) {
       throw new Error(`Weapon ability ${context.selectedAbility} is not supported by the default combat resolver.`);
     }
@@ -85,13 +90,17 @@ export class DefaultCombatResolver extends CombatResolver {
 
     const defenderIsStaggered = target.hasStaggerToken;
     const defenderIsGuarded = target.hasGuardToken && !defenderIsStaggered;
-    const attackRoll = Array.from(
-      { length: weapon.dice },
-      () => this.rollAttackDie(),
+    const attackRoll = this.resolveRoll(
+      weapon.dice,
+      attackRollInput,
+      this.rollAttackDie,
+      "attack",
     );
-    const saveRoll = Array.from(
-      { length: targetDefinition.saveDice },
-      () => this.rollSaveDie(),
+    const saveRoll = this.resolveRoll(
+      targetDefinition.saveDice,
+      saveRollInput,
+      this.rollSaveDie,
+      "save",
     );
 
     const attackStats = this.getAttackRollStats(
@@ -110,8 +119,8 @@ export class DefaultCombatResolver extends CombatResolver {
 
     return new CombatResult(
       context,
-      attackRoll,
-      saveRoll,
+      [...attackRoll],
+      [...saveRoll],
       outcome,
       attackStats.successes,
       saveStats.successes,
@@ -180,6 +189,23 @@ export class DefaultCombatResolver extends CombatResolver {
     }
 
     return CombatOutcome.Draw;
+  }
+
+  private resolveRoll<T>(
+    expectedCount: number,
+    providedRoll: readonly T[] | null,
+    rollDie: () => T,
+    label: string,
+  ): T[] {
+    if (providedRoll !== null) {
+      if (providedRoll.length !== expectedCount) {
+        throw new Error(`Expected ${expectedCount} ${label} dice, got ${providedRoll.length}.`);
+      }
+
+      return [...providedRoll];
+    }
+
+    return Array.from({ length: expectedCount }, () => rollDie());
   }
 
   private static isAttackSupportFace(face: AttackDieFace): boolean {
