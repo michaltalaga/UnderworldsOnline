@@ -1,11 +1,13 @@
 import { CardDefinition } from "../../definitions/CardDefinition";
 import { FighterDefinition } from "../../definitions/FighterDefinition";
 import { WarbandDefinition } from "../../definitions/WarbandDefinition";
+import { WeaponAbilityDefinition } from "../../definitions/WeaponAbilityDefinition";
 import { WarscrollDefinition } from "../../definitions/WarscrollDefinition";
 import { WeaponDefinition } from "../../definitions/WeaponDefinition";
 import {
   CardKind,
   SaveSymbol,
+  WeaponAbilityKind,
   WeaponAccuracy,
 } from "../../values/enums";
 
@@ -18,7 +20,17 @@ const fighters = [
     SaveSymbol.Shield,
     4,
     1,
-    [new WeaponDefinition("weapon-def:setup-practice:1", "Practice Blade", 1, 2, WeaponAccuracy.Hammer, 1)],
+    [
+      new WeaponDefinition(
+        "weapon-def:setup-practice:1",
+        "Practice Blade",
+        1,
+        2,
+        WeaponAccuracy.Hammer,
+        1,
+        [new WeaponAbilityDefinition(WeaponAbilityKind.Stagger)],
+      ),
+    ],
   ),
   new FighterDefinition(
     "fighter-def:setup-practice:2",

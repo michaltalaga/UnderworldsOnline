@@ -187,6 +187,11 @@ body {
   color: #8d321f;
 }
 
+.status-supported {
+  background: rgba(69, 127, 77, 0.14);
+  color: #2d6a39;
+}
+
 .eyebrow,
 .combat-label,
 .fighter-owner {

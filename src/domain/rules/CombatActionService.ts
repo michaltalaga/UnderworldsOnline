@@ -53,7 +53,7 @@ export class CombatActionService extends LegalActionService {
   }
 
   public isLegalAttackAction(game: Game, action: AttackAction): boolean {
-    if (!this.isCombatActionStep(game, action.playerId) || action.selectedAbility !== null) {
+    if (!this.isCombatActionStep(game, action.playerId)) {
       return false;
     }
 
@@ -79,6 +79,13 @@ export class CombatActionService extends LegalActionService {
 
     const weapon = attackerDefinition.weapons.find((candidate) => candidate.id === action.weaponId);
     if (weapon === undefined) {
+      return false;
+    }
+
+    if (
+      action.selectedAbility !== null &&
+      !weapon.abilities.some((ability) => ability.kind === action.selectedAbility)
+    ) {
       return false;
     }
 
@@ -212,7 +219,14 @@ export class CombatActionService extends LegalActionService {
           return [];
         }
 
-        return [new AttackAction(player.id, fighter.id, target.id, weapon.id)];
+        const abilityActions = weapon.abilities.map(
+          (ability) => new AttackAction(player.id, fighter.id, target.id, weapon.id, ability.kind),
+        );
+
+        return [
+          new AttackAction(player.id, fighter.id, target.id, weapon.id),
+          ...abilityActions,
+        ];
       }),
     );
   }

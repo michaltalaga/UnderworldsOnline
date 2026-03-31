@@ -567,11 +567,13 @@ export class GameEngine {
     const damageText = combatResult.damageInflicted === 0
       ? "dealt no damage"
       : `dealt ${combatResult.damageInflicted} damage`;
-    const slayText = targetSlain
-      ? ` and slew fighter ${target.id} for ${targetDefinition.bounty} glory`
-      : "";
+    const effectText = [
+      combatResult.staggerApplied ? `staggered fighter ${target.id}` : null,
+      targetSlain ? `slew fighter ${target.id} for ${targetDefinition.bounty} glory` : null,
+    ].filter((text): text is string => text !== null);
+    const effectSuffix = effectText.length === 0 ? "" : ` and ${effectText.join(" and ")}`;
     game.eventLog.push(
-      `${attackerPlayer.name} attacked fighter ${target.id} with ${weapon.name} and ${damageText}${slayText}.`,
+      `${attackerPlayer.name} attacked fighter ${target.id} with ${weapon.name} and ${damageText}${effectSuffix}.`,
     );
   }
 

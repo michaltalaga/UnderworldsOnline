@@ -4,6 +4,7 @@ import {
   CombatOutcome,
   SaveDieFace,
   SaveSymbol,
+  WeaponAbilityKind,
   WeaponAccuracy,
 } from "../values/enums";
 import { CombatContext } from "./CombatContext";
@@ -55,10 +56,6 @@ export class DefaultCombatResolver extends CombatResolver {
     attackRollInput: readonly AttackDieFace[] | null = null,
     saveRollInput: readonly SaveDieFace[] | null = null,
   ): CombatResult {
-    if (context.selectedAbility !== null) {
-      throw new Error(`Weapon ability ${context.selectedAbility} is not supported by the default combat resolver.`);
-    }
-
     const attackerPlayer = game.getPlayer(context.attackerPlayerId);
     if (attackerPlayer === undefined) {
       throw new Error(`Unknown attacker player ${context.attackerPlayerId}.`);
@@ -86,6 +83,22 @@ export class DefaultCombatResolver extends CombatResolver {
     );
     if (weapon === undefined) {
       throw new Error(`Attacker ${attacker.id} does not have weapon ${context.weaponId}.`);
+    }
+
+    const selectedAbilityDefinition =
+      context.selectedAbility === null
+        ? null
+        : weapon.abilities.find((ability) => ability.kind === context.selectedAbility) ?? null;
+
+    if (context.selectedAbility !== null && selectedAbilityDefinition === null) {
+      throw new Error(`Weapon ability ${context.selectedAbility} is not available on weapon ${weapon.name}.`);
+    }
+
+    if (
+      context.selectedAbility !== null &&
+      context.selectedAbility !== WeaponAbilityKind.Stagger
+    ) {
+      throw new Error(`Weapon ability ${context.selectedAbility} is not supported by the default combat resolver.`);
     }
 
     const defenderIsStaggered = target.hasStaggerToken;
@@ -116,6 +129,15 @@ export class DefaultCombatResolver extends CombatResolver {
     const outcome = this.getCombatOutcome(attackStats, saveStats);
     const damageInflicted = outcome === CombatOutcome.Success ? weapon.damage : 0;
     const targetSlain = target.damage + damageInflicted >= targetDefinition.health;
+    const canTriggerSelectedAbility =
+      selectedAbilityDefinition !== null &&
+      (!selectedAbilityDefinition.requiresCritical || attackStats.criticals > 0);
+    const staggerApplied =
+      context.selectedAbility === WeaponAbilityKind.Stagger &&
+      canTriggerSelectedAbility &&
+      outcome === CombatOutcome.Success &&
+      !targetSlain &&
+      !target.hasStaggerToken;
 
     return new CombatResult(
       context,
@@ -130,7 +152,7 @@ export class DefaultCombatResolver extends CombatResolver {
       targetSlain,
       false,
       false,
-      false,
+      staggerApplied,
     );
   }
 

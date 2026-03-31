@@ -16,6 +16,7 @@ import {
 } from "./debug/createCombatDebugGame";
 
 const debugAbilityKinds = Object.values(WeaponAbilityKind);
+const supportedDebugAbilities = new Set<WeaponAbilityKind>([WeaponAbilityKind.Stagger]);
 
 function App() {
   const [scenarioId, setScenarioId] = useState<CombatDebugScenarioId>("success");
@@ -114,7 +115,8 @@ function App() {
           </div>
           <p className="token-description">{formatSelectedAbilityDescription(debugSnapshot)}</p>
           <p className="token-note">
-            Current end-to-end support only works with <code>selectedAbility = null</code>.
+            Current end-to-end support covers the base attack plus <code>Stagger</code> when the
+            weapon defines it.
           </p>
         </div>
         <dl className="overview-grid">
@@ -166,11 +168,12 @@ function App() {
       <section className="panel">
         <div className="section-heading">
           <p className="eyebrow">Ability Support</p>
-          <h2>Current unsupported abilities</h2>
+          <h2>Ability support on the current weapon</h2>
         </div>
         <div className="ability-status-list">
           {debugAbilityKinds.map((ability) => {
             const definedOnWeapon = debugSnapshot.attackerWeaponAbilities.includes(ability);
+            const supported = definedOnWeapon && supportedDebugAbilities.has(ability);
 
             return (
               <article className="ability-status-card" key={ability}>
@@ -181,7 +184,9 @@ function App() {
                 <p className="fighter-meta">
                   {definedOnWeapon ? "Defined on weapon" : "Not defined on weapon"}
                 </p>
-                <span className="status-badge status-unsupported">unsupported</span>
+                <span className={`status-badge ${supported ? "status-supported" : "status-unsupported"}`}>
+                  {supported ? "supported" : "unsupported"}
+                </span>
               </article>
             );
           })}
@@ -409,6 +414,13 @@ function formatSelectedAbilityDescription(debugSnapshot: CombatDebugSnapshot): s
     return `No ability selected. ${debugSnapshot.attackerWeaponName} follows the current supported path.`;
   }
 
+  if (
+    debugSnapshot.selectedAbilityDefinedOnWeapon &&
+    supportedDebugAbilities.has(debugSnapshot.selectedAbility)
+  ) {
+    return `${formatAbilityLabel(debugSnapshot.selectedAbility)} is defined on ${debugSnapshot.attackerWeaponName} and now resolves through the current attack flow.`;
+  }
+
   if (debugSnapshot.selectedAbilityDefinedOnWeapon) {
     return `${formatAbilityLabel(debugSnapshot.selectedAbility)} is defined on ${debugSnapshot.attackerWeaponName}, but it is still unsupported in the current attack flow.`;
   }
@@ -417,11 +429,15 @@ function formatSelectedAbilityDescription(debugSnapshot: CombatDebugSnapshot): s
     return `${debugSnapshot.attackerWeaponName} defines no abilities, so ${formatAbilityLabel(debugSnapshot.selectedAbility)} is only a debug probe right now.`;
   }
 
-  return `${formatAbilityLabel(debugSnapshot.selectedAbility)} is not defined on ${debugSnapshot.attackerWeaponName} and is currently unsupported.`;
+  return `${formatAbilityLabel(debugSnapshot.selectedAbility)} is not defined on ${debugSnapshot.attackerWeaponName}. Defined abilities: ${formatAbilityList(debugSnapshot.attackerWeaponAbilities)}.`;
 }
 
 function formatAbilityLabel(ability: WeaponAbilityKind): string {
   return ability.charAt(0).toUpperCase() + ability.slice(1);
+}
+
+function formatAbilityList(abilities: readonly WeaponAbilityKind[]): string {
+  return abilities.map(formatAbilityLabel).join(", ");
 }
 
 export default App;
