@@ -39,6 +39,7 @@ import { PlaceFeatureTokenAction } from "../setup/PlaceFeatureTokenAction";
 import { ResolveMulliganAction } from "../setup/ResolveMulliganAction";
 import { ResolveTerritoryRollOffAction } from "../setup/ResolveTerritoryRollOffAction";
 import { SetupAction } from "../setup/SetupAction";
+import { ResolveEquipUpgradesAction } from "../endPhase/ResolveEquipUpgradesAction";
 import { ResolveScoreObjectivesAction } from "../endPhase/ResolveScoreObjectivesAction";
 import { CombatActionService } from "../rules/CombatActionService";
 import { DefaultScoringResolver } from "../rules/DefaultScoringResolver";
@@ -125,6 +126,11 @@ export class GameEngine {
   public applyEndPhaseAction(game: Game, action: EndPhaseAction): Game {
     if (action instanceof ResolveScoreObjectivesAction) {
       this.applyResolveScoreObjectives(game);
+      return game;
+    }
+
+    if (action instanceof ResolveEquipUpgradesAction) {
+      this.applyResolveEquipUpgrades(game);
       return game;
     }
 
@@ -510,6 +516,18 @@ export class GameEngine {
       ),
     );
     game.eventLog.push("Objective scoring complete.");
+  }
+
+  private applyResolveEquipUpgrades(game: Game): void {
+    this.assertEndPhaseStep(game, EndPhaseStep.EquipUpgrades);
+    game.transitionTo(
+      createEndPhaseGameState(
+        EndPhaseStep.DiscardCards,
+        null,
+        game.firstPlayerId,
+      ),
+    );
+    game.eventLog.push("Upgrade equipping complete.");
   }
 
   private drawCards(

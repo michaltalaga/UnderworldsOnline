@@ -165,6 +165,7 @@ export type SetupActionKind = (typeof SetupActionKind)[keyof typeof SetupActionK
 
 export const EndPhaseActionKind = {
   ResolveScoreObjectives: "resolveScoreObjectives",
+  ResolveEquipUpgrades: "resolveEquipUpgrades",
 } as const;
 
 export type EndPhaseActionKind = (typeof EndPhaseActionKind)[keyof typeof EndPhaseActionKind];

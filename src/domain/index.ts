@@ -20,6 +20,7 @@ export * from "./definitions/WeaponAbilityDefinition";
 export * from "./definitions/WeaponDefinition";
 export * from "./endPhase/EndPhaseAction";
 export * from "./endPhase/EndPhaseActionService";
+export * from "./endPhase/ResolveEquipUpgradesAction";
 export * from "./endPhase/ResolveScoreObjectivesAction";
 export * from "./engine/GameEngine";
 export * from "./factories/GameFactory";
