@@ -163,6 +163,12 @@ export const SetupActionKind = {
 
 export type SetupActionKind = (typeof SetupActionKind)[keyof typeof SetupActionKind];
 
+export const EndPhaseActionKind = {
+  ResolveScoreObjectives: "resolveScoreObjectives",
+} as const;
+
+export type EndPhaseActionKind = (typeof EndPhaseActionKind)[keyof typeof EndPhaseActionKind];
+
 export const RollOffKind = {
   TerritoryChoice: "territoryChoice",
   FirstTurn: "firstTurn",

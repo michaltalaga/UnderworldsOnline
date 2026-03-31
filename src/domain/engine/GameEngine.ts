@@ -31,6 +31,7 @@ import { ChooseTerritoryAction } from "../setup/ChooseTerritoryAction";
 import { CompleteMusterAction } from "../setup/CompleteMusterAction";
 import { DeployFighterAction } from "../setup/DeployFighterAction";
 import { DrawStartingHandsAction } from "../setup/DrawStartingHandsAction";
+import { EndPhaseAction } from "../endPhase/EndPhaseAction";
 import { GameAction } from "../actions/GameAction";
 import { MoveAction } from "../actions/MoveAction";
 import { PassAction } from "../actions/PassAction";
@@ -38,11 +39,14 @@ import { PlaceFeatureTokenAction } from "../setup/PlaceFeatureTokenAction";
 import { ResolveMulliganAction } from "../setup/ResolveMulliganAction";
 import { ResolveTerritoryRollOffAction } from "../setup/ResolveTerritoryRollOffAction";
 import { SetupAction } from "../setup/SetupAction";
+import { ResolveScoreObjectivesAction } from "../endPhase/ResolveScoreObjectivesAction";
 import { CombatActionService } from "../rules/CombatActionService";
+import { DefaultScoringResolver } from "../rules/DefaultScoringResolver";
 import { RollOffContext } from "../rules/RollOffContext";
 import { RollOffResolver } from "../rules/RollOffResolver";
 import { type RollOffRoundInput } from "../rules/RollOffRound";
 import { RollOffResult } from "../rules/RollOffResult";
+import { ScoringResolver } from "../rules/ScoringResolver";
 
 export type GameEngineShuffleCards = (cards: readonly CardInstance[]) => CardInstance[];
 
@@ -51,15 +55,18 @@ export class GameEngine {
   private readonly shuffleCards: GameEngineShuffleCards;
   private readonly rollOffResolver: RollOffResolver;
   private readonly combatActionService: CombatActionService;
+  private readonly scoringResolver: ScoringResolver;
 
   public constructor(
     shuffleCards: GameEngineShuffleCards = GameEngine.copyCards,
     rollOffResolver: RollOffResolver = new RollOffResolver(),
     combatActionService: CombatActionService = new CombatActionService(),
+    scoringResolver: ScoringResolver = new DefaultScoringResolver(),
   ) {
     this.shuffleCards = shuffleCards;
     this.rollOffResolver = rollOffResolver;
     this.combatActionService = combatActionService;
+    this.scoringResolver = scoringResolver;
   }
 
   public applySetupAction(game: Game, action: SetupAction): Game {
@@ -113,6 +120,15 @@ export class GameEngine {
     }
 
     throw new Error(`Unsupported game action: ${action.kind}.`);
+  }
+
+  public applyEndPhaseAction(game: Game, action: EndPhaseAction): Game {
+    if (action instanceof ResolveScoreObjectivesAction) {
+      this.applyResolveScoreObjectives(game);
+      return game;
+    }
+
+    throw new Error(`Unsupported end phase action: ${action.kind}.`);
   }
 
   public resolveFirstTurnRollOff(
@@ -452,6 +468,50 @@ export class GameEngine {
     throw new Error(`Unsupported combat turn step ${game.turnStep}.`);
   }
 
+  private applyResolveScoreObjectives(game: Game): void {
+    this.assertEndPhaseStep(game, EndPhaseStep.ScoreObjectives);
+
+    for (const player of game.players) {
+      const scorableObjectives = this.scoringResolver.getScorableObjectives(game, player.id);
+      const uniqueObjectiveIds = new Set(scorableObjectives.map((card) => card.id));
+
+      for (const objectiveId of uniqueObjectiveIds) {
+        const objectiveCard = player.getCard(objectiveId);
+        if (objectiveCard === undefined || objectiveCard.zone !== CardZone.ObjectiveHand) {
+          throw new Error(`Objective card ${objectiveId} is not available to score for ${player.name}.`);
+        }
+
+        const objectiveDefinition = player.getCardDefinition(objectiveCard.id);
+        if (objectiveDefinition === undefined) {
+          throw new Error(`Missing card definition for objective ${objectiveCard.definitionId}.`);
+        }
+
+        const handIndex = player.objectiveHand.findIndex((card) => card.id === objectiveCard.id);
+        if (handIndex === -1) {
+          throw new Error(`Could not find objective ${objectiveCard.id} in ${player.name}'s hand.`);
+        }
+
+        player.objectiveHand.splice(handIndex, 1);
+        objectiveCard.zone = CardZone.ScoredObjectives;
+        objectiveCard.revealed = true;
+        player.scoredObjectives.push(objectiveCard);
+        player.glory += objectiveDefinition.gloryValue;
+        game.eventLog.push(
+          `${player.name} scored ${objectiveDefinition.name} for ${objectiveDefinition.gloryValue} glory.`,
+        );
+      }
+    }
+
+    game.transitionTo(
+      createEndPhaseGameState(
+        EndPhaseStep.EquipUpgrades,
+        null,
+        game.firstPlayerId,
+      ),
+    );
+    game.eventLog.push("Objective scoring complete.");
+  }
+
   private drawCards(
     drawPile: CardInstance[],
     hand: CardInstance[],
@@ -672,6 +732,13 @@ export class GameEngine {
     this.assertStateKind(game, "combatTurn");
     if (game.turnStep !== expectedTurnStep) {
       throw new Error(`Expected combat turn step ${expectedTurnStep}, got ${game.turnStep}.`);
+    }
+  }
+
+  private assertEndPhaseStep(game: Game, expectedEndPhaseStep: EndPhaseStep): void {
+    this.assertStateKind(game, "endPhase");
+    if (game.endPhaseStep !== expectedEndPhaseStep) {
+      throw new Error(`Expected end phase step ${expectedEndPhaseStep}, got ${game.endPhaseStep}.`);
     }
   }
 

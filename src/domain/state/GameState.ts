@@ -365,7 +365,7 @@ export function canTransitionGameState(current: GameState, next: GameState): boo
     case "combatTurn":
       return next.kind === "combatTurn" || next.kind === "endPhase" || next.kind === "finished";
     case "endPhase":
-      return next.kind === "combatReady" || next.kind === "finished";
+      return next.kind === "endPhase" || next.kind === "combatReady" || next.kind === "finished";
     case "finished":
       return false;
     default: {
