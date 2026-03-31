@@ -110,6 +110,33 @@ body {
   color: #442b19;
 }
 
+.token-controls {
+  margin-top: 14px;
+  padding: 16px 18px;
+  background: rgba(243, 233, 212, 0.72);
+  border: 1px solid rgba(149, 112, 71, 0.2);
+  border-radius: 18px;
+}
+
+.token-heading {
+  margin: 0 0 12px;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8f7457;
+}
+
+.token-description,
+.token-note {
+  margin: 12px 0 0;
+  color: #695440;
+}
+
+.token-note {
+  color: #8a442a;
+  font-weight: 700;
+}
+
 .eyebrow,
 .combat-label,
 .fighter-owner {

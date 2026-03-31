@@ -5,13 +5,20 @@ import {
   combatDebugScenarios,
   createCombatDebugGame,
   getCombatDebugScenario,
+  type CombatDebugDefenderState,
   type CombatDebugScenarioId,
 } from "./debug/createCombatDebugGame";
 
 function App() {
   const [scenarioId, setScenarioId] = useState<CombatDebugScenarioId>("success");
+  const [defenderHasGuardToken, setDefenderHasGuardToken] = useState(false);
+  const [defenderHasStaggerToken, setDefenderHasStaggerToken] = useState(false);
   const selectedScenario = getCombatDebugScenario(scenarioId);
-  const debugGame = createCombatDebugGame(scenarioId);
+  const defenderState: CombatDebugDefenderState = {
+    hasGuardToken: defenderHasGuardToken,
+    hasStaggerToken: defenderHasStaggerToken,
+  };
+  const debugGame = createCombatDebugGame(scenarioId, defenderState);
   const latestCombat = debugGame.lastCombatResult;
   const recentEvents = debugGame.eventLog.slice(-8).reverse();
 
@@ -44,6 +51,33 @@ function App() {
             {"  "}
             Save: <code>{formatRoll(selectedScenario.saveRoll)}</code>
           </p>
+        </div>
+        <div className="token-controls">
+          <p className="token-heading">Defender tokens</p>
+          <div className="roll-switcher" role="group" aria-label="Defender token toggles">
+            <button
+              className={`roll-button${defenderHasGuardToken ? " roll-button-active" : ""}`}
+              type="button"
+              onClick={() => setDefenderHasGuardToken((value) => !value)}
+              aria-pressed={defenderHasGuardToken}
+            >
+              Guard
+            </button>
+            <button
+              className={`roll-button${defenderHasStaggerToken ? " roll-button-active" : ""}`}
+              type="button"
+              onClick={() => setDefenderHasStaggerToken((value) => !value)}
+              aria-pressed={defenderHasStaggerToken}
+            >
+              Stagger
+            </button>
+          </div>
+          <p className="token-description">{formatDefenderStateDescription(defenderState)}</p>
+          {defenderHasGuardToken && defenderHasStaggerToken ? (
+            <p className="token-note">
+              Stagger currently suppresses the defender&apos;s guard benefit in combat resolution.
+            </p>
+          ) : null}
         </div>
         <dl className="overview-grid">
           <div>
@@ -285,6 +319,20 @@ function formatFighterTokens(fighter: FighterState): string {
   }
 
   return tokens.length === 0 ? "none" : tokens.join(", ");
+}
+
+function formatDefenderStateDescription(defenderState: CombatDebugDefenderState): string {
+  const states: string[] = [];
+
+  if (defenderState.hasGuardToken) {
+    states.push("guarded");
+  }
+
+  if (defenderState.hasStaggerToken) {
+    states.push("staggered");
+  }
+
+  return states.length === 0 ? "Defender starts clean." : `Defender starts ${states.join(" and ")}.`;
 }
 
 export default App;

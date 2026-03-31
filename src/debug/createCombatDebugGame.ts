@@ -14,7 +14,7 @@ const playerOneFighterThreeId = "player:one:fighter:fighter-def:setup-practice:3
 const playerTwoFighterOneId = "player:two:fighter:fighter-def:setup-practice:1:1";
 const practiceBladeWeaponId = "weapon-def:setup-practice:1";
 
-export type CombatDebugScenarioId = "success" | "draw" | "failure";
+export type CombatDebugScenarioId = "success" | "draw" | "failure" | "support";
 
 export type CombatDebugScenario = {
   id: CombatDebugScenarioId;
@@ -22,6 +22,11 @@ export type CombatDebugScenario = {
   description: string;
   attackRoll: readonly AttackDieFace[];
   saveRoll: readonly SaveDieFace[];
+};
+
+export type CombatDebugDefenderState = {
+  hasGuardToken?: boolean;
+  hasStaggerToken?: boolean;
 };
 
 export const combatDebugScenarios: readonly CombatDebugScenario[] = [
@@ -46,6 +51,13 @@ export const combatDebugScenarios: readonly CombatDebugScenario[] = [
     attackRoll: [AttackDieFace.Hammer, AttackDieFace.Blank],
     saveRoll: [SaveDieFace.Critical],
   },
+  {
+    id: "support",
+    label: "Support Check",
+    description: "Support icons stay neutral until guard or stagger turns them into successes.",
+    attackRoll: [AttackDieFace.Support, AttackDieFace.Blank],
+    saveRoll: [SaveDieFace.Support],
+  },
 ] as const;
 
 export function getCombatDebugScenario(scenarioId: CombatDebugScenarioId): CombatDebugScenario {
@@ -59,6 +71,7 @@ export function getCombatDebugScenario(scenarioId: CombatDebugScenarioId): Comba
 
 export function createCombatDebugGame(
   scenarioId: CombatDebugScenarioId = "success",
+  defenderState: CombatDebugDefenderState = {},
 ): Game {
   const scenario = getCombatDebugScenario(scenarioId);
   const game = createCombatReadySetupPracticeGame("game:setup-practice:combat-debug");
@@ -92,6 +105,27 @@ export function createCombatDebugGame(
     ]),
   );
   engine.applyGameAction(game, new PassAction("player:one"));
+
+  const defender = game.getFighter(playerOneFighterThreeId);
+  if (defender === undefined) {
+    throw new Error(`Could not find debug defender ${playerOneFighterThreeId}.`);
+  }
+
+  defender.hasGuardToken = defenderState.hasGuardToken ?? false;
+  defender.hasStaggerToken = defenderState.hasStaggerToken ?? false;
+
+  const defenderEffects: string[] = [];
+  if (defender.hasGuardToken) {
+    defenderEffects.push("guard");
+  }
+
+  if (defender.hasStaggerToken) {
+    defenderEffects.push("stagger");
+  }
+
+  if (defenderEffects.length > 0) {
+    game.eventLog.push(`Debug setup applied defender tokens: ${defenderEffects.join(", ")}.`);
+  }
 
   engine.applyGameAction(
     game,
