@@ -2,6 +2,7 @@ import { Game } from "../state/Game";
 import { EndPhaseStep, Phase } from "../values/enums";
 import { EndPhaseAction } from "./EndPhaseAction";
 import { ResolveDiscardCardsAction } from "./ResolveDiscardCardsAction";
+import { ResolveDrawObjectivesAction } from "./ResolveDrawObjectivesAction";
 import { ResolveEquipUpgradesAction } from "./ResolveEquipUpgradesAction";
 import { ResolveScoreObjectivesAction } from "./ResolveScoreObjectivesAction";
 
@@ -19,6 +20,7 @@ export class EndPhaseActionService {
       case EndPhaseStep.DiscardCards:
         return [new ResolveDiscardCardsAction()];
       case EndPhaseStep.DrawObjectives:
+        return [new ResolveDrawObjectivesAction()];
       case EndPhaseStep.DrawPowerCards:
       case EndPhaseStep.Cleanup:
         return [];

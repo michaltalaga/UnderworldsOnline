@@ -40,6 +40,7 @@ import { ResolveMulliganAction } from "../setup/ResolveMulliganAction";
 import { ResolveTerritoryRollOffAction } from "../setup/ResolveTerritoryRollOffAction";
 import { SetupAction } from "../setup/SetupAction";
 import { ResolveDiscardCardsAction } from "../endPhase/ResolveDiscardCardsAction";
+import { ResolveDrawObjectivesAction } from "../endPhase/ResolveDrawObjectivesAction";
 import { ResolveEquipUpgradesAction } from "../endPhase/ResolveEquipUpgradesAction";
 import { ResolveScoreObjectivesAction } from "../endPhase/ResolveScoreObjectivesAction";
 import { CombatActionService } from "../rules/CombatActionService";
@@ -53,6 +54,7 @@ import { ScoringResolver } from "../rules/ScoringResolver";
 export type GameEngineShuffleCards = (cards: readonly CardInstance[]) => CardInstance[];
 
 export class GameEngine {
+  private static readonly objectiveHandSize = 3;
   private static readonly turnsPerRound = 4;
   private readonly shuffleCards: GameEngineShuffleCards;
   private readonly rollOffResolver: RollOffResolver;
@@ -137,6 +139,11 @@ export class GameEngine {
 
     if (action instanceof ResolveDiscardCardsAction) {
       this.applyResolveDiscardCards(game);
+      return game;
+    }
+
+    if (action instanceof ResolveDrawObjectivesAction) {
+      this.applyResolveDrawObjectives(game);
       return game;
     }
 
@@ -546,6 +553,34 @@ export class GameEngine {
       ),
     );
     game.eventLog.push("Card discarding complete.");
+  }
+
+  private applyResolveDrawObjectives(game: Game): void {
+    this.assertEndPhaseStep(game, EndPhaseStep.DrawObjectives);
+
+    for (const player of game.players) {
+      const cardsToDraw = Math.max(0, GameEngine.objectiveHandSize - player.objectiveHand.length);
+      if (cardsToDraw === 0) {
+        continue;
+      }
+
+      this.drawCards(
+        player.objectiveDeck.drawPile,
+        player.objectiveHand,
+        cardsToDraw,
+        CardZone.ObjectiveHand,
+      );
+      game.eventLog.push(`${player.name} drew ${cardsToDraw} objective card${cardsToDraw === 1 ? "" : "s"}.`);
+    }
+
+    game.transitionTo(
+      createEndPhaseGameState(
+        EndPhaseStep.DrawPowerCards,
+        null,
+        game.firstPlayerId,
+      ),
+    );
+    game.eventLog.push("Objective drawing complete.");
   }
 
   private drawCards(

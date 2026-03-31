@@ -167,6 +167,7 @@ export const EndPhaseActionKind = {
   ResolveScoreObjectives: "resolveScoreObjectives",
   ResolveEquipUpgrades: "resolveEquipUpgrades",
   ResolveDiscardCards: "resolveDiscardCards",
+  ResolveDrawObjectives: "resolveDrawObjectives",
 } as const;
 
 export type EndPhaseActionKind = (typeof EndPhaseActionKind)[keyof typeof EndPhaseActionKind];
