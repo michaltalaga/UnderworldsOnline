@@ -10,7 +10,45 @@ import { CombatContext } from "./CombatContext";
 import { CombatResolver } from "./CombatResolver";
 import { CombatResult } from "./CombatResult";
 
+export type DefaultCombatResolverRollAttackDie = () => AttackDieFace;
+export type DefaultCombatResolverRollSaveDie = () => SaveDieFace;
+
+type CombatRollStats = {
+  successes: number;
+  criticals: number;
+};
+
+const defaultAttackDieFaces: readonly AttackDieFace[] = [
+  AttackDieFace.Critical,
+  AttackDieFace.Hammer,
+  AttackDieFace.Sword,
+  AttackDieFace.Support,
+  AttackDieFace.DoubleSupport,
+  AttackDieFace.Blank,
+];
+
+const defaultSaveDieFaces: readonly SaveDieFace[] = [
+  SaveDieFace.Critical,
+  SaveDieFace.Shield,
+  SaveDieFace.Dodge,
+  SaveDieFace.Support,
+  SaveDieFace.DoubleSupport,
+  SaveDieFace.Blank,
+];
+
 export class DefaultCombatResolver extends CombatResolver {
+  private readonly rollAttackDie: DefaultCombatResolverRollAttackDie;
+  private readonly rollSaveDie: DefaultCombatResolverRollSaveDie;
+
+  public constructor(
+    rollAttackDie: DefaultCombatResolverRollAttackDie = DefaultCombatResolver.rollAttackDie,
+    rollSaveDie: DefaultCombatResolverRollSaveDie = DefaultCombatResolver.rollSaveDie,
+  ) {
+    super();
+    this.rollAttackDie = rollAttackDie;
+    this.rollSaveDie = rollSaveDie;
+  }
+
   public resolve(game: Game, context: CombatContext): CombatResult {
     if (context.selectedAbility !== null) {
       throw new Error(`Weapon ability ${context.selectedAbility} is not supported by the default combat resolver.`);
@@ -45,23 +83,28 @@ export class DefaultCombatResolver extends CombatResolver {
       throw new Error(`Attacker ${attacker.id} does not have weapon ${context.weaponId}.`);
     }
 
+    const defenderIsStaggered = target.hasStaggerToken;
+    const defenderIsGuarded = target.hasGuardToken && !defenderIsStaggered;
     const attackRoll = Array.from(
       { length: weapon.dice },
-      () => this.getAttackSuccessFace(weapon.accuracy),
+      () => this.rollAttackDie(),
     );
     const saveRoll = Array.from(
       { length: targetDefinition.saveDice },
-      () => this.getSaveSuccessFace(targetDefinition.saveSymbol),
+      () => this.rollSaveDie(),
     );
 
-    const attackSuccesses = attackRoll.length;
-    const saveSuccesses = saveRoll.length;
-    const outcome =
-      attackSuccesses > saveSuccesses
-        ? CombatOutcome.Success
-        : attackSuccesses === saveSuccesses
-          ? CombatOutcome.Draw
-          : CombatOutcome.Failure;
+    const attackStats = this.getAttackRollStats(
+      attackRoll,
+      weapon.accuracy,
+      defenderIsStaggered,
+    );
+    const saveStats = this.getSaveRollStats(
+      saveRoll,
+      targetDefinition.saveSymbol,
+      defenderIsGuarded,
+    );
+    const outcome = this.getCombatOutcome(attackStats, saveStats);
     const damageInflicted = outcome === CombatOutcome.Success ? weapon.damage : 0;
     const targetSlain = target.damage + damageInflicted >= targetDefinition.health;
 
@@ -70,10 +113,10 @@ export class DefaultCombatResolver extends CombatResolver {
       attackRoll,
       saveRoll,
       outcome,
-      attackSuccesses,
-      saveSuccesses,
-      0,
-      0,
+      attackStats.successes,
+      saveStats.successes,
+      attackStats.criticals,
+      saveStats.criticals,
       damageInflicted,
       targetSlain,
       false,
@@ -82,29 +125,86 @@ export class DefaultCombatResolver extends CombatResolver {
     );
   }
 
-  private getAttackSuccessFace(accuracy: WeaponAccuracy): AttackDieFace {
-    switch (accuracy) {
-      case WeaponAccuracy.Hammer:
-        return AttackDieFace.Hammer;
-      case WeaponAccuracy.Sword:
-        return AttackDieFace.Sword;
-      default: {
-        const exhaustiveAccuracy: never = accuracy;
-        throw new Error(`Unsupported weapon accuracy ${exhaustiveAccuracy}.`);
-      }
-    }
+  private getAttackRollStats(
+    attackRoll: readonly AttackDieFace[],
+    accuracy: WeaponAccuracy,
+    defenderIsStaggered: boolean,
+  ): CombatRollStats {
+    const criticals = attackRoll.filter((face) => face === AttackDieFace.Critical).length;
+    const symbolSuccesses = attackRoll.filter((face) => face === accuracy).length;
+    const supportSuccesses = defenderIsStaggered
+      ? attackRoll.filter(DefaultCombatResolver.isAttackSupportFace).length
+      : 0;
+
+    return {
+      successes: criticals + symbolSuccesses + supportSuccesses,
+      criticals,
+    };
   }
 
-  private getSaveSuccessFace(saveSymbol: SaveSymbol): SaveDieFace {
-    switch (saveSymbol) {
-      case SaveSymbol.Shield:
-        return SaveDieFace.Shield;
-      case SaveSymbol.Dodge:
-        return SaveDieFace.Dodge;
-      default: {
-        const exhaustiveSaveSymbol: never = saveSymbol;
-        throw new Error(`Unsupported save symbol ${exhaustiveSaveSymbol}.`);
-      }
+  private getSaveRollStats(
+    saveRoll: readonly SaveDieFace[],
+    saveSymbol: SaveSymbol,
+    defenderIsGuarded: boolean,
+  ): CombatRollStats {
+    const criticals = saveRoll.filter((face) => face === SaveDieFace.Critical).length;
+    const symbolSuccesses = saveRoll.filter((face) => face === saveSymbol).length;
+    const supportSuccesses = defenderIsGuarded
+      ? saveRoll.filter(DefaultCombatResolver.isSaveSupportFace).length
+      : 0;
+
+    return {
+      successes: criticals + symbolSuccesses + supportSuccesses,
+      criticals,
+    };
+  }
+
+  private getCombatOutcome(
+    attackStats: CombatRollStats,
+    saveStats: CombatRollStats,
+  ): CombatOutcome {
+    if (attackStats.criticals > saveStats.criticals) {
+      return CombatOutcome.Success;
     }
+
+    if (attackStats.criticals < saveStats.criticals) {
+      return CombatOutcome.Failure;
+    }
+
+    if (attackStats.successes > saveStats.successes) {
+      return CombatOutcome.Success;
+    }
+
+    if (attackStats.successes < saveStats.successes) {
+      return CombatOutcome.Failure;
+    }
+
+    return CombatOutcome.Draw;
+  }
+
+  private static isAttackSupportFace(face: AttackDieFace): boolean {
+    return face === AttackDieFace.Support || face === AttackDieFace.DoubleSupport;
+  }
+
+  private static isSaveSupportFace(face: SaveDieFace): boolean {
+    return face === SaveDieFace.Support || face === SaveDieFace.DoubleSupport;
+  }
+
+  private static rollAttackDie(): AttackDieFace {
+    return DefaultCombatResolver.pickRandom(defaultAttackDieFaces);
+  }
+
+  private static rollSaveDie(): SaveDieFace {
+    return DefaultCombatResolver.pickRandom(defaultSaveDieFaces);
+  }
+
+  private static pickRandom<T>(faces: readonly T[]): T {
+    const randomIndex = Math.floor(Math.random() * faces.length);
+    const face = faces[randomIndex];
+    if (face === undefined) {
+      throw new Error("Expected a combat die face.");
+    }
+
+    return face;
   }
 }
