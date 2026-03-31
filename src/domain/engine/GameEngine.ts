@@ -6,6 +6,7 @@ import {
   createCombatChooseFirstPlayerGameState,
   createCombatReadyGameState,
   createCombatTurnGameState,
+  createEndPhaseGameState,
   createSetupDeployFightersGameState,
   createSetupDetermineTerritoriesChoiceGameState,
   createSetupDetermineTerritoriesRollOffGameState,
@@ -19,6 +20,7 @@ import { Territory } from "../state/Territory";
 import {
   RollOffKind,
   CardZone,
+  EndPhaseStep,
   FeatureTokenSide,
   HexKind,
   TurnStep,
@@ -45,6 +47,7 @@ import { RollOffResult } from "../rules/RollOffResult";
 export type GameEngineShuffleCards = (cards: readonly CardInstance[]) => CardInstance[];
 
 export class GameEngine {
+  private static readonly turnsPerRound = 4;
   private readonly shuffleCards: GameEngineShuffleCards;
   private readonly rollOffResolver: RollOffResolver;
   private readonly combatActionService: CombatActionService;
@@ -430,6 +433,13 @@ export class GameEngine {
       player.turnsTakenThisRound += 1;
       player.hasDelvedThisPowerStep = false;
 
+      if (this.haveAllPlayersCompletedRoundTurns(game)) {
+        game.consecutivePasses = 0;
+        game.transitionTo(createEndPhaseGameState(EndPhaseStep.ScoreObjectives, null, firstPlayerId));
+        game.eventLog.push(`Round ${game.roundNumber} combat turns complete. End phase begins.`);
+        return;
+      }
+
       const nextPlayer = this.requireOpponent(game, player.id);
       nextPlayer.hasDelvedThisPowerStep = false;
 
@@ -671,6 +681,12 @@ export class GameEngine {
     }
 
     return playerOne.glory < playerTwo.glory ? playerOne.id : playerTwo.id;
+  }
+
+  private haveAllPlayersCompletedRoundTurns(game: Game): boolean {
+    return game.players.every(
+      (player) => player.turnsTakenThisRound >= GameEngine.turnsPerRound,
+    );
   }
 
   private describeRollOff(game: Game, result: RollOffResult): string {
