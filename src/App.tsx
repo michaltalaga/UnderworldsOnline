@@ -1,12 +1,20 @@
+import { useState } from "react";
 import "./App.css";
 import type { CombatResult, FighterState, Game } from "./domain";
-import { createCombatDebugGame } from "./debug/createCombatDebugGame";
-
-const debugGame = createCombatDebugGame();
-const latestCombat = debugGame.lastCombatResult;
-const recentEvents = debugGame.eventLog.slice(-8).reverse();
+import {
+  combatDebugScenarios,
+  createCombatDebugGame,
+  getCombatDebugScenario,
+  type CombatDebugScenarioId,
+} from "./debug/createCombatDebugGame";
 
 function App() {
+  const [scenarioId, setScenarioId] = useState<CombatDebugScenarioId>("success");
+  const selectedScenario = getCombatDebugScenario(scenarioId);
+  const debugGame = createCombatDebugGame(scenarioId);
+  const latestCombat = debugGame.lastCombatResult;
+  const recentEvents = debugGame.eventLog.slice(-8).reverse();
+
   return (
     <main className="app-shell">
       <section className="hero-panel">
@@ -16,6 +24,27 @@ function App() {
           This screen uses the existing setup fixture, runs a short deterministic move/pass
           sequence through the real engine, and stops after one resolved attack.
         </p>
+        <div className="roll-controls">
+          <div className="roll-switcher" role="tablist" aria-label="Combat roll presets">
+            {combatDebugScenarios.map((scenario) => (
+              <button
+                key={scenario.id}
+                className={`roll-button${scenario.id === scenarioId ? " roll-button-active" : ""}`}
+                type="button"
+                onClick={() => setScenarioId(scenario.id)}
+                aria-pressed={scenario.id === scenarioId}
+              >
+                {scenario.label}
+              </button>
+            ))}
+          </div>
+          <p className="roll-description">{selectedScenario.description}</p>
+          <p className="roll-preview">
+            Attack: <code>{formatRoll(selectedScenario.attackRoll)}</code>
+            {"  "}
+            Save: <code>{formatRoll(selectedScenario.saveRoll)}</code>
+          </p>
+        </div>
         <dl className="overview-grid">
           <div>
             <dt>State</dt>

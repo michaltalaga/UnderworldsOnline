@@ -64,6 +64,52 @@ body {
   line-height: 1.6;
 }
 
+.roll-controls {
+  margin-top: 20px;
+  padding: 16px 18px;
+  background: rgba(243, 233, 212, 0.72);
+  border: 1px solid rgba(149, 112, 71, 0.2);
+  border-radius: 18px;
+}
+
+.roll-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.roll-button {
+  border: 1px solid rgba(138, 68, 42, 0.28);
+  background: rgba(255, 251, 242, 0.85);
+  color: #5a3a20;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.roll-button:hover {
+  transform: translateY(-1px);
+}
+
+.roll-button-active {
+  background: #8a442a;
+  color: #fff6ed;
+}
+
+.roll-description,
+.roll-preview {
+  margin: 12px 0 0;
+  color: #695440;
+}
+
+.roll-preview code {
+  font-family: "Consolas", "Courier New", monospace;
+  color: #442b19;
+}
+
 .eyebrow,
 .combat-label,
 .fighter-owner {
