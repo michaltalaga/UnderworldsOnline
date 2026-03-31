@@ -10,6 +10,7 @@ import { PlayerState } from "../state/PlayerState";
 import { Territory } from "../state/Territory";
 import { WarscrollState } from "../state/WarscrollState";
 import {
+  BoardSide,
   CardKind,
   CardZone,
   DeckKind,
@@ -134,25 +135,24 @@ export class GameFactory {
   }
 
   private createBoardState(board: BoardState): BoardState {
-    const hexes = board.hexes.map(
-      (hex) =>
-        new HexCell(
-          hex.id,
-          hex.q,
-          hex.r,
-          hex.kind,
-          hex.territoryId,
-          null,
-          null,
-        ),
-    );
+    const frontHexes = this.createSideHexes(board.getHexesForSide(BoardSide.Front));
+    const frontTerritories = this.createSideTerritories(board.getTerritoriesForSide(BoardSide.Front));
+    const backHexes = board.getAvailableSides().includes(BoardSide.Back)
+      ? this.createSideHexes(board.getHexesForSide(BoardSide.Back))
+      : [];
+    const backTerritories = board.getAvailableSides().includes(BoardSide.Back)
+      ? this.createSideTerritories(board.getTerritoriesForSide(BoardSide.Back))
+      : [];
 
-    const territories = board.territories.map(
-      (territory) =>
-        new Territory(territory.id, territory.name, null, [...territory.hexIds]),
+    return new BoardState(
+      board.layoutId,
+      board.side,
+      frontHexes,
+      frontTerritories,
+      [],
+      backHexes,
+      backTerritories,
     );
-
-    return new BoardState(board.layoutId, board.side, hexes, territories, []);
   }
 
   private validatePlayers(players: readonly GameFactoryPlayerConfig[]): void {
@@ -165,25 +165,12 @@ export class GameFactory {
   }
 
   private validateBoard(board: BoardState): void {
-    this.validateUniqueValues(
-      board.hexes.map((hex) => hex.id),
-      "board hex ids",
-    );
-
-    this.validateUniqueValues(
-      board.territories.map((territory) => territory.id),
-      "territory ids",
-    );
-
-    const hexIds = new Set(board.hexes.map((hex) => hex.id));
-    for (const territory of board.territories) {
-      for (const hexId of territory.hexIds) {
-        if (!hexIds.has(hexId)) {
-          throw new Error(
-            `Territory ${territory.id} references unknown hex ${hexId}.`,
-          );
-        }
-      }
+    for (const side of board.getAvailableSides()) {
+      this.validateBoardSide(
+        board.getHexesForSide(side),
+        board.getTerritoriesForSide(side),
+        side,
+      );
     }
   }
 
@@ -241,6 +228,57 @@ export class GameFactory {
   private validateUniqueValues(values: readonly string[], label: string): void {
     if (new Set(values).size !== values.length) {
       throw new Error(`Expected unique ${label}.`);
+    }
+  }
+
+  private createSideHexes(hexes: readonly HexCell[]): HexCell[] {
+    return hexes.map(
+      (hex) =>
+        new HexCell(
+          hex.id,
+          hex.q,
+          hex.r,
+          hex.kind,
+          hex.isStartingHex,
+          hex.isEdgeHex,
+          hex.territoryId,
+          null,
+          null,
+        ),
+    );
+  }
+
+  private createSideTerritories(territories: readonly Territory[]): Territory[] {
+    return territories.map(
+      (territory) =>
+        new Territory(territory.id, territory.name, null, [...territory.hexIds]),
+    );
+  }
+
+  private validateBoardSide(
+    hexes: readonly HexCell[],
+    territories: readonly Territory[],
+    side: BoardSide,
+  ): void {
+    this.validateUniqueValues(
+      hexes.map((hex) => hex.id),
+      `${side} board hex ids`,
+    );
+
+    this.validateUniqueValues(
+      territories.map((territory) => territory.id),
+      `${side} territory ids`,
+    );
+
+    const hexIds = new Set(hexes.map((hex) => hex.id));
+    for (const territory of territories) {
+      for (const hexId of territory.hexIds) {
+        if (!hexIds.has(hexId)) {
+          throw new Error(
+            `Territory ${territory.id} on ${side} references unknown hex ${hexId}.`,
+          );
+        }
+      }
     }
   }
 

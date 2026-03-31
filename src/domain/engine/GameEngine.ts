@@ -225,6 +225,8 @@ export class GameEngine {
 
   private applyChooseTerritory(game: Game, action: ChooseTerritoryAction): void {
     this.assertSetupStep(game, SetupStep.DetermineTerritories);
+    game.board.setSide(action.boardSide);
+
     if (game.board.territories.length !== 2) {
       throw new Error("Territory choice requires exactly two territories on the board.");
     }
@@ -241,7 +243,6 @@ export class GameEngine {
       throw new Error("Could not find the opposing territory.");
     }
 
-    game.board.side = action.boardSide;
     chosenTerritory.ownerPlayerId = winningPlayer.id;
     remainingTerritory.ownerPlayerId = losingPlayer.id;
     winningPlayer.territoryId = chosenTerritory.id;
@@ -315,7 +316,7 @@ export class GameEngine {
     const territoryId = this.requirePlayerTerritory(player);
     const hex = this.requireHex(game, action.hexId);
 
-    if (hex.kind !== HexKind.Starting) {
+    if (!hex.isStartingHex) {
       throw new Error(`Hex ${hex.id} is not a starting hex.`);
     }
 
@@ -329,6 +330,7 @@ export class GameEngine {
 
     fighter.currentHexId = hex.id;
     hex.occupantFighterId = fighter.id;
+    fighter.hasStaggerToken = hex.kind === HexKind.Stagger;
     game.eventLog.push(`${player.name} deployed fighter ${fighter.id} to ${hex.id}.`);
 
     if (this.areAllFightersDeployed(game)) {
@@ -392,14 +394,14 @@ export class GameEngine {
     }
 
     if (
-      hex.kind === HexKind.Starting ||
+      hex.isStartingHex ||
       hex.kind === HexKind.Blocked ||
       hex.kind === HexKind.Stagger
     ) {
       return false;
     }
 
-    if (!allowEdgePlacement && hex.kind === HexKind.Edge) {
+    if (!allowEdgePlacement && hex.isEdgeHex) {
       return false;
     }
 

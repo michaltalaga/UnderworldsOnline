@@ -68,8 +68,6 @@ export type CardZone = (typeof CardZone)[keyof typeof CardZone];
 
 export const HexKind = {
   Empty: "empty",
-  Starting: "starting",
-  Edge: "edge",
   Blocked: "blocked",
   Stagger: "stagger",
 } as const;

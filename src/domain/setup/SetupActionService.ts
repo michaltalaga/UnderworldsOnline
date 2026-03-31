@@ -67,8 +67,8 @@ export class SetupActionService {
       return [];
     }
 
-    return this.getBoardSides().flatMap((boardSide) =>
-      game.board.territories.map(
+    return this.getBoardSides(game).flatMap((boardSide) =>
+      game.board.getTerritoriesForSide(boardSide).map(
         (territory) => new ChooseTerritoryAction(player.id, boardSide, territory.id),
       ),
     );
@@ -130,7 +130,7 @@ export class SetupActionService {
 
     return game.board.hexes.filter(
       (hex) =>
-        hex.kind === HexKind.Starting &&
+        hex.isStartingHex &&
         hex.territoryId === territoryId &&
         hex.occupantFighterId === null,
     );
@@ -147,14 +147,14 @@ export class SetupActionService {
     }
 
     if (
-      hex.kind === HexKind.Starting ||
+      hex.isStartingHex ||
       hex.kind === HexKind.Blocked ||
       hex.kind === HexKind.Stagger
     ) {
       return false;
     }
 
-    if (!allowEdgePlacement && hex.kind === HexKind.Edge) {
+    if (!allowEdgePlacement && hex.isEdgeHex) {
       return false;
     }
 
@@ -205,7 +205,7 @@ export class SetupActionService {
     return game.getPlayer(game.activePlayerId) ?? null;
   }
 
-  private getBoardSides(): BoardSide[] {
-    return [BoardSide.Front, BoardSide.Back];
+  private getBoardSides(game: Game): BoardSide[] {
+    return game.board.getAvailableSides();
   }
 }
