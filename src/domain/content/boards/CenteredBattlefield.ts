@@ -79,7 +79,7 @@ function createRowHexes(rowIndex: number, rowSize: number): HexCell[] {
     const hexId = `hex:r${rowIndex}:c${columnIndex}`;
     const q = qStart + columnIndex;
     const territoryId =
-      rowIndex <= 2 ? northTerritoryId : rowIndex >= 8 ? southTerritoryId : null;
+      rowIndex < 5 ? northTerritoryId : rowIndex > 5 ? southTerritoryId : null;
     const isStartingHex =
       northStartingHexIds.has(hexId) || southStartingHexIds.has(hexId);
 

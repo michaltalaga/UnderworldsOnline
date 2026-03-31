@@ -1,0 +1,109 @@
+import { CardDefinition } from "../../definitions/CardDefinition";
+import { FighterDefinition } from "../../definitions/FighterDefinition";
+import { WarbandDefinition } from "../../definitions/WarbandDefinition";
+import { WarscrollDefinition } from "../../definitions/WarscrollDefinition";
+import { WeaponDefinition } from "../../definitions/WeaponDefinition";
+import {
+  CardKind,
+  SaveSymbol,
+  WeaponAccuracy,
+} from "../../values/enums";
+
+const fighters = [
+  new FighterDefinition(
+    "fighter-def:setup-practice:1",
+    "Practice Fighter 1",
+    3,
+    1,
+    SaveSymbol.Shield,
+    4,
+    1,
+    [new WeaponDefinition("weapon-def:setup-practice:1", "Practice Blade", 1, 2, WeaponAccuracy.Hammer, 1)],
+  ),
+  new FighterDefinition(
+    "fighter-def:setup-practice:2",
+    "Practice Fighter 2",
+    3,
+    1,
+    SaveSymbol.Shield,
+    4,
+    1,
+    [new WeaponDefinition("weapon-def:setup-practice:2", "Practice Spear", 2, 2, WeaponAccuracy.Hammer, 1)],
+  ),
+  new FighterDefinition(
+    "fighter-def:setup-practice:3",
+    "Practice Fighter 3",
+    4,
+    1,
+    SaveSymbol.Dodge,
+    3,
+    1,
+    [new WeaponDefinition("weapon-def:setup-practice:3", "Practice Bow", 3, 2, WeaponAccuracy.Sword, 1)],
+  ),
+  new FighterDefinition(
+    "fighter-def:setup-practice:4",
+    "Practice Fighter 4",
+    3,
+    1,
+    SaveSymbol.Shield,
+    4,
+    1,
+    [new WeaponDefinition("weapon-def:setup-practice:4", "Practice Hammer", 1, 2, WeaponAccuracy.Hammer, 2)],
+  ),
+] as const;
+
+const warscroll = new WarscrollDefinition(
+  "warscroll-def:setup-practice",
+  "Setup Practice Warscroll",
+);
+
+export const setupPracticeWarband = new WarbandDefinition(
+  "warband-def:setup-practice",
+  "Setup Practice Warband",
+  fighters,
+  warscroll,
+  createObjectiveCards(),
+  createPowerCards(),
+);
+
+function createObjectiveCards(): CardDefinition[] {
+  return Array.from({ length: 12 }, (_, index) => {
+    const cardNumber = String(index + 1).padStart(2, "0");
+
+    return new CardDefinition(
+      `card-def:setup-practice:objective:${cardNumber}`,
+      CardKind.Objective,
+      `Practice Objective ${cardNumber}`,
+      "",
+      1,
+    );
+  });
+}
+
+function createPowerCards(): CardDefinition[] {
+  const ploys = Array.from({ length: 10 }, (_, index) => {
+    const cardNumber = String(index + 1).padStart(2, "0");
+
+    return new CardDefinition(
+      `card-def:setup-practice:ploy:${cardNumber}`,
+      CardKind.Ploy,
+      `Practice Ploy ${cardNumber}`,
+      "",
+      0,
+    );
+  });
+
+  const upgrades = Array.from({ length: 10 }, (_, index) => {
+    const cardNumber = String(index + 1).padStart(2, "0");
+
+    return new CardDefinition(
+      `card-def:setup-practice:upgrade:${cardNumber}`,
+      CardKind.Upgrade,
+      `Practice Upgrade ${cardNumber}`,
+      "",
+      1,
+    );
+  });
+
+  return [...ploys, ...upgrades];
+}

@@ -10,6 +10,7 @@ export * from "./actions/PlayPloyAction";
 export * from "./actions/PlayUpgradeAction";
 export * from "./actions/UseWarscrollAbilityAction";
 export * from "./content/boards/CenteredBattlefield";
+export * from "./content/warbands/SetupPracticeWarband";
 export * from "./definitions/CardDefinition";
 export * from "./definitions/FighterDefinition";
 export * from "./definitions/WarbandDefinition";
