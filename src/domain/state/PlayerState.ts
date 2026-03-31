@@ -9,6 +9,7 @@ import type {
 import { DeckKind } from "../values/enums";
 import { CardDefinition } from "../definitions/CardDefinition";
 import { FighterDefinition } from "../definitions/FighterDefinition";
+import { WarscrollDefinition } from "../definitions/WarscrollDefinition";
 import { WeaponDefinition } from "../definitions/WeaponDefinition";
 import { WarbandDefinition } from "../definitions/WarbandDefinition";
 import { CardInstance } from "./CardInstance";
@@ -19,6 +20,11 @@ import { WarscrollState } from "./WarscrollState";
 export type PlayerCardWithDefinition = {
   card: CardInstance;
   definition: CardDefinition;
+};
+
+export type PlayerWarscrollWithDefinition = {
+  state: WarscrollState;
+  definition: WarscrollDefinition;
 };
 
 export class PlayerState {
@@ -95,6 +101,24 @@ export class PlayerState {
     weaponId: WeaponDefinitionId | null,
   ): WeaponDefinition | undefined {
     return this.getFighterDefinition(fighterId)?.getWeapon(weaponId) ?? undefined;
+  }
+
+  public getWarscrollDefinition(): WarscrollDefinition | undefined {
+    return this.warband.warscroll.id === this.warscrollState.definitionId
+      ? this.warband.warscroll
+      : undefined;
+  }
+
+  public getWarscrollWithDefinition(): PlayerWarscrollWithDefinition | undefined {
+    const definition = this.getWarscrollDefinition();
+    if (definition === undefined) {
+      return undefined;
+    }
+
+    return {
+      state: this.warscrollState,
+      definition,
+    };
   }
 
   public getCard(cardId: CardId): CardInstance | undefined {
