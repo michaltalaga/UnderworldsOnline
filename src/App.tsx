@@ -1,6 +1,7 @@
 import { useState } from "react";
 import "./App.css";
 import {
+  WeaponAbilityDefinition,
   WeaponAbilityKind,
   type CombatResult,
   type FighterState,
@@ -115,11 +116,9 @@ function App() {
                 onClick={() => setSelectedAbility(ability)}
                 aria-pressed={selectedAbility === ability}
               >
-                {formatAbilityLabel(
+                {WeaponAbilityDefinition.formatName(
                   ability,
-                  debugSnapshot.attackerWeaponAbilities.some(
-                    (candidate) => candidate.kind === ability && candidate.requiresCritical,
-                  ),
+                  debugSnapshot.attackerWeapon.getAbility(ability)?.requiresCritical ?? false,
                 )}
               </button>
             ))}
@@ -185,19 +184,17 @@ function App() {
         </div>
         <div className="ability-status-list">
           {debugAbilityKinds.map((ability) => {
-            const definedAbility = debugSnapshot.attackerWeaponAbilities.find(
-              (candidate) => candidate.kind === ability,
-            );
-            const definedOnWeapon = definedAbility !== undefined;
+            const definedAbility = debugSnapshot.attackerWeapon.getAbility(ability);
+            const definedOnWeapon = definedAbility !== null;
             const supported = definedOnWeapon && supportedDebugAbilities.has(ability);
 
             return (
               <article className="ability-status-card" key={ability}>
                 <div>
                   <p className="combat-label">
-                    {formatAbilityLabel(ability, definedAbility?.requiresCritical ?? false)}
+                    {definedAbility?.displayName ?? WeaponAbilityDefinition.formatName(ability)}
                   </p>
-                  <h3>{debugSnapshot.attackerWeaponName}</h3>
+                  <h3>{debugSnapshot.attackerWeapon.name}</h3>
                 </div>
                 <p className="fighter-meta">
                   {definedOnWeapon
@@ -290,7 +287,7 @@ function CombatResultCard({
   const selectedAbilityText =
     result.context.selectedAbility === null
       ? ""
-      : ` using ${formatAbilityLabel(
+      : ` using ${WeaponAbilityDefinition.formatName(
         result.context.selectedAbility,
         result.selectedAbilityRequiresCritical,
       )}`;
@@ -447,44 +444,38 @@ function formatDefenderStateDescription(defenderState: CombatDebugDefenderState)
 }
 
 function formatSelectedAbilityDescription(debugSnapshot: CombatDebugSnapshot): string {
+  const selectedAbilityDefinition = debugSnapshot.attackerWeapon.getAbility(debugSnapshot.selectedAbility);
+
   if (debugSnapshot.selectedAbility === null) {
-    return `No ability selected. ${debugSnapshot.attackerWeaponName} follows the current supported path.`;
+    return `No ability selected. ${debugSnapshot.attackerWeapon.name} follows the current supported path.`;
   }
 
   if (
-    debugSnapshot.selectedAbilityDefinedOnWeapon &&
+    selectedAbilityDefinition !== null &&
     supportedDebugAbilities.has(debugSnapshot.selectedAbility)
   ) {
-    if (debugSnapshot.selectedAbilityRequiresCritical) {
-      return `${formatAbilityLabel(debugSnapshot.selectedAbility, true)} is defined on ${debugSnapshot.attackerWeaponName} and will only trigger if the attack roll includes a critical.`;
+    if (selectedAbilityDefinition.requiresCritical) {
+      return `${selectedAbilityDefinition.displayName} is defined on ${debugSnapshot.attackerWeapon.name} and will only trigger if the attack roll includes a critical.`;
     }
 
-    return `${formatAbilityLabel(debugSnapshot.selectedAbility)} is defined on ${debugSnapshot.attackerWeaponName} and now resolves through the current attack flow.`;
+    return `${selectedAbilityDefinition.displayName} is defined on ${debugSnapshot.attackerWeapon.name} and now resolves through the current attack flow.`;
   }
 
-  if (debugSnapshot.selectedAbilityDefinedOnWeapon) {
-    return `${formatAbilityLabel(
-      debugSnapshot.selectedAbility,
-      debugSnapshot.selectedAbilityRequiresCritical,
-    )} is defined on ${debugSnapshot.attackerWeaponName}, but it is still unsupported in the current attack flow.`;
+  if (selectedAbilityDefinition !== null) {
+    return `${selectedAbilityDefinition.displayName} is defined on ${debugSnapshot.attackerWeapon.name}, but it is still unsupported in the current attack flow.`;
   }
 
-  if (debugSnapshot.attackerWeaponAbilities.length === 0) {
-    return `${debugSnapshot.attackerWeaponName} defines no abilities, so ${formatAbilityLabel(debugSnapshot.selectedAbility)} is only a debug probe right now.`;
+  if (debugSnapshot.attackerWeapon.abilities.length === 0) {
+    return `${debugSnapshot.attackerWeapon.name} defines no abilities, so ${WeaponAbilityDefinition.formatName(debugSnapshot.selectedAbility)} is only a debug probe right now.`;
   }
 
-  return `${formatAbilityLabel(debugSnapshot.selectedAbility)} is not defined on ${debugSnapshot.attackerWeaponName}. Defined abilities: ${formatAbilityList(debugSnapshot.attackerWeaponAbilities)}.`;
-}
-
-function formatAbilityLabel(ability: WeaponAbilityKind, requiresCritical: boolean = false): string {
-  const formattedAbility = ability.charAt(0).toUpperCase() + ability.slice(1);
-  return requiresCritical ? `Critical ${formattedAbility}` : formattedAbility;
+  return `${WeaponAbilityDefinition.formatName(debugSnapshot.selectedAbility)} is not defined on ${debugSnapshot.attackerWeapon.name}. Defined abilities: ${formatAbilityList(debugSnapshot.attackerWeapon.abilities)}.`;
 }
 
 function formatAbilityList(
-  abilities: readonly { kind: WeaponAbilityKind; requiresCritical: boolean }[],
+  abilities: readonly WeaponAbilityDefinition[],
 ): string {
-  return abilities.map((ability) => formatAbilityLabel(ability.kind, ability.requiresCritical)).join(", ");
+  return abilities.map((ability) => ability.displayName).join(", ");
 }
 
 export default App;

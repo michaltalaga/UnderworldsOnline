@@ -1,5 +1,5 @@
 import type { WeaponDefinitionId } from "../values/ids";
-import { WeaponAccuracy } from "../values/enums";
+import { WeaponAccuracy, type WeaponAbilityKind } from "../values/enums";
 import { WeaponAbilityDefinition } from "./WeaponAbilityDefinition";
 
 export class WeaponDefinition {
@@ -27,5 +27,17 @@ export class WeaponDefinition {
     this.accuracy = accuracy;
     this.damage = damage;
     this.abilities = abilities;
+  }
+
+  public getAbility(kind: WeaponAbilityKind | null): WeaponAbilityDefinition | null {
+    if (kind === null) {
+      return null;
+    }
+
+    return this.abilities.find((ability) => ability.kind === kind) ?? null;
+  }
+
+  public hasAbility(kind: WeaponAbilityKind): boolean {
+    return this.getAbility(kind) !== null;
   }
 }

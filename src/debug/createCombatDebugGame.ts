@@ -8,6 +8,7 @@ import {
   WeaponAbilityKind,
   createCombatReadySetupPracticeGame,
   type Game,
+  type WeaponDefinition,
 } from "../domain";
 
 const playerOneFighterThreeId = "player:one:fighter:fighter-def:setup-practice:3:3";
@@ -33,16 +34,8 @@ export type CombatDebugDefenderState = {
 export type CombatDebugSnapshot = {
   game: Game;
   attackError: string | null;
-  attackerWeaponName: string;
-  attackerWeaponAbilities: readonly CombatDebugWeaponAbility[];
+  attackerWeapon: WeaponDefinition;
   selectedAbility: WeaponAbilityKind | null;
-  selectedAbilityDefinedOnWeapon: boolean;
-  selectedAbilityRequiresCritical: boolean;
-};
-
-export type CombatDebugWeaponAbility = {
-  kind: WeaponAbilityKind;
-  requiresCritical: boolean;
 };
 
 export const combatDebugScenarios: readonly CombatDebugScenario[] = [
@@ -169,16 +162,6 @@ export function createCombatDebugSnapshot(
     throw new Error(`Could not find debug weapon ${practiceBladeWeaponId}.`);
   }
 
-  const attackerWeaponAbilities = attackerWeapon.abilities.map((ability) => ({
-    kind: ability.kind,
-    requiresCritical: ability.requiresCritical,
-  }));
-  const selectedAbilityDefinition =
-    selectedAbility === null
-      ? null
-      : attackerWeaponAbilities.find((ability) => ability.kind === selectedAbility) ?? null;
-  const selectedAbilityDefinedOnWeapon = selectedAbilityDefinition !== null;
-
   let attackError: string | null = null;
   try {
     engine.applyGameAction(
@@ -201,10 +184,7 @@ export function createCombatDebugSnapshot(
   return {
     game,
     attackError,
-    attackerWeaponName: attackerWeapon.name,
-    attackerWeaponAbilities,
+    attackerWeapon,
     selectedAbility,
-    selectedAbilityDefinedOnWeapon,
-    selectedAbilityRequiresCritical: selectedAbilityDefinition?.requiresCritical ?? false,
   };
 }

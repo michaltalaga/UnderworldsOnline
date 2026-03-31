@@ -85,10 +85,7 @@ export class DefaultCombatResolver extends CombatResolver {
       throw new Error(`Attacker ${attacker.id} does not have weapon ${context.weaponId}.`);
     }
 
-    const selectedAbilityDefinition =
-      context.selectedAbility === null
-        ? null
-        : weapon.abilities.find((ability) => ability.kind === context.selectedAbility) ?? null;
+    const selectedAbilityDefinition = weapon.getAbility(context.selectedAbility);
 
     if (context.selectedAbility !== null && selectedAbilityDefinition === null) {
       throw new Error(`Weapon ability ${context.selectedAbility} is not available on weapon ${weapon.name}.`);

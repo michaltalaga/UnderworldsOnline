@@ -1,4 +1,5 @@
 import { CardInstance } from "../state/CardInstance";
+import { WeaponAbilityDefinition } from "../definitions/WeaponAbilityDefinition";
 import { FeatureTokenState } from "../state/FeatureTokenState";
 import { FighterState } from "../state/FighterState";
 import { Game } from "../state/Game";
@@ -570,7 +571,7 @@ export class GameEngine {
     const abilitySuffix =
       action.selectedAbility === null
         ? ""
-        : ` using ${GameEngine.formatWeaponAbilityName(
+        : ` using ${WeaponAbilityDefinition.formatName(
           action.selectedAbility,
           combatResult.selectedAbilityRequiresCritical,
         )}`;
@@ -578,7 +579,7 @@ export class GameEngine {
       action.selectedAbility !== null &&
       combatResult.selectedAbilityRequiresCritical &&
       !combatResult.selectedAbilityTriggered
-        ? `did not trigger ${GameEngine.formatWeaponAbilityName(action.selectedAbility, true)}`
+        ? `did not trigger ${WeaponAbilityDefinition.formatName(action.selectedAbility, true)}`
         : null,
       combatResult.staggerApplied ? `staggered fighter ${target.id}` : null,
       targetSlain ? `slew fighter ${target.id} for ${targetDefinition.bounty} glory` : null,
@@ -1079,10 +1080,5 @@ export class GameEngine {
 
   private static copyCards(cards: readonly CardInstance[]): CardInstance[] {
     return [...cards];
-  }
-
-  private static formatWeaponAbilityName(ability: string, requiresCritical: boolean = false): string {
-    const formattedAbility = ability.charAt(0).toUpperCase() + ability.slice(1);
-    return requiresCritical ? `Critical ${formattedAbility}` : formattedAbility;
   }
 }

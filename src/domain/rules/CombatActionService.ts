@@ -84,7 +84,7 @@ export class CombatActionService extends LegalActionService {
 
     if (
       action.selectedAbility !== null &&
-      !weapon.abilities.some((ability) => ability.kind === action.selectedAbility)
+      !weapon.hasAbility(action.selectedAbility)
     ) {
       return false;
     }
