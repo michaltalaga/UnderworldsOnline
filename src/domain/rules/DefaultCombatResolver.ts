@@ -100,6 +100,7 @@ export class DefaultCombatResolver extends CombatResolver {
       && context.selectedAbility !== WeaponAbilityKind.Grievous
       && context.selectedAbility !== WeaponAbilityKind.Cleave
       && context.selectedAbility !== WeaponAbilityKind.Ensnare
+      && context.selectedAbility !== WeaponAbilityKind.Brutal
     ) {
       throw new Error(`Weapon ability ${context.selectedAbility} is not supported by the default combat resolver.`);
     }
@@ -128,15 +129,18 @@ export class DefaultCombatResolver extends CombatResolver {
       selectedAbilityDefinition !== null &&
       (!selectedAbilityDefinition.requiresCritical || attackStats.criticals > 0);
     const effectiveSaveSymbol =
-      context.selectedAbility === WeaponAbilityKind.Cleave &&
-      canTriggerSelectedAbility &&
-      targetDefinition.saveSymbol === SaveSymbol.Shield
+      context.selectedAbility === WeaponAbilityKind.Brutal &&
+      canTriggerSelectedAbility
         ? null
-        : context.selectedAbility === WeaponAbilityKind.Ensnare &&
+        : context.selectedAbility === WeaponAbilityKind.Cleave &&
             canTriggerSelectedAbility &&
-            targetDefinition.saveSymbol === SaveSymbol.Dodge
+            targetDefinition.saveSymbol === SaveSymbol.Shield
           ? null
-          : targetDefinition.saveSymbol;
+          : context.selectedAbility === WeaponAbilityKind.Ensnare &&
+              canTriggerSelectedAbility &&
+              targetDefinition.saveSymbol === SaveSymbol.Dodge
+            ? null
+            : targetDefinition.saveSymbol;
     const saveStats = this.getSaveRollStats(
       saveRoll,
       effectiveSaveSymbol,

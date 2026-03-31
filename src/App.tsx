@@ -21,6 +21,7 @@ const supportedDebugAbilities = new Set<WeaponAbilityKind>([
   WeaponAbilityKind.Grievous,
   WeaponAbilityKind.Cleave,
   WeaponAbilityKind.Ensnare,
+  WeaponAbilityKind.Brutal,
 ]);
 
 function App() {
@@ -121,8 +122,8 @@ function App() {
           <p className="token-description">{formatSelectedAbilityDescription(debugSnapshot)}</p>
           <p className="token-note">
             Current end-to-end support covers the base attack plus <code>Stagger</code> and
-            <code> Grievous</code> and <code> Cleave</code> and <code> Ensnare</code> when the
-            weapon defines them.
+            <code> Grievous</code> and <code> Cleave</code> and <code> Ensnare</code> and
+            <code> Brutal</code> when the weapon defines them.
           </p>
         </div>
         <dl className="overview-grid">

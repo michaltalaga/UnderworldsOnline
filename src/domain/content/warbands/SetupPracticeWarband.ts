@@ -33,6 +33,7 @@ const fighters = [
           new WeaponAbilityDefinition(WeaponAbilityKind.Grievous),
           new WeaponAbilityDefinition(WeaponAbilityKind.Cleave),
           new WeaponAbilityDefinition(WeaponAbilityKind.Ensnare),
+          new WeaponAbilityDefinition(WeaponAbilityKind.Brutal),
         ],
       ),
     ],
