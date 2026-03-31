@@ -1,24 +1,34 @@
 import { useState } from "react";
 import "./App.css";
-import type { CombatResult, FighterState, Game } from "./domain";
+import {
+  WeaponAbilityKind,
+  type CombatResult,
+  type FighterState,
+  type Game,
+} from "./domain";
 import {
   combatDebugScenarios,
-  createCombatDebugGame,
+  createCombatDebugSnapshot,
   getCombatDebugScenario,
+  type CombatDebugSnapshot,
   type CombatDebugDefenderState,
   type CombatDebugScenarioId,
 } from "./debug/createCombatDebugGame";
+
+const debugAbilityKinds = Object.values(WeaponAbilityKind);
 
 function App() {
   const [scenarioId, setScenarioId] = useState<CombatDebugScenarioId>("success");
   const [defenderHasGuardToken, setDefenderHasGuardToken] = useState(false);
   const [defenderHasStaggerToken, setDefenderHasStaggerToken] = useState(false);
+  const [selectedAbility, setSelectedAbility] = useState<WeaponAbilityKind | null>(null);
   const selectedScenario = getCombatDebugScenario(scenarioId);
   const defenderState: CombatDebugDefenderState = {
     hasGuardToken: defenderHasGuardToken,
     hasStaggerToken: defenderHasStaggerToken,
   };
-  const debugGame = createCombatDebugGame(scenarioId, defenderState);
+  const debugSnapshot = createCombatDebugSnapshot(scenarioId, defenderState, selectedAbility);
+  const debugGame = debugSnapshot.game;
   const latestCombat = debugGame.lastCombatResult;
   const recentEvents = debugGame.eventLog.slice(-8).reverse();
 
@@ -79,6 +89,34 @@ function App() {
             </p>
           ) : null}
         </div>
+        <div className="ability-controls">
+          <p className="token-heading">Selected ability</p>
+          <div className="roll-switcher" role="group" aria-label="Attacker ability selection">
+            <button
+              className={`roll-button${selectedAbility === null ? " roll-button-active" : ""}`}
+              type="button"
+              onClick={() => setSelectedAbility(null)}
+              aria-pressed={selectedAbility === null}
+            >
+              None
+            </button>
+            {debugAbilityKinds.map((ability) => (
+              <button
+                key={ability}
+                className={`roll-button${selectedAbility === ability ? " roll-button-active" : ""}`}
+                type="button"
+                onClick={() => setSelectedAbility(ability)}
+                aria-pressed={selectedAbility === ability}
+              >
+                {formatAbilityLabel(ability)}
+              </button>
+            ))}
+          </div>
+          <p className="token-description">{formatSelectedAbilityDescription(debugSnapshot)}</p>
+          <p className="token-note">
+            Current end-to-end support only works with <code>selectedAbility = null</code>.
+          </p>
+        </div>
         <dl className="overview-grid">
           <div>
             <dt>State</dt>
@@ -112,11 +150,42 @@ function App() {
           <p className="eyebrow">Last Combat</p>
           <h2>Resolved attack summary</h2>
         </div>
-        {latestCombat === null ? (
+        {debugSnapshot.attackError !== null ? (
+          <article className="blocked-card">
+            <p className="combat-label">Attack Blocked</p>
+            <h3>Selected ability is not supported in the current attack flow.</h3>
+            <p className="empty-state">{debugSnapshot.attackError}</p>
+          </article>
+        ) : latestCombat === null ? (
           <p className="empty-state">No combat has resolved yet.</p>
         ) : (
           <CombatResultCard game={debugGame} result={latestCombat} isLatest />
         )}
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <p className="eyebrow">Ability Support</p>
+          <h2>Current unsupported abilities</h2>
+        </div>
+        <div className="ability-status-list">
+          {debugAbilityKinds.map((ability) => {
+            const definedOnWeapon = debugSnapshot.attackerWeaponAbilities.includes(ability);
+
+            return (
+              <article className="ability-status-card" key={ability}>
+                <div>
+                  <p className="combat-label">{formatAbilityLabel(ability)}</p>
+                  <h3>{debugSnapshot.attackerWeaponName}</h3>
+                </div>
+                <p className="fighter-meta">
+                  {definedOnWeapon ? "Defined on weapon" : "Not defined on weapon"}
+                </p>
+                <span className="status-badge status-unsupported">unsupported</span>
+              </article>
+            );
+          })}
+        </div>
       </section>
 
       <section className="panel">
@@ -333,6 +402,26 @@ function formatDefenderStateDescription(defenderState: CombatDebugDefenderState)
   }
 
   return states.length === 0 ? "Defender starts clean." : `Defender starts ${states.join(" and ")}.`;
+}
+
+function formatSelectedAbilityDescription(debugSnapshot: CombatDebugSnapshot): string {
+  if (debugSnapshot.selectedAbility === null) {
+    return `No ability selected. ${debugSnapshot.attackerWeaponName} follows the current supported path.`;
+  }
+
+  if (debugSnapshot.selectedAbilityDefinedOnWeapon) {
+    return `${formatAbilityLabel(debugSnapshot.selectedAbility)} is defined on ${debugSnapshot.attackerWeaponName}, but it is still unsupported in the current attack flow.`;
+  }
+
+  if (debugSnapshot.attackerWeaponAbilities.length === 0) {
+    return `${debugSnapshot.attackerWeaponName} defines no abilities, so ${formatAbilityLabel(debugSnapshot.selectedAbility)} is only a debug probe right now.`;
+  }
+
+  return `${formatAbilityLabel(debugSnapshot.selectedAbility)} is not defined on ${debugSnapshot.attackerWeaponName} and is currently unsupported.`;
+}
+
+function formatAbilityLabel(ability: WeaponAbilityKind): string {
+  return ability.charAt(0).toUpperCase() + ability.slice(1);
 }
 
 export default App;

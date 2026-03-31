@@ -5,6 +5,7 @@ import {
   MoveAction,
   PassAction,
   SaveDieFace,
+  WeaponAbilityKind,
   createCombatReadySetupPracticeGame,
   type Game,
 } from "../domain";
@@ -27,6 +28,15 @@ export type CombatDebugScenario = {
 export type CombatDebugDefenderState = {
   hasGuardToken?: boolean;
   hasStaggerToken?: boolean;
+};
+
+export type CombatDebugSnapshot = {
+  game: Game;
+  attackError: string | null;
+  attackerWeaponName: string;
+  attackerWeaponAbilities: readonly WeaponAbilityKind[];
+  selectedAbility: WeaponAbilityKind | null;
+  selectedAbilityDefinedOnWeapon: boolean;
 };
 
 export const combatDebugScenarios: readonly CombatDebugScenario[] = [
@@ -72,7 +82,16 @@ export function getCombatDebugScenario(scenarioId: CombatDebugScenarioId): Comba
 export function createCombatDebugGame(
   scenarioId: CombatDebugScenarioId = "success",
   defenderState: CombatDebugDefenderState = {},
+  selectedAbility: WeaponAbilityKind | null = null,
 ): Game {
+  return createCombatDebugSnapshot(scenarioId, defenderState, selectedAbility).game;
+}
+
+export function createCombatDebugSnapshot(
+  scenarioId: CombatDebugScenarioId = "success",
+  defenderState: CombatDebugDefenderState = {},
+  selectedAbility: WeaponAbilityKind | null = null,
+): CombatDebugSnapshot {
   const scenario = getCombatDebugScenario(scenarioId);
   const game = createCombatReadySetupPracticeGame("game:setup-practice:combat-debug");
   const engine = new GameEngine();
@@ -127,18 +146,44 @@ export function createCombatDebugGame(
     game.eventLog.push(`Debug setup applied defender tokens: ${defenderEffects.join(", ")}.`);
   }
 
-  engine.applyGameAction(
-    game,
-    new AttackAction(
-      "player:two",
-      playerTwoFighterOneId,
-      playerOneFighterThreeId,
-      practiceBladeWeaponId,
-      null,
-      [...scenario.attackRoll],
-      [...scenario.saveRoll],
-    ),
+  const attackerPlayer = game.getPlayer("player:two");
+  const attackerDefinition = attackerPlayer?.getFighterDefinition(playerTwoFighterOneId);
+  const attackerWeapon = attackerDefinition?.weapons.find(
+    (candidate) => candidate.id === practiceBladeWeaponId,
   );
+  if (attackerWeapon === undefined) {
+    throw new Error(`Could not find debug weapon ${practiceBladeWeaponId}.`);
+  }
 
-  return game;
+  const attackerWeaponAbilities = attackerWeapon.abilities.map((ability) => ability.kind);
+  const selectedAbilityDefinedOnWeapon =
+    selectedAbility !== null && attackerWeaponAbilities.includes(selectedAbility);
+
+  let attackError: string | null = null;
+  try {
+    engine.applyGameAction(
+      game,
+      new AttackAction(
+        "player:two",
+        playerTwoFighterOneId,
+        playerOneFighterThreeId,
+        practiceBladeWeaponId,
+        selectedAbility,
+        [...scenario.attackRoll],
+        [...scenario.saveRoll],
+      ),
+    );
+  } catch (error) {
+    attackError = error instanceof Error ? error.message : String(error);
+    game.eventLog.push(`Debug attack failed: ${attackError}`);
+  }
+
+  return {
+    game,
+    attackError,
+    attackerWeaponName: attackerWeapon.name,
+    attackerWeaponAbilities,
+    selectedAbility,
+    selectedAbilityDefinedOnWeapon,
+  };
 }

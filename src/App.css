@@ -137,6 +137,56 @@ body {
   font-weight: 700;
 }
 
+.ability-controls {
+  margin-top: 14px;
+  padding: 16px 18px;
+  background: rgba(243, 233, 212, 0.72);
+  border: 1px solid rgba(149, 112, 71, 0.2);
+  border-radius: 18px;
+}
+
+.ability-controls code {
+  font-family: "Consolas", "Courier New", monospace;
+  color: #442b19;
+}
+
+.blocked-card,
+.ability-status-card {
+  background: rgba(243, 233, 212, 0.72);
+  border: 1px solid rgba(149, 112, 71, 0.2);
+  border-radius: 18px;
+}
+
+.blocked-card {
+  padding: 18px;
+}
+
+.ability-status-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.ability-status-card {
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.status-badge {
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: lowercase;
+}
+
+.status-unsupported {
+  background: rgba(152, 61, 40, 0.14);
+  color: #8d321f;
+}
+
 .eyebrow,
 .combat-label,
 .fighter-owner {
