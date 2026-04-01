@@ -228,7 +228,12 @@ function App() {
         ) : latestCombat === null ? (
           <p className="empty-state">No combat has resolved yet.</p>
         ) : (
-          <CombatResultCard game={debugGame} result={latestCombat} isLatest />
+          <CombatResultCard
+            game={debugGame}
+            result={latestCombat}
+            isLatest
+            defenderFeatureTokenBeforeAttack={debugSnapshot.defenderFeatureTokenBeforeAttack}
+          />
         )}
       </section>
 
@@ -491,6 +496,7 @@ function App() {
 type CombatResultCardProps = {
   game: Game;
   result: CombatResult;
+  defenderFeatureTokenBeforeAttack?: CombatDebugSnapshot["defenderFeatureTokenBeforeAttack"];
   isLatest?: boolean;
   label?: string;
 };
@@ -498,6 +504,7 @@ type CombatResultCardProps = {
 function CombatResultCard({
   game,
   result,
+  defenderFeatureTokenBeforeAttack,
   isLatest = false,
   label = "Recorded attack",
 }: CombatResultCardProps) {
@@ -559,6 +566,12 @@ function CombatResultCard({
           <dt>Effects</dt>
           <dd>{formatCombatEffects(result)}</dd>
         </div>
+        {defenderFeatureTokenBeforeAttack !== undefined ? (
+          <div>
+            <dt>Defender Feature</dt>
+            <dd>{formatDefenderFeatureTokenState(game, defenderFeatureTokenBeforeAttack)}</dd>
+          </div>
+        ) : null}
       </dl>
     </article>
   );
@@ -666,6 +679,22 @@ function formatDefenderStateDescription(defenderState: CombatDebugDefenderState)
   }
 
   return states.length === 0 ? "Defender starts clean." : `Defender starts ${states.join(" and ")}.`;
+}
+
+function formatDefenderFeatureTokenState(
+  game: Game,
+  featureTokenSnapshot: CombatDebugSnapshot["defenderFeatureTokenBeforeAttack"],
+): string {
+  if (featureTokenSnapshot.featureTokenId === null || featureTokenSnapshot.featureTokenSide === null) {
+    return `none on ${featureTokenSnapshot.fighterHexId}`;
+  }
+
+  const holderText =
+    featureTokenSnapshot.heldByFighterId === null
+      ? ""
+      : `, held by ${getFighterName(game, featureTokenSnapshot.heldByFighterId)}`;
+
+  return `${featureTokenSnapshot.featureTokenSide} ${featureTokenSnapshot.featureTokenId} on ${featureTokenSnapshot.fighterHexId}${holderText}`;
 }
 
 function formatSelectedAbilityDescription(debugSnapshot: CombatDebugSnapshot): string {

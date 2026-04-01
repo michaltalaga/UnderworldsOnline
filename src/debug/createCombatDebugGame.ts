@@ -47,10 +47,18 @@ export type CombatDebugDefenderState = {
   isOnCoverToken?: boolean;
 };
 
+export type CombatDebugFeatureTokenSnapshot = {
+  fighterHexId: string;
+  featureTokenId: string | null;
+  featureTokenSide: FeatureTokenSide | null;
+  heldByFighterId: string | null;
+};
+
 export type CombatDebugSnapshot = {
   game: Game;
   attackError: string | null;
   attackerWeapon: WeaponDefinition;
+  defenderFeatureTokenBeforeAttack: CombatDebugFeatureTokenSnapshot;
   playerWarscrollName: string;
   warscrollAbilityOptions: readonly CombatDebugWarscrollAbilityOption[];
   warscrollTokensBefore: Readonly<Record<string, number>>;
@@ -243,6 +251,7 @@ export function createCombatDebugSnapshot(
     throw new Error(`Could not find debug weapon ${practiceBladeWeaponId}.`);
   }
 
+  const defenderFeatureTokenBeforeAttack = getDefenderFeatureTokenSnapshot(game, defender.id);
   let attackError: string | null = null;
   try {
     engine.applyGameAction(
@@ -266,6 +275,7 @@ export function createCombatDebugSnapshot(
     game,
     attackError,
     attackerWeapon,
+    defenderFeatureTokenBeforeAttack,
     playerWarscrollName: playerWarscroll.definition.name,
     warscrollAbilityOptions,
     warscrollTokensBefore,
@@ -403,4 +413,41 @@ function applyDebugDefenderFeatureTokenState(
   debugFeatureToken.side = FeatureTokenSide.Cover;
   debugFeatureToken.heldByFighterId = null;
   defenderHex.featureTokenId = debugFeatureToken.id;
+}
+
+function getDefenderFeatureTokenSnapshot(
+  game: Game,
+  defenderId: string,
+): CombatDebugFeatureTokenSnapshot {
+  const defender = game.getFighter(defenderId);
+  const fighterHexId = defender?.currentHexId;
+  if (defender === undefined || fighterHexId === null || fighterHexId === undefined) {
+    throw new Error(`Could not capture feature token snapshot for defender ${defenderId}.`);
+  }
+
+  const fighterHex = game.board.getHex(fighterHexId);
+  if (fighterHex === undefined) {
+    throw new Error(`Could not find defender hex ${fighterHexId} for feature token snapshot.`);
+  }
+
+  if (fighterHex.featureTokenId === null) {
+    return {
+      fighterHexId: fighterHex.id,
+      featureTokenId: null,
+      featureTokenSide: null,
+      heldByFighterId: null,
+    };
+  }
+
+  const featureToken = game.board.getFeatureToken(fighterHex.featureTokenId);
+  if (featureToken === undefined) {
+    throw new Error(`Could not find feature token ${fighterHex.featureTokenId} for debug snapshot.`);
+  }
+
+  return {
+    fighterHexId: fighterHex.id,
+    featureTokenId: featureToken.id,
+    featureTokenSide: featureToken.side,
+    heldByFighterId: featureToken.heldByFighterId,
+  };
 }
