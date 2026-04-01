@@ -412,6 +412,16 @@ export default function PracticeBattlefieldApp() {
             pendingAttackBadgeLabel={pendingAttackBadgeLabel}
             recentCombatTargetId={recentCombatTargetId}
             resultFlash={resultFlash}
+            onGuardSelectedFighter={() => {
+              if (actionLens.guardAction !== null) {
+                applyAction(actionLens.guardAction);
+              }
+            }}
+            onPassTurn={() => {
+              if (actionLens.passAction !== null) {
+                applyAction(actionLens.passAction);
+              }
+            }}
             onAttackTarget={attackTarget}
             onCancelPendingCharge={cancelPendingCharge}
             onCompleteChargeAgainstTarget={completeChargeAgainstTarget}
@@ -654,6 +664,9 @@ export default function PracticeBattlefieldApp() {
                 <strong>Guard:</strong> the selected fighter gets a white ring when guard is legal.
               </p>
               <p>
+                <strong>Board buttons:</strong> guard appears on the map during action step, and pass power appears on the map during power step.
+              </p>
+              <p>
                 <strong>Attack targets:</strong>{" "}
                 {attackTargetNames.length === 0 ? "none" : attackTargetNames.join(", ")}
               </p>
@@ -740,6 +753,8 @@ function BoardMap({
   pendingAttackBadgeLabel,
   recentCombatTargetId,
   resultFlash,
+  onGuardSelectedFighter,
+  onPassTurn,
   onAttackTarget,
   onCancelPendingCharge,
   onCompleteChargeAgainstTarget,
@@ -760,6 +775,8 @@ function BoardMap({
   pendingAttackBadgeLabel: string | null;
   recentCombatTargetId: FighterId | null;
   resultFlash: BattlefieldResultFlash | null;
+  onGuardSelectedFighter: () => void;
+  onPassTurn: () => void;
   onAttackTarget: (targetId: FighterId) => void;
   onCancelPendingCharge: () => void;
   onCompleteChargeAgainstTarget: (targetId: FighterId) => void;
@@ -772,6 +789,8 @@ function BoardMap({
   const width = Math.max(...positionedHexes.map((hex) => hex.left + hexWidth)) + boardPadding;
   const height = Math.max(...positionedHexes.map((hex) => hex.top + hexHeight)) + boardPadding;
   const visibleChargeTargetHexIds = getChargeTargetHexIdsForHex(game, actionLens, pendingChargeHexId);
+  const selectedFighterName =
+    selectedFighterId === null ? null : getFighterName(game, selectedFighterId);
   const [actionTooltip, setActionTooltip] = useState<{ label: string; left: number; top: number } | null>(null);
 
   useEffect(() => {
@@ -796,6 +815,29 @@ function BoardMap({
 
   return (
     <div className="battlefield-board-frame">
+      {(game.turnStep === TurnStep.Power && actionLens.passAction !== null) ||
+      (game.turnStep === TurnStep.Action && actionLens.guardAction !== null && selectedFighterName !== null) ? (
+        <div className="battlefield-board-quick-actions">
+          {game.turnStep === TurnStep.Action && actionLens.guardAction !== null && selectedFighterName !== null ? (
+            <button
+              type="button"
+              className="battlefield-board-action battlefield-board-action-guard"
+              onClick={onGuardSelectedFighter}
+            >
+              Guard {selectedFighterName}
+            </button>
+          ) : null}
+          {game.turnStep === TurnStep.Power && actionLens.passAction !== null ? (
+            <button
+              type="button"
+              className="battlefield-board-action battlefield-board-action-pass"
+              onClick={onPassTurn}
+            >
+              Pass Power
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {resultFlash === null ? null : (
         <div
           key={resultFlash.id}
