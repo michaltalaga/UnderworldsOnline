@@ -59,9 +59,16 @@ type FighterActionLens = {
 type AttackProfileSummary = {
   targetId: FighterId;
   targetName: string;
-  preferredLabel: string;
-  preferredStats: string;
-  alternativeLabels: string[];
+  defaultKey: string;
+  selectedKey: string;
+  options: AttackProfileOptionSummary[];
+};
+
+type AttackProfileOptionSummary = {
+  key: string;
+  label: string;
+  stats: string;
+  isDefault: boolean;
 };
 
 export default function PracticeBattlefieldApp() {
@@ -88,17 +95,24 @@ export default function PracticeBattlefieldApp() {
   const [pendingChargeHexId, setPendingChargeHexId] = useState<HexId | null>(null);
   const [pendingChargeTargetId, setPendingChargeTargetId] = useState<FighterId | null>(null);
   const [pendingAttackTargetId, setPendingAttackTargetId] = useState<FighterId | null>(null);
+  const [selectedAttackKeysByTarget, setSelectedAttackKeysByTarget] = useState<Record<string, string>>({});
   const selectedMoveOption = moveOptions.find((option) => option.hexId === selectedMoveHexId) ?? moveOptions[0] ?? null;
   const selectedChargeOption = chargeOptions.find((option) => option.key === selectedChargeKey) ?? chargeOptions[0] ?? null;
   const visibleChargeTargetIds = getChargeTargetIdsForHex(actionLens, pendingChargeHexId);
   const chargeTargetNames = [...visibleChargeTargetIds].map((fighterId) => getFighterName(game, fighterId));
   const attackTargetNames = [...actionLens.attackTargetIds].map((fighterId) => getFighterName(game, fighterId));
-  const attackProfiles = getAttackProfiles(game, activePlayer, actionLens);
+  const attackProfiles = getAttackProfiles(game, activePlayer, actionLens, selectedAttackKeysByTarget);
   const selectedFighterName = selectedFighter === null ? "none" : getFighterName(game, selectedFighter.id);
   const pendingChargeTargetName =
     pendingChargeTargetId === null ? null : getFighterName(game, pendingChargeTargetId);
-  const pendingAttackTargetName =
-    pendingAttackTargetId === null ? null : getFighterName(game, pendingAttackTargetId);
+  const pendingAttackProfile =
+    pendingAttackTargetId === null
+      ? null
+      : getAttackProfileForTarget(attackProfiles, pendingAttackTargetId);
+  const pendingAttackTargetName = pendingAttackProfile?.targetName ?? (
+    pendingAttackTargetId === null ? null : getFighterName(game, pendingAttackTargetId)
+  );
+  const pendingAttackOption = pendingAttackProfile?.options.find((option) => option.key === pendingAttackProfile.selectedKey) ?? null;
   const latestCombat = game.getLatestRecord(GameRecordKind.Combat);
   const recentCombat =
     latestCombat !== null &&
@@ -112,7 +126,7 @@ export default function PracticeBattlefieldApp() {
   const actionPrompt =
     game.turnStep === TurnStep.Action
       ? pendingAttackTargetId !== null
-        ? `${pendingAttackTargetName ?? pendingAttackTargetId} selected. Click the same crimson target again to confirm the attack, press Escape to cancel, or pick a different crimson target.`
+        ? `${pendingAttackTargetName ?? pendingAttackTargetId} selected with ${pendingAttackOption?.label ?? "the current profile"}. Click the same crimson target again to confirm the attack, press Escape to cancel, or pick a different crimson target.`
         : pendingChargeTargetId !== null && pendingChargeHexId !== null
         ? `${pendingChargeTargetName ?? pendingChargeTargetId} selected from ${pendingChargeHexId}. Click the same red target again to confirm, press Escape to cancel, or pick a different target.`
         : pendingChargeHexId !== null
@@ -132,6 +146,7 @@ export default function PracticeBattlefieldApp() {
     setPendingChargeHexId(null);
     setPendingChargeTargetId(null);
     setPendingAttackTargetId(null);
+    setSelectedAttackKeysByTarget({});
   }
 
   function refreshGame(): void {
@@ -148,6 +163,7 @@ export default function PracticeBattlefieldApp() {
     setPendingChargeHexId(null);
     setPendingChargeTargetId(null);
     setPendingAttackTargetId(null);
+    setSelectedAttackKeysByTarget({});
     setSelectedFighterId(getNextSelectedFighterId(game, previousActivePlayerId, previousSelectedFighterId));
     refreshGame();
   }
@@ -208,10 +224,21 @@ export default function PracticeBattlefieldApp() {
       return;
     }
 
-    const attackAction = getAttackActionForTarget(actionLens, targetId);
+    const attackAction = getAttackActionForTarget(
+      actionLens,
+      targetId,
+      getSelectedAttackKeyForTarget(selectedAttackKeysByTarget, targetId),
+    );
     if (attackAction !== null) {
       applyAction(attackAction);
     }
+  }
+
+  function selectAttackProfile(targetId: FighterId, attackKey: string): void {
+    setSelectedAttackKeysByTarget((current) => ({
+      ...current,
+      [targetId]: attackKey,
+    }));
   }
 
   useEffect(() => {
@@ -247,6 +274,7 @@ export default function PracticeBattlefieldApp() {
     setPendingChargeHexId(null);
     setPendingChargeTargetId(null);
     setPendingAttackTargetId(null);
+    setSelectedAttackKeysByTarget({});
   }
 
   return (
@@ -381,15 +409,32 @@ export default function PracticeBattlefieldApp() {
                   <article key={profile.targetId} className="battlefield-attack-profile-card">
                     <div className="battlefield-attack-profile-header">
                       <strong>{profile.targetName}</strong>
-                      <span className="battlefield-attack-profile-chip">map pick</span>
+                      <span className="battlefield-attack-profile-chip">
+                        {profile.selectedKey === profile.defaultKey ? "map default" : "custom pick"}
+                      </span>
                     </div>
-                    <p className="battlefield-attack-profile-primary">{profile.preferredLabel}</p>
-                    <p className="battlefield-attack-profile-meta">{profile.preferredStats}</p>
-                    {profile.alternativeLabels.length === 0 ? null : (
-                      <p className="battlefield-attack-profile-meta">
-                        Also legal: {profile.alternativeLabels.join(", ")}
-                      </p>
-                    )}
+                    <div className="battlefield-attack-profile-option-list">
+                      {profile.options.map((option) => (
+                        <button
+                          key={option.key}
+                          type="button"
+                          className={[
+                            "battlefield-attack-profile-option",
+                            option.key === profile.selectedKey ? "battlefield-attack-profile-option-selected" : "",
+                          ].filter(Boolean).join(" ")}
+                          disabled={game.turnStep !== TurnStep.Action}
+                          onClick={() => selectAttackProfile(profile.targetId, option.key)}
+                        >
+                          <span className="battlefield-attack-profile-option-label-row">
+                            <span className="battlefield-attack-profile-primary">{option.label}</span>
+                            {option.isDefault ? (
+                              <span className="battlefield-attack-profile-option-tag">default</span>
+                            ) : null}
+                          </span>
+                          <span className="battlefield-attack-profile-meta">{option.stats}</span>
+                        </button>
+                      ))}
+                    </div>
                   </article>
                 ))
               )}
@@ -484,7 +529,7 @@ export default function PracticeBattlefieldApp() {
                 <strong>Attack:</strong> click a crimson target to arm it, then click that same crimson target again to confirm.
               </p>
               <p>
-                <strong>Attack profiles:</strong> the card above shows the exact legal profile the map will use for each target.
+                <strong>Attack profiles:</strong> click a profile on a target card to make the map use it for that target.
               </p>
               <p>
                 <strong>Move:</strong> click a teal hex to arm it, then click the same teal hex again to confirm.
@@ -1332,7 +1377,17 @@ function getChargeActionForTarget(
 function getAttackActionForTarget(
   actionLens: FighterActionLens,
   targetId: FighterId,
+  preferredAttackKey: string | null = null,
 ): AttackAction | null {
+  if (preferredAttackKey !== null) {
+    const preferredAction = actionLens.attackActions.find(
+      (action) => action.targetId === targetId && getAttackActionKey(action) === preferredAttackKey,
+    );
+    if (preferredAction !== undefined) {
+      return preferredAction;
+    }
+  }
+
   let bestAction: AttackAction | null = null;
 
   for (const action of actionLens.attackActions) {
@@ -1348,10 +1403,22 @@ function getAttackActionForTarget(
   return bestAction;
 }
 
+function getAttackActionKey(action: AttackAction): string {
+  return `${action.attackerId}:${action.targetId}:${action.weaponId}:${action.selectedAbility ?? "base"}`;
+}
+
+function getSelectedAttackKeyForTarget(
+  selectedAttackKeysByTarget: Record<string, string>,
+  targetId: FighterId,
+): string | null {
+  return selectedAttackKeysByTarget[targetId] ?? null;
+}
+
 function getAttackProfiles(
   game: Game,
   activePlayer: PlayerState | null,
   actionLens: FighterActionLens,
+  selectedAttackKeysByTarget: Record<string, string>,
 ): AttackProfileSummary[] {
   if (activePlayer === null || actionLens.fighter === null || actionLens.attackActions.length === 0) {
     return [];
@@ -1368,21 +1435,36 @@ function getAttackProfiles(
   }
 
   return [...actionsByTarget.entries()].map(([targetId, actions]) => {
-    const preferredAction = getAttackActionForTarget(actionLens, targetId) ?? actions[0];
-    const preferredProfile = describeAttackAction(activePlayer, preferredAction);
-    const alternativeLabels = actions
-      .filter((action) => action !== preferredAction)
-      .map((action) => describeAttackAction(activePlayer, action).label)
-      .filter((label, index, allLabels) => allLabels.indexOf(label) === index);
+    const defaultAction = getAttackActionForTarget(actionLens, targetId) ?? actions[0];
+    const selectedAction = getAttackActionForTarget(
+      actionLens,
+      targetId,
+      getSelectedAttackKeyForTarget(selectedAttackKeysByTarget, targetId),
+    ) ?? defaultAction;
 
     return {
       targetId,
       targetName: getFighterName(game, targetId),
-      preferredLabel: preferredProfile.label,
-      preferredStats: preferredProfile.stats,
-      alternativeLabels,
+      defaultKey: getAttackActionKey(defaultAction),
+      selectedKey: getAttackActionKey(selectedAction),
+      options: actions.map((action) => {
+        const description = describeAttackAction(activePlayer, action);
+        return {
+          key: getAttackActionKey(action),
+          label: description.label,
+          stats: description.stats,
+          isDefault: action === defaultAction,
+        };
+      }),
     };
   });
+}
+
+function getAttackProfileForTarget(
+  attackProfiles: AttackProfileSummary[],
+  targetId: FighterId,
+): AttackProfileSummary | null {
+  return attackProfiles.find((profile) => profile.targetId === targetId) ?? null;
 }
 
 function describeAttackAction(
