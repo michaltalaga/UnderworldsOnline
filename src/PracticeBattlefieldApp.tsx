@@ -126,6 +126,7 @@ export default function PracticeBattlefieldApp() {
       ? null
       : getChargeProfileForTarget(chargeProfiles, pendingChargeTargetId);
   const pendingChargeOption = pendingChargeProfile?.options.find((option) => option.key === pendingChargeProfile.selectedKey) ?? null;
+  const pendingChargeBadgeLabel = pendingChargeOption?.label ?? null;
   const pendingAttackProfile =
     pendingAttackTargetId === null
       ? null
@@ -383,6 +384,7 @@ export default function PracticeBattlefieldApp() {
             pendingChargeHexId={pendingChargeHexId}
             pendingChargeTargetId={pendingChargeTargetId}
             pendingAttackTargetId={pendingAttackTargetId}
+            pendingChargeBadgeLabel={pendingChargeBadgeLabel}
             recentCombatTargetId={recentCombatTargetId}
             onAttackTarget={attackTarget}
             onCancelPendingCharge={cancelPendingCharge}
@@ -708,6 +710,7 @@ function BoardMap({
   pendingChargeHexId,
   pendingChargeTargetId,
   pendingAttackTargetId,
+  pendingChargeBadgeLabel,
   recentCombatTargetId,
   onAttackTarget,
   onCancelPendingCharge,
@@ -725,6 +728,7 @@ function BoardMap({
   pendingChargeHexId: HexId | null;
   pendingChargeTargetId: FighterId | null;
   pendingAttackTargetId: FighterId | null;
+  pendingChargeBadgeLabel: string | null;
   recentCombatTargetId: FighterId | null;
   onAttackTarget: (targetId: FighterId) => void;
   onCancelPendingCharge: () => void;
@@ -791,6 +795,7 @@ function BoardMap({
             isChargeDestination,
             isPendingAttackTarget,
             isPendingChargeHex,
+            pendingChargeBadgeLabel,
             isPendingChargeTarget,
             isChargeTarget,
             isPendingMoveHex,
@@ -903,8 +908,14 @@ function BoardMap({
                   </span>
                 )}
                 {actionBadge === null ? null : (
-                  <span className={`battlefield-hex-action-badge battlefield-hex-action-${actionBadge}`}>
-                    {actionBadge}
+                  <span
+                    className={[
+                      "battlefield-hex-action-badge",
+                      `battlefield-hex-action-${actionBadge.tone}`,
+                      actionBadge.detailed ? "battlefield-hex-action-badge-detailed" : "",
+                    ].filter(Boolean).join(" ")}
+                  >
+                    {actionBadge.label}
                   </span>
                 )}
                 {fighter === null ? (
@@ -1212,46 +1223,55 @@ function getHexActionBadge(state: {
   isChargeDestination: boolean;
   isPendingAttackTarget: boolean;
   isPendingChargeHex: boolean;
+  pendingChargeBadgeLabel: string | null;
   isPendingChargeTarget: boolean;
   isChargeTarget: boolean;
   isPendingMoveHex: boolean;
   isMoveDestination: boolean;
   isRecentCombatTarget: boolean;
-}): "move" | "charge" | "armed" | "target" | "confirm" | "attack" | "last" | null {
+}): {
+  tone: "move" | "charge" | "armed" | "target" | "confirm" | "attack" | "last";
+  label: string;
+  detailed: boolean;
+} | null {
   if (state.isPendingAttackTarget) {
-    return "confirm";
+    return { tone: "confirm", label: "confirm", detailed: false };
   }
 
   if (state.isPendingChargeTarget) {
-    return "confirm";
+    return {
+      tone: "confirm",
+      label: state.pendingChargeBadgeLabel ?? "confirm",
+      detailed: state.pendingChargeBadgeLabel !== null,
+    };
   }
 
   if (state.isChargeTarget) {
-    return "target";
+    return { tone: "target", label: "target", detailed: false };
   }
 
   if (state.isPendingChargeHex) {
-    return "armed";
+    return { tone: "armed", label: "armed", detailed: false };
   }
 
   if (state.isPendingMoveHex) {
-    return "confirm";
+    return { tone: "confirm", label: "confirm", detailed: false };
   }
 
   if (state.isChargeDestination) {
-    return "charge";
+    return { tone: "charge", label: "charge", detailed: false };
   }
 
   if (state.isAttackTarget) {
-    return "attack";
+    return { tone: "attack", label: "attack", detailed: false };
   }
 
   if (state.isRecentCombatTarget) {
-    return "last";
+    return { tone: "last", label: "last", detailed: false };
   }
 
   if (state.isMoveDestination) {
-    return "move";
+    return { tone: "move", label: "move", detailed: false };
   }
 
   return null;
