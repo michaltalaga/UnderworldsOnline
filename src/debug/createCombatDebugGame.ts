@@ -70,6 +70,8 @@ export type EndPhaseDebugSnapshot = {
   game: Game;
 };
 
+export type EndPhaseDebugMode = "round" | "final";
+
 export const combatDebugScenarios: readonly CombatDebugScenario[] = [
   {
     id: "success",
@@ -269,13 +271,24 @@ export function createCombatDebugSnapshot(
   };
 }
 
-export function createEndPhaseDebugSnapshot(): EndPhaseDebugSnapshot {
-  const game = createCombatReadySetupPracticeGame("game:setup-practice:end-phase-debug");
+export function createEndPhaseDebugSnapshot(
+  mode: EndPhaseDebugMode = "round",
+): EndPhaseDebugSnapshot {
+  const gameId =
+    mode === "final"
+      ? "game:setup-practice:end-phase-debug:final"
+      : "game:setup-practice:end-phase-debug";
+  const game = createCombatReadySetupPracticeGame(gameId);
   const engine = new GameEngine(undefined, undefined, undefined, new DebugEndPhaseScoringResolver());
   const playerOne = game.getPlayer("player:one");
 
   if (playerOne === undefined) {
     throw new Error("Could not find player one for end-phase debug setup.");
+  }
+
+  if (mode === "final") {
+    game.roundNumber = game.maxRounds;
+    game.eventLog.push("Debug setup forced the game to its final round before round start.");
   }
 
   movePowerCardsToDiscard(playerOne.powerHand, playerOne.powerDeck.discardPile, 2);
