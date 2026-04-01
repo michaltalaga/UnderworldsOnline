@@ -9,6 +9,7 @@ import {
   GuardAction,
   MoveAction,
   PassAction,
+  PlayPloyAction,
   ResolveCleanupAction,
   ResolveDiscardCardsAction,
   ResolveDrawObjectivesAction,
@@ -77,6 +78,10 @@ export type CombatDebugWarscrollAbilityOption = {
 };
 
 export type EndPhaseDebugSnapshot = {
+  game: Game;
+};
+
+export type PloyDebugSnapshot = {
   game: Game;
 };
 
@@ -339,6 +344,64 @@ export function createEndPhaseDebugSnapshot(
   engine.applyEndPhaseAction(game, new ResolveDrawObjectivesAction());
   engine.applyEndPhaseAction(game, new ResolveDrawPowerCardsAction());
   engine.applyEndPhaseAction(game, new ResolveCleanupAction());
+
+  return { game };
+}
+
+export function createPloyDebugSnapshot(): PloyDebugSnapshot {
+  const game = createCombatReadySetupPracticeGame("game:setup-practice:ploy-debug");
+  const engine = new GameEngine();
+  const actionService = new CombatActionService();
+
+  engine.startCombatRound(
+    game,
+    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Blank }],
+    "player:one",
+  );
+  engine.applyGameAction(game, new PassAction("player:one"));
+
+  const playerOne = game.getPlayer("player:one");
+  const playerTwo = game.getPlayer("player:two");
+  if (playerOne === undefined || playerTwo === undefined) {
+    throw new Error("Could not find both players for ploy debug setup.");
+  }
+
+  const targetedPloy = playerOne.powerDeck.drawPile.find(
+    (card) => card.definitionId === "card-def:setup-practice:ploy:10",
+  );
+  if (targetedPloy === undefined) {
+    throw new Error("Could not find Practice Ploy 10 in Player One draw pile.");
+  }
+
+  playerOne.powerDeck.drawPile = playerOne.powerDeck.drawPile.filter(
+    (card) => card.id !== targetedPloy.id,
+  );
+  targetedPloy.zone = CardZone.PowerHand;
+  playerOne.powerHand.push(targetedPloy);
+  game.eventLog.push("Debug setup moved Practice Ploy 10 into Player One hand.");
+
+  const drawPloy = playerOne.powerHand.find(
+    (card) => card.definitionId === "card-def:setup-practice:ploy:01",
+  );
+  if (drawPloy === undefined) {
+    throw new Error("Could not find Practice Ploy 01 in Player One hand.");
+  }
+
+  engine.applyGameAction(game, new PlayPloyAction(playerOne.id, drawPloy.id));
+
+  const targetedPloyAction = actionService
+    .getLegalActions(game, playerOne.id)
+    .find(
+      (action): action is PlayPloyAction =>
+        action instanceof PlayPloyAction &&
+        action.cardId === targetedPloy.id &&
+        playerTwo.getFighter(action.targetFighterId ?? "") !== undefined,
+    );
+  if (targetedPloyAction === undefined) {
+    throw new Error("Could not find a legal targeted Practice Ploy 10 action.");
+  }
+
+  engine.applyGameAction(game, targetedPloyAction);
 
   return { game };
 }

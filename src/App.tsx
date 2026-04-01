@@ -13,6 +13,7 @@ import {
   combatDebugScenarios,
   createCombatDebugSnapshot,
   createEndPhaseDebugSnapshot,
+  createPloyDebugSnapshot,
   getCombatDebugScenario,
   type CombatDebugSnapshot,
   type CombatDebugDefenderState,
@@ -48,6 +49,7 @@ function App() {
     selectedWarscrollAbilityIndex,
   );
   const endPhaseDebugGame = createEndPhaseDebugSnapshot().game;
+  const ployDebugGame = createPloyDebugSnapshot().game;
   const debugGame = debugSnapshot.game;
   const latestCombat = debugGame.lastCombatResult;
   const recentEvents = debugGame.eventLog.slice(-8).reverse();
@@ -269,6 +271,69 @@ function App() {
               </article>
             );
           })}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <p className="eyebrow">Ploys</p>
+          <h2>Stored ploy resolutions</h2>
+        </div>
+        <article className="warscroll-card">
+          <div className="combat-card-header">
+            <div>
+              <p className="combat-label">Power Step Snapshot</p>
+              <h3>{formatPloyHeadline(ployDebugGame)}</h3>
+            </div>
+            <span className={`status-badge ${getResolutionStatusClass(ployDebugGame.lastPloyResolution)}`}>
+              {getResolutionStatusLabel(ployDebugGame.lastPloyResolution)}
+            </span>
+          </div>
+          <p className="combat-meta">
+            This snapshot reaches Player One&apos;s first power step, plays one untargeted ploy and
+            one targeted ploy through the real engine, then reads the stored ploy resolution objects
+            directly from game state.
+          </p>
+          <dl className="combat-grid">
+            <div>
+              <dt>Last Ploy</dt>
+              <dd>{formatPloyHeadline(ployDebugGame)}</dd>
+            </div>
+            <div>
+              <dt>History</dt>
+              <dd>{ployDebugGame.ployHistory.length}</dd>
+            </div>
+            <div>
+              <dt>Latest Target</dt>
+              <dd>{formatPloyTargetHeadline(ployDebugGame)}</dd>
+            </div>
+            <div>
+              <dt>Effects</dt>
+              <dd>{formatPloyEffectHeadline(ployDebugGame)}</dd>
+            </div>
+            <div>
+              <dt>Turn Step</dt>
+              <dd>{ployDebugGame.turnStep ?? "n/a"}</dd>
+            </div>
+            <div>
+              <dt>Active Player</dt>
+              <dd>{getPlayerName(ployDebugGame, ployDebugGame.activePlayerId)}</dd>
+            </div>
+          </dl>
+        </article>
+        <div className="ability-status-list">
+          {ployDebugGame.ployHistory.map((resolution, index) => (
+            <article className="ability-status-card" key={`${resolution.cardId}:${index}`}>
+              <div>
+                <p className="combat-label">Ploy {index + 1}</p>
+                <h3>{resolution.cardName}</h3>
+              </div>
+              <p className="fighter-meta">{resolution.playerName}</p>
+              <p className="fighter-meta">{formatPloyResolutionTarget(resolution)}</p>
+              <p className="fighter-meta">{resolution.effectSummaries.join(", ")}</p>
+              <span className="status-badge status-supported">recorded</span>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -807,6 +872,43 @@ function formatWarscrollResolution(game: Game): string {
   }
 
   return `${resolution.abilityName}: ${resolution.effectSummaries.join(", ")}`;
+}
+
+function formatPloyHeadline(game: Game): string {
+  const resolution = game.lastPloyResolution;
+  if (resolution === null) {
+    return "No ploy recorded";
+  }
+
+  return `${resolution.cardName} by ${resolution.playerName}`;
+}
+
+function formatPloyTargetHeadline(game: Game): string {
+  const resolution = game.lastPloyResolution;
+  if (resolution === null || resolution.targetFighterId === null) {
+    return "none";
+  }
+
+  return `${resolution.targetFighterName} (${resolution.targetOwnerPlayerName})`;
+}
+
+function formatPloyEffectHeadline(game: Game): string {
+  const resolution = game.lastPloyResolution;
+  if (resolution === null) {
+    return "none";
+  }
+
+  return resolution.effectSummaries.join(", ");
+}
+
+function formatPloyResolutionTarget(
+  resolution: NonNullable<Game["lastPloyResolution"]>,
+): string {
+  if (resolution.targetFighterId === null) {
+    return "No fighter target";
+  }
+
+  return `Target: ${resolution.targetFighterName} (${resolution.targetOwnerPlayerName})`;
 }
 
 function getWarscrollUsageLabel(debugSnapshot: CombatDebugSnapshot): string {
