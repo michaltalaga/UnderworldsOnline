@@ -30,12 +30,18 @@ function App() {
   const [defenderHasGuardToken, setDefenderHasGuardToken] = useState(false);
   const [defenderHasStaggerToken, setDefenderHasStaggerToken] = useState(false);
   const [selectedAbility, setSelectedAbility] = useState<WeaponAbilityKind | null>(null);
+  const [selectedWarscrollAbilityIndex, setSelectedWarscrollAbilityIndex] = useState<number | null>(null);
   const selectedScenario = getCombatDebugScenario(scenarioId);
   const defenderState: CombatDebugDefenderState = {
     hasGuardToken: defenderHasGuardToken,
     hasStaggerToken: defenderHasStaggerToken,
   };
-  const debugSnapshot = createCombatDebugSnapshot(scenarioId, defenderState, selectedAbility);
+  const debugSnapshot = createCombatDebugSnapshot(
+    scenarioId,
+    defenderState,
+    selectedAbility,
+    selectedWarscrollAbilityIndex,
+  );
   const debugGame = debugSnapshot.game;
   const latestCombat = debugGame.lastCombatResult;
   const recentEvents = debugGame.eventLog.slice(-8).reverse();
@@ -47,7 +53,8 @@ function App() {
         <h1>Latest combat result and history are now visible in the browser.</h1>
         <p className="hero-copy">
           This screen uses the existing setup fixture, runs a short deterministic move/pass
-          sequence through the real engine, and stops after one resolved attack.
+          sequence through the real engine, can spend a warscroll ability in player one&apos;s
+          power step, and stops after one resolved attack.
         </p>
         <div className="roll-controls">
           <div className="roll-switcher" role="tablist" aria-label="Combat roll presets">
@@ -131,6 +138,36 @@ function App() {
             definition.
           </p>
         </div>
+        <div className="warscroll-controls">
+          <p className="token-heading">Player One warscroll power step</p>
+          <div className="roll-switcher" role="group" aria-label="Player one warscroll ability selection">
+            <button
+              className={`roll-button${selectedWarscrollAbilityIndex === null ? " roll-button-active" : ""}`}
+              type="button"
+              onClick={() => setSelectedWarscrollAbilityIndex(null)}
+              aria-pressed={selectedWarscrollAbilityIndex === null}
+            >
+              None
+            </button>
+            {debugSnapshot.warscrollAbilityOptions.map((option) => (
+              <button
+                key={option.abilityIndex}
+                className={`roll-button${selectedWarscrollAbilityIndex === option.abilityIndex ? " roll-button-active" : ""}`}
+                type="button"
+                onClick={() => setSelectedWarscrollAbilityIndex(option.abilityIndex)}
+                aria-pressed={selectedWarscrollAbilityIndex === option.abilityIndex}
+                disabled={!option.isLegal}
+                title={option.isLegal ? option.definition.text : "Not legal in the captured power step."}
+              >
+                {option.definition.name}
+              </button>
+            ))}
+          </div>
+          <p className="token-description">{formatSelectedWarscrollDescription(debugSnapshot)}</p>
+          {debugSnapshot.warscrollAbilityError !== null ? (
+            <p className="token-note">{debugSnapshot.warscrollAbilityError}</p>
+          ) : null}
+        </div>
         <dl className="overview-grid">
           <div>
             <dt>State</dt>
@@ -209,6 +246,69 @@ function App() {
               </article>
             );
           })}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <p className="eyebrow">Warscroll</p>
+          <h2>Player one power-step warscroll state</h2>
+        </div>
+        <article className="warscroll-card">
+          <div className="combat-card-header">
+            <div>
+              <p className="combat-label">Pre-Attack Power Step</p>
+              <h3>{debugSnapshot.playerWarscrollName}</h3>
+            </div>
+            <span className={`status-badge ${getWarscrollUsageStatusClass(debugSnapshot)}`}>
+              {getWarscrollUsageLabel(debugSnapshot)}
+            </span>
+          </div>
+          <p className="combat-meta">
+            Player one reaches a real power step before the final attack. This panel shows the
+            captured legal warscroll actions and any token spend from the selected one.
+          </p>
+          <dl className="combat-grid">
+            <div>
+              <dt>Tokens Before</dt>
+              <dd>{formatWarscrollTokens(debugSnapshot.warscrollTokensBefore)}</dd>
+            </div>
+            <div>
+              <dt>Tokens After</dt>
+              <dd>{formatWarscrollTokens(debugSnapshot.warscrollTokensAfter)}</dd>
+            </div>
+            <div>
+              <dt>Power Hand</dt>
+              <dd>
+                {debugSnapshot.powerHandBeforeWarscroll} to {debugSnapshot.powerHandAfterWarscroll}
+              </dd>
+            </div>
+            <div>
+              <dt>Legal Abilities</dt>
+              <dd>
+                {debugSnapshot.warscrollAbilityOptions.filter((option) => option.isLegal).length}
+              </dd>
+            </div>
+          </dl>
+        </article>
+        <div className="ability-status-list">
+          {debugSnapshot.warscrollAbilityOptions.map((option) => (
+            <article className="ability-status-card" key={option.abilityIndex}>
+              <div>
+                <p className="combat-label">Ability {option.abilityIndex + 1}</p>
+                <h3>{option.definition.name}</h3>
+              </div>
+              <p className="fighter-meta">{option.definition.text}</p>
+              <p className="fighter-meta">
+                Cost: {formatWarscrollTokenCosts(option.definition.tokenCosts)}. Effect: draw{" "}
+                {option.definition.drawPowerCards} power card
+                {option.definition.drawPowerCards === 1 ? "" : "s"}.
+              </p>
+              <span className={`status-badge ${getWarscrollAbilityStatusClass(debugSnapshot, option.abilityIndex, option.isLegal)}`}>
+                {getWarscrollAbilityStatusLabel(debugSnapshot, option.abilityIndex, option.isLegal)}
+              </span>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -475,6 +575,88 @@ function formatAbilityList(
   abilities: readonly WeaponAbilityDefinition[],
 ): string {
   return abilities.map((ability) => ability.displayName).join(", ");
+}
+
+function formatSelectedWarscrollDescription(debugSnapshot: CombatDebugSnapshot): string {
+  if (debugSnapshot.warscrollAbilityOptions.length === 0) {
+    return `${debugSnapshot.playerWarscrollName} defines no warscroll abilities in this debug snapshot.`;
+  }
+
+  if (debugSnapshot.selectedWarscrollAbilityIndex === null) {
+    return `${debugSnapshot.playerWarscrollName} reaches a real player-one power step before the attack. Choose a legal ability to spend tokens there.`;
+  }
+
+  const selectedOption = debugSnapshot.warscrollAbilityOptions.find(
+    (option) => option.abilityIndex === debugSnapshot.selectedWarscrollAbilityIndex,
+  );
+  if (selectedOption === undefined) {
+    return `Selected warscroll ability ${debugSnapshot.selectedWarscrollAbilityIndex + 1} is not defined on ${debugSnapshot.playerWarscrollName}.`;
+  }
+
+  if (debugSnapshot.warscrollAbilityError !== null) {
+    return `${selectedOption.definition.name} was selected but failed during the captured power step.`;
+  }
+
+  const cardsDrawn = debugSnapshot.powerHandAfterWarscroll - debugSnapshot.powerHandBeforeWarscroll;
+  return `${selectedOption.definition.name} resolved in player one's power step and changed the power hand by ${cardsDrawn}.`;
+}
+
+function formatWarscrollTokens(tokens: Readonly<Record<string, number>>): string {
+  const entries = Object.entries(tokens);
+  if (entries.length === 0) {
+    return "none";
+  }
+
+  return entries.map(([tokenName, tokenCount]) => `${tokenName} ${tokenCount}`).join(", ");
+}
+
+function formatWarscrollTokenCosts(tokenCosts: Readonly<Record<string, number>>): string {
+  const entries = Object.entries(tokenCosts);
+  if (entries.length === 0) {
+    return "none";
+  }
+
+  return entries.map(([tokenName, tokenCount]) => `${tokenCount} ${tokenName}`).join(", ");
+}
+
+function getWarscrollUsageLabel(debugSnapshot: CombatDebugSnapshot): string {
+  if (debugSnapshot.selectedWarscrollAbilityIndex === null) {
+    return "unused";
+  }
+
+  return debugSnapshot.warscrollAbilityError === null ? "used" : "failed";
+}
+
+function getWarscrollUsageStatusClass(debugSnapshot: CombatDebugSnapshot): string {
+  if (debugSnapshot.selectedWarscrollAbilityIndex === null) {
+    return "status-idle";
+  }
+
+  return debugSnapshot.warscrollAbilityError === null ? "status-supported" : "status-unsupported";
+}
+
+function getWarscrollAbilityStatusLabel(
+  debugSnapshot: CombatDebugSnapshot,
+  abilityIndex: number,
+  isLegal: boolean,
+): string {
+  if (debugSnapshot.selectedWarscrollAbilityIndex === abilityIndex) {
+    return debugSnapshot.warscrollAbilityError === null ? "used" : "failed";
+  }
+
+  return isLegal ? "legal" : "not legal";
+}
+
+function getWarscrollAbilityStatusClass(
+  debugSnapshot: CombatDebugSnapshot,
+  abilityIndex: number,
+  isLegal: boolean,
+): string {
+  if (debugSnapshot.selectedWarscrollAbilityIndex === abilityIndex) {
+    return debugSnapshot.warscrollAbilityError === null ? "status-supported" : "status-unsupported";
+  }
+
+  return isLegal ? "status-supported" : "status-unsupported";
 }
 
 export default App;

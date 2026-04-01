@@ -1,13 +1,16 @@
 import {
   AttackAction,
   AttackDieFace,
+  CombatActionService,
   GameEngine,
   MoveAction,
   PassAction,
   SaveDieFace,
+  UseWarscrollAbilityAction,
   WeaponAbilityKind,
   createCombatReadySetupPracticeGame,
   type Game,
+  type WarscrollAbilityDefinition,
   type WeaponDefinition,
 } from "../domain";
 
@@ -35,7 +38,21 @@ export type CombatDebugSnapshot = {
   game: Game;
   attackError: string | null;
   attackerWeapon: WeaponDefinition;
+  playerWarscrollName: string;
+  warscrollAbilityOptions: readonly CombatDebugWarscrollAbilityOption[];
+  warscrollTokensBefore: Readonly<Record<string, number>>;
+  warscrollTokensAfter: Readonly<Record<string, number>>;
+  powerHandBeforeWarscroll: number;
+  powerHandAfterWarscroll: number;
+  warscrollAbilityError: string | null;
   selectedAbility: WeaponAbilityKind | null;
+  selectedWarscrollAbilityIndex: number | null;
+};
+
+export type CombatDebugWarscrollAbilityOption = {
+  abilityIndex: number;
+  definition: WarscrollAbilityDefinition;
+  isLegal: boolean;
 };
 
 export const combatDebugScenarios: readonly CombatDebugScenario[] = [
@@ -89,18 +106,26 @@ export function createCombatDebugGame(
   scenarioId: CombatDebugScenarioId = "success",
   defenderState: CombatDebugDefenderState = {},
   selectedAbility: WeaponAbilityKind | null = null,
+  selectedWarscrollAbilityIndex: number | null = null,
 ): Game {
-  return createCombatDebugSnapshot(scenarioId, defenderState, selectedAbility).game;
+  return createCombatDebugSnapshot(
+    scenarioId,
+    defenderState,
+    selectedAbility,
+    selectedWarscrollAbilityIndex,
+  ).game;
 }
 
 export function createCombatDebugSnapshot(
   scenarioId: CombatDebugScenarioId = "success",
   defenderState: CombatDebugDefenderState = {},
   selectedAbility: WeaponAbilityKind | null = null,
+  selectedWarscrollAbilityIndex: number | null = null,
 ): CombatDebugSnapshot {
   const scenario = getCombatDebugScenario(scenarioId);
   const game = createCombatReadySetupPracticeGame("game:setup-practice:combat-debug");
   const engine = new GameEngine();
+  const actionService = new CombatActionService();
   const debugDefenderId = scenarioId === "dodge" ? playerOneFighterThreeId : playerOneFighterFourId;
   const defenderMovePath =
     scenarioId === "dodge"
@@ -130,6 +155,41 @@ export function createCombatDebugSnapshot(
   engine.applyGameAction(game, new PassAction("player:two"));
 
   engine.applyGameAction(game, new PassAction("player:one"));
+  const warscrollPlayer = game.getPlayer("player:one");
+  const playerWarscroll = warscrollPlayer?.getWarscrollWithDefinition();
+  if (warscrollPlayer === undefined || playerWarscroll === undefined) {
+    throw new Error("Could not find player one's warscroll state for debug setup.");
+  }
+
+  const powerHandBeforeWarscroll = warscrollPlayer.powerHand.length;
+  const warscrollTokensBefore = { ...warscrollPlayer.warscrollState.tokens };
+  const legalWarscrollAbilityIndices = new Set(
+    actionService.getLegalActions(game, warscrollPlayer.id).flatMap((action) =>
+      action instanceof UseWarscrollAbilityAction ? [action.abilityIndex] : []
+    ),
+  );
+  const warscrollAbilityOptions = playerWarscroll.definition.abilities.map((definition, abilityIndex) => ({
+    abilityIndex,
+    definition,
+    isLegal: legalWarscrollAbilityIndices.has(abilityIndex),
+  }));
+
+  let warscrollAbilityError: string | null = null;
+  if (selectedWarscrollAbilityIndex !== null) {
+    try {
+      engine.applyGameAction(
+        game,
+        new UseWarscrollAbilityAction(warscrollPlayer.id, selectedWarscrollAbilityIndex),
+      );
+    } catch (error) {
+      warscrollAbilityError = error instanceof Error ? error.message : String(error);
+      game.eventLog.push(`Debug warscroll ability failed: ${warscrollAbilityError}`);
+    }
+  }
+
+  const powerHandAfterWarscroll = warscrollPlayer.powerHand.length;
+  const warscrollTokensAfter = { ...warscrollPlayer.warscrollState.tokens };
+
   engine.applyGameAction(game, new PassAction("player:one"));
 
   const defender = game.getFighter(debugDefenderId);
@@ -182,6 +242,14 @@ export function createCombatDebugSnapshot(
     game,
     attackError,
     attackerWeapon,
+    playerWarscrollName: playerWarscroll.definition.name,
+    warscrollAbilityOptions,
+    warscrollTokensBefore,
+    warscrollTokensAfter,
+    powerHandBeforeWarscroll,
+    powerHandAfterWarscroll,
+    warscrollAbilityError,
     selectedAbility,
+    selectedWarscrollAbilityIndex,
   };
 }

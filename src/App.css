@@ -94,6 +94,12 @@ body {
   transform: translateY(-1px);
 }
 
+.roll-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .roll-button-active {
   background: #8a442a;
   color: #fff6ed;
@@ -145,12 +151,21 @@ body {
   border-radius: 18px;
 }
 
+.warscroll-controls {
+  margin-top: 14px;
+  padding: 16px 18px;
+  background: rgba(243, 233, 212, 0.72);
+  border: 1px solid rgba(149, 112, 71, 0.2);
+  border-radius: 18px;
+}
+
 .ability-controls code {
   font-family: "Consolas", "Courier New", monospace;
   color: #442b19;
 }
 
 .blocked-card,
+.warscroll-card,
 .ability-status-card {
   background: rgba(243, 233, 212, 0.72);
   border: 1px solid rgba(149, 112, 71, 0.2);
@@ -158,6 +173,10 @@ body {
 }
 
 .blocked-card {
+  padding: 18px;
+}
+
+.warscroll-card {
   padding: 18px;
 }
 
@@ -190,6 +209,11 @@ body {
 .status-supported {
   background: rgba(69, 127, 77, 0.14);
   color: #2d6a39;
+}
+
+.status-idle {
+  background: rgba(138, 102, 55, 0.14);
+  color: #7a5b29;
 }
 
 .eyebrow,
