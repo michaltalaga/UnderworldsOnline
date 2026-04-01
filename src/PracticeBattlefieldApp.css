@@ -309,6 +309,15 @@ body {
     0 10px 20px rgba(48, 37, 28, 0.18);
 }
 
+.battlefield-map-hex-charge-armed {
+  border-color: rgba(120, 71, 8, 0.95);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 251, 231, 0.84),
+    0 0 0 4px rgba(222, 170, 46, 0.42),
+    0 0 18px rgba(214, 157, 41, 0.48),
+    0 10px 20px rgba(48, 37, 28, 0.2);
+}
+
 .battlefield-map-hex-charge-target {
   border-color: rgba(152, 61, 40, 0.82);
   background: linear-gradient(180deg, rgba(247, 197, 184, 0.98), rgba(217, 117, 91, 0.98));
@@ -376,6 +385,11 @@ body {
 .battlefield-hex-action-charge {
   background: rgba(134, 93, 15, 0.92);
   color: #fff8e7;
+}
+
+.battlefield-hex-action-armed {
+  background: rgba(111, 66, 8, 0.96);
+  color: #fff6db;
 }
 
 .battlefield-hex-action-target {

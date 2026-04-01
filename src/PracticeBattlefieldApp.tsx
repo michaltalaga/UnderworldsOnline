@@ -453,6 +453,7 @@ function BoardMap({
           const isSelectedHex = fighter?.id === selectedFighterId;
           const isMoveDestination = actionLens.moveHexIds.has(hex.id);
           const isChargeDestination = actionLens.chargeHexIds.has(hex.id);
+          const isPendingChargeHex = pendingChargeHexId === hex.id;
           const isChargeTarget = visibleChargeTargetHexIds.has(hex.id);
           const isClickableMoveDestination = isMoveDestination && game.turnStep === TurnStep.Action;
           const isClickableChargeDestination = isChargeDestination && game.turnStep === TurnStep.Action;
@@ -468,6 +469,7 @@ function BoardMap({
             isClickableMoveDestination;
           const actionBadge = getHexActionBadge({
             isChargeDestination,
+            isPendingChargeHex,
             isChargeTarget,
             isMoveDestination,
           });
@@ -481,6 +483,7 @@ function BoardMap({
               key={hex.id}
               className={getHexClassName(game, hex, {
                 isChargeDestination,
+                isPendingChargeHex,
                 isChargeTarget,
                 isClickableHex: isInteractiveHex,
                 isMoveDestination,
@@ -752,6 +755,7 @@ function getHexClassName(
   hex: HexCell,
   state: {
     isChargeDestination: boolean;
+    isPendingChargeHex: boolean;
     isChargeTarget: boolean;
     isClickableHex: boolean;
     isMoveDestination: boolean;
@@ -798,6 +802,10 @@ function getHexClassName(
     classes.push("battlefield-map-hex-charge");
   }
 
+  if (state.isPendingChargeHex) {
+    classes.push("battlefield-map-hex-charge-armed");
+  }
+
   if (state.isChargeTarget) {
     classes.push("battlefield-map-hex-charge-target");
   }
@@ -827,11 +835,16 @@ function formatWeaponAccuracy(accuracy: string): string {
 
 function getHexActionBadge(state: {
   isChargeDestination: boolean;
+  isPendingChargeHex: boolean;
   isChargeTarget: boolean;
   isMoveDestination: boolean;
-}): "move" | "charge" | "target" | null {
+}): "move" | "charge" | "armed" | "target" | null {
   if (state.isChargeTarget) {
     return "target";
+  }
+
+  if (state.isPendingChargeHex) {
+    return "armed";
   }
 
   if (state.isChargeDestination) {
