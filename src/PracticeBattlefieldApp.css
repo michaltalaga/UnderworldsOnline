@@ -300,6 +300,7 @@ body {
 }
 
 .battlefield-board-frame {
+  position: relative;
   overflow: auto;
   padding: 14px;
   border-radius: 22px;
@@ -309,8 +310,77 @@ body {
   border: 1px solid rgba(99, 75, 49, 0.18);
 }
 
+.battlefield-board-flash {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 12;
+  width: min(280px, calc(100% - 32px));
+  padding: 12px 14px;
+  border-radius: 18px;
+  box-shadow: 0 18px 34px rgba(35, 24, 18, 0.18);
+  pointer-events: none;
+  animation: battlefield-board-flash-enter 2200ms ease forwards;
+}
+
+.battlefield-board-flash-move {
+  background: linear-gradient(180deg, rgba(214, 251, 247, 0.98), rgba(126, 223, 216, 0.98));
+  border: 1px solid rgba(22, 118, 123, 0.2);
+  color: #143f42;
+}
+
+.battlefield-board-flash-attack {
+  background: linear-gradient(180deg, rgba(253, 227, 236, 0.98), rgba(232, 141, 173, 0.98));
+  border: 1px solid rgba(140, 34, 61, 0.18);
+  color: #551b31;
+}
+
+.battlefield-board-flash-charge {
+  background: linear-gradient(180deg, rgba(255, 242, 201, 0.98), rgba(240, 199, 108, 0.98));
+  border: 1px solid rgba(156, 111, 22, 0.18);
+  color: #5d4311;
+}
+
+.battlefield-board-flash-title,
+.battlefield-board-flash-detail {
+  margin: 0;
+}
+
+.battlefield-board-flash-title {
+  font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.battlefield-board-flash-detail {
+  margin-top: 4px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 .battlefield-board-map {
   position: relative;
+}
+
+@keyframes battlefield-board-flash-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+
+  12% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  82% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.99);
+  }
 }
 
 .battlefield-map-hex {

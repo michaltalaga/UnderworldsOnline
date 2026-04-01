@@ -15,6 +15,7 @@ import {
   PassAction,
   TurnStep,
   type BoardState,
+  type CombatResult,
   type FeatureTokenState,
   type FighterState,
   type FighterId,
@@ -79,9 +80,17 @@ type ChargeProfileSummary = {
   options: AttackProfileOptionSummary[];
 };
 
+type BattlefieldResultFlash = {
+  id: number;
+  tone: "move" | "attack" | "charge";
+  title: string;
+  detail: string;
+};
+
 export default function PracticeBattlefieldApp() {
   const [game, setGame] = useState<Game>(() => createActionStepPracticeGame());
   const [, setRefreshTick] = useState(0);
+  const [resultFlash, setResultFlash] = useState<BattlefieldResultFlash | null>(null);
   const boardProjection = projectBoard(game.board);
   const recentEvents = [...game.eventLog].slice(-10).reverse();
   const activePlayer = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
@@ -181,6 +190,7 @@ export default function PracticeBattlefieldApp() {
     const previousActivePlayerId = game.activePlayerId;
     const previousSelectedFighterId = selectedFighterId;
     demoEngine.applyGameAction(game, action);
+    setResultFlash(buildBattlefieldResultFlash(game, action));
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
     setPendingMoveHexId(null);
@@ -304,9 +314,22 @@ export default function PracticeBattlefieldApp() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [pendingMoveHexId, pendingChargeHexId, pendingChargeTargetId, pendingAttackTargetId]);
 
+  useEffect(() => {
+    if (resultFlash === null) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setResultFlash((current) => (current?.id === resultFlash.id ? null : current));
+    }, 2200);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [resultFlash]);
+
   function resetBattlefield(): void {
     const nextGame = createActionStepPracticeGame();
     setGame(nextGame);
+    setResultFlash(null);
     setSelectedFighterId(getDefaultSelectableFighterId(nextGame));
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
@@ -388,6 +411,7 @@ export default function PracticeBattlefieldApp() {
             pendingChargeBadgeLabel={pendingChargeBadgeLabel}
             pendingAttackBadgeLabel={pendingAttackBadgeLabel}
             recentCombatTargetId={recentCombatTargetId}
+            resultFlash={resultFlash}
             onAttackTarget={attackTarget}
             onCancelPendingCharge={cancelPendingCharge}
             onCompleteChargeAgainstTarget={completeChargeAgainstTarget}
@@ -715,6 +739,7 @@ function BoardMap({
   pendingChargeBadgeLabel,
   pendingAttackBadgeLabel,
   recentCombatTargetId,
+  resultFlash,
   onAttackTarget,
   onCancelPendingCharge,
   onCompleteChargeAgainstTarget,
@@ -734,6 +759,7 @@ function BoardMap({
   pendingChargeBadgeLabel: string | null;
   pendingAttackBadgeLabel: string | null;
   recentCombatTargetId: FighterId | null;
+  resultFlash: BattlefieldResultFlash | null;
   onAttackTarget: (targetId: FighterId) => void;
   onCancelPendingCharge: () => void;
   onCompleteChargeAgainstTarget: (targetId: FighterId) => void;
@@ -770,6 +796,16 @@ function BoardMap({
 
   return (
     <div className="battlefield-board-frame">
+      {resultFlash === null ? null : (
+        <div
+          key={resultFlash.id}
+          className={`battlefield-board-flash battlefield-board-flash-${resultFlash.tone}`}
+          aria-live="polite"
+        >
+          <p className="battlefield-board-flash-title">{resultFlash.title}</p>
+          <p className="battlefield-board-flash-detail">{resultFlash.detail}</p>
+        </div>
+      )}
       <div
         className="battlefield-board-map"
         style={{
@@ -1425,6 +1461,81 @@ function getFighterActionLens(
     chargeCount: uniqueChargeOptions.size,
     guardAvailable: guardAction !== null,
   };
+}
+
+function buildBattlefieldResultFlash(
+  game: Game,
+  action: MoveAction | ChargeAction | AttackAction | GuardAction | PassAction,
+): BattlefieldResultFlash | null {
+  const detail = game.eventLog[game.eventLog.length - 1];
+  if (detail === undefined) {
+    return null;
+  }
+
+  if (action instanceof MoveAction) {
+    const destinationHexId = action.path[action.path.length - 1];
+    return {
+      id: Date.now(),
+      tone: "move",
+      title: `Moved to ${destinationHexId === undefined ? "destination" : compactHexId(destinationHexId)}`,
+      detail,
+    };
+  }
+
+  if (action instanceof AttackAction) {
+    const combatResult = game.getLatestRecord(GameRecordKind.Combat);
+    if (combatResult === null) {
+      return null;
+    }
+
+    return {
+      id: Date.now(),
+      tone: "attack",
+      title: buildCombatFlashTitle("attack", combatResult.damageInflicted, combatResult.outcome, combatResult.targetSlain),
+      detail,
+    };
+  }
+
+  if (action instanceof ChargeAction) {
+    const combatResult = game.getLatestRecord(GameRecordKind.Combat);
+    if (combatResult === null) {
+      return null;
+    }
+
+    return {
+      id: Date.now(),
+      tone: "charge",
+      title: buildCombatFlashTitle("charge", combatResult.damageInflicted, combatResult.outcome, combatResult.targetSlain),
+      detail,
+    };
+  }
+
+  return null;
+}
+
+function buildCombatFlashTitle(
+  actionLabel: "attack" | "charge",
+  damageInflicted: number,
+  outcome: CombatResult["outcome"],
+  targetSlain: boolean,
+): string {
+  const capitalizedAction = actionLabel[0].toUpperCase() + actionLabel.slice(1);
+
+  if (targetSlain) {
+    return `${capitalizedAction} slew target`;
+  }
+
+  if (outcome === "success") {
+    return damageInflicted === 0
+      ? `${capitalizedAction} landed`
+      : `${capitalizedAction} hit for ${damageInflicted}`;
+  }
+
+  if (outcome === "draw") {
+    return `${capitalizedAction} drawn`;
+  }
+
+  return `${capitalizedAction} missed`;
 }
 
 function createEmptyActionLens(passAction: PassAction | null): FighterActionLens {
