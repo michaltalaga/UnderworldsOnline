@@ -425,7 +425,7 @@ function App() {
           <div className="combat-card-header">
             <div>
               <p className="combat-label">Power Step Snapshot</p>
-              <h3>{formatUpgradeHeadline(upgradeDebugSnapshot)}</h3>
+              <h3>{formatUpgradeHeadline(upgradeDebugGame)}</h3>
             </div>
             <span className={`status-badge ${getUpgradeUsageStatusClass(upgradeDebugSnapshot)}`}>
               {getUpgradeUsageLabel(upgradeDebugSnapshot)}
@@ -452,15 +452,15 @@ function App() {
             </div>
             <div>
               <dt>Attached To</dt>
-              <dd>{formatLatestUpgradeTarget(upgradeDebugSnapshot)}</dd>
+              <dd>{formatLatestUpgradeTarget(upgradeDebugGame)}</dd>
             </div>
             <div>
               <dt>Turn Step</dt>
               <dd>{upgradeDebugGame.turnStep ?? "n/a"}</dd>
             </div>
             <div>
-              <dt>Active Player</dt>
-              <dd>{getPlayerName(upgradeDebugGame, upgradeDebugGame.activePlayerId)}</dd>
+              <dt>History</dt>
+              <dd>{upgradeDebugGame.upgradeHistory.length}</dd>
             </div>
           </dl>
         </article>
@@ -481,9 +481,9 @@ function App() {
             <article className="ability-status-card">
               <div>
                 <p className="combat-label">Latest Upgrade</p>
-                <h3>{formatUpgradeHeadline(upgradeDebugSnapshot)}</h3>
+                <h3>{formatUpgradeHeadline(upgradeDebugGame)}</h3>
               </div>
-              <p className="fighter-meta">{formatLatestUpgradeTarget(upgradeDebugSnapshot)}</p>
+              <p className="fighter-meta">{formatLatestUpgradeTarget(upgradeDebugGame)}</p>
               <p className="fighter-meta">
                 {formatLatestUpgradeResult(upgradeDebugSnapshot)}
               </p>
@@ -1132,7 +1132,12 @@ function formatSelectedUpgradeDescription(
     return `${formatUpgradeOptionTitle(selectedOption)} failed during replay.`;
   }
 
-  return `${formatUpgradeOptionTitle(selectedOption)} resolved through the captured power step.`;
+  const resolution = upgradeDebugSnapshot.game.lastUpgradeResolution;
+  if (resolution === null) {
+    return `${formatUpgradeOptionTitle(selectedOption)} resolved, but no upgrade resolution was recorded.`;
+  }
+
+  return `${resolution.cardName} on ${resolution.fighterName} resolved and spent ${resolution.gloryPaid} glory.`;
 }
 
 function formatUpgradeOptionButton(option: UpgradeDebugOption): string {
@@ -1143,39 +1148,29 @@ function formatUpgradeOptionTitle(option: UpgradeDebugOption): string {
   return `${option.cardName} on ${option.fighterName} (${option.gloryCost} glory)`;
 }
 
-function formatUpgradeHeadline(
-  upgradeDebugSnapshot: ReturnType<typeof createUpgradeDebugSnapshot>,
-): string {
-  const selectedOption = upgradeDebugSnapshot.upgradeOptions.find(
-    (option) => option.actionKey === upgradeDebugSnapshot.selectedUpgradeActionKey,
-  );
-  if (selectedOption === undefined) {
+function formatUpgradeHeadline(game: Game): string {
+  const resolution = game.lastUpgradeResolution;
+  if (resolution === null) {
     return "No upgrade recorded";
   }
 
-  return `${selectedOption.cardName} on ${selectedOption.fighterName}`;
+  return `${resolution.cardName} on ${resolution.fighterName}`;
 }
 
-function formatLatestUpgradeTarget(
-  upgradeDebugSnapshot: ReturnType<typeof createUpgradeDebugSnapshot>,
-): string {
-  const selectedOption = upgradeDebugSnapshot.upgradeOptions.find(
-    (option) => option.actionKey === upgradeDebugSnapshot.selectedUpgradeActionKey,
-  );
-  if (selectedOption === undefined) {
+function formatLatestUpgradeTarget(game: Game): string {
+  const resolution = game.lastUpgradeResolution;
+  if (resolution === null) {
     return "none";
   }
 
-  return selectedOption.fighterName;
+  return resolution.fighterName;
 }
 
 function formatLatestUpgradeResult(
   upgradeDebugSnapshot: ReturnType<typeof createUpgradeDebugSnapshot>,
 ): string {
-  const selectedOption = upgradeDebugSnapshot.upgradeOptions.find(
-    (option) => option.actionKey === upgradeDebugSnapshot.selectedUpgradeActionKey,
-  );
-  if (selectedOption === undefined) {
+  const resolution = upgradeDebugSnapshot.game.lastUpgradeResolution;
+  if (resolution === null) {
     return "No upgrade has been replayed yet.";
   }
 
@@ -1183,10 +1178,10 @@ function formatLatestUpgradeResult(
     return upgradeDebugSnapshot.upgradeActionError;
   }
 
-  const playerOne = upgradeDebugSnapshot.game.getPlayer("player:one");
-  const fighter = playerOne?.getFighter(selectedOption.action.fighterId);
+  const playerOne = upgradeDebugSnapshot.game.getPlayer(resolution.playerId);
+  const fighter = playerOne?.getFighter(resolution.fighterId);
   const attachedCount = fighter?.upgradeCardIds.length ?? 0;
-  return `Glory ${upgradeDebugSnapshot.gloryBeforeUpgrades} to ${upgradeDebugSnapshot.gloryAfterUpgrades}. ${selectedOption.fighterName} now has ${attachedCount} attached upgrade${attachedCount === 1 ? "" : "s"}.`;
+  return `Glory ${upgradeDebugSnapshot.gloryBeforeUpgrades} to ${upgradeDebugSnapshot.gloryAfterUpgrades}. ${resolution.fighterName} now has ${attachedCount} attached upgrade${attachedCount === 1 ? "" : "s"}.`;
 }
 
 function getUpgradeUsageLabel(
@@ -1196,7 +1191,11 @@ function getUpgradeUsageLabel(
     return "unused";
   }
 
-  return upgradeDebugSnapshot.upgradeActionError === null ? "used" : "failed";
+  if (upgradeDebugSnapshot.upgradeActionError !== null) {
+    return "failed";
+  }
+
+  return getResolutionStatusLabel(upgradeDebugSnapshot.game.lastUpgradeResolution);
 }
 
 function getUpgradeUsageStatusClass(
@@ -1206,7 +1205,11 @@ function getUpgradeUsageStatusClass(
     return "status-idle";
   }
 
-  return upgradeDebugSnapshot.upgradeActionError === null ? "status-supported" : "status-unsupported";
+  if (upgradeDebugSnapshot.upgradeActionError !== null) {
+    return "status-unsupported";
+  }
+
+  return getResolutionStatusClass(upgradeDebugSnapshot.game.lastUpgradeResolution);
 }
 
 function getWarscrollUsageLabel(debugSnapshot: CombatDebugSnapshot): string {

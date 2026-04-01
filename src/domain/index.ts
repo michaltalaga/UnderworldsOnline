@@ -53,6 +53,7 @@ export * from "./rules/RollOffResolver";
 export * from "./rules/RollOffResult";
 export * from "./rules/RollOffRound";
 export * from "./rules/ScoringResolver";
+export * from "./rules/UpgradeResolution";
 export * from "./rules/VictoryResolver";
 export * from "./rules/WarscrollAbilityResolution";
 export * from "./rules/WarscrollEffectResolver";

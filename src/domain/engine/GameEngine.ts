@@ -91,6 +91,7 @@ import { RollOffResolver } from "../rules/RollOffResolver";
 import { type RollOffRoundInput } from "../rules/RollOffRound";
 import { RollOffResult } from "../rules/RollOffResult";
 import { ScoringResolver } from "../rules/ScoringResolver";
+import { UpgradeResolution } from "../rules/UpgradeResolution";
 import { WarscrollAbilityResolution } from "../rules/WarscrollAbilityResolution";
 import { VictoryResolver } from "../rules/VictoryResolver";
 import { WarscrollEffectResolver } from "../rules/WarscrollEffectResolver";
@@ -874,6 +875,11 @@ export class GameEngine {
       throw new Error(`Card ${cardWithDefinition.definition.name} is not an upgrade.`);
     }
 
+    const fighterDefinition = player.getFighterDefinition(fighter.id);
+    if (fighterDefinition === undefined) {
+      throw new Error(`Could not find fighter definition for ${fighter.id}.`);
+    }
+
     const upgradeCost = cardWithDefinition.definition.gloryValue;
     if (player.glory < upgradeCost) {
       throw new Error(`${player.name} does not have enough glory to play ${cardWithDefinition.definition.name}.`);
@@ -891,6 +897,18 @@ export class GameEngine {
     player.equippedUpgrades.push(cardWithDefinition.card);
     fighter.upgradeCardIds.push(cardWithDefinition.card.id);
     player.glory -= upgradeCost;
+    const resolution = new UpgradeResolution(
+      player.id,
+      player.name,
+      cardWithDefinition.card.id,
+      cardWithDefinition.card.definitionId,
+      cardWithDefinition.definition.name,
+      fighter.id,
+      fighterDefinition.name,
+      upgradeCost,
+    );
+    game.lastUpgradeResolution = resolution;
+    game.upgradeHistory.push(resolution);
     game.consecutivePasses = 0;
     game.eventLog.push(
       `${player.name} played upgrade ${cardWithDefinition.definition.name} on fighter ${fighter.id} for ${upgradeCost} glory.`,
