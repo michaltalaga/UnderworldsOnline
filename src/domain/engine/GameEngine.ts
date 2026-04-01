@@ -35,6 +35,11 @@ import { DeployFighterAction } from "../setup/DeployFighterAction";
 import { DrawStartingHandsAction } from "../setup/DrawStartingHandsAction";
 import { EndPhaseAction } from "../endPhase/EndPhaseAction";
 import {
+  ObjectiveDrawResolution,
+  type ObjectiveDrawCardResolution,
+  type ObjectiveDrawPlayerResolution,
+} from "../endPhase/ObjectiveDrawResolution";
+import {
   ObjectiveScoringResolution,
   type ObjectiveScoringCardResolution,
   type ObjectiveScoringPlayerResolution,
@@ -799,9 +804,18 @@ export class GameEngine {
   private applyResolveDrawObjectives(game: Game): void {
     this.assertEndPhaseStep(game, EndPhaseStep.DrawObjectives);
 
+    const playerResolutions: ObjectiveDrawPlayerResolution[] = [];
     for (const player of game.players) {
+      const handSizeBefore = player.objectiveHand.length;
       const cardsToDraw = Math.max(0, GameEngine.objectiveHandSize - player.objectiveHand.length);
+      const drawnCards: ObjectiveDrawCardResolution[] = [];
+
       if (cardsToDraw === 0) {
+        playerResolutions.push({
+          playerId: player.id,
+          playerName: player.name,
+          cardsDrawn: drawnCards,
+        });
         continue;
       }
 
@@ -811,9 +825,31 @@ export class GameEngine {
         cardsToDraw,
         CardZone.ObjectiveHand,
       );
+
+      for (const card of player.objectiveHand.slice(handSizeBefore)) {
+        const cardWithDefinition = player.getCardWithDefinition(card.id);
+        if (cardWithDefinition === undefined) {
+          throw new Error(`Objective card ${card.id} is missing definition data after draw.`);
+        }
+
+        drawnCards.push({
+          cardId: cardWithDefinition.card.id,
+          cardDefinitionId: cardWithDefinition.card.definitionId,
+          cardName: cardWithDefinition.definition.name,
+        });
+      }
+
+      playerResolutions.push({
+        playerId: player.id,
+        playerName: player.name,
+        cardsDrawn: drawnCards,
+      });
       game.eventLog.push(`${player.name} drew ${cardsToDraw} objective card${cardsToDraw === 1 ? "" : "s"}.`);
     }
 
+    const resolution = new ObjectiveDrawResolution(game.roundNumber, playerResolutions);
+    game.lastObjectiveDrawResolution = resolution;
+    game.objectiveDrawHistory.push(resolution);
     game.transitionTo(
       createEndPhaseGameState(
         EndPhaseStep.DrawPowerCards,
