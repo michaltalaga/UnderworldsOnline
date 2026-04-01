@@ -10,6 +10,7 @@ import {
   MoveAction,
   PassAction,
   PlayPloyAction,
+  PlayUpgradeAction,
   ResolveCleanupAction,
   ResolveDiscardCardsAction,
   ResolveDrawObjectivesAction,
@@ -88,12 +89,29 @@ export type PloyDebugSnapshot = {
   ployActionError: string | null;
 };
 
+export type UpgradeDebugSnapshot = {
+  game: Game;
+  upgradeOptions: readonly UpgradeDebugOption[];
+  selectedUpgradeActionKey: string | null;
+  upgradeActionError: string | null;
+  gloryBeforeUpgrades: number;
+  gloryAfterUpgrades: number;
+};
+
 export type PloyDebugOption = {
   actionKey: string;
   action: PlayPloyAction;
   cardName: string;
   targetFighterName: string | null;
   targetOwnerPlayerName: string | null;
+};
+
+export type UpgradeDebugOption = {
+  actionKey: string;
+  action: PlayUpgradeAction;
+  cardName: string;
+  fighterName: string;
+  gloryCost: number;
 };
 
 export type EndPhaseDebugMode = "round" | "final";
@@ -437,6 +455,75 @@ export function createPloyDebugSnapshot(
   };
 }
 
+export function createUpgradeDebugSnapshot(
+  selectedUpgradeActionKey: string | null = null,
+): UpgradeDebugSnapshot {
+  const game = createCombatReadySetupPracticeGame("game:setup-practice:upgrade-debug");
+  const engine = new GameEngine();
+  const actionService = new CombatActionService();
+
+  engine.startCombatRound(
+    game,
+    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Blank }],
+    "player:one",
+  );
+  engine.applyGameAction(game, new PassAction("player:one"));
+
+  const playerOne = game.getPlayer("player:one");
+  if (playerOne === undefined) {
+    throw new Error("Could not find Player One for upgrade debug setup.");
+  }
+
+  playerOne.glory = 2;
+  game.eventLog.push("Debug setup granted Player One 2 glory for upgrade replay.");
+  movePowerCardFromDrawPileToHand(
+    game,
+    playerOne.id,
+    "card-def:setup-practice:upgrade:01",
+  );
+  movePowerCardFromDrawPileToHand(
+    game,
+    playerOne.id,
+    "card-def:setup-practice:upgrade:02",
+  );
+
+  const gloryBeforeUpgrades = playerOne.glory;
+  const upgradeOptions = actionService
+    .getLegalActions(game, playerOne.id)
+    .flatMap((action) =>
+      action instanceof PlayUpgradeAction
+        ? [createUpgradeDebugOption(game, playerOne.id, action)]
+        : [],
+    );
+
+  let upgradeActionError: string | null = null;
+  if (selectedUpgradeActionKey !== null) {
+    const selectedOption = upgradeOptions.find(
+      (option) => option.actionKey === selectedUpgradeActionKey,
+    );
+    if (selectedOption === undefined) {
+      upgradeActionError = `Selected upgrade action ${selectedUpgradeActionKey} is not legal in the captured power step.`;
+      game.eventLog.push(`Debug upgrade failed: ${upgradeActionError}`);
+    } else {
+      try {
+        engine.applyGameAction(game, selectedOption.action);
+      } catch (error) {
+        upgradeActionError = error instanceof Error ? error.message : String(error);
+        game.eventLog.push(`Debug upgrade failed: ${upgradeActionError}`);
+      }
+    }
+  }
+
+  return {
+    game,
+    upgradeOptions,
+    selectedUpgradeActionKey,
+    upgradeActionError,
+    gloryBeforeUpgrades,
+    gloryAfterUpgrades: playerOne.glory,
+  };
+}
+
 class DebugEndPhaseScoringResolver extends ScoringResolver {
   public override getScorableObjectives(game: Game, playerId: string): CardInstance[] {
     const player = game.getPlayer(playerId);
@@ -600,4 +687,55 @@ function getPloyDebugTargetDetails(
     targetFighterName: targetFighterId,
     targetOwnerPlayerName: null,
   };
+}
+
+function createUpgradeDebugOption(
+  game: Game,
+  playerId: string,
+  action: PlayUpgradeAction,
+): UpgradeDebugOption {
+  const player = game.getPlayer(playerId);
+  const cardWithDefinition = player?.getCardWithDefinition(action.cardId);
+  const fighterDefinition = player?.getFighterDefinition(action.fighterId);
+  if (
+    player === undefined ||
+    cardWithDefinition === undefined ||
+    fighterDefinition === undefined
+  ) {
+    throw new Error(`Could not build upgrade debug option for card ${action.cardId}.`);
+  }
+
+  return {
+    actionKey: getUpgradeDebugActionKey(action),
+    action,
+    cardName: cardWithDefinition.definition.name,
+    fighterName: fighterDefinition.name,
+    gloryCost: cardWithDefinition.definition.gloryValue,
+  };
+}
+
+function getUpgradeDebugActionKey(action: PlayUpgradeAction): string {
+  return `${action.cardId}:${action.fighterId}`;
+}
+
+function movePowerCardFromDrawPileToHand(
+  game: Game,
+  playerId: string,
+  definitionId: string,
+): void {
+  const player = game.getPlayer(playerId);
+  if (player === undefined) {
+    throw new Error(`Could not find player ${playerId} for debug power card setup.`);
+  }
+
+  const card = player.powerDeck.drawPile.find((candidate) => candidate.definitionId === definitionId);
+  if (card === undefined) {
+    throw new Error(`Could not find power card ${definitionId} in ${player.name}'s draw pile.`);
+  }
+
+  player.powerDeck.drawPile = player.powerDeck.drawPile.filter((candidate) => candidate.id !== card.id);
+  card.zone = CardZone.PowerHand;
+  player.powerHand.push(card);
+  const cardName = player.getCardDefinition(card.id)?.name ?? definitionId;
+  game.eventLog.push(`Debug setup moved ${cardName} into ${player.name}'s hand.`);
 }

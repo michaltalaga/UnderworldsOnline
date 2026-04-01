@@ -14,11 +14,13 @@ import {
   createCombatDebugSnapshot,
   createEndPhaseDebugSnapshot,
   createPloyDebugSnapshot,
+  createUpgradeDebugSnapshot,
   getCombatDebugScenario,
   type CombatDebugSnapshot,
   type CombatDebugDefenderState,
   type PloyDebugOption,
   type CombatDebugScenarioId,
+  type UpgradeDebugOption,
 } from "./debug/createCombatDebugGame";
 
 const debugAbilityKinds = Object.values(WeaponAbilityKind);
@@ -38,6 +40,7 @@ function App() {
   const [selectedAbility, setSelectedAbility] = useState<WeaponAbilityKind | null>(null);
   const [selectedWarscrollAbilityIndex, setSelectedWarscrollAbilityIndex] = useState<number | null>(null);
   const [selectedPloyActionKey, setSelectedPloyActionKey] = useState<string | null>(null);
+  const [selectedUpgradeActionKey, setSelectedUpgradeActionKey] = useState<string | null>(null);
   const selectedScenario = getCombatDebugScenario(scenarioId);
   const defenderState: CombatDebugDefenderState = {
     hasGuardToken: defenderHasGuardToken,
@@ -52,7 +55,9 @@ function App() {
   );
   const endPhaseDebugGame = createEndPhaseDebugSnapshot().game;
   const ployDebugSnapshot = createPloyDebugSnapshot(selectedPloyActionKey);
+  const upgradeDebugSnapshot = createUpgradeDebugSnapshot(selectedUpgradeActionKey);
   const ployDebugGame = ployDebugSnapshot.game;
+  const upgradeDebugGame = upgradeDebugSnapshot.game;
   const debugGame = debugSnapshot.game;
   const latestCombat = debugGame.lastCombatResult;
   const recentEvents = debugGame.eventLog.slice(-8).reverse();
@@ -379,6 +384,114 @@ function App() {
               <span className="status-badge status-supported">recorded</span>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <p className="eyebrow">Upgrades</p>
+          <h2>Power-step upgrade replay</h2>
+        </div>
+        <div className="warscroll-controls">
+          <p className="token-heading">Player One power-step upgrades</p>
+          <div className="roll-switcher" role="group" aria-label="Player one upgrade selection">
+            <button
+              className={`roll-button${selectedUpgradeActionKey === null ? " roll-button-active" : ""}`}
+              type="button"
+              onClick={() => setSelectedUpgradeActionKey(null)}
+              aria-pressed={selectedUpgradeActionKey === null}
+            >
+              None
+            </button>
+            {upgradeDebugSnapshot.upgradeOptions.map((option) => (
+              <button
+                key={option.actionKey}
+                className={`roll-button${selectedUpgradeActionKey === option.actionKey ? " roll-button-active" : ""}`}
+                type="button"
+                onClick={() => setSelectedUpgradeActionKey(option.actionKey)}
+                aria-pressed={selectedUpgradeActionKey === option.actionKey}
+                title={formatUpgradeOptionTitle(option)}
+              >
+                {formatUpgradeOptionButton(option)}
+              </button>
+            ))}
+          </div>
+          <p className="token-description">{formatSelectedUpgradeDescription(upgradeDebugSnapshot)}</p>
+          {upgradeDebugSnapshot.upgradeActionError !== null ? (
+            <p className="token-note">{upgradeDebugSnapshot.upgradeActionError}</p>
+          ) : null}
+        </div>
+        <article className="warscroll-card">
+          <div className="combat-card-header">
+            <div>
+              <p className="combat-label">Power Step Snapshot</p>
+              <h3>{formatUpgradeHeadline(upgradeDebugSnapshot)}</h3>
+            </div>
+            <span className={`status-badge ${getUpgradeUsageStatusClass(upgradeDebugSnapshot)}`}>
+              {getUpgradeUsageLabel(upgradeDebugSnapshot)}
+            </span>
+          </div>
+          <p className="combat-meta">
+            This snapshot reaches the same Player One power step, grants a small debug glory pool,
+            exposes legal upgrade plays, and replays the selected one through the real engine.
+          </p>
+          <dl className="combat-grid">
+            <div>
+              <dt>Legal Actions</dt>
+              <dd>{upgradeDebugSnapshot.upgradeOptions.length}</dd>
+            </div>
+            <div>
+              <dt>Glory</dt>
+              <dd>
+                {upgradeDebugSnapshot.gloryBeforeUpgrades} to {upgradeDebugSnapshot.gloryAfterUpgrades}
+              </dd>
+            </div>
+            <div>
+              <dt>Equipped</dt>
+              <dd>{upgradeDebugGame.getPlayer("player:one")?.equippedUpgrades.length ?? 0}</dd>
+            </div>
+            <div>
+              <dt>Attached To</dt>
+              <dd>{formatLatestUpgradeTarget(upgradeDebugSnapshot)}</dd>
+            </div>
+            <div>
+              <dt>Turn Step</dt>
+              <dd>{upgradeDebugGame.turnStep ?? "n/a"}</dd>
+            </div>
+            <div>
+              <dt>Active Player</dt>
+              <dd>{getPlayerName(upgradeDebugGame, upgradeDebugGame.activePlayerId)}</dd>
+            </div>
+          </dl>
+        </article>
+        <div className="ability-status-list">
+          {upgradeDebugSnapshot.selectedUpgradeActionKey === null ? (
+            <article className="ability-status-card">
+              <div>
+                <p className="combat-label">No Upgrade Yet</p>
+                <h3>Choose a legal action above</h3>
+              </div>
+              <p className="fighter-meta">
+                The snapshot is parked on Player One&apos;s power step until you replay one of the
+                legal upgrades.
+              </p>
+              <span className="status-badge status-idle">idle</span>
+            </article>
+          ) : (
+            <article className="ability-status-card">
+              <div>
+                <p className="combat-label">Latest Upgrade</p>
+                <h3>{formatUpgradeHeadline(upgradeDebugSnapshot)}</h3>
+              </div>
+              <p className="fighter-meta">{formatLatestUpgradeTarget(upgradeDebugSnapshot)}</p>
+              <p className="fighter-meta">
+                {formatLatestUpgradeResult(upgradeDebugSnapshot)}
+              </p>
+              <span className={`status-badge ${getUpgradeUsageStatusClass(upgradeDebugSnapshot)}`}>
+                {getUpgradeUsageLabel(upgradeDebugSnapshot)}
+              </span>
+            </article>
+          )}
         </div>
       </section>
 
@@ -995,6 +1108,105 @@ function formatPloyOptionTitle(option: PloyDebugOption): string {
   }
 
   return `${option.cardName} targeting ${option.targetFighterName} (${option.targetOwnerPlayerName})`;
+}
+
+function formatSelectedUpgradeDescription(
+  upgradeDebugSnapshot: ReturnType<typeof createUpgradeDebugSnapshot>,
+): string {
+  if (upgradeDebugSnapshot.upgradeOptions.length === 0) {
+    return "No legal upgrade actions were available in the captured power step.";
+  }
+
+  if (upgradeDebugSnapshot.selectedUpgradeActionKey === null) {
+    return "Choose any legal upgrade action from Player One's captured power step to replay it through the engine.";
+  }
+
+  const selectedOption = upgradeDebugSnapshot.upgradeOptions.find(
+    (option) => option.actionKey === upgradeDebugSnapshot.selectedUpgradeActionKey,
+  );
+  if (selectedOption === undefined) {
+    return `Selected upgrade action ${upgradeDebugSnapshot.selectedUpgradeActionKey} is not available in this snapshot.`;
+  }
+
+  if (upgradeDebugSnapshot.upgradeActionError !== null) {
+    return `${formatUpgradeOptionTitle(selectedOption)} failed during replay.`;
+  }
+
+  return `${formatUpgradeOptionTitle(selectedOption)} resolved through the captured power step.`;
+}
+
+function formatUpgradeOptionButton(option: UpgradeDebugOption): string {
+  return `${option.cardName} -> ${option.fighterName}`;
+}
+
+function formatUpgradeOptionTitle(option: UpgradeDebugOption): string {
+  return `${option.cardName} on ${option.fighterName} (${option.gloryCost} glory)`;
+}
+
+function formatUpgradeHeadline(
+  upgradeDebugSnapshot: ReturnType<typeof createUpgradeDebugSnapshot>,
+): string {
+  const selectedOption = upgradeDebugSnapshot.upgradeOptions.find(
+    (option) => option.actionKey === upgradeDebugSnapshot.selectedUpgradeActionKey,
+  );
+  if (selectedOption === undefined) {
+    return "No upgrade recorded";
+  }
+
+  return `${selectedOption.cardName} on ${selectedOption.fighterName}`;
+}
+
+function formatLatestUpgradeTarget(
+  upgradeDebugSnapshot: ReturnType<typeof createUpgradeDebugSnapshot>,
+): string {
+  const selectedOption = upgradeDebugSnapshot.upgradeOptions.find(
+    (option) => option.actionKey === upgradeDebugSnapshot.selectedUpgradeActionKey,
+  );
+  if (selectedOption === undefined) {
+    return "none";
+  }
+
+  return selectedOption.fighterName;
+}
+
+function formatLatestUpgradeResult(
+  upgradeDebugSnapshot: ReturnType<typeof createUpgradeDebugSnapshot>,
+): string {
+  const selectedOption = upgradeDebugSnapshot.upgradeOptions.find(
+    (option) => option.actionKey === upgradeDebugSnapshot.selectedUpgradeActionKey,
+  );
+  if (selectedOption === undefined) {
+    return "No upgrade has been replayed yet.";
+  }
+
+  if (upgradeDebugSnapshot.upgradeActionError !== null) {
+    return upgradeDebugSnapshot.upgradeActionError;
+  }
+
+  const playerOne = upgradeDebugSnapshot.game.getPlayer("player:one");
+  const fighter = playerOne?.getFighter(selectedOption.action.fighterId);
+  const attachedCount = fighter?.upgradeCardIds.length ?? 0;
+  return `Glory ${upgradeDebugSnapshot.gloryBeforeUpgrades} to ${upgradeDebugSnapshot.gloryAfterUpgrades}. ${selectedOption.fighterName} now has ${attachedCount} attached upgrade${attachedCount === 1 ? "" : "s"}.`;
+}
+
+function getUpgradeUsageLabel(
+  upgradeDebugSnapshot: ReturnType<typeof createUpgradeDebugSnapshot>,
+): string {
+  if (upgradeDebugSnapshot.selectedUpgradeActionKey === null) {
+    return "unused";
+  }
+
+  return upgradeDebugSnapshot.upgradeActionError === null ? "used" : "failed";
+}
+
+function getUpgradeUsageStatusClass(
+  upgradeDebugSnapshot: ReturnType<typeof createUpgradeDebugSnapshot>,
+): string {
+  if (upgradeDebugSnapshot.selectedUpgradeActionKey === null) {
+    return "status-idle";
+  }
+
+  return upgradeDebugSnapshot.upgradeActionError === null ? "status-supported" : "status-unsupported";
 }
 
 function getWarscrollUsageLabel(debugSnapshot: CombatDebugSnapshot): string {
