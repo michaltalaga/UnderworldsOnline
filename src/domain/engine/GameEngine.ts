@@ -80,9 +80,11 @@ import { CombatActionService } from "../rules/CombatActionService";
 import { CombatContext } from "../rules/CombatContext";
 import { CombatResolver } from "../rules/CombatResolver";
 import { DefaultCombatResolver } from "../rules/DefaultCombatResolver";
+import { DefaultPloyEffectResolver } from "../rules/DefaultPloyEffectResolver";
 import { DefaultScoringResolver } from "../rules/DefaultScoringResolver";
 import { DefaultWarscrollEffectResolver } from "../rules/DefaultWarscrollEffectResolver";
 import { DefaultVictoryResolver } from "../rules/DefaultVictoryResolver";
+import { PloyEffectResolver } from "../rules/PloyEffectResolver";
 import { RollOffContext } from "../rules/RollOffContext";
 import { RollOffResolver } from "../rules/RollOffResolver";
 import { type RollOffRoundInput } from "../rules/RollOffRound";
@@ -105,6 +107,7 @@ export class GameEngine {
   private readonly scoringResolver: ScoringResolver;
   private readonly victoryResolver: VictoryResolver;
   private readonly warscrollEffectResolver: WarscrollEffectResolver;
+  private readonly ployEffectResolver: PloyEffectResolver;
 
   public constructor(
     shuffleCards: GameEngineShuffleCards = GameEngine.copyCards,
@@ -113,7 +116,8 @@ export class GameEngine {
     scoringResolver: ScoringResolver = new DefaultScoringResolver(),
     victoryResolver: VictoryResolver = new DefaultVictoryResolver(),
     warscrollEffectResolver: WarscrollEffectResolver = new DefaultWarscrollEffectResolver(),
-    combatActionService: CombatActionService = new CombatActionService(warscrollEffectResolver),
+    ployEffectResolver: PloyEffectResolver = new DefaultPloyEffectResolver(),
+    combatActionService: CombatActionService = new CombatActionService(warscrollEffectResolver, ployEffectResolver),
   ) {
     this.shuffleCards = shuffleCards;
     this.rollOffResolver = rollOffResolver;
@@ -122,6 +126,7 @@ export class GameEngine {
     this.scoringResolver = scoringResolver;
     this.victoryResolver = victoryResolver;
     this.warscrollEffectResolver = warscrollEffectResolver;
+    this.ployEffectResolver = ployEffectResolver;
   }
 
   public applySetupAction(game: Game, action: SetupAction): Game {
@@ -812,6 +817,7 @@ export class GameEngine {
       throw new Error(`Card ${cardWithDefinition.definition.name} is not a ploy.`);
     }
 
+    const effectDescriptions = this.ployEffectResolver.resolve(game, player, cardWithDefinition.definition);
     const handIndex = player.powerHand.findIndex((card) => card.id === cardWithDefinition.card.id);
     if (handIndex === -1) {
       throw new Error(`Could not find ploy ${cardWithDefinition.card.id} in ${player.name}'s power hand.`);
@@ -823,7 +829,8 @@ export class GameEngine {
     cardWithDefinition.card.revealed = true;
     player.powerDeck.discardPile.push(cardWithDefinition.card);
     game.consecutivePasses = 0;
-    game.eventLog.push(`${player.name} played ploy ${cardWithDefinition.definition.name}.`);
+    const effectSuffix = effectDescriptions.length > 0 ? ` and ${effectDescriptions.join(", ")}` : "";
+    game.eventLog.push(`${player.name} played ploy ${cardWithDefinition.definition.name}${effectSuffix}.`);
   }
 
   private applyPlayUpgradeAction(game: Game, action: PlayUpgradeAction): void {

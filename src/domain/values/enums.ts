@@ -45,6 +45,14 @@ export const WarscrollAbilityEffectKind = {
 export type WarscrollAbilityEffectKind =
   (typeof WarscrollAbilityEffectKind)[keyof typeof WarscrollAbilityEffectKind];
 
+export const PloyEffectKind = {
+  DrawPowerCards: "drawPowerCards",
+  GainWarscrollTokens: "gainWarscrollTokens",
+} as const;
+
+export type PloyEffectKind =
+  (typeof PloyEffectKind)[keyof typeof PloyEffectKind];
+
 export const DeckKind = {
   Objective: "objective",
   Power: "power",

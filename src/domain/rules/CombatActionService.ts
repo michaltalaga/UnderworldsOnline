@@ -15,7 +15,9 @@ import { PlayerState } from "../state/PlayerState";
 import { CardKind, CardZone, FeatureTokenSide, HexKind, TurnStep } from "../values/enums";
 import type { FighterId, HexId, PlayerId } from "../values/ids";
 import { DefaultWarscrollEffectResolver } from "./DefaultWarscrollEffectResolver";
+import { DefaultPloyEffectResolver } from "./DefaultPloyEffectResolver";
 import { LegalActionService } from "./LegalActionService";
+import { PloyEffectResolver } from "./PloyEffectResolver";
 import { WarscrollEffectResolver } from "./WarscrollEffectResolver";
 
 const neighborDirections = [
@@ -34,12 +36,15 @@ type MovePathSearchNode = {
 
 export class CombatActionService extends LegalActionService {
   private readonly warscrollEffectResolver: WarscrollEffectResolver;
+  private readonly ployEffectResolver: PloyEffectResolver;
 
   public constructor(
     warscrollEffectResolver: WarscrollEffectResolver = new DefaultWarscrollEffectResolver(),
+    ployEffectResolver: PloyEffectResolver = new DefaultPloyEffectResolver(),
   ) {
     super();
     this.warscrollEffectResolver = warscrollEffectResolver;
+    this.ployEffectResolver = ployEffectResolver;
   }
 
   public getLegalActions(game: Game, playerId: PlayerId): GameAction[] {
@@ -264,6 +269,10 @@ export class CombatActionService extends LegalActionService {
     }
 
     const player = game.getPlayer(action.playerId);
+    if (player === undefined) {
+      return false;
+    }
+
     const cardWithDefinition = player?.getCardWithDefinition(action.cardId);
     if (cardWithDefinition === undefined) {
       return false;
@@ -271,7 +280,8 @@ export class CombatActionService extends LegalActionService {
 
     return (
       cardWithDefinition.definition.kind === CardKind.Ploy &&
-      cardWithDefinition.card.zone === CardZone.PowerHand
+      cardWithDefinition.card.zone === CardZone.PowerHand &&
+      this.ployEffectResolver.canResolve(game, player, cardWithDefinition.definition)
     );
   }
 
@@ -550,7 +560,10 @@ export class CombatActionService extends LegalActionService {
 
     return player.powerHand.flatMap((card) => {
       const definition = player.getCardDefinition(card.id);
-      return definition?.kind === CardKind.Ploy
+      return (
+        definition?.kind === CardKind.Ploy &&
+        this.ployEffectResolver.canResolve(game, player, definition)
+      )
         ? [new PlayPloyAction(player.id, card.id)]
         : [];
     });

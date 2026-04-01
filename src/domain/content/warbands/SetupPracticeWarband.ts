@@ -7,6 +7,7 @@ import { WarscrollDefinition } from "../../definitions/WarscrollDefinition";
 import { WeaponDefinition } from "../../definitions/WeaponDefinition";
 import {
   CardKind,
+  PloyEffectKind,
   SaveSymbol,
   TurnStep,
   WarscrollAbilityEffectKind,
@@ -133,13 +134,27 @@ function createObjectiveCards(): CardDefinition[] {
 function createPowerCards(): CardDefinition[] {
   const ploys = Array.from({ length: 10 }, (_, index) => {
     const cardNumber = String(index + 1).padStart(2, "0");
+    const isDrawPloy = index < 5;
 
     return new CardDefinition(
       `card-def:setup-practice:ploy:${cardNumber}`,
       CardKind.Ploy,
       `Practice Ploy ${cardNumber}`,
-      "",
+      isDrawPloy ? "Draw 1 power card." : "Gain 1 signal token.",
       0,
+      isDrawPloy
+        ? [
+          {
+            kind: PloyEffectKind.DrawPowerCards,
+            count: 1,
+          },
+        ]
+        : [
+          {
+            kind: PloyEffectKind.GainWarscrollTokens,
+            tokens: { signal: 1 },
+          },
+        ],
     );
   });
 
