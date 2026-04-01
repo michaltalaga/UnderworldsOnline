@@ -76,7 +76,7 @@ export default function PracticeBattlefieldApp() {
   const selectedFighterName = selectedFighter === null ? "none" : getFighterName(game, selectedFighter.id);
   const actionPrompt =
     game.turnStep === TurnStep.Action
-      ? "Select a fighter, then use the controls below to apply one of its legal actions."
+      ? "Select a fighter, then click a teal hex to move there or use the controls below."
       : "The selected fighter has already acted. Pass the power step or reset the board.";
 
   function selectFighter(fighterId: FighterId | null): void {
@@ -97,6 +97,13 @@ export default function PracticeBattlefieldApp() {
     setSelectedChargeKey(null);
     setSelectedFighterId(getNextSelectedFighterId(game, previousActivePlayerId, previousSelectedFighterId));
     refreshGame();
+  }
+
+  function moveToHex(hexId: HexId): void {
+    const moveAction = getMoveActionForHex(actionLens, hexId);
+    if (moveAction !== null) {
+      applyAction(moveAction);
+    }
   }
 
   function resetBattlefield(): void {
@@ -170,6 +177,7 @@ export default function PracticeBattlefieldApp() {
             activePlayerId={activePlayer?.id ?? null}
             selectedFighterId={selectedFighterId}
             actionLens={actionLens}
+            onMoveToHex={moveToHex}
             onSelectFighter={selectFighter}
             positionedHexes={boardProjection.positionedHexes}
           />
@@ -380,6 +388,7 @@ function BoardMap({
   activePlayerId,
   actionLens,
   game,
+  onMoveToHex,
   onSelectFighter,
   positionedHexes,
   selectedFighterId,
@@ -387,6 +396,7 @@ function BoardMap({
   activePlayerId: FighterState["ownerPlayerId"] | null;
   actionLens: FighterActionLens;
   game: Game;
+  onMoveToHex: (hexId: HexId) => void;
   onSelectFighter: (fighterId: FighterId | null) => void;
   positionedHexes: PositionedHex[];
   selectedFighterId: FighterId | null;
@@ -411,6 +421,8 @@ function BoardMap({
           const isMoveDestination = actionLens.moveHexIds.has(hex.id);
           const isChargeDestination = actionLens.chargeHexIds.has(hex.id);
           const isChargeTarget = actionLens.chargeTargetHexIds.has(hex.id);
+          const isClickableMoveDestination = isMoveDestination && game.turnStep === TurnStep.Action;
+          const isInteractiveHex = isSelectableFighter || isClickableMoveDestination;
           const actionBadge = getHexActionBadge({
             isChargeDestination,
             isChargeTarget,
@@ -427,6 +439,7 @@ function BoardMap({
               className={getHexClassName(game, hex, {
                 isChargeDestination,
                 isChargeTarget,
+                isClickableHex: isInteractiveHex,
                 isMoveDestination,
                 isSelectedHex,
                 isSelectableHex: isSelectableFighter,
@@ -435,17 +448,32 @@ function BoardMap({
               onClick={() => {
                 if (isSelectableFighter) {
                   onSelectFighter(fighter.id);
+                  return;
+                }
+
+                if (isClickableMoveDestination) {
+                  onMoveToHex(hex.id);
                 }
               }}
               onKeyDown={(event) => {
-                if (isSelectableFighter && (event.key === "Enter" || event.key === " ")) {
-                  event.preventDefault();
+                if (!isInteractiveHex || (event.key !== "Enter" && event.key !== " ")) {
+                  return;
+                }
+
+                event.preventDefault();
+
+                if (isSelectableFighter) {
                   onSelectFighter(fighter.id);
+                  return;
+                }
+
+                if (isClickableMoveDestination) {
+                  onMoveToHex(hex.id);
                 }
               }}
-              role={isSelectableFighter ? "button" : undefined}
+              role={isInteractiveHex ? "button" : undefined}
               style={style}
-              tabIndex={isSelectableFighter ? 0 : undefined}
+              tabIndex={isInteractiveHex ? 0 : undefined}
               title={buildHexTitle(game, hex, fighter, featureToken)}
             >
               <div className="battlefield-hex-meta-row">
@@ -662,6 +690,7 @@ function getHexClassName(
   state: {
     isChargeDestination: boolean;
     isChargeTarget: boolean;
+    isClickableHex: boolean;
     isMoveDestination: boolean;
     isSelectedHex: boolean;
     isSelectableHex: boolean;
@@ -716,6 +745,10 @@ function getHexClassName(
 
   if (state.isSelectableHex) {
     classes.push("battlefield-map-hex-selectable");
+  }
+
+  if (state.isClickableHex) {
+    classes.push("battlefield-map-hex-clickable");
   }
 
   if (state.isGuardReadyHex) {
@@ -856,6 +889,23 @@ function getMoveOptions(actionLens: FighterActionLens): Array<{
         }];
     })
     .sort((left, right) => left.hexId.localeCompare(right.hexId));
+}
+
+function getMoveActionForHex(actionLens: FighterActionLens, hexId: HexId): MoveAction | null {
+  let bestAction: MoveAction | null = null;
+
+  for (const action of actionLens.moveActions) {
+    const destinationHexId = action.path[action.path.length - 1];
+    if (destinationHexId !== hexId) {
+      continue;
+    }
+
+    if (bestAction === null || action.path.length < bestAction.path.length) {
+      bestAction = action;
+    }
+  }
+
+  return bestAction;
 }
 
 function getChargeOptions(

@@ -272,7 +272,15 @@ body {
   cursor: pointer;
 }
 
+.battlefield-map-hex-clickable {
+  cursor: pointer;
+}
+
 .battlefield-map-hex-selectable:hover {
+  transform: translateY(-2px);
+}
+
+.battlefield-map-hex-clickable:hover {
   transform: translateY(-2px);
 }
 
