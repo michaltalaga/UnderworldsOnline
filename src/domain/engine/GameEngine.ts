@@ -57,6 +57,7 @@ import {
 } from "../endPhase/PowerDrawResolution";
 import { AttackAction } from "../actions/AttackAction";
 import { ChargeAction } from "../actions/ChargeAction";
+import { DelveAction } from "../actions/DelveAction";
 import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
@@ -177,6 +178,11 @@ export class GameEngine {
 
     if (action instanceof GuardAction) {
       this.applyGuardAction(game, action);
+      return game;
+    }
+
+    if (action instanceof DelveAction) {
+      this.applyDelveAction(game, action);
       return game;
     }
 
@@ -722,6 +728,52 @@ export class GameEngine {
     game.consecutivePasses = 0;
     game.transitionTo(createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power));
     game.eventLog.push(`${player.name} put fighter ${fighter.id} on guard.`);
+  }
+
+  private applyDelveAction(game: Game, action: DelveAction): void {
+    this.assertCombatTurnStep(game, TurnStep.Power);
+    if (!this.combatActionService.isLegalDelveAction(game, action)) {
+      throw new Error(
+        `Delve action is not legal for fighter ${action.fighterId} on feature token ${action.featureTokenId}.`,
+      );
+    }
+
+    const player = this.requirePlayer(game, action.playerId);
+    this.assertActivePlayer(game, player.id);
+
+    const fighter = this.requireOwnedDeployedFighter(player, action.fighterId);
+    const fighterHexId = fighter.currentHexId;
+    if (fighterHexId === null) {
+      throw new Error(`Fighter ${fighter.id} is not on the board to delve.`);
+    }
+
+    const fighterHex = this.requireHex(game, fighterHexId);
+    if (fighterHex.featureTokenId !== action.featureTokenId) {
+      throw new Error(
+        `Fighter ${fighter.id} is not on feature token ${action.featureTokenId}.`,
+      );
+    }
+
+    const featureToken = game.board.getFeatureToken(action.featureTokenId);
+    if (featureToken === undefined) {
+      throw new Error(`Unknown feature token ${action.featureTokenId}.`);
+    }
+
+    if (featureToken.side === FeatureTokenSide.Treasure) {
+      featureToken.side = FeatureTokenSide.Cover;
+    } else if (featureToken.side === FeatureTokenSide.Cover) {
+      featureToken.side = FeatureTokenSide.Treasure;
+    } else {
+      throw new Error(`Feature token ${featureToken.id} cannot be delved from side ${featureToken.side}.`);
+    }
+
+    fighter.hasStaggerToken = true;
+    player.hasDelvedThisPowerStep = true;
+    game.consecutivePasses = 0;
+    game.eventLog.push(
+      `${player.name} delved feature token ${featureToken.id} with fighter ${fighter.id}. `
+      + `It is now a ${featureToken.side} token and ${fighter.id} gained a stagger token.`,
+    );
   }
 
   private applyUseWarscrollAbilityAction(game: Game, action: UseWarscrollAbilityAction): void {

@@ -1,5 +1,6 @@
 import { AttackAction } from "../actions/AttackAction";
 import { ChargeAction } from "../actions/ChargeAction";
+import { DelveAction } from "../actions/DelveAction";
 import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
@@ -9,7 +10,7 @@ import { Game } from "../state/Game";
 import { HexCell } from "../state/HexCell";
 import { FighterState } from "../state/FighterState";
 import { PlayerState } from "../state/PlayerState";
-import { HexKind, TurnStep } from "../values/enums";
+import { FeatureTokenSide, HexKind, TurnStep } from "../values/enums";
 import type { FighterId, HexId, PlayerId } from "../values/ids";
 import { DefaultWarscrollEffectResolver } from "./DefaultWarscrollEffectResolver";
 import { LegalActionService } from "./LegalActionService";
@@ -51,6 +52,7 @@ export class CombatActionService extends LegalActionService {
 
     if (game.turnStep === TurnStep.Power) {
       return [
+        ...this.getLegalDelveActions(game, player),
         ...this.getLegalUseWarscrollAbilityActions(game, player),
         new PassAction(playerId),
       ];
@@ -193,6 +195,38 @@ export class CombatActionService extends LegalActionService {
     }
 
     return this.canFighterGuard(fighter);
+  }
+
+  public isLegalDelveAction(game: Game, action: DelveAction): boolean {
+    if (!this.isCombatTurnStep(game, action.playerId, TurnStep.Power)) {
+      return false;
+    }
+
+    const player = game.getPlayer(action.playerId);
+    if (player === undefined || player.hasDelvedThisPowerStep) {
+      return false;
+    }
+
+    const fighter = player.getFighter(action.fighterId);
+    if (
+      fighter === undefined ||
+      fighter.isSlain ||
+      fighter.currentHexId === null
+    ) {
+      return false;
+    }
+
+    const fighterHex = game.board.getHex(fighter.currentHexId);
+    const featureToken = game.board.getFeatureToken(action.featureTokenId);
+    if (fighterHex === undefined || featureToken === undefined) {
+      return false;
+    }
+
+    return (
+      fighterHex.featureTokenId === featureToken.id &&
+      featureToken.hexId === fighterHex.id &&
+      featureToken.side !== FeatureTokenSide.Hidden
+    );
   }
 
   public isLegalUseWarscrollAbilityAction(game: Game, action: UseWarscrollAbilityAction): boolean {
@@ -399,6 +433,40 @@ export class CombatActionService extends LegalActionService {
     }
 
     return [new GuardAction(player.id, fighter.id)];
+  }
+
+  private getLegalDelveActions(
+    game: Game,
+    player: PlayerState,
+  ): DelveAction[] {
+    if (
+      player.hasDelvedThisPowerStep ||
+      !this.isCombatTurnStep(game, player.id, TurnStep.Power)
+    ) {
+      return [];
+    }
+
+    return player.fighters.flatMap((fighter) => {
+      if (fighter.isSlain || fighter.currentHexId === null) {
+        return [];
+      }
+
+      const fighterHex = game.board.getHex(fighter.currentHexId);
+      if (fighterHex?.featureTokenId === null || fighterHex?.featureTokenId === undefined) {
+        return [];
+      }
+
+      const featureToken = game.board.getFeatureToken(fighterHex.featureTokenId);
+      if (
+        featureToken === undefined ||
+        featureToken.hexId !== fighterHex.id ||
+        featureToken.side === FeatureTokenSide.Hidden
+      ) {
+        return [];
+      }
+
+      return [new DelveAction(player.id, fighter.id, featureToken.id)];
+    });
   }
 
   private getLegalUseWarscrollAbilityActions(
