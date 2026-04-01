@@ -104,7 +104,7 @@ export const combatDebugScenarios: readonly CombatDebugScenario[] = [
   {
     id: "support",
     label: "Support Check",
-    description: "Support icons stay neutral until guard or stagger turns them into successes.",
+    description: "Support icons stay neutral until a rule like stagger or cover turns them into successes.",
     attackRoll: [AttackDieFace.Support, AttackDieFace.Blank],
     saveRoll: [SaveDieFace.Support],
   },

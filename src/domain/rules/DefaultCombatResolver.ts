@@ -2,6 +2,7 @@ import { Game } from "../state/Game";
 import {
   AttackDieFace,
   CombatOutcome,
+  FeatureTokenSide,
   SaveDieFace,
   SaveSymbol,
   WeaponAbilityKind,
@@ -102,6 +103,7 @@ export class DefaultCombatResolver extends CombatResolver {
 
     const defenderIsStaggered = target.hasStaggerToken;
     const defenderIsGuarded = target.hasGuardToken && !defenderIsStaggered;
+    const defenderIsOnCoverToken = this.isFighterOnCoverToken(game, target.currentHexId);
     const attackRoll = this.resolveRoll(
       weapon.dice,
       attackRollInput,
@@ -123,23 +125,16 @@ export class DefaultCombatResolver extends CombatResolver {
     const canTriggerSelectedAbility =
       selectedAbilityDefinition !== null &&
       (!selectedAbilityDefinition.requiresCritical || attackStats.criticals > 0);
-    const effectiveSaveSymbol =
-      context.selectedAbility === WeaponAbilityKind.Brutal &&
-      canTriggerSelectedAbility
-        ? null
-        : context.selectedAbility === WeaponAbilityKind.Cleave &&
-            canTriggerSelectedAbility &&
-            targetDefinition.saveSymbol === SaveSymbol.Shield
-          ? null
-          : context.selectedAbility === WeaponAbilityKind.Ensnare &&
-              canTriggerSelectedAbility &&
-              targetDefinition.saveSymbol === SaveSymbol.Dodge
-            ? null
-            : targetDefinition.saveSymbol;
+    const saveSuccessFaces = this.getSaveSuccessFaces(
+      targetDefinition.saveSymbol,
+      context.selectedAbility,
+      canTriggerSelectedAbility,
+      defenderIsGuarded,
+    );
     const saveStats = this.getSaveRollStats(
       saveRoll,
-      effectiveSaveSymbol,
-      defenderIsGuarded,
+      saveSuccessFaces,
+      defenderIsOnCoverToken,
     );
     const outcome = this.getCombatOutcome(attackStats, saveStats);
     const grievousDamageBonus =
@@ -195,15 +190,12 @@ export class DefaultCombatResolver extends CombatResolver {
 
   private getSaveRollStats(
     saveRoll: readonly SaveDieFace[],
-    saveSymbol: SaveSymbol | null,
-    defenderIsGuarded: boolean,
+    saveSuccessFaces: ReadonlySet<SaveDieFace>,
+    defenderIsOnCoverToken: boolean,
   ): CombatRollStats {
     const criticals = saveRoll.filter((face) => face === SaveDieFace.Critical).length;
-    const symbolSuccesses =
-      saveSymbol === null
-        ? 0
-        : saveRoll.filter((face) => face === saveSymbol).length;
-    const supportSuccesses = defenderIsGuarded
+    const symbolSuccesses = saveRoll.filter((face) => saveSuccessFaces.has(face)).length;
+    const supportSuccesses = defenderIsOnCoverToken
       ? saveRoll.filter(DefaultCombatResolver.isSaveSupportFace).length
       : 0;
 
@@ -253,6 +245,42 @@ export class DefaultCombatResolver extends CombatResolver {
     return Array.from({ length: expectedCount }, () => rollDie());
   }
 
+  private getSaveSuccessFaces(
+    saveSymbol: SaveSymbol,
+    selectedAbility: WeaponAbilityKind | null,
+    canTriggerSelectedAbility: boolean,
+    defenderIsGuarded: boolean,
+  ): ReadonlySet<SaveDieFace> {
+    const saveSuccessFaces = new Set<SaveDieFace>(
+      defenderIsGuarded
+        ? [SaveDieFace.Shield, SaveDieFace.Dodge]
+        : saveSymbol === SaveSymbol.Shield
+          ? [SaveDieFace.Shield]
+          : [SaveDieFace.Dodge],
+    );
+
+    if (!canTriggerSelectedAbility) {
+      return saveSuccessFaces;
+    }
+
+    if (selectedAbility === WeaponAbilityKind.Brutal) {
+      saveSuccessFaces.clear();
+      return saveSuccessFaces;
+    }
+
+    if (selectedAbility === WeaponAbilityKind.Cleave) {
+      saveSuccessFaces.delete(SaveDieFace.Shield);
+      return saveSuccessFaces;
+    }
+
+    if (selectedAbility === WeaponAbilityKind.Ensnare) {
+      saveSuccessFaces.delete(SaveDieFace.Dodge);
+      return saveSuccessFaces;
+    }
+
+    return saveSuccessFaces;
+  }
+
   private static isAttackSupportFace(face: AttackDieFace): boolean {
     return face === AttackDieFace.Support || face === AttackDieFace.DoubleSupport;
   }
@@ -277,5 +305,19 @@ export class DefaultCombatResolver extends CombatResolver {
     }
 
     return face;
+  }
+
+  private isFighterOnCoverToken(game: Game, fighterHexId: string): boolean {
+    const fighterHex = game.board.getHex(fighterHexId);
+    if (fighterHex?.featureTokenId === null || fighterHex?.featureTokenId === undefined) {
+      return false;
+    }
+
+    const featureToken = game.board.getFeatureToken(fighterHex.featureTokenId);
+    return (
+      featureToken !== undefined &&
+      featureToken.hexId === fighterHex.id &&
+      featureToken.side === FeatureTokenSide.Cover
+    );
   }
 }
