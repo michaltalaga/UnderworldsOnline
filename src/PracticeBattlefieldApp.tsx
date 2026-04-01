@@ -79,7 +79,7 @@ export default function PracticeBattlefieldApp() {
   const actionPrompt =
     game.turnStep === TurnStep.Action
       ? pendingChargeHexId === null
-        ? "Select a fighter, then click a teal hex to move or a gold hex to start a charge."
+        ? "Select a fighter, then click a teal hex to move or click a gold hex and then a red target to charge."
         : `Charge from ${pendingChargeHexId} selected. Click a red target to complete it.`
       : "The selected fighter has already acted. Pass the power step or reset the board.";
 
@@ -114,13 +114,7 @@ export default function PracticeBattlefieldApp() {
 
   function startChargeToHex(hexId: HexId): void {
     const chargeActions = getChargeActionsForHex(actionLens, hexId);
-    const uniqueTargetIds = [...new Set(chargeActions.map((action) => action.targetId))];
-
-    if (uniqueTargetIds.length <= 1) {
-      const chargeAction = chargeActions[0] ?? null;
-      if (chargeAction !== null) {
-        applyAction(chargeAction);
-      }
+    if (chargeActions.length === 0) {
       return;
     }
 
