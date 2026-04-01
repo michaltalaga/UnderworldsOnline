@@ -1,3 +1,4 @@
+import { CleanupResolution } from "../endPhase/CleanupResolution";
 import type { CardId, FighterId, GameId, PlayerId } from "../values/ids";
 import { ObjectiveDrawResolution } from "../endPhase/ObjectiveDrawResolution";
 import { ObjectiveScoringResolution } from "../endPhase/ObjectiveScoringResolution";
@@ -33,6 +34,8 @@ export class Game {
   public objectiveDrawHistory: ObjectiveDrawResolution[];
   public lastPowerDrawResolution: PowerDrawResolution | null;
   public powerDrawHistory: PowerDrawResolution[];
+  public lastCleanupResolution: CleanupResolution | null;
+  public cleanupHistory: CleanupResolution[];
   public eventLog: string[];
   private flowState: GameState;
 
@@ -71,6 +74,8 @@ export class Game {
     this.objectiveDrawHistory = [];
     this.lastPowerDrawResolution = null;
     this.powerDrawHistory = [];
+    this.lastCleanupResolution = null;
+    this.cleanupHistory = [];
     this.eventLog = eventLog;
     this.flowState = createGameStateFromLegacyFields({
       phase,
@@ -174,6 +179,8 @@ export class Game {
       objectiveDrawHistory: this.objectiveDrawHistory,
       lastPowerDrawResolution: this.lastPowerDrawResolution,
       powerDrawHistory: this.powerDrawHistory,
+      lastCleanupResolution: this.lastCleanupResolution,
+      cleanupHistory: this.cleanupHistory,
       eventLog: this.eventLog,
     };
   }

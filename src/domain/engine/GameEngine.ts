@@ -1,5 +1,11 @@
 import { CardInstance } from "../state/CardInstance";
 import { WeaponAbilityDefinition } from "../definitions/WeaponAbilityDefinition";
+import {
+  CleanupResolution,
+  CleanupTransitionKind,
+  type CleanupFighterResolution,
+  type CleanupPlayerResolution,
+} from "../endPhase/CleanupResolution";
 import { FeatureTokenState } from "../state/FeatureTokenState";
 import { FighterState } from "../state/FighterState";
 import { Game } from "../state/Game";
@@ -927,6 +933,44 @@ export class GameEngine {
   private applyResolveCleanup(game: Game): void {
     this.assertEndPhaseStep(game, EndPhaseStep.Cleanup);
 
+    const completedRoundNumber = game.roundNumber;
+    const consecutivePassesBeforeReset = game.consecutivePasses;
+    const playerResolutions: CleanupPlayerResolution[] = game.players.map((player) => {
+      const fightersWithTokensCleared: CleanupFighterResolution[] = [];
+
+      for (const fighter of player.fighters) {
+        if (!fighter.hasMoveToken && !fighter.hasChargeToken && !fighter.hasGuardToken) {
+          continue;
+        }
+
+        const fighterDefinition = player.getFighterDefinition(fighter.id);
+        if (fighterDefinition === undefined) {
+          throw new Error(`Fighter ${fighter.id} is missing definition data during cleanup.`);
+        }
+
+        const clearedTokenCount = Number(fighter.hasMoveToken)
+          + Number(fighter.hasChargeToken)
+          + Number(fighter.hasGuardToken);
+
+        fightersWithTokensCleared.push({
+          fighterId: fighter.id,
+          fighterName: fighterDefinition.name,
+          clearedMoveToken: fighter.hasMoveToken,
+          clearedChargeToken: fighter.hasChargeToken,
+          clearedGuardToken: fighter.hasGuardToken,
+          clearedTokenCount,
+        });
+      }
+
+      return {
+        playerId: player.id,
+        playerName: player.name,
+        turnsTakenBeforeReset: player.turnsTakenThisRound,
+        hadDelvedThisPowerStepBeforeReset: player.hasDelvedThisPowerStep,
+        fightersWithTokensCleared,
+      };
+    });
+
     this.resetRoundState(game);
 
     if (game.isFinalRound()) {
@@ -937,6 +981,18 @@ export class GameEngine {
 
       game.winnerPlayerId = outcome.winnerPlayerId;
       game.transitionTo(createFinishedGameState());
+      const resolution = new CleanupResolution(
+        completedRoundNumber,
+        consecutivePassesBeforeReset,
+        playerResolutions,
+        CleanupTransitionKind.Finished,
+        null,
+        outcome.kind,
+        outcome.winnerPlayerId,
+        outcome.reason,
+      );
+      game.lastCleanupResolution = resolution;
+      game.cleanupHistory.push(resolution);
 
       if (outcome.winnerPlayerId === null) {
         game.eventLog.push(`Cleanup complete. Game finished in a draw. ${outcome.reason}`);
@@ -948,10 +1004,18 @@ export class GameEngine {
       return;
     }
 
-    const completedRoundNumber = game.roundNumber;
     game.roundNumber += 1;
     game.winnerPlayerId = null;
     game.transitionTo(createCombatReadyGameState());
+    const resolution = new CleanupResolution(
+      completedRoundNumber,
+      consecutivePassesBeforeReset,
+      playerResolutions,
+      CleanupTransitionKind.CombatReady,
+      game.roundNumber,
+    );
+    game.lastCleanupResolution = resolution;
+    game.cleanupHistory.push(resolution);
     game.eventLog.push(
       `Cleanup complete. Round ${completedRoundNumber + 1} is ready to begin.`,
     );

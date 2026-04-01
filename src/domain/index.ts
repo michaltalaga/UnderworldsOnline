@@ -20,6 +20,7 @@ export * from "./definitions/WarscrollAbilityEffect";
 export * from "./definitions/WarscrollDefinition";
 export * from "./definitions/WeaponAbilityDefinition";
 export * from "./definitions/WeaponDefinition";
+export * from "./endPhase/CleanupResolution";
 export * from "./endPhase/EndPhaseAction";
 export * from "./endPhase/EndPhaseActionService";
 export * from "./endPhase/ObjectiveDrawResolution";
