@@ -1,14 +1,25 @@
 import {
   AttackAction,
   AttackDieFace,
+  CardZone,
   CombatActionService,
+  EndPhaseStep,
   GameEngine,
+  GuardAction,
   MoveAction,
   PassAction,
+  ResolveCleanupAction,
+  ResolveDiscardCardsAction,
+  ResolveDrawObjectivesAction,
+  ResolveDrawPowerCardsAction,
+  ResolveEquipUpgradesAction,
+  ResolveScoreObjectivesAction,
   SaveDieFace,
+  ScoringResolver,
   UseWarscrollAbilityAction,
   WeaponAbilityKind,
   createCombatReadySetupPracticeGame,
+  type CardInstance,
   type Game,
   type WarscrollAbilityDefinition,
   type WeaponDefinition,
@@ -53,6 +64,10 @@ export type CombatDebugWarscrollAbilityOption = {
   abilityIndex: number;
   definition: WarscrollAbilityDefinition;
   isLegal: boolean;
+};
+
+export type EndPhaseDebugSnapshot = {
+  game: Game;
 };
 
 export const combatDebugScenarios: readonly CombatDebugScenario[] = [
@@ -252,4 +267,71 @@ export function createCombatDebugSnapshot(
     selectedAbility,
     selectedWarscrollAbilityIndex,
   };
+}
+
+export function createEndPhaseDebugSnapshot(): EndPhaseDebugSnapshot {
+  const game = createCombatReadySetupPracticeGame("game:setup-practice:end-phase-debug");
+  const engine = new GameEngine(undefined, undefined, undefined, new DebugEndPhaseScoringResolver());
+  const playerOne = game.getPlayer("player:one");
+
+  if (playerOne === undefined) {
+    throw new Error("Could not find player one for end-phase debug setup.");
+  }
+
+  movePowerCardsToDiscard(playerOne.powerHand, playerOne.powerDeck.discardPile, 2);
+  game.eventLog.push("Debug setup moved 2 power cards from Player One hand to discard before round start.");
+
+  engine.startCombatRound(
+    game,
+    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Blank }],
+    "player:one",
+  );
+
+  const guardedFighterId = playerOne.fighters[0]?.id;
+  if (guardedFighterId === undefined) {
+    throw new Error("Could not find a fighter to guard during end-phase debug setup.");
+  }
+
+  engine.applyGameAction(game, new GuardAction(playerOne.id, guardedFighterId));
+  engine.applyGameAction(game, new PassAction(playerOne.id));
+
+  while (game.state.kind === "combatTurn") {
+    engine.applyGameAction(game, new PassAction(game.activePlayerId!));
+  }
+
+  if (game.endPhaseStep !== EndPhaseStep.ScoreObjectives) {
+    throw new Error(`Expected end-phase debug setup to reach scoreObjectives, got ${game.endPhaseStep}.`);
+  }
+
+  engine.applyEndPhaseAction(game, new ResolveScoreObjectivesAction());
+  engine.applyEndPhaseAction(game, new ResolveEquipUpgradesAction());
+  engine.applyEndPhaseAction(game, new ResolveDiscardCardsAction());
+  engine.applyEndPhaseAction(game, new ResolveDrawObjectivesAction());
+  engine.applyEndPhaseAction(game, new ResolveDrawPowerCardsAction());
+  engine.applyEndPhaseAction(game, new ResolveCleanupAction());
+
+  return { game };
+}
+
+class DebugEndPhaseScoringResolver extends ScoringResolver {
+  public override getScorableObjectives(game: Game, playerId: string): CardInstance[] {
+    const player = game.getPlayer(playerId);
+    if (player === undefined || player.id !== "player:one") {
+      return [];
+    }
+
+    return player.objectiveHand.slice(0, 1);
+  }
+}
+
+function movePowerCardsToDiscard(
+  hand: CardInstance[],
+  discardPile: CardInstance[],
+  count: number,
+): void {
+  const discardedCards = hand.splice(0, count);
+  for (const card of discardedCards) {
+    card.zone = CardZone.PowerDiscard;
+    discardPile.push(card);
+  }
 }

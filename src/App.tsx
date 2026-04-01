@@ -12,6 +12,7 @@ import {
 import {
   combatDebugScenarios,
   createCombatDebugSnapshot,
+  createEndPhaseDebugSnapshot,
   getCombatDebugScenario,
   type CombatDebugSnapshot,
   type CombatDebugDefenderState,
@@ -44,6 +45,7 @@ function App() {
     selectedAbility,
     selectedWarscrollAbilityIndex,
   );
+  const endPhaseDebugGame = createEndPhaseDebugSnapshot().game;
   const debugGame = debugSnapshot.game;
   const latestCombat = debugGame.lastCombatResult;
   const recentEvents = debugGame.eventLog.slice(-8).reverse();
@@ -318,6 +320,103 @@ function App() {
               </span>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <p className="eyebrow">End Phase</p>
+          <h2>Stored end-phase resolutions</h2>
+        </div>
+        <article className="warscroll-card">
+          <div className="combat-card-header">
+            <div>
+              <p className="combat-label">Full Round Snapshot</p>
+              <h3>{endPhaseDebugGame.state.kind}</h3>
+            </div>
+            <span className="status-badge status-supported">recorded</span>
+          </div>
+          <p className="combat-meta">
+            This snapshot runs a deterministic round through cleanup, then reads the stored
+            objective scoring, objective draw, power draw, and cleanup resolution objects
+            directly from game state.
+          </p>
+          <dl className="combat-grid">
+            <div>
+              <dt>Round</dt>
+              <dd>{endPhaseDebugGame.roundNumber}</dd>
+            </div>
+            <div>
+              <dt>Scoring History</dt>
+              <dd>{endPhaseDebugGame.objectiveScoringHistory.length}</dd>
+            </div>
+            <div>
+              <dt>Objective Draw History</dt>
+              <dd>{endPhaseDebugGame.objectiveDrawHistory.length}</dd>
+            </div>
+            <div>
+              <dt>Power Draw History</dt>
+              <dd>{endPhaseDebugGame.powerDrawHistory.length}</dd>
+            </div>
+            <div>
+              <dt>Cleanup History</dt>
+              <dd>{endPhaseDebugGame.cleanupHistory.length}</dd>
+            </div>
+            <div>
+              <dt>Last Cleanup</dt>
+              <dd>{formatCleanupHeadline(endPhaseDebugGame)}</dd>
+            </div>
+          </dl>
+        </article>
+        <div className="ability-status-list">
+          <article className="ability-status-card">
+            <div>
+              <p className="combat-label">Score Objectives</p>
+              <h3>{formatObjectiveScoringHeadline(endPhaseDebugGame)}</h3>
+            </div>
+            {formatObjectiveScoringDetails(endPhaseDebugGame).map((detail) => (
+              <p className="fighter-meta" key={detail}>{detail}</p>
+            ))}
+            <span className={`status-badge ${getResolutionStatusClass(endPhaseDebugGame.lastObjectiveScoringResolution)}`}>
+              {getResolutionStatusLabel(endPhaseDebugGame.lastObjectiveScoringResolution)}
+            </span>
+          </article>
+          <article className="ability-status-card">
+            <div>
+              <p className="combat-label">Draw Objectives</p>
+              <h3>{formatObjectiveDrawHeadline(endPhaseDebugGame)}</h3>
+            </div>
+            {formatObjectiveDrawDetails(endPhaseDebugGame).map((detail) => (
+              <p className="fighter-meta" key={detail}>{detail}</p>
+            ))}
+            <span className={`status-badge ${getResolutionStatusClass(endPhaseDebugGame.lastObjectiveDrawResolution)}`}>
+              {getResolutionStatusLabel(endPhaseDebugGame.lastObjectiveDrawResolution)}
+            </span>
+          </article>
+          <article className="ability-status-card">
+            <div>
+              <p className="combat-label">Draw Power Cards</p>
+              <h3>{formatPowerDrawHeadline(endPhaseDebugGame)}</h3>
+            </div>
+            {formatPowerDrawDetails(endPhaseDebugGame).map((detail) => (
+              <p className="fighter-meta" key={detail}>{detail}</p>
+            ))}
+            <span className={`status-badge ${getResolutionStatusClass(endPhaseDebugGame.lastPowerDrawResolution)}`}>
+              {getResolutionStatusLabel(endPhaseDebugGame.lastPowerDrawResolution)}
+            </span>
+          </article>
+          <article className="ability-status-card">
+            <div>
+              <p className="combat-label">Cleanup</p>
+              <h3>{formatCleanupHeadline(endPhaseDebugGame)}</h3>
+            </div>
+            {formatCleanupDetails(endPhaseDebugGame).map((detail) => (
+              <p className="fighter-meta" key={detail}>{detail}</p>
+            ))}
+            <span className={`status-badge ${getResolutionStatusClass(endPhaseDebugGame.lastCleanupResolution)}`}>
+              {getResolutionStatusLabel(endPhaseDebugGame.lastCleanupResolution)}
+            </span>
+          </article>
         </div>
       </section>
 
@@ -701,6 +800,144 @@ function getWarscrollAbilityStatusClass(
   }
 
   return isLegal ? "status-supported" : "status-unsupported";
+}
+
+function formatObjectiveScoringHeadline(game: Game): string {
+  const resolution = game.lastObjectiveScoringResolution;
+  if (resolution === null) {
+    return "No scoring recorded";
+  }
+
+  return `${resolution.totalObjectivesScored} objective${resolution.totalObjectivesScored === 1 ? "" : "s"} / ${resolution.totalGloryGained} glory`;
+}
+
+function formatObjectiveScoringDetails(game: Game): string[] {
+  const resolution = game.lastObjectiveScoringResolution;
+  if (resolution === null) {
+    return ["The debug snapshot did not record objective scoring."];
+  }
+
+  return resolution.playerResolutions.map((playerResolution) => {
+    if (playerResolution.scoredObjectives.length === 0) {
+      return `${playerResolution.playerName}: no objectives scored.`;
+    }
+
+    const scoredObjectiveNames = playerResolution.scoredObjectives
+      .map((objective) => `${objective.cardName} (+${objective.gloryValue})`)
+      .join(", ");
+    return `${playerResolution.playerName}: ${scoredObjectiveNames}.`;
+  });
+}
+
+function formatObjectiveDrawHeadline(game: Game): string {
+  const resolution = game.lastObjectiveDrawResolution;
+  if (resolution === null) {
+    return "No objective draw recorded";
+  }
+
+  return `${resolution.totalCardsDrawn} objective card${resolution.totalCardsDrawn === 1 ? "" : "s"} drawn`;
+}
+
+function formatObjectiveDrawDetails(game: Game): string[] {
+  const resolution = game.lastObjectiveDrawResolution;
+  if (resolution === null) {
+    return ["The debug snapshot did not record objective refills."];
+  }
+
+  return resolution.playerResolutions.map((playerResolution) => {
+    if (playerResolution.cardsDrawn.length === 0) {
+      return `${playerResolution.playerName}: no objective cards drawn.`;
+    }
+
+    return `${playerResolution.playerName}: ${playerResolution.cardsDrawn.map((card) => card.cardName).join(", ")}.`;
+  });
+}
+
+function formatPowerDrawHeadline(game: Game): string {
+  const resolution = game.lastPowerDrawResolution;
+  if (resolution === null) {
+    return "No power draw recorded";
+  }
+
+  return `${resolution.totalCardsDrawn} power card${resolution.totalCardsDrawn === 1 ? "" : "s"} drawn`;
+}
+
+function formatPowerDrawDetails(game: Game): string[] {
+  const resolution = game.lastPowerDrawResolution;
+  if (resolution === null) {
+    return ["The debug snapshot did not record power refills."];
+  }
+
+  return resolution.playerResolutions.map((playerResolution) => {
+    if (playerResolution.cardsDrawn.length === 0) {
+      return `${playerResolution.playerName}: no power cards drawn.`;
+    }
+
+    return `${playerResolution.playerName}: ${playerResolution.cardsDrawn.map((card) => card.cardName).join(", ")}.`;
+  });
+}
+
+function formatCleanupHeadline(game: Game): string {
+  const resolution = game.lastCleanupResolution;
+  if (resolution === null) {
+    return "No cleanup recorded";
+  }
+
+  if (resolution.nextStateKind === "finished") {
+    return resolution.winnerPlayerId === null
+      ? "Game finished in a draw"
+      : `${getPlayerName(game, resolution.winnerPlayerId)} won`;
+  }
+
+  return `Round ${resolution.nextRoundNumber} ready`;
+}
+
+function formatCleanupDetails(game: Game): string[] {
+  const resolution = game.lastCleanupResolution;
+  if (resolution === null) {
+    return ["The debug snapshot did not record cleanup."];
+  }
+
+  const details = [
+    `Consecutive passes reset from ${resolution.consecutivePassesBeforeReset}; cleared ${resolution.totalTokensCleared} token${resolution.totalTokensCleared === 1 ? "" : "s"}.`,
+  ];
+
+  for (const playerResolution of resolution.playerResolutions) {
+    if (playerResolution.fightersWithTokensCleared.length === 0) {
+      details.push(`${playerResolution.playerName}: no move, charge, or guard tokens cleared.`);
+      continue;
+    }
+
+    const clearedTokens = playerResolution.fightersWithTokensCleared.map((fighterResolution) => {
+      const tokens: string[] = [];
+      if (fighterResolution.clearedMoveToken) {
+        tokens.push("move");
+      }
+      if (fighterResolution.clearedChargeToken) {
+        tokens.push("charge");
+      }
+      if (fighterResolution.clearedGuardToken) {
+        tokens.push("guard");
+      }
+
+      return `${fighterResolution.fighterName} (${tokens.join(", ")})`;
+    });
+    details.push(`${playerResolution.playerName}: ${clearedTokens.join(", ")}.`);
+  }
+
+  if (resolution.outcomeReason !== null) {
+    details.push(resolution.outcomeReason);
+  }
+
+  return details;
+}
+
+function getResolutionStatusLabel(resolution: object | null): string {
+  return resolution === null ? "missing" : "recorded";
+}
+
+function getResolutionStatusClass(resolution: object | null): string {
+  return resolution === null ? "status-unsupported" : "status-supported";
 }
 
 export default App;
