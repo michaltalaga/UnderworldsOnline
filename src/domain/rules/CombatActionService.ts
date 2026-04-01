@@ -10,7 +10,9 @@ import { FighterState } from "../state/FighterState";
 import { PlayerState } from "../state/PlayerState";
 import { HexKind, TurnStep } from "../values/enums";
 import type { FighterId, HexId, PlayerId } from "../values/ids";
+import { DefaultWarscrollEffectResolver } from "./DefaultWarscrollEffectResolver";
 import { LegalActionService } from "./LegalActionService";
+import { WarscrollEffectResolver } from "./WarscrollEffectResolver";
 
 const neighborDirections = [
   [1, 0],
@@ -27,6 +29,15 @@ type MovePathSearchNode = {
 };
 
 export class CombatActionService extends LegalActionService {
+  private readonly warscrollEffectResolver: WarscrollEffectResolver;
+
+  public constructor(
+    warscrollEffectResolver: WarscrollEffectResolver = new DefaultWarscrollEffectResolver(),
+  ) {
+    super();
+    this.warscrollEffectResolver = warscrollEffectResolver;
+  }
+
   public getLegalActions(game: Game, playerId: PlayerId): GameAction[] {
     if (game.state.kind !== "combatTurn" || game.activePlayerId !== playerId) {
       return [];
@@ -137,16 +148,15 @@ export class CombatActionService extends LegalActionService {
       return false;
     }
 
-    if (ability.timing !== TurnStep.Power || ability.drawPowerCards < 1) {
+    if (ability.timing !== TurnStep.Power) {
       return false;
     }
 
-    if (player.powerDeck.drawPile.length < ability.drawPowerCards) {
-      return false;
-    }
-
-    return Object.entries(ability.tokenCosts).every(
-      ([tokenName, tokenCost]) => (player.warscrollState.tokens[tokenName] ?? 0) >= tokenCost,
+    return (
+      Object.entries(ability.tokenCosts).every(
+        ([tokenName, tokenCost]) => (player.warscrollState.tokens[tokenName] ?? 0) >= tokenCost,
+      ) &&
+      this.warscrollEffectResolver.canResolve(game, player, ability)
     );
   }
 

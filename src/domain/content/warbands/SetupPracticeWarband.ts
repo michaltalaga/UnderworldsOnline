@@ -9,6 +9,7 @@ import {
   CardKind,
   SaveSymbol,
   TurnStep,
+  WarscrollAbilityEffectKind,
   WeaponAbilityKind,
   WeaponAccuracy,
 } from "../../values/enums";
@@ -84,7 +85,24 @@ const warscroll = new WarscrollDefinition(
       "Spend 1 signal token: draw 1 power card.",
       TurnStep.Power,
       { signal: 1 },
-      1,
+      [
+        {
+          kind: WarscrollAbilityEffectKind.DrawPowerCards,
+          count: 1,
+        },
+      ],
+    ),
+    new WarscrollAbilityDefinition(
+      "Signal Cache",
+      "Spend 1 signal token: gain 1 reserve token.",
+      TurnStep.Power,
+      { signal: 1 },
+      [
+        {
+          kind: WarscrollAbilityEffectKind.GainWarscrollTokens,
+          tokens: { reserve: 1 },
+        },
+      ],
     ),
   ],
 );

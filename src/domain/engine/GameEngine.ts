@@ -55,6 +55,7 @@ import { CombatContext } from "../rules/CombatContext";
 import { CombatResolver } from "../rules/CombatResolver";
 import { DefaultCombatResolver } from "../rules/DefaultCombatResolver";
 import { DefaultScoringResolver } from "../rules/DefaultScoringResolver";
+import { DefaultWarscrollEffectResolver } from "../rules/DefaultWarscrollEffectResolver";
 import { DefaultVictoryResolver } from "../rules/DefaultVictoryResolver";
 import { RollOffContext } from "../rules/RollOffContext";
 import { RollOffResolver } from "../rules/RollOffResolver";
@@ -62,6 +63,7 @@ import { type RollOffRoundInput } from "../rules/RollOffRound";
 import { RollOffResult } from "../rules/RollOffResult";
 import { ScoringResolver } from "../rules/ScoringResolver";
 import { VictoryResolver } from "../rules/VictoryResolver";
+import { WarscrollEffectResolver } from "../rules/WarscrollEffectResolver";
 
 export type GameEngineShuffleCards = (cards: readonly CardInstance[]) => CardInstance[];
 
@@ -75,14 +77,16 @@ export class GameEngine {
   private readonly combatResolver: CombatResolver;
   private readonly scoringResolver: ScoringResolver;
   private readonly victoryResolver: VictoryResolver;
+  private readonly warscrollEffectResolver: WarscrollEffectResolver;
 
   public constructor(
     shuffleCards: GameEngineShuffleCards = GameEngine.copyCards,
     rollOffResolver: RollOffResolver = new RollOffResolver(),
-    combatActionService: CombatActionService = new CombatActionService(),
     combatResolver: CombatResolver = new DefaultCombatResolver(),
     scoringResolver: ScoringResolver = new DefaultScoringResolver(),
     victoryResolver: VictoryResolver = new DefaultVictoryResolver(),
+    warscrollEffectResolver: WarscrollEffectResolver = new DefaultWarscrollEffectResolver(),
+    combatActionService: CombatActionService = new CombatActionService(warscrollEffectResolver),
   ) {
     this.shuffleCards = shuffleCards;
     this.rollOffResolver = rollOffResolver;
@@ -90,6 +94,7 @@ export class GameEngine {
     this.combatResolver = combatResolver;
     this.scoringResolver = scoringResolver;
     this.victoryResolver = victoryResolver;
+    this.warscrollEffectResolver = warscrollEffectResolver;
   }
 
   public applySetupAction(game: Game, action: SetupAction): Game {
@@ -642,18 +647,10 @@ export class GameEngine {
       player.warscrollState.tokens[tokenName] = currentTokenCount - tokenCost;
     }
 
-    if (ability.drawPowerCards > 0) {
-      this.drawCards(
-        player.powerDeck.drawPile,
-        player.powerHand,
-        ability.drawPowerCards,
-        CardZone.PowerHand,
-      );
-    }
-
+    const effectSummaries = this.warscrollEffectResolver.resolve(game, player, ability);
     game.consecutivePasses = 0;
     game.eventLog.push(
-      `${player.name} used warscroll ability ${ability.name} and drew ${ability.drawPowerCards} power card${ability.drawPowerCards === 1 ? "" : "s"}.`,
+      `${player.name} used warscroll ability ${ability.name} and ${effectSummaries.join(" and ")}.`,
     );
   }
 

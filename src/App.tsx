@@ -3,9 +3,11 @@ import "./App.css";
 import {
   WeaponAbilityDefinition,
   WeaponAbilityKind,
+  WarscrollAbilityEffectKind,
   type CombatResult,
   type FighterState,
   type Game,
+  type WarscrollAbilityEffect,
 } from "./domain";
 import {
   combatDebugScenarios,
@@ -300,9 +302,8 @@ function App() {
               </div>
               <p className="fighter-meta">{option.definition.text}</p>
               <p className="fighter-meta">
-                Cost: {formatWarscrollTokenCosts(option.definition.tokenCosts)}. Effect: draw{" "}
-                {option.definition.drawPowerCards} power card
-                {option.definition.drawPowerCards === 1 ? "" : "s"}.
+                Cost: {formatWarscrollTokenCosts(option.definition.tokenCosts)}. Effect:{" "}
+                {formatWarscrollEffects(option.definition.effects)}.
               </p>
               <span className={`status-badge ${getWarscrollAbilityStatusClass(debugSnapshot, option.abilityIndex, option.isLegal)}`}>
                 {getWarscrollAbilityStatusLabel(debugSnapshot, option.abilityIndex, option.isLegal)}
@@ -597,8 +598,7 @@ function formatSelectedWarscrollDescription(debugSnapshot: CombatDebugSnapshot):
     return `${selectedOption.definition.name} was selected but failed during the captured power step.`;
   }
 
-  const cardsDrawn = debugSnapshot.powerHandAfterWarscroll - debugSnapshot.powerHandBeforeWarscroll;
-  return `${selectedOption.definition.name} resolved in player one's power step and changed the power hand by ${cardsDrawn}.`;
+  return `${selectedOption.definition.name} resolved in player one's power step: ${formatWarscrollEffects(selectedOption.definition.effects)}.`;
 }
 
 function formatWarscrollTokens(tokens: Readonly<Record<string, number>>): string {
@@ -617,6 +617,27 @@ function formatWarscrollTokenCosts(tokenCosts: Readonly<Record<string, number>>)
   }
 
   return entries.map(([tokenName, tokenCount]) => `${tokenCount} ${tokenName}`).join(", ");
+}
+
+function formatWarscrollEffects(effects: readonly WarscrollAbilityEffect[]): string {
+  if (effects.length === 0) {
+    return "none";
+  }
+
+  return effects.map((effect) => formatWarscrollEffect(effect)).join(", ");
+}
+
+function formatWarscrollEffect(effect: WarscrollAbilityEffect): string {
+  switch (effect.kind) {
+    case WarscrollAbilityEffectKind.DrawPowerCards:
+      return `draw ${effect.count} power card${effect.count === 1 ? "" : "s"}`;
+    case WarscrollAbilityEffectKind.GainWarscrollTokens:
+      return `gain ${formatWarscrollTokenCosts(effect.tokens)} token${isSingleTokenAmount(effect.tokens) ? "" : "s"}`;
+  }
+}
+
+function isSingleTokenAmount(tokens: Readonly<Record<string, number>>): boolean {
+  return Object.values(tokens).reduce((total, tokenCount) => total + tokenCount, 0) === 1;
 }
 
 function getWarscrollUsageLabel(debugSnapshot: CombatDebugSnapshot): string {

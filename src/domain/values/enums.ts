@@ -37,6 +37,14 @@ export const EndPhaseStep = {
 
 export type EndPhaseStep = (typeof EndPhaseStep)[keyof typeof EndPhaseStep];
 
+export const WarscrollAbilityEffectKind = {
+  DrawPowerCards: "drawPowerCards",
+  GainWarscrollTokens: "gainWarscrollTokens",
+} as const;
+
+export type WarscrollAbilityEffectKind =
+  (typeof WarscrollAbilityEffectKind)[keyof typeof WarscrollAbilityEffectKind];
+
 export const DeckKind = {
   Objective: "objective",
   Power: "power",
