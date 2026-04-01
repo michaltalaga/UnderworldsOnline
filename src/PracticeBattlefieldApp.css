@@ -121,6 +121,17 @@ body {
   margin-bottom: 16px;
 }
 
+.battlefield-action-notes {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  color: #645345;
+}
+
+.battlefield-action-notes p {
+  margin: 0;
+}
+
 .battlefield-side-stack,
 .battlefield-warband-grid,
 .battlefield-token-list,
@@ -155,6 +166,7 @@ body {
   border: 2px solid rgba(62, 47, 31, 0.34);
   background: rgba(246, 240, 229, 0.88);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45), 0 8px 18px rgba(48, 37, 28, 0.14);
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
 
 .battlefield-map-hex-neutral {
@@ -205,6 +217,52 @@ body {
 
 .battlefield-map-hex-stagger::after {
   border: 2px dashed rgba(140, 81, 40, 0.48);
+}
+
+.battlefield-map-hex-selectable {
+  cursor: pointer;
+}
+
+.battlefield-map-hex-selectable:hover {
+  transform: translateY(-2px);
+}
+
+.battlefield-map-hex-selected {
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 251, 243, 0.7),
+    0 0 0 4px rgba(83, 58, 38, 0.18),
+    0 10px 20px rgba(48, 37, 28, 0.18);
+}
+
+.battlefield-map-hex-move {
+  border-color: rgba(27, 121, 129, 0.74);
+  box-shadow:
+    inset 0 0 0 2px rgba(176, 246, 246, 0.58),
+    0 0 0 4px rgba(86, 175, 177, 0.14),
+    0 10px 20px rgba(48, 37, 28, 0.18);
+}
+
+.battlefield-map-hex-charge {
+  border-color: rgba(168, 121, 24, 0.82);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 230, 155, 0.6),
+    0 0 0 4px rgba(204, 164, 55, 0.14),
+    0 10px 20px rgba(48, 37, 28, 0.18);
+}
+
+.battlefield-map-hex-charge-target {
+  border-color: rgba(152, 61, 40, 0.82);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 200, 184, 0.62),
+    0 0 0 4px rgba(179, 77, 51, 0.16),
+    0 10px 20px rgba(48, 37, 28, 0.18);
+}
+
+.battlefield-map-hex-guard-ready {
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.84),
+    0 0 0 4px rgba(255, 255, 255, 0.28),
+    0 10px 20px rgba(48, 37, 28, 0.18);
 }
 
 .battlefield-hex-meta-row,
@@ -357,6 +415,18 @@ body {
   background: rgba(239, 223, 142, 0.92);
 }
 
+.battlefield-swatch-move {
+  background: rgba(86, 175, 177, 0.92);
+}
+
+.battlefield-swatch-charge {
+  background: rgba(204, 164, 55, 0.92);
+}
+
+.battlefield-swatch-target {
+  background: rgba(179, 77, 51, 0.92);
+}
+
 .battlefield-warband-card {
   padding: 18px;
   border-radius: 22px;
@@ -384,6 +454,20 @@ body {
 .battlefield-fighter-card,
 .battlefield-token-card {
   padding: 14px;
+}
+
+.battlefield-fighter-card-selectable {
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.battlefield-fighter-card-selectable:hover {
+  transform: translateY(-2px);
+}
+
+.battlefield-fighter-card-selected {
+  border-color: rgba(83, 58, 38, 0.32);
+  box-shadow: 0 10px 20px rgba(48, 37, 28, 0.12);
 }
 
 .battlefield-fighter-meta,
