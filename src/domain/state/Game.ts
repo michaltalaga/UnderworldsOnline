@@ -5,6 +5,7 @@ import { ObjectiveScoringResolution } from "../endPhase/ObjectiveScoringResoluti
 import { PowerDrawResolution } from "../endPhase/PowerDrawResolution";
 import { EndPhaseStep, Phase, SetupStep, TurnStep } from "../values/enums";
 import { CombatResult } from "../rules/CombatResult";
+import { PloyResolution } from "../rules/PloyResolution";
 import { WarscrollAbilityResolution } from "../rules/WarscrollAbilityResolution";
 import { BoardState } from "./BoardState";
 import { CardInstance } from "./CardInstance";
@@ -26,6 +27,8 @@ export class Game {
   public winnerPlayerId: PlayerId | null;
   public lastCombatResult: CombatResult | null;
   public combatHistory: CombatResult[];
+  public lastPloyResolution: PloyResolution | null;
+  public ployHistory: PloyResolution[];
   public lastWarscrollAbilityResolution: WarscrollAbilityResolution | null;
   public warscrollAbilityHistory: WarscrollAbilityResolution[];
   public lastObjectiveScoringResolution: ObjectiveScoringResolution | null;
@@ -66,6 +69,8 @@ export class Game {
     this.winnerPlayerId = winnerPlayerId;
     this.lastCombatResult = lastCombatResult;
     this.combatHistory = [];
+    this.lastPloyResolution = null;
+    this.ployHistory = [];
     this.lastWarscrollAbilityResolution = null;
     this.warscrollAbilityHistory = [];
     this.lastObjectiveScoringResolution = null;
@@ -171,6 +176,8 @@ export class Game {
       winnerPlayerId: this.winnerPlayerId,
       lastCombatResult: this.lastCombatResult,
       combatHistory: this.combatHistory,
+      lastPloyResolution: this.lastPloyResolution,
+      ployHistory: this.ployHistory,
       lastWarscrollAbilityResolution: this.lastWarscrollAbilityResolution,
       warscrollAbilityHistory: this.warscrollAbilityHistory,
       lastObjectiveScoringResolution: this.lastObjectiveScoringResolution,

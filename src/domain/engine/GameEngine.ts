@@ -85,6 +85,7 @@ import { DefaultScoringResolver } from "../rules/DefaultScoringResolver";
 import { DefaultWarscrollEffectResolver } from "../rules/DefaultWarscrollEffectResolver";
 import { DefaultVictoryResolver } from "../rules/DefaultVictoryResolver";
 import { PloyEffectResolver } from "../rules/PloyEffectResolver";
+import { PloyResolution } from "../rules/PloyResolution";
 import { RollOffContext } from "../rules/RollOffContext";
 import { RollOffResolver } from "../rules/RollOffResolver";
 import { type RollOffRoundInput } from "../rules/RollOffRound";
@@ -817,6 +818,7 @@ export class GameEngine {
       throw new Error(`Card ${cardWithDefinition.definition.name} is not a ploy.`);
     }
 
+    const ployTarget = this.getPloyTargetDetails(game, action.targetFighterId);
     const effectDescriptions = this.ployEffectResolver.resolve(
       game,
       player,
@@ -833,6 +835,21 @@ export class GameEngine {
     cardWithDefinition.card.attachedToFighterId = null;
     cardWithDefinition.card.revealed = true;
     player.powerDeck.discardPile.push(cardWithDefinition.card);
+    const resolution = new PloyResolution(
+      player.id,
+      player.name,
+      cardWithDefinition.card.id,
+      cardWithDefinition.card.definitionId,
+      cardWithDefinition.definition.name,
+      ployTarget?.fighterId ?? null,
+      ployTarget?.fighterName ?? null,
+      ployTarget?.ownerPlayerId ?? null,
+      ployTarget?.ownerPlayerName ?? null,
+      cardWithDefinition.definition.ployEffects,
+      effectDescriptions,
+    );
+    game.lastPloyResolution = resolution;
+    game.ployHistory.push(resolution);
     game.consecutivePasses = 0;
     const effectSuffix = effectDescriptions.length > 0 ? ` and ${effectDescriptions.join(", ")}` : "";
     game.eventLog.push(`${player.name} played ploy ${cardWithDefinition.definition.name}${effectSuffix}.`);
@@ -1600,5 +1617,36 @@ export class GameEngine {
 
     featureToken.heldByFighterId =
       featureToken.side === FeatureTokenSide.Treasure ? hex.occupantFighterId : null;
+  }
+
+  private getPloyTargetDetails(
+    game: Game,
+    targetFighterId: FighterId | null,
+  ): {
+    fighterId: FighterId;
+    fighterName: string;
+    ownerPlayerId: PlayerId;
+    ownerPlayerName: string;
+  } | null {
+    if (targetFighterId === null) {
+      return null;
+    }
+
+    for (const player of game.players) {
+      const fighter = player.getFighter(targetFighterId);
+      const fighterDefinition = player.getFighterDefinition(targetFighterId);
+      if (fighter === undefined || fighterDefinition === undefined) {
+        continue;
+      }
+
+      return {
+        fighterId: fighter.id,
+        fighterName: fighterDefinition.name,
+        ownerPlayerId: player.id,
+        ownerPlayerName: player.name,
+      };
+    }
+
+    return null;
   }
 }
