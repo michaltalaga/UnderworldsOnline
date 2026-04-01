@@ -22,6 +22,7 @@ export * from "./definitions/WeaponAbilityDefinition";
 export * from "./definitions/WeaponDefinition";
 export * from "./endPhase/EndPhaseAction";
 export * from "./endPhase/EndPhaseActionService";
+export * from "./endPhase/ObjectiveScoringResolution";
 export * from "./endPhase/ResolveCleanupAction";
 export * from "./endPhase/ResolveDiscardCardsAction";
 export * from "./endPhase/ResolveDrawObjectivesAction";

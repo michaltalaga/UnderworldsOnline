@@ -34,6 +34,11 @@ import { CompleteMusterAction } from "../setup/CompleteMusterAction";
 import { DeployFighterAction } from "../setup/DeployFighterAction";
 import { DrawStartingHandsAction } from "../setup/DrawStartingHandsAction";
 import { EndPhaseAction } from "../endPhase/EndPhaseAction";
+import {
+  ObjectiveScoringResolution,
+  type ObjectiveScoringCardResolution,
+  type ObjectiveScoringPlayerResolution,
+} from "../endPhase/ObjectiveScoringResolution";
 import { AttackAction } from "../actions/AttackAction";
 import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
@@ -711,9 +716,12 @@ export class GameEngine {
   private applyResolveScoreObjectives(game: Game): void {
     this.assertEndPhaseStep(game, EndPhaseStep.ScoreObjectives);
 
+    const playerResolutions: ObjectiveScoringPlayerResolution[] = [];
     for (const player of game.players) {
       const scorableObjectives = this.scoringResolver.getScorableObjectives(game, player.id);
       const uniqueObjectiveIds = new Set(scorableObjectives.map((card) => card.id));
+      const scoredObjectives: ObjectiveScoringCardResolution[] = [];
+      let gloryGained = 0;
 
       for (const objectiveId of uniqueObjectiveIds) {
         const objective = player.getCardWithDefinition(objectiveId);
@@ -731,12 +739,29 @@ export class GameEngine {
         objective.card.revealed = true;
         player.scoredObjectives.push(objective.card);
         player.glory += objective.definition.gloryValue;
+        gloryGained += objective.definition.gloryValue;
+        scoredObjectives.push({
+          cardId: objective.card.id,
+          cardDefinitionId: objective.card.definitionId,
+          cardName: objective.definition.name,
+          gloryValue: objective.definition.gloryValue,
+        });
         game.eventLog.push(
           `${player.name} scored ${objective.definition.name} for ${objective.definition.gloryValue} glory.`,
         );
       }
+
+      playerResolutions.push({
+        playerId: player.id,
+        playerName: player.name,
+        gloryGained,
+        scoredObjectives,
+      });
     }
 
+    const resolution = new ObjectiveScoringResolution(game.roundNumber, playerResolutions);
+    game.lastObjectiveScoringResolution = resolution;
+    game.objectiveScoringHistory.push(resolution);
     game.transitionTo(
       createEndPhaseGameState(
         EndPhaseStep.EquipUpgrades,
