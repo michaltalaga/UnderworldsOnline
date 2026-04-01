@@ -71,6 +71,14 @@ type AttackProfileOptionSummary = {
   isDefault: boolean;
 };
 
+type ChargeProfileSummary = {
+  targetId: FighterId;
+  targetName: string;
+  defaultKey: string;
+  selectedKey: string;
+  options: AttackProfileOptionSummary[];
+};
+
 export default function PracticeBattlefieldApp() {
   const [game, setGame] = useState<Game>(() => createActionStepPracticeGame());
   const [, setRefreshTick] = useState(0);
@@ -96,15 +104,28 @@ export default function PracticeBattlefieldApp() {
   const [pendingChargeTargetId, setPendingChargeTargetId] = useState<FighterId | null>(null);
   const [pendingAttackTargetId, setPendingAttackTargetId] = useState<FighterId | null>(null);
   const [selectedAttackKeysByTarget, setSelectedAttackKeysByTarget] = useState<Record<string, string>>({});
+  const [selectedChargeKeysByPair, setSelectedChargeKeysByPair] = useState<Record<string, string>>({});
   const selectedMoveOption = moveOptions.find((option) => option.hexId === selectedMoveHexId) ?? moveOptions[0] ?? null;
   const selectedChargeOption = chargeOptions.find((option) => option.key === selectedChargeKey) ?? chargeOptions[0] ?? null;
   const visibleChargeTargetIds = getChargeTargetIdsForHex(actionLens, pendingChargeHexId);
   const chargeTargetNames = [...visibleChargeTargetIds].map((fighterId) => getFighterName(game, fighterId));
   const attackTargetNames = [...actionLens.attackTargetIds].map((fighterId) => getFighterName(game, fighterId));
   const attackProfiles = getAttackProfiles(game, activePlayer, actionLens, selectedAttackKeysByTarget);
+  const chargeProfiles = getChargeProfiles(
+    game,
+    activePlayer,
+    actionLens,
+    pendingChargeHexId,
+    selectedChargeKeysByPair,
+  );
   const selectedFighterName = selectedFighter === null ? "none" : getFighterName(game, selectedFighter.id);
   const pendingChargeTargetName =
     pendingChargeTargetId === null ? null : getFighterName(game, pendingChargeTargetId);
+  const pendingChargeProfile =
+    pendingChargeHexId === null || pendingChargeTargetId === null
+      ? null
+      : getChargeProfileForTarget(chargeProfiles, pendingChargeTargetId);
+  const pendingChargeOption = pendingChargeProfile?.options.find((option) => option.key === pendingChargeProfile.selectedKey) ?? null;
   const pendingAttackProfile =
     pendingAttackTargetId === null
       ? null
@@ -128,9 +149,9 @@ export default function PracticeBattlefieldApp() {
       ? pendingAttackTargetId !== null
         ? `${pendingAttackTargetName ?? pendingAttackTargetId} selected with ${pendingAttackOption?.label ?? "the current profile"}. Click the same crimson target again to confirm the attack, press Escape to cancel, or pick a different crimson target.`
         : pendingChargeTargetId !== null && pendingChargeHexId !== null
-        ? `${pendingChargeTargetName ?? pendingChargeTargetId} selected from ${pendingChargeHexId}. Click the same red target again to confirm, press Escape to cancel, or pick a different target.`
+        ? `${pendingChargeTargetName ?? pendingChargeTargetId} selected from ${pendingChargeHexId} with ${pendingChargeOption?.label ?? "the current profile"}. Click the same red target again to confirm, press Escape to cancel, or pick a different target.`
         : pendingChargeHexId !== null
-          ? `Charge from ${pendingChargeHexId} selected. Click a red target to arm it, or press Escape to cancel.`
+          ? `Charge from ${pendingChargeHexId} selected. Click a red target to arm it, or choose a charge profile below first.`
           : pendingMoveHexId !== null
             ? `Move to ${pendingMoveHexId} selected. Click the same teal hex again to confirm, press Escape to cancel, or choose another teal hex.`
             : "Select a fighter, then click a teal hex to move or click a gold hex and then a red target to charge."
@@ -147,6 +168,7 @@ export default function PracticeBattlefieldApp() {
     setPendingChargeTargetId(null);
     setPendingAttackTargetId(null);
     setSelectedAttackKeysByTarget({});
+    setSelectedChargeKeysByPair({});
   }
 
   function refreshGame(): void {
@@ -164,6 +186,7 @@ export default function PracticeBattlefieldApp() {
     setPendingChargeTargetId(null);
     setPendingAttackTargetId(null);
     setSelectedAttackKeysByTarget({});
+    setSelectedChargeKeysByPair({});
     setSelectedFighterId(getNextSelectedFighterId(game, previousActivePlayerId, previousSelectedFighterId));
     refreshGame();
   }
@@ -202,9 +225,13 @@ export default function PracticeBattlefieldApp() {
       return;
     }
 
-    const chargeAction = getChargeActionForTarget(actionLens, pendingChargeHexId, targetId);
-    if (chargeAction !== null) {
-      applyAction(chargeAction);
+    const selectedChargeKey =
+      pendingChargeHexId === null
+        ? null
+        : getSelectedChargeKeyForPair(selectedChargeKeysByPair, pendingChargeHexId, targetId);
+    const selectedChargeAction = getChargeActionForTarget(actionLens, pendingChargeHexId, targetId, selectedChargeKey);
+    if (selectedChargeAction !== null) {
+      applyAction(selectedChargeAction);
     }
   }
 
@@ -238,6 +265,17 @@ export default function PracticeBattlefieldApp() {
     setSelectedAttackKeysByTarget((current) => ({
       ...current,
       [targetId]: attackKey,
+    }));
+  }
+
+  function selectChargeProfile(targetId: FighterId, chargeKey: string): void {
+    if (pendingChargeHexId === null) {
+      return;
+    }
+
+    setSelectedChargeKeysByPair((current) => ({
+      ...current,
+      [getChargePairKey(pendingChargeHexId, targetId)]: chargeKey,
     }));
   }
 
@@ -275,6 +313,7 @@ export default function PracticeBattlefieldApp() {
     setPendingChargeTargetId(null);
     setPendingAttackTargetId(null);
     setSelectedAttackKeysByTarget({});
+    setSelectedChargeKeysByPair({});
   }
 
   return (
@@ -439,6 +478,49 @@ export default function PracticeBattlefieldApp() {
                 ))
               )}
             </div>
+            {pendingChargeHexId === null ? null : (
+              <div className="battlefield-profile-section">
+                <p className="battlefield-profile-section-label">Charge Profiles from {pendingChargeHexId}</p>
+                <div className="battlefield-attack-profile-list">
+                  {chargeProfiles.length === 0 ? (
+                    <p className="battlefield-attack-profile-empty">No legal charge profiles from this hex.</p>
+                  ) : (
+                    chargeProfiles.map((profile) => (
+                      <article key={`${pendingChargeHexId}:${profile.targetId}`} className="battlefield-attack-profile-card">
+                        <div className="battlefield-attack-profile-header">
+                          <strong>{profile.targetName}</strong>
+                          <span className="battlefield-attack-profile-chip">
+                            {profile.selectedKey === profile.defaultKey ? "charge default" : "custom pick"}
+                          </span>
+                        </div>
+                        <div className="battlefield-attack-profile-option-list">
+                          {profile.options.map((option) => (
+                            <button
+                              key={option.key}
+                              type="button"
+                              className={[
+                                "battlefield-attack-profile-option",
+                                option.key === profile.selectedKey ? "battlefield-attack-profile-option-selected" : "",
+                              ].filter(Boolean).join(" ")}
+                              disabled={game.turnStep !== TurnStep.Action}
+                              onClick={() => selectChargeProfile(profile.targetId, option.key)}
+                            >
+                              <span className="battlefield-attack-profile-option-label-row">
+                                <span className="battlefield-attack-profile-primary">{option.label}</span>
+                                {option.isDefault ? (
+                                  <span className="battlefield-attack-profile-option-tag">default</span>
+                                ) : null}
+                              </span>
+                              <span className="battlefield-attack-profile-meta">{option.stats}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </article>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
             <div className="battlefield-action-controls">
               <label className="battlefield-control-group">
                 <span>Move</span>
@@ -536,6 +618,9 @@ export default function PracticeBattlefieldApp() {
               </p>
               <p>
                 <strong>Charge:</strong> click a gold destination, then click a red target to arm it, then click that same red target again to confirm. Click the armed gold hex again or press Escape to cancel.
+              </p>
+              <p>
+                <strong>Charge profiles:</strong> after you arm a gold destination, pick a target profile card to control which charge attack the map uses.
               </p>
               <p>
                 <strong>Guard:</strong> the selected fighter gets a white ring when guard is legal.
@@ -1354,9 +1439,19 @@ function getChargeActionForTarget(
   actionLens: FighterActionLens,
   hexId: HexId | null,
   targetId: FighterId,
+  preferredChargeKey: string | null = null,
 ): ChargeAction | null {
   if (hexId === null) {
     return null;
+  }
+
+  if (preferredChargeKey !== null) {
+    const preferredAction = getChargeActionsForHex(actionLens, hexId).find(
+      (action) => action.targetId === targetId && getChargeActionKey(action) === preferredChargeKey,
+    );
+    if (preferredAction !== undefined) {
+      return preferredAction;
+    }
   }
 
   let bestAction: ChargeAction | null = null;
@@ -1372,6 +1467,26 @@ function getChargeActionForTarget(
   }
 
   return bestAction;
+}
+
+function getChargeActionKey(action: ChargeAction): string {
+  const destinationHexId = action.path[action.path.length - 1] ?? "unknown";
+  return `${action.fighterId}:${destinationHexId}:${action.targetId}:${action.weaponId}:${action.selectedAbility ?? "base"}`;
+}
+
+function getChargePairKey(
+  destinationHexId: HexId,
+  targetId: FighterId,
+): string {
+  return `${destinationHexId}:${targetId}`;
+}
+
+function getSelectedChargeKeyForPair(
+  selectedChargeKeysByPair: Record<string, string>,
+  destinationHexId: HexId,
+  targetId: FighterId,
+): string | null {
+  return selectedChargeKeysByPair[getChargePairKey(destinationHexId, targetId)] ?? null;
 }
 
 function getAttackActionForTarget(
@@ -1467,6 +1582,70 @@ function getAttackProfileForTarget(
   return attackProfiles.find((profile) => profile.targetId === targetId) ?? null;
 }
 
+function getChargeProfiles(
+  game: Game,
+  activePlayer: PlayerState | null,
+  actionLens: FighterActionLens,
+  destinationHexId: HexId | null,
+  selectedChargeKeysByPair: Record<string, string>,
+): ChargeProfileSummary[] {
+  if (
+    activePlayer === null ||
+    actionLens.fighter === null ||
+    destinationHexId === null
+  ) {
+    return [];
+  }
+
+  const chargeActions = getChargeActionsForHex(actionLens, destinationHexId);
+  if (chargeActions.length === 0) {
+    return [];
+  }
+
+  const actionsByTarget = new Map<FighterId, ChargeAction[]>();
+  for (const action of chargeActions) {
+    const existingActions = actionsByTarget.get(action.targetId);
+    if (existingActions === undefined) {
+      actionsByTarget.set(action.targetId, [action]);
+    } else {
+      existingActions.push(action);
+    }
+  }
+
+  return [...actionsByTarget.entries()].map(([targetId, actions]) => {
+    const defaultAction = getChargeActionForTarget(actionLens, destinationHexId, targetId) ?? actions[0];
+    const selectedAction = getChargeActionForTarget(
+      actionLens,
+      destinationHexId,
+      targetId,
+      getSelectedChargeKeyForPair(selectedChargeKeysByPair, destinationHexId, targetId),
+    ) ?? defaultAction;
+
+    return {
+      targetId,
+      targetName: getFighterName(game, targetId),
+      defaultKey: getChargeActionKey(defaultAction),
+      selectedKey: getChargeActionKey(selectedAction),
+      options: actions.map((action) => {
+        const description = describeWeaponProfile(activePlayer, action.fighterId, action.weaponId, action.selectedAbility);
+        return {
+          key: getChargeActionKey(action),
+          label: description.label,
+          stats: description.stats,
+          isDefault: action === defaultAction,
+        };
+      }),
+    };
+  });
+}
+
+function getChargeProfileForTarget(
+  chargeProfiles: ChargeProfileSummary[],
+  targetId: FighterId,
+): ChargeProfileSummary | null {
+  return chargeProfiles.find((profile) => profile.targetId === targetId) ?? null;
+}
+
 function describeAttackAction(
   player: PlayerState,
   action: AttackAction,
@@ -1474,17 +1653,29 @@ function describeAttackAction(
   label: string;
   stats: string;
 } {
-  const weapon = player.getFighterWeaponDefinition(action.attackerId, action.weaponId);
+  return describeWeaponProfile(player, action.attackerId, action.weaponId, action.selectedAbility);
+}
+
+function describeWeaponProfile(
+  player: PlayerState,
+  fighterId: FighterId,
+  weaponId: string,
+  selectedAbility: AttackAction["selectedAbility"] | ChargeAction["selectedAbility"],
+): {
+  label: string;
+  stats: string;
+} {
+  const weapon = player.getFighterWeaponDefinition(fighterId, weaponId);
   if (weapon === undefined) {
     return {
-      label: action.weaponId,
+      label: weaponId,
       stats: "",
     };
   }
 
-  const selectedAbility = weapon.getAbility(action.selectedAbility);
+  const selectedWeaponAbility = weapon.getAbility(selectedAbility);
   return {
-    label: selectedAbility === null ? weapon.name : `${weapon.name} using ${selectedAbility.displayName}`,
+    label: selectedWeaponAbility === null ? weapon.name : `${weapon.name} using ${selectedWeaponAbility.displayName}`,
     stats: `Range ${weapon.range} | ${weapon.dice} dice | ${formatWeaponAccuracy(weapon.accuracy)} | Dmg ${weapon.damage}`,
   };
 }

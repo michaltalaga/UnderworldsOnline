@@ -133,6 +133,16 @@ body {
   margin-top: 14px;
 }
 
+.battlefield-profile-section {
+  margin-top: 16px;
+}
+
+.battlefield-profile-section-label {
+  margin: 0;
+  color: #645345;
+  font-weight: 700;
+}
+
 .battlefield-attack-profile-card {
   padding: 12px 14px;
   border-radius: 16px;
