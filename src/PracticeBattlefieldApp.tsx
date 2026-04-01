@@ -135,6 +135,7 @@ export default function PracticeBattlefieldApp() {
     pendingAttackTargetId === null ? null : getFighterName(game, pendingAttackTargetId)
   );
   const pendingAttackOption = pendingAttackProfile?.options.find((option) => option.key === pendingAttackProfile.selectedKey) ?? null;
+  const pendingAttackBadgeLabel = pendingAttackOption?.label ?? null;
   const latestCombat = game.getLatestRecord(GameRecordKind.Combat);
   const recentCombat =
     latestCombat !== null &&
@@ -385,6 +386,7 @@ export default function PracticeBattlefieldApp() {
             pendingChargeTargetId={pendingChargeTargetId}
             pendingAttackTargetId={pendingAttackTargetId}
             pendingChargeBadgeLabel={pendingChargeBadgeLabel}
+            pendingAttackBadgeLabel={pendingAttackBadgeLabel}
             recentCombatTargetId={recentCombatTargetId}
             onAttackTarget={attackTarget}
             onCancelPendingCharge={cancelPendingCharge}
@@ -711,6 +713,7 @@ function BoardMap({
   pendingChargeTargetId,
   pendingAttackTargetId,
   pendingChargeBadgeLabel,
+  pendingAttackBadgeLabel,
   recentCombatTargetId,
   onAttackTarget,
   onCancelPendingCharge,
@@ -729,6 +732,7 @@ function BoardMap({
   pendingChargeTargetId: FighterId | null;
   pendingAttackTargetId: FighterId | null;
   pendingChargeBadgeLabel: string | null;
+  pendingAttackBadgeLabel: string | null;
   recentCombatTargetId: FighterId | null;
   onAttackTarget: (targetId: FighterId) => void;
   onCancelPendingCharge: () => void;
@@ -796,6 +800,7 @@ function BoardMap({
             isPendingAttackTarget,
             isPendingChargeHex,
             pendingChargeBadgeLabel,
+            pendingAttackBadgeLabel,
             isPendingChargeTarget,
             isChargeTarget,
             isPendingMoveHex,
@@ -1224,6 +1229,7 @@ function getHexActionBadge(state: {
   isPendingAttackTarget: boolean;
   isPendingChargeHex: boolean;
   pendingChargeBadgeLabel: string | null;
+  pendingAttackBadgeLabel: string | null;
   isPendingChargeTarget: boolean;
   isChargeTarget: boolean;
   isPendingMoveHex: boolean;
@@ -1235,7 +1241,11 @@ function getHexActionBadge(state: {
   detailed: boolean;
 } | null {
   if (state.isPendingAttackTarget) {
-    return { tone: "confirm", label: "confirm", detailed: false };
+    return {
+      tone: "confirm",
+      label: state.pendingAttackBadgeLabel ?? "confirm",
+      detailed: state.pendingAttackBadgeLabel !== null,
+    };
   }
 
   if (state.isPendingChargeTarget) {
