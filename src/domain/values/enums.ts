@@ -48,8 +48,7 @@ export type WarscrollAbilityEffectKind =
 export const PloyEffectKind = {
   DrawPowerCards: "drawPowerCards",
   GainWarscrollTokens: "gainWarscrollTokens",
-  GainGuardToken: "gainGuardToken",
-  GainStaggerToken: "gainStaggerToken",
+  GainFighterToken: "gainFighterToken",
 } as const;
 
 export type PloyEffectKind =
@@ -62,6 +61,16 @@ export const PloyEffectTargetKind = {
 
 export type PloyEffectTargetKind =
   (typeof PloyEffectTargetKind)[keyof typeof PloyEffectTargetKind];
+
+export const FighterTokenKind = {
+  Move: "move",
+  Charge: "charge",
+  Guard: "guard",
+  Stagger: "stagger",
+} as const;
+
+export type FighterTokenKind =
+  (typeof FighterTokenKind)[keyof typeof FighterTokenKind];
 
 export const DeckKind = {
   Objective: "objective",

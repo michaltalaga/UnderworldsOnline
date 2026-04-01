@@ -7,6 +7,7 @@ import { WarscrollDefinition } from "../../definitions/WarscrollDefinition";
 import { WeaponDefinition } from "../../definitions/WeaponDefinition";
 import {
   CardKind,
+  FighterTokenKind,
   PloyEffectKind,
   PloyEffectTargetKind,
   SaveSymbol,
@@ -168,14 +169,16 @@ function createPowerCards(): CardDefinition[] {
           : isGuardPloy
             ? [
               {
-                kind: PloyEffectKind.GainGuardToken,
+                kind: PloyEffectKind.GainFighterToken,
                 target: PloyEffectTargetKind.FriendlyFighter,
+                token: FighterTokenKind.Guard,
               },
             ]
             : [
               {
-                kind: PloyEffectKind.GainStaggerToken,
+                kind: PloyEffectKind.GainFighterToken,
                 target: PloyEffectTargetKind.EnemyFighter,
+                token: FighterTokenKind.Stagger,
               },
             ],
     );

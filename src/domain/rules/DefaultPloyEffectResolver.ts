@@ -3,7 +3,13 @@ import type { PloyEffect } from "../definitions/PloyEffect";
 import { FighterState } from "../state/FighterState";
 import { Game } from "../state/Game";
 import { PlayerState } from "../state/PlayerState";
-import { CardKind, CardZone, PloyEffectKind, PloyEffectTargetKind } from "../values/enums";
+import {
+  CardKind,
+  CardZone,
+  FighterTokenKind,
+  PloyEffectKind,
+  PloyEffectTargetKind,
+} from "../values/enums";
 import type { FighterId } from "../values/ids";
 import { PloyEffectResolver } from "./PloyEffectResolver";
 
@@ -48,22 +54,15 @@ export class DefaultPloyEffectResolver extends PloyEffectResolver {
         return Number.isInteger(effect.count) && effect.count > 0 && player.powerDeck.drawPile.length >= effect.count;
       case PloyEffectKind.GainWarscrollTokens:
         return Object.values(effect.tokens).every((tokenCount) => Number.isInteger(tokenCount) && tokenCount > 0);
-      case PloyEffectKind.GainGuardToken: {
+      case PloyEffectKind.GainFighterToken: {
         const target = this.getTargetFighter(game, player, effect, targetFighterId);
-        return target !== undefined && !target.hasGuardToken;
-      }
-      case PloyEffectKind.GainStaggerToken: {
-        const target = this.getTargetFighter(game, player, effect, targetFighterId);
-        return target !== undefined && !target.hasStaggerToken;
+        return target !== undefined && !this.hasFighterToken(target, effect.token);
       }
     }
   }
 
   private effectRequiresTarget(effect: PloyEffect): boolean {
-    return (
-      effect.kind === PloyEffectKind.GainGuardToken ||
-      effect.kind === PloyEffectKind.GainStaggerToken
-    );
+    return effect.kind === PloyEffectKind.GainFighterToken;
   }
 
   private resolveEffect(
@@ -84,23 +83,14 @@ export class DefaultPloyEffectResolver extends PloyEffectResolver {
 
         return `gained ${this.formatTokenAmounts(effect.tokens)}`;
       }
-      case PloyEffectKind.GainGuardToken: {
+      case PloyEffectKind.GainFighterToken: {
         const target = this.getTargetFighter(game, player, effect, targetFighterId);
         if (target === undefined) {
           throw new Error(`Could not find a legal fighter target for ${effect.kind}.`);
         }
 
-        target.hasGuardToken = true;
-        return `gave guard to fighter ${target.id}`;
-      }
-      case PloyEffectKind.GainStaggerToken: {
-        const target = this.getTargetFighter(game, player, effect, targetFighterId);
-        if (target === undefined) {
-          throw new Error(`Could not find a legal fighter target for ${effect.kind}.`);
-        }
-
-        target.hasStaggerToken = true;
-        return `gave stagger to fighter ${target.id}`;
+        this.setFighterToken(target, effect.token, true);
+        return `gave ${effect.token} token to fighter ${target.id}`;
       }
     }
   }
@@ -110,7 +100,7 @@ export class DefaultPloyEffectResolver extends PloyEffectResolver {
     player: PlayerState,
     effect: Extract<
       PloyEffect,
-      { kind: typeof PloyEffectKind.GainGuardToken | typeof PloyEffectKind.GainStaggerToken }
+      { kind: typeof PloyEffectKind.GainFighterToken }
     >,
     targetFighterId: FighterId | null,
   ): FighterState | undefined {
@@ -138,6 +128,36 @@ export class DefaultPloyEffectResolver extends PloyEffectResolver {
     }
 
     return target;
+  }
+
+  private hasFighterToken(fighter: FighterState, token: FighterTokenKind): boolean {
+    switch (token) {
+      case FighterTokenKind.Move:
+        return fighter.hasMoveToken;
+      case FighterTokenKind.Charge:
+        return fighter.hasChargeToken;
+      case FighterTokenKind.Guard:
+        return fighter.hasGuardToken;
+      case FighterTokenKind.Stagger:
+        return fighter.hasStaggerToken;
+    }
+  }
+
+  private setFighterToken(fighter: FighterState, token: FighterTokenKind, value: boolean): void {
+    switch (token) {
+      case FighterTokenKind.Move:
+        fighter.hasMoveToken = value;
+        return;
+      case FighterTokenKind.Charge:
+        fighter.hasChargeToken = value;
+        return;
+      case FighterTokenKind.Guard:
+        fighter.hasGuardToken = value;
+        return;
+      case FighterTokenKind.Stagger:
+        fighter.hasStaggerToken = value;
+        return;
+    }
   }
 
   private drawPowerCards(player: PlayerState, count: number): void {
