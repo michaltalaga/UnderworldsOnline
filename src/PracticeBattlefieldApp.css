@@ -530,6 +530,7 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 0.62rem;
@@ -548,6 +549,40 @@ body {
   text-transform: none;
   letter-spacing: 0;
   font-size: 0.48rem;
+}
+
+.battlefield-board-tooltip {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, calc(-100% - 10px));
+  width: max-content;
+  max-width: 160px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(46, 33, 24, 0.96);
+  color: #fff8ee;
+  box-shadow: 0 12px 24px rgba(26, 19, 15, 0.26);
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0;
+  text-align: center;
+  text-transform: none;
+  white-space: normal;
+  pointer-events: none;
+  z-index: 8;
+}
+
+.battlefield-board-tooltip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0;
+  border-style: solid;
+  border-color: rgba(46, 33, 24, 0.96) transparent transparent;
 }
 
 .battlefield-hex-action-move {

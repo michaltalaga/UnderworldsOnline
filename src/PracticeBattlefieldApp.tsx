@@ -746,6 +746,27 @@ function BoardMap({
   const width = Math.max(...positionedHexes.map((hex) => hex.left + hexWidth)) + boardPadding;
   const height = Math.max(...positionedHexes.map((hex) => hex.top + hexHeight)) + boardPadding;
   const visibleChargeTargetHexIds = getChargeTargetHexIdsForHex(game, actionLens, pendingChargeHexId);
+  const [actionTooltip, setActionTooltip] = useState<{ label: string; left: number; top: number } | null>(null);
+
+  useEffect(() => {
+    if (actionTooltip === null) {
+      return;
+    }
+
+    const nextLabel = pendingChargeBadgeLabel ?? pendingAttackBadgeLabel;
+
+    if (nextLabel === null) {
+      setActionTooltip(null);
+      return;
+    }
+
+    if (actionTooltip.label !== nextLabel) {
+      setActionTooltip({
+        ...actionTooltip,
+        label: nextLabel,
+      });
+    }
+  }, [actionTooltip, pendingAttackBadgeLabel, pendingChargeBadgeLabel]);
 
   return (
     <div className="battlefield-board-frame">
@@ -811,6 +832,20 @@ function BoardMap({
             left: `${left}px`,
             top: `${top}px`,
           };
+          const showActionTooltip = () => {
+            if (!actionBadge?.detailed) {
+              return;
+            }
+
+            setActionTooltip({
+              label: actionBadge.label,
+              left: left + hexWidth / 2,
+              top: top + 10,
+            });
+          };
+          const hideActionTooltip = () => {
+            setActionTooltip((current) => (current?.label === actionBadge?.label ? null : current));
+          };
 
           return (
             <article
@@ -860,6 +895,8 @@ function BoardMap({
                   onMoveToHex(hex.id);
                 }
               }}
+              onBlur={hideActionTooltip}
+              onFocus={showActionTooltip}
               onKeyDown={(event) => {
                 if (!isInteractiveHex || (event.key !== "Enter" && event.key !== " ")) {
                   return;
@@ -896,6 +933,8 @@ function BoardMap({
                   onMoveToHex(hex.id);
                 }
               }}
+              onMouseEnter={showActionTooltip}
+              onMouseLeave={hideActionTooltip}
               role={isInteractiveHex ? "button" : undefined}
               style={style}
               tabIndex={isInteractiveHex ? 0 : undefined}
@@ -919,6 +958,7 @@ function BoardMap({
                       `battlefield-hex-action-${actionBadge.tone}`,
                       actionBadge.detailed ? "battlefield-hex-action-badge-detailed" : "",
                     ].filter(Boolean).join(" ")}
+                    title={actionBadge.detailed ? actionBadge.label : undefined}
                   >
                     {actionBadge.label}
                   </span>
@@ -946,6 +986,17 @@ function BoardMap({
             </article>
           );
         })}
+        {actionTooltip === null ? null : (
+          <div
+            className="battlefield-board-tooltip"
+            style={{
+              left: `${actionTooltip.left}px`,
+              top: `${actionTooltip.top}px`,
+            }}
+          >
+            {actionTooltip.label}
+          </div>
+        )}
       </div>
     </div>
   );
