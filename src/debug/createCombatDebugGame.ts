@@ -4,6 +4,7 @@ import {
   CardZone,
   CombatActionService,
   EndPhaseStep,
+  FeatureTokenSide,
   GameEngine,
   GuardAction,
   MoveAction,
@@ -43,6 +44,7 @@ export type CombatDebugScenario = {
 export type CombatDebugDefenderState = {
   hasGuardToken?: boolean;
   hasStaggerToken?: boolean;
+  isOnCoverToken?: boolean;
 };
 
 export type CombatDebugSnapshot = {
@@ -214,6 +216,7 @@ export function createCombatDebugSnapshot(
     throw new Error(`Could not find debug defender ${debugDefenderId}.`);
   }
 
+  applyDebugDefenderFeatureTokenState(game, defender.id, defenderState);
   defender.hasGuardToken = defenderState.hasGuardToken ?? false;
   defender.hasStaggerToken = defenderState.hasStaggerToken ?? false;
 
@@ -224,6 +227,10 @@ export function createCombatDebugSnapshot(
 
   if (defender.hasStaggerToken) {
     defenderEffects.push("stagger");
+  }
+
+  if (defenderState.isOnCoverToken) {
+    defenderEffects.push("cover");
   }
 
   if (defenderEffects.length > 0) {
@@ -347,4 +354,53 @@ function movePowerCardsToDiscard(
     card.zone = CardZone.PowerDiscard;
     discardPile.push(card);
   }
+}
+
+function applyDebugDefenderFeatureTokenState(
+  game: Game,
+  defenderId: string,
+  defenderState: CombatDebugDefenderState,
+): void {
+  const defender = game.getFighter(defenderId);
+  const defenderHexId = defender?.currentHexId;
+  if (defender === undefined || defenderHexId === null || defenderHexId === undefined) {
+    throw new Error(`Could not place debug feature token state for defender ${defenderId}.`);
+  }
+
+  const defenderHex = game.board.getHex(defenderHexId);
+  if (defenderHex === undefined) {
+    throw new Error(`Could not find debug defender hex ${defenderHexId}.`);
+  }
+
+  const existingFeatureTokenId = defenderHex.featureTokenId;
+  if (existingFeatureTokenId !== null) {
+    const existingFeatureToken = game.board.getFeatureToken(existingFeatureTokenId);
+    if (existingFeatureToken !== undefined) {
+      existingFeatureToken.side = defenderState.isOnCoverToken
+        ? FeatureTokenSide.Cover
+        : FeatureTokenSide.Treasure;
+      existingFeatureToken.heldByFighterId = null;
+    }
+
+    return;
+  }
+
+  if (!defenderState.isOnCoverToken) {
+    return;
+  }
+
+  const debugFeatureToken = game.board.getFeatureToken("feature:1");
+  if (debugFeatureToken === undefined) {
+    throw new Error("Could not find debug feature token feature:1.");
+  }
+
+  const previousHex = game.board.getHex(debugFeatureToken.hexId);
+  if (previousHex?.featureTokenId === debugFeatureToken.id) {
+    previousHex.featureTokenId = null;
+  }
+
+  debugFeatureToken.hexId = defenderHex.id;
+  debugFeatureToken.side = FeatureTokenSide.Cover;
+  debugFeatureToken.heldByFighterId = null;
+  defenderHex.featureTokenId = debugFeatureToken.id;
 }

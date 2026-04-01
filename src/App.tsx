@@ -32,12 +32,14 @@ function App() {
   const [scenarioId, setScenarioId] = useState<CombatDebugScenarioId>("success");
   const [defenderHasGuardToken, setDefenderHasGuardToken] = useState(false);
   const [defenderHasStaggerToken, setDefenderHasStaggerToken] = useState(false);
+  const [defenderIsOnCoverToken, setDefenderIsOnCoverToken] = useState(false);
   const [selectedAbility, setSelectedAbility] = useState<WeaponAbilityKind | null>(null);
   const [selectedWarscrollAbilityIndex, setSelectedWarscrollAbilityIndex] = useState<number | null>(null);
   const selectedScenario = getCombatDebugScenario(scenarioId);
   const defenderState: CombatDebugDefenderState = {
     hasGuardToken: defenderHasGuardToken,
     hasStaggerToken: defenderHasStaggerToken,
+    isOnCoverToken: defenderIsOnCoverToken,
   };
   const debugSnapshot = createCombatDebugSnapshot(
     scenarioId,
@@ -100,11 +102,23 @@ function App() {
             >
               Stagger
             </button>
+            <button
+              className={`roll-button${defenderIsOnCoverToken ? " roll-button-active" : ""}`}
+              type="button"
+              onClick={() => setDefenderIsOnCoverToken((value) => !value)}
+              aria-pressed={defenderIsOnCoverToken}
+            >
+              Cover
+            </button>
           </div>
           <p className="token-description">{formatDefenderStateDescription(defenderState)}</p>
           {defenderHasGuardToken && defenderHasStaggerToken ? (
             <p className="token-note">
               Stagger currently suppresses the defender&apos;s guard benefit in combat resolution.
+            </p>
+          ) : defenderIsOnCoverToken ? (
+            <p className="token-note">
+              Cover currently makes save support icons count as successes for the defender.
             </p>
           ) : null}
         </div>
@@ -645,6 +659,10 @@ function formatDefenderStateDescription(defenderState: CombatDebugDefenderState)
 
   if (defenderState.hasStaggerToken) {
     states.push("staggered");
+  }
+
+  if (defenderState.isOnCoverToken) {
+    states.push("on a cover token");
   }
 
   return states.length === 0 ? "Defender starts clean." : `Defender starts ${states.join(" and ")}.`;
