@@ -46,6 +46,7 @@ export * from "./rules/RollOffResult";
 export * from "./rules/RollOffRound";
 export * from "./rules/ScoringResolver";
 export * from "./rules/VictoryResolver";
+export * from "./rules/WarscrollAbilityResolution";
 export * from "./rules/WarscrollEffectResolver";
 export * from "./state/BoardState";
 export * from "./state/CardInstance";

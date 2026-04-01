@@ -291,6 +291,14 @@ function App() {
                 {debugSnapshot.warscrollAbilityOptions.filter((option) => option.isLegal).length}
               </dd>
             </div>
+            <div>
+              <dt>Recorded Result</dt>
+              <dd>{formatWarscrollResolution(debugGame)}</dd>
+            </div>
+            <div>
+              <dt>History</dt>
+              <dd>{debugGame.warscrollAbilityHistory.length}</dd>
+            </div>
           </dl>
         </article>
         <div className="ability-status-list">
@@ -579,6 +587,8 @@ function formatAbilityList(
 }
 
 function formatSelectedWarscrollDescription(debugSnapshot: CombatDebugSnapshot): string {
+  const resolution = debugSnapshot.game.lastWarscrollAbilityResolution;
+
   if (debugSnapshot.warscrollAbilityOptions.length === 0) {
     return `${debugSnapshot.playerWarscrollName} defines no warscroll abilities in this debug snapshot.`;
   }
@@ -598,7 +608,11 @@ function formatSelectedWarscrollDescription(debugSnapshot: CombatDebugSnapshot):
     return `${selectedOption.definition.name} was selected but failed during the captured power step.`;
   }
 
-  return `${selectedOption.definition.name} resolved in player one's power step: ${formatWarscrollEffects(selectedOption.definition.effects)}.`;
+  if (resolution === null) {
+    return `${selectedOption.definition.name} resolved, but no warscroll resolution was recorded.`;
+  }
+
+  return `${selectedOption.definition.name} resolved in player one's power step: ${resolution.effectSummaries.join(", ")}.`;
 }
 
 function formatWarscrollTokens(tokens: Readonly<Record<string, number>>): string {
@@ -638,6 +652,15 @@ function formatWarscrollEffect(effect: WarscrollAbilityEffect): string {
 
 function isSingleTokenAmount(tokens: Readonly<Record<string, number>>): boolean {
   return Object.values(tokens).reduce((total, tokenCount) => total + tokenCount, 0) === 1;
+}
+
+function formatWarscrollResolution(game: Game): string {
+  const resolution = game.lastWarscrollAbilityResolution;
+  if (resolution === null) {
+    return "none";
+  }
+
+  return `${resolution.abilityName}: ${resolution.effectSummaries.join(", ")}`;
 }
 
 function getWarscrollUsageLabel(debugSnapshot: CombatDebugSnapshot): string {

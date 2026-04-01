@@ -62,6 +62,7 @@ import { RollOffResolver } from "../rules/RollOffResolver";
 import { type RollOffRoundInput } from "../rules/RollOffRound";
 import { RollOffResult } from "../rules/RollOffResult";
 import { ScoringResolver } from "../rules/ScoringResolver";
+import { WarscrollAbilityResolution } from "../rules/WarscrollAbilityResolution";
 import { VictoryResolver } from "../rules/VictoryResolver";
 import { WarscrollEffectResolver } from "../rules/WarscrollEffectResolver";
 
@@ -648,9 +649,21 @@ export class GameEngine {
     }
 
     const effectSummaries = this.warscrollEffectResolver.resolve(game, player, ability);
+    const resolution = new WarscrollAbilityResolution(
+      player.id,
+      warscroll.definition.name,
+      action.abilityIndex,
+      ability.name,
+      { ...ability.tokenCosts },
+      ability.effects,
+      effectSummaries,
+    );
+
+    game.lastWarscrollAbilityResolution = resolution;
+    game.warscrollAbilityHistory.push(resolution);
     game.consecutivePasses = 0;
     game.eventLog.push(
-      `${player.name} used warscroll ability ${ability.name} and ${effectSummaries.join(" and ")}.`,
+      `${player.name} used warscroll ability ${ability.name} and ${resolution.effectSummaries.join(" and ")}.`,
     );
   }
 

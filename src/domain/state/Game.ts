@@ -1,6 +1,7 @@
 import type { CardId, FighterId, GameId, PlayerId } from "../values/ids";
 import { EndPhaseStep, Phase, SetupStep, TurnStep } from "../values/enums";
 import { CombatResult } from "../rules/CombatResult";
+import { WarscrollAbilityResolution } from "../rules/WarscrollAbilityResolution";
 import { BoardState } from "./BoardState";
 import { CardInstance } from "./CardInstance";
 import { FighterState } from "./FighterState";
@@ -21,6 +22,8 @@ export class Game {
   public winnerPlayerId: PlayerId | null;
   public lastCombatResult: CombatResult | null;
   public combatHistory: CombatResult[];
+  public lastWarscrollAbilityResolution: WarscrollAbilityResolution | null;
+  public warscrollAbilityHistory: WarscrollAbilityResolution[];
   public eventLog: string[];
   private flowState: GameState;
 
@@ -51,6 +54,8 @@ export class Game {
     this.winnerPlayerId = winnerPlayerId;
     this.lastCombatResult = lastCombatResult;
     this.combatHistory = [];
+    this.lastWarscrollAbilityResolution = null;
+    this.warscrollAbilityHistory = [];
     this.eventLog = eventLog;
     this.flowState = createGameStateFromLegacyFields({
       phase,
@@ -146,6 +151,8 @@ export class Game {
       winnerPlayerId: this.winnerPlayerId,
       lastCombatResult: this.lastCombatResult,
       combatHistory: this.combatHistory,
+      lastWarscrollAbilityResolution: this.lastWarscrollAbilityResolution,
+      warscrollAbilityHistory: this.warscrollAbilityHistory,
       eventLog: this.eventLog,
     };
   }
