@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./App.css";
+export { default } from "./PracticeBattlefieldApp";
 import {
   GameRecordKind,
   WeaponAbilityDefinition,
@@ -34,7 +34,7 @@ const supportedDebugAbilities = new Set<WeaponAbilityKind>([
   WeaponAbilityKind.Brutal,
 ]);
 
-function App() {
+function DebugApp() {
   const [scenarioId, setScenarioId] = useState<CombatDebugScenarioId>("success");
   const [defenderHasGuardToken, setDefenderHasGuardToken] = useState(false);
   const [defenderHasStaggerToken, setDefenderHasStaggerToken] = useState(false);
@@ -1591,4 +1591,4 @@ function getResolutionStatusClass(resolution: object | null): string {
   return resolution === null ? "status-unsupported" : "status-supported";
 }
 
-export default App;
+export { DebugApp };
