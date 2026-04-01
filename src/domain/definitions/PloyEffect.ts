@@ -12,4 +12,8 @@ export type PloyEffect =
   | {
     kind: typeof PloyEffectKind.GainGuardToken;
     target: typeof PloyEffectTargetKind.FriendlyFighter;
+  }
+  | {
+    kind: typeof PloyEffectKind.GainStaggerToken;
+    target: typeof PloyEffectTargetKind.EnemyFighter;
   };

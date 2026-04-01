@@ -9,7 +9,7 @@ import { PloyEffectResolver } from "./PloyEffectResolver";
 
 export class DefaultPloyEffectResolver extends PloyEffectResolver {
   public canResolve(
-    _game: Game,
+    game: Game,
     player: PlayerState,
     ploy: CardDefinition,
     targetFighterId: FighterId | null = null,
@@ -20,7 +20,7 @@ export class DefaultPloyEffectResolver extends PloyEffectResolver {
       ploy.kind === CardKind.Ploy &&
       ploy.ployEffects.length > 0 &&
       (requiresTarget ? targetFighterId !== null : targetFighterId === null) &&
-      ploy.ployEffects.every((effect) => this.canResolveEffect(player, effect, targetFighterId))
+      ploy.ployEffects.every((effect) => this.canResolveEffect(game, player, effect, targetFighterId))
     );
   }
 
@@ -34,10 +34,11 @@ export class DefaultPloyEffectResolver extends PloyEffectResolver {
       throw new Error(`Ploy ${ploy.name} cannot currently resolve.`);
     }
 
-    return ploy.ployEffects.map((effect) => this.resolveEffect(player, effect, targetFighterId));
+    return ploy.ployEffects.map((effect) => this.resolveEffect(game, player, effect, targetFighterId));
   }
 
   private canResolveEffect(
+    game: Game,
     player: PlayerState,
     effect: PloyEffect,
     targetFighterId: FighterId | null,
@@ -48,17 +49,25 @@ export class DefaultPloyEffectResolver extends PloyEffectResolver {
       case PloyEffectKind.GainWarscrollTokens:
         return Object.values(effect.tokens).every((tokenCount) => Number.isInteger(tokenCount) && tokenCount > 0);
       case PloyEffectKind.GainGuardToken: {
-        const target = this.getTargetFighter(player, effect, targetFighterId);
+        const target = this.getTargetFighter(game, player, effect, targetFighterId);
         return target !== undefined && !target.hasGuardToken;
+      }
+      case PloyEffectKind.GainStaggerToken: {
+        const target = this.getTargetFighter(game, player, effect, targetFighterId);
+        return target !== undefined && !target.hasStaggerToken;
       }
     }
   }
 
   private effectRequiresTarget(effect: PloyEffect): boolean {
-    return effect.kind === PloyEffectKind.GainGuardToken;
+    return (
+      effect.kind === PloyEffectKind.GainGuardToken ||
+      effect.kind === PloyEffectKind.GainStaggerToken
+    );
   }
 
   private resolveEffect(
+    game: Game,
     player: PlayerState,
     effect: PloyEffect,
     targetFighterId: FighterId | null,
@@ -76,7 +85,7 @@ export class DefaultPloyEffectResolver extends PloyEffectResolver {
         return `gained ${this.formatTokenAmounts(effect.tokens)}`;
       }
       case PloyEffectKind.GainGuardToken: {
-        const target = this.getTargetFighter(player, effect, targetFighterId);
+        const target = this.getTargetFighter(game, player, effect, targetFighterId);
         if (target === undefined) {
           throw new Error(`Could not find a legal fighter target for ${effect.kind}.`);
         }
@@ -84,19 +93,42 @@ export class DefaultPloyEffectResolver extends PloyEffectResolver {
         target.hasGuardToken = true;
         return `gave guard to fighter ${target.id}`;
       }
+      case PloyEffectKind.GainStaggerToken: {
+        const target = this.getTargetFighter(game, player, effect, targetFighterId);
+        if (target === undefined) {
+          throw new Error(`Could not find a legal fighter target for ${effect.kind}.`);
+        }
+
+        target.hasStaggerToken = true;
+        return `gave stagger to fighter ${target.id}`;
+      }
     }
   }
 
   private getTargetFighter(
+    game: Game,
     player: PlayerState,
-    effect: Extract<PloyEffect, { kind: typeof PloyEffectKind.GainGuardToken }>,
+    effect: Extract<
+      PloyEffect,
+      { kind: typeof PloyEffectKind.GainGuardToken | typeof PloyEffectKind.GainStaggerToken }
+    >,
     targetFighterId: FighterId | null,
   ): FighterState | undefined {
-    if (effect.target !== PloyEffectTargetKind.FriendlyFighter || targetFighterId === null) {
+    if (targetFighterId === null) {
       return undefined;
     }
 
-    const target = player.getFighter(targetFighterId);
+    const targetOwner =
+      effect.target === PloyEffectTargetKind.FriendlyFighter
+        ? player
+        : effect.target === PloyEffectTargetKind.EnemyFighter
+          ? game.getOpponent(player.id)
+          : undefined;
+    if (targetOwner === undefined) {
+      return undefined;
+    }
+
+    const target = targetOwner.getFighter(targetFighterId);
     if (
       target === undefined ||
       target.isSlain ||

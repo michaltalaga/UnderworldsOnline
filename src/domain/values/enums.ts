@@ -49,6 +49,7 @@ export const PloyEffectKind = {
   DrawPowerCards: "drawPowerCards",
   GainWarscrollTokens: "gainWarscrollTokens",
   GainGuardToken: "gainGuardToken",
+  GainStaggerToken: "gainStaggerToken",
 } as const;
 
 export type PloyEffectKind =
@@ -56,6 +57,7 @@ export type PloyEffectKind =
 
 export const PloyEffectTargetKind = {
   FriendlyFighter: "friendlyFighter",
+  EnemyFighter: "enemyFighter",
 } as const;
 
 export type PloyEffectTargetKind =

@@ -574,7 +574,7 @@ export class CombatActionService extends LegalActionService {
         return [untargetedAction];
       }
 
-      return player.fighters.flatMap((fighter) => {
+      return game.players.flatMap((candidatePlayer) => candidatePlayer.fighters).flatMap((fighter) => {
         const targetedAction = new PlayPloyAction(player.id, card.id, fighter.id);
         return this.isLegalPlayPloyAction(game, targetedAction) ? [targetedAction] : [];
       });

@@ -137,6 +137,7 @@ function createPowerCards(): CardDefinition[] {
     const cardNumber = String(index + 1).padStart(2, "0");
     const isDrawPloy = index < 5;
     const isSignalPloy = index >= 5 && index < 8;
+    const isGuardPloy = index === 8;
 
     return new CardDefinition(
       `card-def:setup-practice:ploy:${cardNumber}`,
@@ -146,7 +147,9 @@ function createPowerCards(): CardDefinition[] {
         ? "Draw 1 power card."
         : isSignalPloy
           ? "Gain 1 signal token."
-          : "Give a friendly fighter a guard token.",
+          : isGuardPloy
+            ? "Give a friendly fighter a guard token."
+            : "Give an enemy fighter a stagger token.",
       0,
       isDrawPloy
         ? [
@@ -162,12 +165,19 @@ function createPowerCards(): CardDefinition[] {
               tokens: { signal: 1 },
             },
           ]
-          : [
-            {
-              kind: PloyEffectKind.GainGuardToken,
-              target: PloyEffectTargetKind.FriendlyFighter,
-            },
-          ],
+          : isGuardPloy
+            ? [
+              {
+                kind: PloyEffectKind.GainGuardToken,
+                target: PloyEffectTargetKind.FriendlyFighter,
+              },
+            ]
+            : [
+              {
+                kind: PloyEffectKind.GainStaggerToken,
+                target: PloyEffectTargetKind.EnemyFighter,
+              },
+            ],
     );
   });
 
