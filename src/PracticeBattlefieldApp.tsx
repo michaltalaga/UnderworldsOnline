@@ -70,24 +70,34 @@ export default function PracticeBattlefieldApp() {
   const chargeOptions = getChargeOptions(game, actionLens);
   const [selectedMoveHexId, setSelectedMoveHexId] = useState<HexId | null>(null);
   const [selectedChargeKey, setSelectedChargeKey] = useState<string | null>(null);
+  const [pendingMoveHexId, setPendingMoveHexId] = useState<HexId | null>(null);
   const [pendingChargeHexId, setPendingChargeHexId] = useState<HexId | null>(null);
+  const [pendingChargeTargetId, setPendingChargeTargetId] = useState<FighterId | null>(null);
   const selectedMoveOption = moveOptions.find((option) => option.hexId === selectedMoveHexId) ?? moveOptions[0] ?? null;
   const selectedChargeOption = chargeOptions.find((option) => option.key === selectedChargeKey) ?? chargeOptions[0] ?? null;
   const visibleChargeTargetIds = getChargeTargetIdsForHex(actionLens, pendingChargeHexId);
   const chargeTargetNames = [...visibleChargeTargetIds].map((fighterId) => getFighterName(game, fighterId));
   const selectedFighterName = selectedFighter === null ? "none" : getFighterName(game, selectedFighter.id);
+  const pendingChargeTargetName =
+    pendingChargeTargetId === null ? null : getFighterName(game, pendingChargeTargetId);
   const actionPrompt =
     game.turnStep === TurnStep.Action
-      ? pendingChargeHexId === null
-        ? "Select a fighter, then click a teal hex to move or click a gold hex and then a red target to charge."
-        : `Charge from ${pendingChargeHexId} selected. Click it again, press Escape, or click a red target to continue.`
+      ? pendingChargeTargetId !== null && pendingChargeHexId !== null
+        ? `${pendingChargeTargetName ?? pendingChargeTargetId} selected from ${pendingChargeHexId}. Click the same red target again to confirm, press Escape to cancel, or pick a different target.`
+        : pendingChargeHexId !== null
+          ? `Charge from ${pendingChargeHexId} selected. Click a red target to arm it, or press Escape to cancel.`
+          : pendingMoveHexId !== null
+            ? `Move to ${pendingMoveHexId} selected. Click the same teal hex again to confirm, press Escape to cancel, or choose another teal hex.`
+            : "Select a fighter, then click a teal hex to move or click a gold hex and then a red target to charge."
       : "The selected fighter has already acted. Pass the power step or reset the board.";
 
   function selectFighter(fighterId: FighterId | null): void {
     setSelectedFighterId(fighterId);
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
+    setPendingMoveHexId(null);
     setPendingChargeHexId(null);
+    setPendingChargeTargetId(null);
   }
 
   function refreshGame(): void {
@@ -100,12 +110,21 @@ export default function PracticeBattlefieldApp() {
     demoEngine.applyGameAction(game, action);
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
+    setPendingMoveHexId(null);
     setPendingChargeHexId(null);
+    setPendingChargeTargetId(null);
     setSelectedFighterId(getNextSelectedFighterId(game, previousActivePlayerId, previousSelectedFighterId));
     refreshGame();
   }
 
   function moveToHex(hexId: HexId): void {
+    if (pendingMoveHexId !== hexId) {
+      setPendingMoveHexId(hexId);
+      setPendingChargeHexId(null);
+      setPendingChargeTargetId(null);
+      return;
+    }
+
     const moveAction = getMoveActionForHex(actionLens, hexId);
     if (moveAction !== null) {
       applyAction(moveAction);
@@ -118,10 +137,17 @@ export default function PracticeBattlefieldApp() {
       return;
     }
 
+    setPendingMoveHexId(null);
     setPendingChargeHexId(hexId);
+    setPendingChargeTargetId(null);
   }
 
   function completeChargeAgainstTarget(targetId: FighterId): void {
+    if (pendingChargeTargetId !== targetId) {
+      setPendingChargeTargetId(targetId);
+      return;
+    }
+
     const chargeAction = getChargeActionForTarget(actionLens, pendingChargeHexId, targetId);
     if (chargeAction !== null) {
       applyAction(chargeAction);
@@ -129,23 +155,27 @@ export default function PracticeBattlefieldApp() {
   }
 
   function cancelPendingCharge(): void {
+    setPendingMoveHexId(null);
     setPendingChargeHexId(null);
+    setPendingChargeTargetId(null);
   }
 
   useEffect(() => {
-    if (pendingChargeHexId === null) {
+    if (pendingMoveHexId === null && pendingChargeHexId === null && pendingChargeTargetId === null) {
       return;
     }
 
     function handleKeyDown(event: KeyboardEvent): void {
       if (event.key === "Escape") {
+        setPendingMoveHexId(null);
         setPendingChargeHexId(null);
+        setPendingChargeTargetId(null);
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [pendingChargeHexId]);
+  }, [pendingMoveHexId, pendingChargeHexId, pendingChargeTargetId]);
 
   function resetBattlefield(): void {
     const nextGame = createActionStepPracticeGame();
@@ -153,7 +183,9 @@ export default function PracticeBattlefieldApp() {
     setSelectedFighterId(getDefaultSelectableFighterId(nextGame));
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
+    setPendingMoveHexId(null);
     setPendingChargeHexId(null);
+    setPendingChargeTargetId(null);
   }
 
   return (
@@ -219,7 +251,9 @@ export default function PracticeBattlefieldApp() {
             activePlayerId={activePlayer?.id ?? null}
             selectedFighterId={selectedFighterId}
             actionLens={actionLens}
+            pendingMoveHexId={pendingMoveHexId}
             pendingChargeHexId={pendingChargeHexId}
+            pendingChargeTargetId={pendingChargeTargetId}
             onCancelPendingCharge={cancelPendingCharge}
             onCompleteChargeAgainstTarget={completeChargeAgainstTarget}
             onMoveToHex={moveToHex}
@@ -356,10 +390,10 @@ export default function PracticeBattlefieldApp() {
             </div>
             <div className="battlefield-action-notes">
               <p>
-                <strong>Move:</strong> highlighted in teal, with the field background changing when legal.
+                <strong>Move:</strong> click a teal hex to arm it, then click the same teal hex again to confirm.
               </p>
               <p>
-                <strong>Charge:</strong> click a gold destination, then click a red target. Click the armed hex again or press Escape to cancel.
+                <strong>Charge:</strong> click a gold destination, then click a red target to arm it, then click that same red target again to confirm. Click the armed gold hex again or press Escape to cancel.
               </p>
               <p>
                 <strong>Guard:</strong> the selected fighter gets a white ring when guard is legal.
@@ -434,7 +468,9 @@ function BoardMap({
   activePlayerId,
   actionLens,
   game,
+  pendingMoveHexId,
   pendingChargeHexId,
+  pendingChargeTargetId,
   onCancelPendingCharge,
   onCompleteChargeAgainstTarget,
   onMoveToHex,
@@ -446,7 +482,9 @@ function BoardMap({
   activePlayerId: FighterState["ownerPlayerId"] | null;
   actionLens: FighterActionLens;
   game: Game;
+  pendingMoveHexId: HexId | null;
   pendingChargeHexId: HexId | null;
+  pendingChargeTargetId: FighterId | null;
   onCancelPendingCharge: () => void;
   onCompleteChargeAgainstTarget: (targetId: FighterId) => void;
   onMoveToHex: (hexId: HexId) => void;
@@ -474,9 +512,11 @@ function BoardMap({
           const isSelectableFighter = fighter !== null && fighter.ownerPlayerId === activePlayerId;
           const isSelectedHex = fighter?.id === selectedFighterId;
           const isMoveDestination = actionLens.moveHexIds.has(hex.id);
+          const isPendingMoveHex = pendingMoveHexId === hex.id;
           const isChargeDestination = actionLens.chargeHexIds.has(hex.id);
           const isPendingChargeHex = pendingChargeHexId === hex.id;
           const isChargeTarget = visibleChargeTargetHexIds.has(hex.id);
+          const isPendingChargeTarget = fighter?.id === pendingChargeTargetId;
           const isClickableMoveDestination = isMoveDestination && game.turnStep === TurnStep.Action;
           const isClickableChargeDestination = isChargeDestination && game.turnStep === TurnStep.Action;
           const isClickableChargeTarget =
@@ -492,7 +532,9 @@ function BoardMap({
           const actionBadge = getHexActionBadge({
             isChargeDestination,
             isPendingChargeHex,
+            isPendingChargeTarget,
             isChargeTarget,
+            isPendingMoveHex,
             isMoveDestination,
           });
           const style: CSSProperties = {
@@ -506,8 +548,10 @@ function BoardMap({
               className={getHexClassName(game, hex, {
                 isChargeDestination,
                 isPendingChargeHex,
+                isPendingChargeTarget,
                 isChargeTarget,
                 isClickableHex: isInteractiveHex,
+                isPendingMoveHex,
                 isMoveDestination,
                 isSelectedHex,
                 isSelectableHex: isSelectableFighter,
@@ -788,8 +832,10 @@ function getHexClassName(
   state: {
     isChargeDestination: boolean;
     isPendingChargeHex: boolean;
+    isPendingChargeTarget: boolean;
     isChargeTarget: boolean;
     isClickableHex: boolean;
+    isPendingMoveHex: boolean;
     isMoveDestination: boolean;
     isSelectedHex: boolean;
     isSelectableHex: boolean;
@@ -830,6 +876,10 @@ function getHexClassName(
     classes.push("battlefield-map-hex-move");
   }
 
+  if (state.isPendingMoveHex) {
+    classes.push("battlefield-map-hex-move-armed");
+  }
+
   if (state.isChargeDestination) {
     classes.push("battlefield-map-hex-charge");
   }
@@ -840,6 +890,10 @@ function getHexClassName(
 
   if (state.isChargeTarget) {
     classes.push("battlefield-map-hex-charge-target");
+  }
+
+  if (state.isPendingChargeTarget) {
+    classes.push("battlefield-map-hex-charge-target-armed");
   }
 
   if (state.isSelectedHex) {
@@ -868,15 +922,25 @@ function formatWeaponAccuracy(accuracy: string): string {
 function getHexActionBadge(state: {
   isChargeDestination: boolean;
   isPendingChargeHex: boolean;
+  isPendingChargeTarget: boolean;
   isChargeTarget: boolean;
+  isPendingMoveHex: boolean;
   isMoveDestination: boolean;
-}): "move" | "charge" | "armed" | "target" | null {
+}): "move" | "charge" | "armed" | "target" | "confirm" | null {
+  if (state.isPendingChargeTarget) {
+    return "confirm";
+  }
+
   if (state.isChargeTarget) {
     return "target";
   }
 
   if (state.isPendingChargeHex) {
     return "armed";
+  }
+
+  if (state.isPendingMoveHex) {
+    return "confirm";
   }
 
   if (state.isChargeDestination) {
