@@ -56,6 +56,7 @@ import {
   type PowerDrawPlayerResolution,
 } from "../endPhase/PowerDrawResolution";
 import { AttackAction } from "../actions/AttackAction";
+import { ChargeAction } from "../actions/ChargeAction";
 import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
@@ -161,6 +162,11 @@ export class GameEngine {
   public applyGameAction(game: Game, action: GameAction): Game {
     if (action instanceof AttackAction) {
       this.applyAttackAction(game, action);
+      return game;
+    }
+
+    if (action instanceof ChargeAction) {
+      this.applyChargeAction(game, action);
       return game;
     }
 
@@ -556,39 +562,18 @@ export class GameEngine {
       throw new Error(`Fighter ${attacker.id} does not have weapon ${action.weaponId}.`);
     }
 
-    const combatResult = this.combatResolver.resolve(
+    const { combatResult, targetSlain } = this.resolveCombatAction(
       game,
-      new CombatContext(
-        attackerPlayer.id,
-        defenderPlayer.id,
-        attacker.id,
-        target.id,
-        weapon.id,
-        action.selectedAbility,
-      ),
+      attackerPlayer,
+      defenderPlayer,
+      attacker,
+      target,
+      targetDefinition,
+      weapon.id,
+      action.selectedAbility,
       action.attackRoll,
       action.saveRoll,
     );
-
-    if (combatResult.targetMoved || combatResult.attackerMoved) {
-      throw new Error("Driven back movement is not yet supported.");
-    }
-
-    game.lastCombatResult = combatResult;
-    game.combatHistory.push(combatResult);
-    target.damage += combatResult.damageInflicted;
-    if (combatResult.staggerApplied) {
-      target.hasStaggerToken = true;
-    }
-
-    const targetSlain = combatResult.targetSlain || target.damage >= targetDefinition.health;
-    if (targetSlain) {
-      const targetHex = this.requireHex(game, target.currentHexId);
-      targetHex.occupantFighterId = null;
-      target.currentHexId = null;
-      target.isSlain = true;
-      attackerPlayer.glory += targetDefinition.bounty;
-    }
 
     const firstPlayerId = game.firstPlayerId;
     if (firstPlayerId === null) {
@@ -620,6 +605,100 @@ export class GameEngine {
     const effectSuffix = effectText.length === 0 ? "" : ` and ${effectText.join(" and ")}`;
     game.eventLog.push(
       `${attackerPlayer.name} attacked fighter ${target.id} with ${weapon.name}${abilitySuffix} and ${damageText}${effectSuffix}.`,
+    );
+  }
+
+  private applyChargeAction(game: Game, action: ChargeAction): void {
+    this.assertCombatTurnStep(game, TurnStep.Action);
+    if (!this.combatActionService.isLegalChargeAction(game, action)) {
+      throw new Error(`Charge action is not legal for fighter ${action.fighterId} against ${action.targetId}.`);
+    }
+
+    const attackerPlayer = this.requirePlayer(game, action.playerId);
+    this.assertActivePlayer(game, attackerPlayer.id);
+
+    const defenderPlayer = this.requireOpponent(game, attackerPlayer.id);
+    const attacker = this.requireOwnedDeployedFighter(attackerPlayer, action.fighterId);
+    const target = defenderPlayer.getFighter(action.targetId);
+    const targetDefinition = defenderPlayer.getFighterDefinition(action.targetId);
+    if (
+      target === undefined ||
+      targetDefinition === undefined ||
+      target.currentHexId === null ||
+      target.isSlain
+    ) {
+      throw new Error(`Charge target ${action.targetId} is not available.`);
+    }
+
+    const weapon = attackerPlayer.getFighterWeaponDefinition(attacker.id, action.weaponId);
+    if (weapon === undefined) {
+      throw new Error(`Fighter ${attacker.id} does not have weapon ${action.weaponId}.`);
+    }
+
+    const currentHexId = attacker.currentHexId;
+    if (currentHexId === null) {
+      throw new Error(`Fighter ${attacker.id} is not deployed on the board.`);
+    }
+
+    const destinationHexId = action.path[action.path.length - 1];
+    if (destinationHexId === undefined) {
+      throw new Error(`Charge action for fighter ${attacker.id} requires a destination hex.`);
+    }
+
+    const currentHex = this.requireHex(game, currentHexId);
+    const destinationHex = this.requireHex(game, destinationHexId);
+    currentHex.occupantFighterId = null;
+    destinationHex.occupantFighterId = attacker.id;
+    attacker.currentHexId = destinationHex.id;
+    if (destinationHex.kind === HexKind.Stagger) {
+      attacker.hasStaggerToken = true;
+    }
+
+    const { combatResult, targetSlain } = this.resolveCombatAction(
+      game,
+      attackerPlayer,
+      defenderPlayer,
+      attacker,
+      target,
+      targetDefinition,
+      weapon.id,
+      action.selectedAbility,
+      action.attackRoll,
+      action.saveRoll,
+    );
+
+    attacker.hasChargeToken = true;
+
+    const firstPlayerId = game.firstPlayerId;
+    if (firstPlayerId === null) {
+      throw new Error("Combat turn state requires a first player id.");
+    }
+
+    game.consecutivePasses = 0;
+    game.transitionTo(createCombatTurnGameState(firstPlayerId, attackerPlayer.id, TurnStep.Power));
+
+    const damageText = combatResult.damageInflicted === 0
+      ? "dealt no damage"
+      : `dealt ${combatResult.damageInflicted} damage`;
+    const abilitySuffix =
+      action.selectedAbility === null
+        ? ""
+        : ` using ${WeaponAbilityDefinition.formatName(
+          action.selectedAbility,
+          combatResult.selectedAbilityRequiresCritical,
+        )}`;
+    const effectText = [
+      action.selectedAbility !== null &&
+      combatResult.selectedAbilityRequiresCritical &&
+      !combatResult.selectedAbilityTriggered
+        ? `did not trigger ${WeaponAbilityDefinition.formatName(action.selectedAbility, true)}`
+        : null,
+      combatResult.staggerApplied ? `staggered fighter ${target.id}` : null,
+      targetSlain ? `slew fighter ${target.id} for ${targetDefinition.bounty} glory` : null,
+    ].filter((text): text is string => text !== null);
+    const effectSuffix = effectText.length === 0 ? "" : ` and ${effectText.join(" and ")}`;
+    game.eventLog.push(
+      `${attackerPlayer.name} charged fighter ${attacker.id} to ${destinationHex.id} and attacked fighter ${target.id} with ${weapon.name}${abilitySuffix} and ${damageText}${effectSuffix}.`,
     );
   }
 
@@ -1291,5 +1370,59 @@ export class GameEngine {
 
   private static copyCards(cards: readonly CardInstance[]): CardInstance[] {
     return [...cards];
+  }
+
+  private resolveCombatAction(
+    game: Game,
+    attackerPlayer: PlayerState,
+    defenderPlayer: PlayerState,
+    attacker: FighterState,
+    target: FighterState,
+    targetDefinition: PlayerState["warband"]["fighters"][number],
+    weaponId: string,
+    selectedAbility: AttackAction["selectedAbility"],
+    attackRoll: AttackAction["attackRoll"],
+    saveRoll: AttackAction["saveRoll"],
+  ): { combatResult: ReturnType<CombatResolver["resolve"]>; targetSlain: boolean } {
+    const combatResult = this.combatResolver.resolve(
+      game,
+      new CombatContext(
+        attackerPlayer.id,
+        defenderPlayer.id,
+        attacker.id,
+        target.id,
+        weaponId,
+        selectedAbility,
+      ),
+      attackRoll,
+      saveRoll,
+    );
+
+    if (combatResult.targetMoved || combatResult.attackerMoved) {
+      throw new Error("Driven back movement is not yet supported.");
+    }
+
+    game.lastCombatResult = combatResult;
+    game.combatHistory.push(combatResult);
+    target.damage += combatResult.damageInflicted;
+    if (combatResult.staggerApplied) {
+      target.hasStaggerToken = true;
+    }
+
+    const targetSlain = combatResult.targetSlain || target.damage >= targetDefinition.health;
+    if (targetSlain) {
+      const targetHexId = target.currentHexId;
+      if (targetHexId === null) {
+        throw new Error(`Target fighter ${target.id} is not on the board to be slain.`);
+      }
+
+      const targetHex = this.requireHex(game, targetHexId);
+      targetHex.occupantFighterId = null;
+      target.currentHexId = null;
+      target.isSlain = true;
+      attackerPlayer.glory += targetDefinition.bounty;
+    }
+
+    return { combatResult, targetSlain };
   }
 }

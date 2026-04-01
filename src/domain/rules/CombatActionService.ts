@@ -1,4 +1,5 @@
 import { AttackAction } from "../actions/AttackAction";
+import { ChargeAction } from "../actions/ChargeAction";
 import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
@@ -61,10 +62,68 @@ export class CombatActionService extends LegalActionService {
 
     return [
       ...player.fighters.flatMap((fighter) => this.getLegalMoveActionsForFighter(game, player, fighter.id)),
+      ...player.fighters.flatMap((fighter) => this.getLegalChargeActionsForFighter(game, player, fighter.id)),
       ...player.fighters.flatMap((fighter) => this.getLegalAttackActionsForFighter(game, player, fighter.id)),
       ...player.fighters.flatMap((fighter) => this.getLegalGuardActionsForFighter(game, player, fighter.id)),
       new PassAction(playerId),
     ];
+  }
+
+  public isLegalChargeAction(game: Game, action: ChargeAction): boolean {
+    if (!this.isCombatActionStep(game, action.playerId)) {
+      return false;
+    }
+
+    const player = game.getPlayer(action.playerId);
+    const opponent = game.getOpponent(action.playerId);
+    if (player === undefined || opponent === undefined) {
+      return false;
+    }
+
+    const fighter = player.getFighter(action.fighterId);
+    const fighterDefinition = player.getFighterDefinition(action.fighterId);
+    const target = opponent.getFighter(action.targetId);
+    if (
+      fighter === undefined ||
+      fighterDefinition === undefined ||
+      target === undefined ||
+      target.isSlain ||
+      target.currentHexId === null
+    ) {
+      return false;
+    }
+
+    if (
+      !this.isLegalMoveAction(game, new MoveAction(action.playerId, action.fighterId, action.path))
+      || action.path.length === 0
+    ) {
+      return false;
+    }
+
+    const weapon = player.getFighterWeaponDefinition(action.fighterId, action.weaponId);
+    if (weapon === undefined) {
+      return false;
+    }
+
+    if (
+      action.selectedAbility !== null &&
+      !weapon.hasAbility(action.selectedAbility)
+    ) {
+      return false;
+    }
+
+    const destinationHexId = action.path[action.path.length - 1];
+    if (destinationHexId === undefined) {
+      return false;
+    }
+
+    const destinationHex = game.board.getHex(destinationHexId);
+    const targetHex = game.board.getHex(target.currentHexId);
+    if (destinationHex === undefined || targetHex === undefined) {
+      return false;
+    }
+
+    return this.getHexDistance(destinationHex, targetHex) <= weapon.range;
   }
 
   public isLegalAttackAction(game: Game, action: AttackAction): boolean {
@@ -268,6 +327,61 @@ export class CombatActionService extends LegalActionService {
         ];
       }),
     );
+  }
+
+  private getLegalChargeActionsForFighter(
+    game: Game,
+    player: PlayerState,
+    fighterId: FighterId,
+  ): ChargeAction[] {
+    const fighter = player.getFighter(fighterId);
+    const fighterDefinition = player.getFighterDefinition(fighterId);
+    if (
+      fighter === undefined ||
+      fighterDefinition === undefined ||
+      !this.isCombatActionStep(game, player.id)
+    ) {
+      return [];
+    }
+
+    const opponent = game.getOpponent(player.id);
+    if (opponent === undefined) {
+      return [];
+    }
+
+    return this.getLegalMoveActionsForFighter(game, player, fighterId).flatMap((moveAction) => {
+      const destinationHexId = moveAction.path[moveAction.path.length - 1];
+      if (destinationHexId === undefined) {
+        return [];
+      }
+
+      const destinationHex = game.board.getHex(destinationHexId);
+      if (destinationHex === undefined) {
+        return [];
+      }
+
+      return fighterDefinition.weapons.flatMap((weapon) =>
+        opponent.fighters.flatMap((target) => {
+          if (target.isSlain || target.currentHexId === null) {
+            return [];
+          }
+
+          const targetHex = game.board.getHex(target.currentHexId);
+          if (targetHex === undefined || this.getHexDistance(destinationHex, targetHex) > weapon.range) {
+            return [];
+          }
+
+          const abilityActions = weapon.abilities.map(
+            (ability) => new ChargeAction(player.id, fighter.id, moveAction.path, target.id, weapon.id, ability.kind),
+          );
+
+          return [
+            new ChargeAction(player.id, fighter.id, moveAction.path, target.id, weapon.id),
+            ...abilityActions,
+          ];
+        }),
+      );
+    });
   }
 
   private getLegalGuardActionsForFighter(
