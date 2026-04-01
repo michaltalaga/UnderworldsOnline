@@ -572,6 +572,32 @@ function PlayerPanel({
               <p className="battlefield-fighter-meta">
                 Move {definition?.move ?? "-"} | Save {definition?.saveDice ?? "-"} {definition?.saveSymbol ?? ""}
               </p>
+              <div className="battlefield-weapon-list">
+                {definition?.weapons.length ? (
+                  definition.weapons.map((weapon) => (
+                    <div key={weapon.id} className="battlefield-weapon-card">
+                      <div className="battlefield-weapon-header">
+                        <strong>{weapon.name}</strong>
+                        <span className="battlefield-weapon-damage">Dmg {weapon.damage}</span>
+                      </div>
+                      <p className="battlefield-weapon-profile">
+                        Range {weapon.range} | {weapon.dice} dice | {formatWeaponAccuracy(weapon.accuracy)}
+                      </p>
+                      {weapon.abilities.length === 0 ? null : (
+                        <div className="battlefield-fighter-chip-row">
+                          {weapon.abilities.map((ability) => (
+                            <span key={ability.displayName} className="battlefield-fighter-chip">
+                              {ability.displayName}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="battlefield-weapon-empty">No weapons</p>
+                )}
+              </div>
               <div className="battlefield-fighter-chip-row">
                 {tokenTags.length === 0 ? (
                   <span className="battlefield-fighter-chip battlefield-fighter-chip-idle">ready</span>
@@ -697,6 +723,10 @@ function getHexClassName(
   }
 
   return classes.join(" ");
+}
+
+function formatWeaponAccuracy(accuracy: string): string {
+  return accuracy.charAt(0).toUpperCase() + accuracy.slice(1);
 }
 
 function getHexActionBadge(state: {
