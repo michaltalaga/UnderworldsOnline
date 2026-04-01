@@ -12,6 +12,7 @@ import {
 import {
   combatDebugScenarios,
   createCombatDebugSnapshot,
+  createDelveDebugSnapshot,
   createEndPhaseDebugSnapshot,
   createPloyDebugSnapshot,
   createUpgradeDebugSnapshot,
@@ -53,6 +54,7 @@ function App() {
     selectedAbility,
     selectedWarscrollAbilityIndex,
   );
+  const delveDebugGame = createDelveDebugSnapshot().game;
   const endPhaseDebugGame = createEndPhaseDebugSnapshot().game;
   const ployDebugSnapshot = createPloyDebugSnapshot(selectedPloyActionKey);
   const upgradeDebugSnapshot = createUpgradeDebugSnapshot(selectedUpgradeActionKey);
@@ -384,6 +386,68 @@ function App() {
               <span className="status-badge status-supported">recorded</span>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <p className="eyebrow">Delve</p>
+          <h2>Stored delve resolution</h2>
+        </div>
+        <article className="warscroll-card">
+          <div className="combat-card-header">
+            <div>
+              <p className="combat-label">Power Step Snapshot</p>
+              <h3>{formatDelveHeadline(delveDebugGame)}</h3>
+            </div>
+            <span className={`status-badge ${getResolutionStatusClass(delveDebugGame.lastDelveResolution)}`}>
+              {getResolutionStatusLabel(delveDebugGame.lastDelveResolution)}
+            </span>
+          </div>
+          <p className="combat-meta">
+            This snapshot moves one fighter onto a treasure token, delves it in a real power step,
+            then reads the stored delve resolution directly from game state.
+          </p>
+          <dl className="combat-grid">
+            <div>
+              <dt>Last Delve</dt>
+              <dd>{formatDelveHeadline(delveDebugGame)}</dd>
+            </div>
+            <div>
+              <dt>Feature Token</dt>
+              <dd>{formatDelveFeatureToken(delveDebugGame)}</dd>
+            </div>
+            <div>
+              <dt>Transition</dt>
+              <dd>{formatDelveTransition(delveDebugGame)}</dd>
+            </div>
+            <div>
+              <dt>Holder After</dt>
+              <dd>{formatDelveHolderAfter(delveDebugGame)}</dd>
+            </div>
+            <div>
+              <dt>Stagger</dt>
+              <dd>{formatDelveStagger(delveDebugGame)}</dd>
+            </div>
+            <div>
+              <dt>History</dt>
+              <dd>{delveDebugGame.delveHistory.length}</dd>
+            </div>
+          </dl>
+        </article>
+        <div className="ability-status-list">
+          <article className="ability-status-card">
+            <div>
+              <p className="combat-label">Delve Result</p>
+              <h3>{formatDelveHeadline(delveDebugGame)}</h3>
+            </div>
+            {formatDelveDetails(delveDebugGame).map((detail) => (
+              <p className="fighter-meta" key={detail}>{detail}</p>
+            ))}
+            <span className={`status-badge ${getResolutionStatusClass(delveDebugGame.lastDelveResolution)}`}>
+              {getResolutionStatusLabel(delveDebugGame.lastDelveResolution)}
+            </span>
+          </article>
         </div>
       </section>
 
@@ -1108,6 +1172,69 @@ function formatPloyOptionTitle(option: PloyDebugOption): string {
   }
 
   return `${option.cardName} targeting ${option.targetFighterName} (${option.targetOwnerPlayerName})`;
+}
+
+function formatDelveHeadline(game: Game): string {
+  const resolution = game.lastDelveResolution;
+  if (resolution === null) {
+    return "No delve recorded";
+  }
+
+  return `${resolution.fighterName} delved ${resolution.featureTokenId}`;
+}
+
+function formatDelveFeatureToken(game: Game): string {
+  const resolution = game.lastDelveResolution;
+  if (resolution === null) {
+    return "none";
+  }
+
+  return `${resolution.featureTokenId} on ${resolution.featureTokenHexId}`;
+}
+
+function formatDelveTransition(game: Game): string {
+  const resolution = game.lastDelveResolution;
+  if (resolution === null) {
+    return "none";
+  }
+
+  return `${resolution.sideBeforeDelve} to ${resolution.sideAfterDelve}`;
+}
+
+function formatDelveHolderAfter(game: Game): string {
+  const resolution = game.lastDelveResolution;
+  if (resolution === null || resolution.holderAfterFighterId === null) {
+    return "none";
+  }
+
+  return resolution.holderAfterFighterName ?? resolution.holderAfterFighterId;
+}
+
+function formatDelveStagger(game: Game): string {
+  const resolution = game.lastDelveResolution;
+  if (resolution === null) {
+    return "none";
+  }
+
+  return resolution.staggerApplied ? "applied" : "already staggered";
+}
+
+function formatDelveDetails(game: Game): string[] {
+  const resolution = game.lastDelveResolution;
+  if (resolution === null) {
+    return ["The debug snapshot did not record a delve action."];
+  }
+
+  return [
+    `${resolution.playerName}: ${resolution.fighterName} delved ${resolution.featureTokenId}.`,
+    `Feature token flipped from ${resolution.sideBeforeDelve} to ${resolution.sideAfterDelve}.`,
+    resolution.holderAfterFighterId === null
+      ? "No fighter holds the feature token after the delve."
+      : `${resolution.holderAfterFighterName ?? resolution.holderAfterFighterId} holds the feature token after the delve.`,
+    resolution.staggerApplied
+      ? `${resolution.fighterName} gained a stagger token.`
+      : `${resolution.fighterName} was already staggered before the delve.`,
+  ];
 }
 
 function formatSelectedUpgradeDescription(

@@ -3,6 +3,7 @@ import {
   AttackDieFace,
   CardZone,
   CombatActionService,
+  DelveAction,
   EndPhaseStep,
   FeatureTokenSide,
   GameEngine,
@@ -79,6 +80,10 @@ export type CombatDebugWarscrollAbilityOption = {
 };
 
 export type EndPhaseDebugSnapshot = {
+  game: Game;
+};
+
+export type DelveDebugSnapshot = {
   game: Game;
 };
 
@@ -373,6 +378,27 @@ export function createEndPhaseDebugSnapshot(
   engine.applyEndPhaseAction(game, new ResolveDrawObjectivesAction());
   engine.applyEndPhaseAction(game, new ResolveDrawPowerCardsAction());
   engine.applyEndPhaseAction(game, new ResolveCleanupAction());
+
+  return { game };
+}
+
+export function createDelveDebugSnapshot(): DelveDebugSnapshot {
+  const game = createCombatReadySetupPracticeGame("game:setup-practice:delve-debug");
+  const engine = new GameEngine();
+
+  engine.startCombatRound(
+    game,
+    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Blank }],
+    "player:one",
+  );
+  engine.applyGameAction(
+    game,
+    new MoveAction("player:one", playerOneFighterThreeId, ["hex:r1:c2"]),
+  );
+  engine.applyGameAction(
+    game,
+    new DelveAction("player:one", playerOneFighterThreeId, "feature:2"),
+  );
 
   return { game };
 }

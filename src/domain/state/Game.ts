@@ -5,6 +5,7 @@ import { ObjectiveScoringResolution } from "../endPhase/ObjectiveScoringResoluti
 import { PowerDrawResolution } from "../endPhase/PowerDrawResolution";
 import { EndPhaseStep, Phase, SetupStep, TurnStep } from "../values/enums";
 import { CombatResult } from "../rules/CombatResult";
+import { DelveResolution } from "../rules/DelveResolution";
 import { PloyResolution } from "../rules/PloyResolution";
 import { UpgradeResolution } from "../rules/UpgradeResolution";
 import { WarscrollAbilityResolution } from "../rules/WarscrollAbilityResolution";
@@ -28,6 +29,8 @@ export class Game {
   public winnerPlayerId: PlayerId | null;
   public lastCombatResult: CombatResult | null;
   public combatHistory: CombatResult[];
+  public lastDelveResolution: DelveResolution | null;
+  public delveHistory: DelveResolution[];
   public lastPloyResolution: PloyResolution | null;
   public ployHistory: PloyResolution[];
   public lastUpgradeResolution: UpgradeResolution | null;
@@ -72,6 +75,8 @@ export class Game {
     this.winnerPlayerId = winnerPlayerId;
     this.lastCombatResult = lastCombatResult;
     this.combatHistory = [];
+    this.lastDelveResolution = null;
+    this.delveHistory = [];
     this.lastPloyResolution = null;
     this.ployHistory = [];
     this.lastUpgradeResolution = null;
@@ -181,6 +186,8 @@ export class Game {
       winnerPlayerId: this.winnerPlayerId,
       lastCombatResult: this.lastCombatResult,
       combatHistory: this.combatHistory,
+      lastDelveResolution: this.lastDelveResolution,
+      delveHistory: this.delveHistory,
       lastPloyResolution: this.lastPloyResolution,
       ployHistory: this.ployHistory,
       lastUpgradeResolution: this.lastUpgradeResolution,

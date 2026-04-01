@@ -84,6 +84,7 @@ import { DefaultPloyEffectResolver } from "../rules/DefaultPloyEffectResolver";
 import { DefaultScoringResolver } from "../rules/DefaultScoringResolver";
 import { DefaultWarscrollEffectResolver } from "../rules/DefaultWarscrollEffectResolver";
 import { DefaultVictoryResolver } from "../rules/DefaultVictoryResolver";
+import { DelveResolution } from "../rules/DelveResolution";
 import { PloyEffectResolver } from "../rules/PloyEffectResolver";
 import { PloyResolution } from "../rules/PloyResolution";
 import { RollOffContext } from "../rules/RollOffContext";
@@ -766,6 +767,11 @@ export class GameEngine {
     this.assertActivePlayer(game, player.id);
 
     const fighter = this.requireOwnedDeployedFighter(player, action.fighterId);
+    const fighterDefinition = player.getFighterDefinition(fighter.id);
+    if (fighterDefinition === undefined) {
+      throw new Error(`Could not find fighter definition for ${fighter.id}.`);
+    }
+
     const fighterHexId = fighter.currentHexId;
     if (fighterHexId === null) {
       throw new Error(`Fighter ${fighter.id} is not on the board to delve.`);
@@ -783,6 +789,7 @@ export class GameEngine {
       throw new Error(`Unknown feature token ${action.featureTokenId}.`);
     }
 
+    const sideBeforeDelve = featureToken.side;
     if (featureToken.side === FeatureTokenSide.Treasure) {
       featureToken.side = FeatureTokenSide.Cover;
     } else if (featureToken.side === FeatureTokenSide.Cover) {
@@ -791,9 +798,26 @@ export class GameEngine {
       throw new Error(`Feature token ${featureToken.id} cannot be delved from side ${featureToken.side}.`);
     }
 
+    const hadStaggerTokenBeforeDelve = fighter.hasStaggerToken;
     this.syncFeatureTokenHolderAtHex(game, fighterHex.id);
     fighter.hasStaggerToken = true;
     player.hasDelvedThisPowerStep = true;
+    const holderAfterDelve = this.getPloyTargetDetails(game, featureToken.heldByFighterId);
+    const resolution = new DelveResolution(
+      player.id,
+      player.name,
+      fighter.id,
+      fighterDefinition.name,
+      featureToken.id,
+      fighterHex.id,
+      sideBeforeDelve,
+      featureToken.side,
+      !hadStaggerTokenBeforeDelve && fighter.hasStaggerToken,
+      holderAfterDelve?.fighterId ?? null,
+      holderAfterDelve?.fighterName ?? null,
+    );
+    game.lastDelveResolution = resolution;
+    game.delveHistory.push(resolution);
     game.consecutivePasses = 0;
     game.eventLog.push(
       `${player.name} delved feature token ${featureToken.id} with fighter ${fighter.id}. `

@@ -38,6 +38,7 @@ export * from "./factories/GameFactory";
 export * from "./rules/CombatContext";
 export * from "./rules/CombatActionService";
 export * from "./rules/DefaultCombatResolver";
+export * from "./rules/DelveResolution";
 export * from "./rules/DefaultPloyEffectResolver";
 export * from "./rules/DefaultScoringResolver";
 export * from "./rules/DefaultWarscrollEffectResolver";
