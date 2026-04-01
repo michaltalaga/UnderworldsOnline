@@ -10,6 +10,8 @@ import {
   GuardAction,
   HexKind,
   MoveAction,
+  PassAction,
+  TurnStep,
   type BoardState,
   type FeatureTokenState,
   type FighterState,
@@ -20,8 +22,8 @@ import {
   type PlayerState,
 } from "./domain";
 
-const practiceGame = createActionStepPracticeGame();
 const combatActionService = new CombatActionService();
+const demoEngine = new GameEngine();
 const hexRadius = 46;
 const hexWidth = Math.sqrt(3) * hexRadius;
 const hexHeight = hexRadius * 2;
@@ -39,28 +41,71 @@ type FighterActionLens = {
   chargeHexIds: Set<HexId>;
   chargeTargetHexIds: Set<HexId>;
   chargeTargetIds: Set<FighterId>;
+  moveActions: MoveAction[];
+  chargeActions: ChargeAction[];
+  guardAction: GuardAction | null;
+  passAction: PassAction | null;
   moveCount: number;
   chargeCount: number;
   guardAvailable: boolean;
 };
 
 export default function PracticeBattlefieldApp() {
-  const game = practiceGame;
+  const [game, setGame] = useState<Game>(() => createActionStepPracticeGame());
+  const [, setRefreshTick] = useState(0);
   const boardProjection = projectBoard(game.board);
   const recentEvents = [...game.eventLog].slice(-10).reverse();
   const activePlayer = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
   const selectableFighters =
     activePlayer?.fighters.filter((fighter) => !fighter.isSlain && fighter.currentHexId !== null) ?? [];
   const [selectedFighterId, setSelectedFighterId] = useState<FighterId | null>(
-    selectableFighters[0]?.id ?? null,
+    selectableFighters[0]?.id ?? getDefaultSelectableFighterId(game),
   );
   const selectedFighter =
     selectedFighterId === null || activePlayer === null
       ? null
       : activePlayer.getFighter(selectedFighterId) ?? null;
   const actionLens = getFighterActionLens(game, activePlayer, selectedFighterId);
+  const moveOptions = getMoveOptions(actionLens);
+  const chargeOptions = getChargeOptions(game, actionLens);
+  const [selectedMoveHexId, setSelectedMoveHexId] = useState<HexId | null>(null);
+  const [selectedChargeKey, setSelectedChargeKey] = useState<string | null>(null);
+  const selectedMoveOption = moveOptions.find((option) => option.hexId === selectedMoveHexId) ?? moveOptions[0] ?? null;
+  const selectedChargeOption = chargeOptions.find((option) => option.key === selectedChargeKey) ?? chargeOptions[0] ?? null;
   const chargeTargetNames = [...actionLens.chargeTargetIds].map((fighterId) => getFighterName(game, fighterId));
   const selectedFighterName = selectedFighter === null ? "none" : getFighterName(game, selectedFighter.id);
+  const actionPrompt =
+    game.turnStep === TurnStep.Action
+      ? "Select a fighter, then use the controls below to apply one of its legal actions."
+      : "The selected fighter has already acted. Pass the power step or reset the board.";
+
+  function selectFighter(fighterId: FighterId | null): void {
+    setSelectedFighterId(fighterId);
+    setSelectedMoveHexId(null);
+    setSelectedChargeKey(null);
+  }
+
+  function refreshGame(): void {
+    setRefreshTick((value) => value + 1);
+  }
+
+  function applyAction(action: MoveAction | ChargeAction | GuardAction | PassAction): void {
+    const previousActivePlayerId = game.activePlayerId;
+    const previousSelectedFighterId = selectedFighterId;
+    demoEngine.applyGameAction(game, action);
+    setSelectedMoveHexId(null);
+    setSelectedChargeKey(null);
+    setSelectedFighterId(getNextSelectedFighterId(game, previousActivePlayerId, previousSelectedFighterId));
+    refreshGame();
+  }
+
+  function resetBattlefield(): void {
+    const nextGame = createActionStepPracticeGame();
+    setGame(nextGame);
+    setSelectedFighterId(getDefaultSelectableFighterId(nextGame));
+    setSelectedMoveHexId(null);
+    setSelectedChargeKey(null);
+  }
 
   return (
     <main className="battlefield-app-shell">
@@ -125,7 +170,7 @@ export default function PracticeBattlefieldApp() {
             activePlayerId={activePlayer?.id ?? null}
             selectedFighterId={selectedFighterId}
             actionLens={actionLens}
-            onSelectFighter={setSelectedFighterId}
+            onSelectFighter={selectFighter}
             positionedHexes={boardProjection.positionedHexes}
           />
 
@@ -169,12 +214,98 @@ export default function PracticeBattlefieldApp() {
                 <dd>{actionLens.guardAvailable ? "legal" : "no"}</dd>
               </div>
             </dl>
+            <p className="battlefield-action-prompt">{actionPrompt}</p>
+            <div className="battlefield-action-controls">
+              <label className="battlefield-control-group">
+                <span>Move</span>
+                <select
+                  value={selectedMoveOption?.hexId ?? ""}
+                  onChange={(event) => setSelectedMoveHexId(event.target.value === "" ? null : event.target.value as HexId)}
+                  disabled={selectedMoveOption === null || game.turnStep !== TurnStep.Action}
+                >
+                  {moveOptions.length === 0 ? (
+                    <option value="">No legal move</option>
+                  ) : (
+                    moveOptions.map((option) => (
+                      <option key={option.hexId} value={option.hexId}>
+                        {option.label}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedMoveOption !== null) {
+                      applyAction(selectedMoveOption.action);
+                    }
+                  }}
+                  disabled={selectedMoveOption === null || game.turnStep !== TurnStep.Action}
+                >
+                  Apply
+                </button>
+              </label>
+              <label className="battlefield-control-group">
+                <span>Charge</span>
+                <select
+                  value={selectedChargeOption?.key ?? ""}
+                  onChange={(event) => setSelectedChargeKey(event.target.value === "" ? null : event.target.value)}
+                  disabled={selectedChargeOption === null || game.turnStep !== TurnStep.Action}
+                >
+                  {chargeOptions.length === 0 ? (
+                    <option value="">No legal charge</option>
+                  ) : (
+                    chargeOptions.map((option) => (
+                      <option key={option.key} value={option.key}>
+                        {option.label}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedChargeOption !== null) {
+                      applyAction(selectedChargeOption.action);
+                    }
+                  }}
+                  disabled={selectedChargeOption === null || game.turnStep !== TurnStep.Action}
+                >
+                  Apply
+                </button>
+              </label>
+              <div className="battlefield-button-row">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (actionLens.guardAction !== null) {
+                      applyAction(actionLens.guardAction);
+                    }
+                  }}
+                  disabled={actionLens.guardAction === null || game.turnStep !== TurnStep.Action}
+                >
+                  Guard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (actionLens.passAction !== null) {
+                      applyAction(actionLens.passAction);
+                    }
+                  }}
+                  disabled={actionLens.passAction === null}
+                >
+                  {game.turnStep === TurnStep.Power ? "Pass Power" : "Pass"}
+                </button>
+                <button type="button" onClick={resetBattlefield}>Reset</button>
+              </div>
+            </div>
             <div className="battlefield-action-notes">
               <p>
-                <strong>Move:</strong> highlighted in teal.
+                <strong>Move:</strong> highlighted in teal, with the field background changing when legal.
               </p>
               <p>
-                <strong>Charge:</strong> destinations glow gold, and legal enemy targets glow red.
+                <strong>Charge:</strong> destinations change to gold, and legal enemy targets change to red.
               </p>
               <p>
                 <strong>Guard:</strong> the selected fighter gets a white ring when guard is legal.
@@ -199,7 +330,7 @@ export default function PracticeBattlefieldApp() {
                   game={game}
                   player={player}
                   selectedFighterId={selectedFighterId}
-                  onSelectFighter={setSelectedFighterId}
+                  onSelectFighter={selectFighter}
                 />
               ))}
             </div>
@@ -277,6 +408,14 @@ function BoardMap({
           const fighter = hex.occupantFighterId === null ? null : game.getFighter(hex.occupantFighterId) ?? null;
           const isSelectableFighter = fighter !== null && fighter.ownerPlayerId === activePlayerId;
           const isSelectedHex = fighter?.id === selectedFighterId;
+          const isMoveDestination = actionLens.moveHexIds.has(hex.id);
+          const isChargeDestination = actionLens.chargeHexIds.has(hex.id);
+          const isChargeTarget = actionLens.chargeTargetHexIds.has(hex.id);
+          const actionBadge = getHexActionBadge({
+            isChargeDestination,
+            isChargeTarget,
+            isMoveDestination,
+          });
           const style: CSSProperties = {
             left: `${left}px`,
             top: `${top}px`,
@@ -286,9 +425,9 @@ function BoardMap({
             <article
               key={hex.id}
               className={getHexClassName(game, hex, {
-                isChargeDestination: actionLens.chargeHexIds.has(hex.id),
-                isChargeTarget: actionLens.chargeTargetHexIds.has(hex.id),
-                isMoveDestination: actionLens.moveHexIds.has(hex.id),
+                isChargeDestination,
+                isChargeTarget,
+                isMoveDestination,
                 isSelectedHex,
                 isSelectableHex: isSelectableFighter,
                 isGuardReadyHex: isSelectedHex && actionLens.guardAvailable,
@@ -318,6 +457,11 @@ function BoardMap({
                 {featureToken === null ? null : (
                   <span className={`battlefield-feature-chip battlefield-feature-${featureToken.side}`}>
                     {getFeatureTokenBadge(featureToken)}
+                  </span>
+                )}
+                {actionBadge === null ? null : (
+                  <span className={`battlefield-hex-action-badge battlefield-hex-action-${actionBadge}`}>
+                    {actionBadge}
                   </span>
                 )}
                 {fighter === null ? (
@@ -555,30 +699,54 @@ function getHexClassName(
   return classes.join(" ");
 }
 
+function getHexActionBadge(state: {
+  isChargeDestination: boolean;
+  isChargeTarget: boolean;
+  isMoveDestination: boolean;
+}): "move" | "charge" | "target" | null {
+  if (state.isChargeTarget) {
+    return "target";
+  }
+
+  if (state.isChargeDestination) {
+    return "charge";
+  }
+
+  if (state.isMoveDestination) {
+    return "move";
+  }
+
+  return null;
+}
+
 function getFighterActionLens(
   game: Game,
   activePlayer: PlayerState | null,
   selectedFighterId: FighterId | null,
 ): FighterActionLens {
+  const legalActions = activePlayer === null ? [] : combatActionService.getLegalActions(game, activePlayer.id);
+  const passAction = legalActions.find(
+    (action): action is PassAction => action instanceof PassAction,
+  ) ?? null;
+
   if (activePlayer === null || selectedFighterId === null) {
-    return createEmptyActionLens();
+    return createEmptyActionLens(passAction);
   }
 
   const fighter = activePlayer.getFighter(selectedFighterId) ?? null;
   if (fighter === null) {
-    return createEmptyActionLens();
+    return createEmptyActionLens(passAction);
   }
 
-  const legalActions = combatActionService.getLegalActions(game, activePlayer.id);
   const moveActions = legalActions.filter(
     (action): action is MoveAction => action instanceof MoveAction && action.fighterId === selectedFighterId,
   );
   const chargeActions = legalActions.filter(
     (action): action is ChargeAction => action instanceof ChargeAction && action.fighterId === selectedFighterId,
   );
-  const guardAvailable = legalActions.some(
-    (action) => action instanceof GuardAction && action.fighterId === selectedFighterId,
-  );
+  const guardAction = legalActions.find(
+    (action): action is GuardAction => action instanceof GuardAction && action.fighterId === selectedFighterId,
+  ) ?? null;
 
   const moveHexIds = new Set<HexId>(
     moveActions.flatMap((action) => {
@@ -614,23 +782,123 @@ function getFighterActionLens(
     chargeHexIds,
     chargeTargetHexIds,
     chargeTargetIds,
+    moveActions,
+    chargeActions,
+    guardAction,
+    passAction,
     moveCount: moveHexIds.size,
     chargeCount: uniqueChargeOptions.size,
-    guardAvailable,
+    guardAvailable: guardAction !== null,
   };
 }
 
-function createEmptyActionLens(): FighterActionLens {
+function createEmptyActionLens(passAction: PassAction | null): FighterActionLens {
   return {
     fighter: null,
     moveHexIds: new Set<HexId>(),
     chargeHexIds: new Set<HexId>(),
     chargeTargetHexIds: new Set<HexId>(),
     chargeTargetIds: new Set<FighterId>(),
+    moveActions: [],
+    chargeActions: [],
+    guardAction: null,
+    passAction,
     moveCount: 0,
     chargeCount: 0,
     guardAvailable: false,
   };
+}
+
+function getMoveOptions(actionLens: FighterActionLens): Array<{
+  action: MoveAction;
+  hexId: HexId;
+  label: string;
+}> {
+  return actionLens.moveActions
+    .flatMap((action) => {
+      const destinationHexId = action.path[action.path.length - 1];
+      return destinationHexId === undefined
+        ? []
+        : [{
+          action,
+          hexId: destinationHexId,
+          label: `Move to ${destinationHexId} (${action.path.length} step${action.path.length === 1 ? "" : "s"})`,
+        }];
+    })
+    .sort((left, right) => left.hexId.localeCompare(right.hexId));
+}
+
+function getChargeOptions(
+  game: Game,
+  actionLens: FighterActionLens,
+): Array<{
+  action: ChargeAction;
+  key: string;
+  label: string;
+}> {
+  const byKey = new Map<string, ChargeAction>();
+
+  for (const action of actionLens.chargeActions) {
+    const destinationHexId = action.path[action.path.length - 1];
+    if (destinationHexId === undefined) {
+      continue;
+    }
+
+    const key = `${destinationHexId}:${action.targetId}`;
+    const existingAction = byKey.get(key);
+    if (existingAction === undefined || (existingAction.selectedAbility !== null && action.selectedAbility === null)) {
+      byKey.set(key, action);
+    }
+  }
+
+  return [...byKey.entries()]
+    .map(([key, action]) => {
+      const destinationHexId = action.path[action.path.length - 1];
+      const targetName = getFighterName(game, action.targetId);
+      return destinationHexId === undefined
+        ? null
+        : {
+          action,
+          key,
+          label: `Charge to ${destinationHexId} vs ${targetName}`,
+        };
+    })
+    .filter((option): option is {
+      action: ChargeAction;
+      key: string;
+      label: string;
+    } => option !== null)
+    .sort((left, right) => left.label.localeCompare(right.label));
+}
+
+function getDefaultSelectableFighterId(game: Game): FighterId | null {
+  const activePlayerId = game.activePlayerId;
+  if (activePlayerId === null) {
+    return null;
+  }
+
+  const activePlayer = game.getPlayer(activePlayerId);
+  return activePlayer?.fighters.find((fighter) => !fighter.isSlain && fighter.currentHexId !== null)?.id ?? null;
+}
+
+function getNextSelectedFighterId(
+  game: Game,
+  previousActivePlayerId: PlayerState["id"] | null,
+  previousSelectedFighterId: FighterId | null,
+): FighterId | null {
+  if (
+    game.activePlayerId !== null &&
+    game.activePlayerId === previousActivePlayerId &&
+    previousSelectedFighterId !== null
+  ) {
+    const activePlayer = game.getPlayer(game.activePlayerId);
+    const fighter = activePlayer?.getFighter(previousSelectedFighterId);
+    if (fighter !== undefined && !fighter.isSlain && fighter.currentHexId !== null) {
+      return fighter.id;
+    }
+  }
+
+  return getDefaultSelectableFighterId(game);
 }
 
 function buildHexTitle(

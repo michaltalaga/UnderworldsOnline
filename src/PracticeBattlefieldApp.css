@@ -121,6 +121,55 @@ body {
   margin-bottom: 16px;
 }
 
+.battlefield-action-prompt {
+  margin: 14px 0 0;
+  color: #645345;
+  font-weight: 700;
+}
+
+.battlefield-action-controls {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.battlefield-control-group {
+  display: grid;
+  gap: 8px;
+  color: #5e4b3a;
+  font-weight: 700;
+}
+
+.battlefield-control-group select,
+.battlefield-control-group button,
+.battlefield-button-row button {
+  border: 1px solid rgba(84, 63, 45, 0.18);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font: inherit;
+  background: rgba(255, 251, 243, 0.88);
+  color: #3f3228;
+}
+
+.battlefield-control-group button,
+.battlefield-button-row button {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.battlefield-control-group button:disabled,
+.battlefield-button-row button:disabled,
+.battlefield-control-group select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.battlefield-button-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .battlefield-action-notes {
   display: grid;
   gap: 8px;
@@ -236,25 +285,28 @@ body {
 
 .battlefield-map-hex-move {
   border-color: rgba(27, 121, 129, 0.74);
+  background: linear-gradient(180deg, rgba(190, 240, 235, 0.98), rgba(104, 204, 196, 0.98));
   box-shadow:
-    inset 0 0 0 2px rgba(176, 246, 246, 0.58),
-    0 0 0 4px rgba(86, 175, 177, 0.14),
+    inset 0 0 0 2px rgba(230, 255, 252, 0.72),
+    0 0 0 4px rgba(86, 175, 177, 0.2),
     0 10px 20px rgba(48, 37, 28, 0.18);
 }
 
 .battlefield-map-hex-charge {
   border-color: rgba(168, 121, 24, 0.82);
+  background: linear-gradient(180deg, rgba(247, 227, 159, 0.98), rgba(227, 184, 82, 0.98));
   box-shadow:
-    inset 0 0 0 2px rgba(255, 230, 155, 0.6),
-    0 0 0 4px rgba(204, 164, 55, 0.14),
+    inset 0 0 0 2px rgba(255, 247, 213, 0.72),
+    0 0 0 4px rgba(204, 164, 55, 0.2),
     0 10px 20px rgba(48, 37, 28, 0.18);
 }
 
 .battlefield-map-hex-charge-target {
   border-color: rgba(152, 61, 40, 0.82);
+  background: linear-gradient(180deg, rgba(247, 197, 184, 0.98), rgba(217, 117, 91, 0.98));
   box-shadow:
-    inset 0 0 0 2px rgba(255, 200, 184, 0.62),
-    0 0 0 4px rgba(179, 77, 51, 0.16),
+    inset 0 0 0 2px rgba(255, 229, 221, 0.72),
+    0 0 0 4px rgba(179, 77, 51, 0.22),
     0 10px 20px rgba(48, 37, 28, 0.18);
 }
 
@@ -297,6 +349,30 @@ body {
   height: 8px;
   border-radius: 999px;
   background: rgba(87, 73, 61, 0.45);
+}
+
+.battlefield-hex-action-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.battlefield-hex-action-move {
+  background: rgba(16, 96, 102, 0.9);
+  color: #ecfffd;
+}
+
+.battlefield-hex-action-charge {
+  background: rgba(134, 93, 15, 0.92);
+  color: #fff8e7;
+}
+
+.battlefield-hex-action-target {
+  background: rgba(134, 44, 24, 0.92);
+  color: #fff3ef;
 }
 
 .battlefield-feature-chip {
