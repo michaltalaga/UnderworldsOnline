@@ -5,12 +5,13 @@ import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
 import { PassAction } from "../actions/PassAction";
+import { PlayUpgradeAction } from "../actions/PlayUpgradeAction";
 import { UseWarscrollAbilityAction } from "../actions/UseWarscrollAbilityAction";
 import { Game } from "../state/Game";
 import { HexCell } from "../state/HexCell";
 import { FighterState } from "../state/FighterState";
 import { PlayerState } from "../state/PlayerState";
-import { FeatureTokenSide, HexKind, TurnStep } from "../values/enums";
+import { CardKind, CardZone, FeatureTokenSide, HexKind, TurnStep } from "../values/enums";
 import type { FighterId, HexId, PlayerId } from "../values/ids";
 import { DefaultWarscrollEffectResolver } from "./DefaultWarscrollEffectResolver";
 import { LegalActionService } from "./LegalActionService";
@@ -53,6 +54,7 @@ export class CombatActionService extends LegalActionService {
     if (game.turnStep === TurnStep.Power) {
       return [
         ...this.getLegalDelveActions(game, player),
+        ...this.getLegalPlayUpgradeActions(game, player),
         ...this.getLegalUseWarscrollAbilityActions(game, player),
         new PassAction(playerId),
       ];
@@ -226,6 +228,31 @@ export class CombatActionService extends LegalActionService {
       fighterHex.featureTokenId === featureToken.id &&
       featureToken.hexId === fighterHex.id &&
       featureToken.side !== FeatureTokenSide.Hidden
+    );
+  }
+
+  public isLegalPlayUpgradeAction(game: Game, action: PlayUpgradeAction): boolean {
+    if (!this.isCombatTurnStep(game, action.playerId, TurnStep.Power)) {
+      return false;
+    }
+
+    const player = game.getPlayer(action.playerId);
+    if (player === undefined) {
+      return false;
+    }
+
+    const cardWithDefinition = player.getCardWithDefinition(action.cardId);
+    const fighter = player.getFighter(action.fighterId);
+    if (cardWithDefinition === undefined || fighter === undefined) {
+      return false;
+    }
+
+    return (
+      cardWithDefinition.definition.kind === CardKind.Upgrade &&
+      cardWithDefinition.card.zone === CardZone.PowerHand &&
+      player.glory >= cardWithDefinition.definition.gloryValue &&
+      !fighter.isSlain &&
+      fighter.currentHexId !== null
     );
   }
 
@@ -467,6 +494,31 @@ export class CombatActionService extends LegalActionService {
 
       return [new DelveAction(player.id, fighter.id, featureToken.id)];
     });
+  }
+
+  private getLegalPlayUpgradeActions(
+    game: Game,
+    player: PlayerState,
+  ): PlayUpgradeAction[] {
+    if (!this.isCombatTurnStep(game, player.id, TurnStep.Power)) {
+      return [];
+    }
+
+    const upgradeCards = player.powerHand.filter((card) => {
+      const definition = player.getCardDefinition(card.id);
+      return (
+        definition?.kind === CardKind.Upgrade &&
+        player.glory >= definition.gloryValue
+      );
+    });
+
+    return upgradeCards.flatMap((card) =>
+      player.fighters.flatMap((fighter) =>
+        !fighter.isSlain && fighter.currentHexId !== null
+          ? [new PlayUpgradeAction(player.id, card.id, fighter.id)]
+          : []
+      ),
+    );
   }
 
   private getLegalUseWarscrollAbilityActions(

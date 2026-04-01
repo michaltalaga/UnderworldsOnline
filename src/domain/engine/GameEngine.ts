@@ -27,6 +27,7 @@ import { PlayerState } from "../state/PlayerState";
 import { Territory } from "../state/Territory";
 import {
   RollOffKind,
+  CardKind,
   CardZone,
   EndPhaseStep,
   FeatureTokenSide,
@@ -62,6 +63,7 @@ import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
 import { PassAction } from "../actions/PassAction";
+import { PlayUpgradeAction } from "../actions/PlayUpgradeAction";
 import { PlaceFeatureTokenAction } from "../setup/PlaceFeatureTokenAction";
 import { UseWarscrollAbilityAction } from "../actions/UseWarscrollAbilityAction";
 import { ResolveCleanupAction } from "../endPhase/ResolveCleanupAction";
@@ -183,6 +185,11 @@ export class GameEngine {
 
     if (action instanceof DelveAction) {
       this.applyDelveAction(game, action);
+      return game;
+    }
+
+    if (action instanceof PlayUpgradeAction) {
+      this.applyPlayUpgradeAction(game, action);
       return game;
     }
 
@@ -778,6 +785,48 @@ export class GameEngine {
     game.eventLog.push(
       `${player.name} delved feature token ${featureToken.id} with fighter ${fighter.id}. `
       + `It is now a ${featureToken.side} token and ${fighter.id} gained a stagger token.`,
+    );
+  }
+
+  private applyPlayUpgradeAction(game: Game, action: PlayUpgradeAction): void {
+    this.assertCombatTurnStep(game, TurnStep.Power);
+    if (!this.combatActionService.isLegalPlayUpgradeAction(game, action)) {
+      throw new Error(`Upgrade play is not legal for card ${action.cardId} on fighter ${action.fighterId}.`);
+    }
+
+    const player = this.requirePlayer(game, action.playerId);
+    this.assertActivePlayer(game, player.id);
+
+    const cardWithDefinition = player.getCardWithDefinition(action.cardId);
+    const fighter = this.requireOwnedDeployedFighter(player, action.fighterId);
+    if (cardWithDefinition === undefined) {
+      throw new Error(`Player ${player.name} does not have upgrade card ${action.cardId}.`);
+    }
+
+    if (cardWithDefinition.definition.kind !== CardKind.Upgrade) {
+      throw new Error(`Card ${cardWithDefinition.definition.name} is not an upgrade.`);
+    }
+
+    const upgradeCost = cardWithDefinition.definition.gloryValue;
+    if (player.glory < upgradeCost) {
+      throw new Error(`${player.name} does not have enough glory to play ${cardWithDefinition.definition.name}.`);
+    }
+
+    const handIndex = player.powerHand.findIndex((card) => card.id === cardWithDefinition.card.id);
+    if (handIndex === -1) {
+      throw new Error(`Could not find upgrade ${cardWithDefinition.card.id} in ${player.name}'s power hand.`);
+    }
+
+    player.powerHand.splice(handIndex, 1);
+    cardWithDefinition.card.zone = CardZone.Equipped;
+    cardWithDefinition.card.attachedToFighterId = fighter.id;
+    cardWithDefinition.card.revealed = true;
+    player.equippedUpgrades.push(cardWithDefinition.card);
+    fighter.upgradeCardIds.push(cardWithDefinition.card.id);
+    player.glory -= upgradeCost;
+    game.consecutivePasses = 0;
+    game.eventLog.push(
+      `${player.name} played upgrade ${cardWithDefinition.definition.name} on fighter ${fighter.id} for ${upgradeCost} glory.`,
     );
   }
 
