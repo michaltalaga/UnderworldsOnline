@@ -17,6 +17,7 @@ import {
   getCombatDebugScenario,
   type CombatDebugSnapshot,
   type CombatDebugDefenderState,
+  type PloyDebugOption,
   type CombatDebugScenarioId,
 } from "./debug/createCombatDebugGame";
 
@@ -36,6 +37,7 @@ function App() {
   const [defenderIsOnCoverToken, setDefenderIsOnCoverToken] = useState(false);
   const [selectedAbility, setSelectedAbility] = useState<WeaponAbilityKind | null>(null);
   const [selectedWarscrollAbilityIndex, setSelectedWarscrollAbilityIndex] = useState<number | null>(null);
+  const [selectedPloyActionKey, setSelectedPloyActionKey] = useState<string | null>(null);
   const selectedScenario = getCombatDebugScenario(scenarioId);
   const defenderState: CombatDebugDefenderState = {
     hasGuardToken: defenderHasGuardToken,
@@ -49,7 +51,8 @@ function App() {
     selectedWarscrollAbilityIndex,
   );
   const endPhaseDebugGame = createEndPhaseDebugSnapshot().game;
-  const ployDebugGame = createPloyDebugSnapshot().game;
+  const ployDebugSnapshot = createPloyDebugSnapshot(selectedPloyActionKey);
+  const ployDebugGame = ployDebugSnapshot.game;
   const debugGame = debugSnapshot.game;
   const latestCombat = debugGame.lastCombatResult;
   const recentEvents = debugGame.eventLog.slice(-8).reverse();
@@ -279,6 +282,35 @@ function App() {
           <p className="eyebrow">Ploys</p>
           <h2>Stored ploy resolutions</h2>
         </div>
+        <div className="warscroll-controls">
+          <p className="token-heading">Player One power-step ploys</p>
+          <div className="roll-switcher" role="group" aria-label="Player one ploy selection">
+            <button
+              className={`roll-button${selectedPloyActionKey === null ? " roll-button-active" : ""}`}
+              type="button"
+              onClick={() => setSelectedPloyActionKey(null)}
+              aria-pressed={selectedPloyActionKey === null}
+            >
+              None
+            </button>
+            {ployDebugSnapshot.ployOptions.map((option) => (
+              <button
+                key={option.actionKey}
+                className={`roll-button${selectedPloyActionKey === option.actionKey ? " roll-button-active" : ""}`}
+                type="button"
+                onClick={() => setSelectedPloyActionKey(option.actionKey)}
+                aria-pressed={selectedPloyActionKey === option.actionKey}
+                title={formatPloyOptionTitle(option)}
+              >
+                {formatPloyOptionButton(option)}
+              </button>
+            ))}
+          </div>
+          <p className="token-description">{formatSelectedPloyDescription(ployDebugSnapshot)}</p>
+          {ployDebugSnapshot.ployActionError !== null ? (
+            <p className="token-note">{ployDebugSnapshot.ployActionError}</p>
+          ) : null}
+        </div>
         <article className="warscroll-card">
           <div className="combat-card-header">
             <div>
@@ -290,9 +322,9 @@ function App() {
             </span>
           </div>
           <p className="combat-meta">
-            This snapshot reaches Player One&apos;s first power step, plays one untargeted ploy and
-            one targeted ploy through the real engine, then reads the stored ploy resolution objects
-            directly from game state.
+            This snapshot reaches Player One&apos;s first power step, exposes the legal ploy actions
+            in that exact moment, then replays the selected one through the real engine and reads
+            the stored ploy resolution objects directly from game state.
           </p>
           <dl className="combat-grid">
             <div>
@@ -300,8 +332,8 @@ function App() {
               <dd>{formatPloyHeadline(ployDebugGame)}</dd>
             </div>
             <div>
-              <dt>History</dt>
-              <dd>{ployDebugGame.ployHistory.length}</dd>
+              <dt>Legal Actions</dt>
+              <dd>{ployDebugSnapshot.ployOptions.length}</dd>
             </div>
             <div>
               <dt>Latest Target</dt>
@@ -316,12 +348,25 @@ function App() {
               <dd>{ployDebugGame.turnStep ?? "n/a"}</dd>
             </div>
             <div>
-              <dt>Active Player</dt>
-              <dd>{getPlayerName(ployDebugGame, ployDebugGame.activePlayerId)}</dd>
+              <dt>History</dt>
+              <dd>{ployDebugGame.ployHistory.length}</dd>
             </div>
           </dl>
         </article>
         <div className="ability-status-list">
+          {ployDebugGame.ployHistory.length === 0 ? (
+            <article className="ability-status-card">
+              <div>
+                <p className="combat-label">No Ploy Yet</p>
+                <h3>Choose a legal action above</h3>
+              </div>
+              <p className="fighter-meta">
+                The snapshot is parked on Player One&apos;s power step until you replay one of the
+                legal ploys.
+              </p>
+              <span className="status-badge status-idle">idle</span>
+            </article>
+          ) : null}
           {ployDebugGame.ployHistory.map((resolution, index) => (
             <article className="ability-status-card" key={`${resolution.cardId}:${index}`}>
               <div>
@@ -909,6 +954,47 @@ function formatPloyResolutionTarget(
   }
 
   return `Target: ${resolution.targetFighterName} (${resolution.targetOwnerPlayerName})`;
+}
+
+function formatSelectedPloyDescription(
+  ployDebugSnapshot: ReturnType<typeof createPloyDebugSnapshot>,
+): string {
+  if (ployDebugSnapshot.ployOptions.length === 0) {
+    return "No legal ploy actions were available in the captured power step.";
+  }
+
+  if (ployDebugSnapshot.selectedPloyActionKey === null) {
+    return "Choose any legal ploy action from Player One's captured power step to replay it through the engine.";
+  }
+
+  const selectedOption = ployDebugSnapshot.ployOptions.find(
+    (option) => option.actionKey === ployDebugSnapshot.selectedPloyActionKey,
+  );
+  if (selectedOption === undefined) {
+    return `Selected ploy action ${ployDebugSnapshot.selectedPloyActionKey} is not available in this snapshot.`;
+  }
+
+  if (ployDebugSnapshot.ployActionError !== null) {
+    return `${formatPloyOptionTitle(selectedOption)} failed during replay.`;
+  }
+
+  return `${formatPloyOptionTitle(selectedOption)} resolved through the captured power step.`;
+}
+
+function formatPloyOptionButton(option: PloyDebugOption): string {
+  return option.targetFighterName === null ? option.cardName : `${option.cardName} -> ${option.targetFighterName}`;
+}
+
+function formatPloyOptionTitle(option: PloyDebugOption): string {
+  if (option.targetFighterName === null) {
+    return option.cardName;
+  }
+
+  if (option.targetOwnerPlayerName === null) {
+    return `${option.cardName} targeting ${option.targetFighterName}`;
+  }
+
+  return `${option.cardName} targeting ${option.targetFighterName} (${option.targetOwnerPlayerName})`;
 }
 
 function getWarscrollUsageLabel(debugSnapshot: CombatDebugSnapshot): string {

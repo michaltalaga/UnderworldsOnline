@@ -83,6 +83,17 @@ export type EndPhaseDebugSnapshot = {
 
 export type PloyDebugSnapshot = {
   game: Game;
+  ployOptions: readonly PloyDebugOption[];
+  selectedPloyActionKey: string | null;
+  ployActionError: string | null;
+};
+
+export type PloyDebugOption = {
+  actionKey: string;
+  action: PlayPloyAction;
+  cardName: string;
+  targetFighterName: string | null;
+  targetOwnerPlayerName: string | null;
 };
 
 export type EndPhaseDebugMode = "round" | "final";
@@ -348,7 +359,9 @@ export function createEndPhaseDebugSnapshot(
   return { game };
 }
 
-export function createPloyDebugSnapshot(): PloyDebugSnapshot {
+export function createPloyDebugSnapshot(
+  selectedPloyActionKey: string | null = null,
+): PloyDebugSnapshot {
   const game = createCombatReadySetupPracticeGame("game:setup-practice:ploy-debug");
   const engine = new GameEngine();
   const actionService = new CombatActionService();
@@ -366,44 +379,62 @@ export function createPloyDebugSnapshot(): PloyDebugSnapshot {
     throw new Error("Could not find both players for ploy debug setup.");
   }
 
-  const targetedPloy = playerOne.powerDeck.drawPile.find(
+  const friendlyTargetedPloy = playerOne.powerDeck.drawPile.find(
+    (card) => card.definitionId === "card-def:setup-practice:ploy:09",
+  );
+  if (friendlyTargetedPloy === undefined) {
+    throw new Error("Could not find Practice Ploy 09 in Player One draw pile.");
+  }
+
+  playerOne.powerDeck.drawPile = playerOne.powerDeck.drawPile.filter(
+    (card) => card.id !== friendlyTargetedPloy.id,
+  );
+  friendlyTargetedPloy.zone = CardZone.PowerHand;
+  playerOne.powerHand.push(friendlyTargetedPloy);
+  game.eventLog.push("Debug setup moved Practice Ploy 09 into Player One hand.");
+
+  const enemyTargetedPloy = playerOne.powerDeck.drawPile.find(
     (card) => card.definitionId === "card-def:setup-practice:ploy:10",
   );
-  if (targetedPloy === undefined) {
+  if (enemyTargetedPloy === undefined) {
     throw new Error("Could not find Practice Ploy 10 in Player One draw pile.");
   }
 
   playerOne.powerDeck.drawPile = playerOne.powerDeck.drawPile.filter(
-    (card) => card.id !== targetedPloy.id,
+    (card) => card.id !== enemyTargetedPloy.id,
   );
-  targetedPloy.zone = CardZone.PowerHand;
-  playerOne.powerHand.push(targetedPloy);
+  enemyTargetedPloy.zone = CardZone.PowerHand;
+  playerOne.powerHand.push(enemyTargetedPloy);
   game.eventLog.push("Debug setup moved Practice Ploy 10 into Player One hand.");
 
-  const drawPloy = playerOne.powerHand.find(
-    (card) => card.definitionId === "card-def:setup-practice:ploy:01",
-  );
-  if (drawPloy === undefined) {
-    throw new Error("Could not find Practice Ploy 01 in Player One hand.");
-  }
-
-  engine.applyGameAction(game, new PlayPloyAction(playerOne.id, drawPloy.id));
-
-  const targetedPloyAction = actionService
+  const ployOptions = actionService
     .getLegalActions(game, playerOne.id)
-    .find(
-      (action): action is PlayPloyAction =>
-        action instanceof PlayPloyAction &&
-        action.cardId === targetedPloy.id &&
-        playerTwo.getFighter(action.targetFighterId ?? "") !== undefined,
+    .flatMap((action) =>
+      action instanceof PlayPloyAction ? [createPloyDebugOption(game, playerOne.id, action)] : [],
     );
-  if (targetedPloyAction === undefined) {
-    throw new Error("Could not find a legal targeted Practice Ploy 10 action.");
+
+  let ployActionError: string | null = null;
+  if (selectedPloyActionKey !== null) {
+    const selectedOption = ployOptions.find((option) => option.actionKey === selectedPloyActionKey);
+    if (selectedOption === undefined) {
+      ployActionError = `Selected ploy action ${selectedPloyActionKey} is not legal in the captured power step.`;
+      game.eventLog.push(`Debug ploy failed: ${ployActionError}`);
+    } else {
+      try {
+        engine.applyGameAction(game, selectedOption.action);
+      } catch (error) {
+        ployActionError = error instanceof Error ? error.message : String(error);
+        game.eventLog.push(`Debug ploy failed: ${ployActionError}`);
+      }
+    }
   }
 
-  engine.applyGameAction(game, targetedPloyAction);
-
-  return { game };
+  return {
+    game,
+    ployOptions,
+    selectedPloyActionKey,
+    ployActionError,
+  };
 }
 
 class DebugEndPhaseScoringResolver extends ScoringResolver {
@@ -512,5 +543,61 @@ function getDefenderFeatureTokenSnapshot(
     featureTokenId: featureToken.id,
     featureTokenSide: featureToken.side,
     heldByFighterId: featureToken.heldByFighterId,
+  };
+}
+
+function createPloyDebugOption(
+  game: Game,
+  playerId: string,
+  action: PlayPloyAction,
+): PloyDebugOption {
+  const player = game.getPlayer(playerId);
+  const cardWithDefinition = player?.getCardWithDefinition(action.cardId);
+  if (player === undefined || cardWithDefinition === undefined) {
+    throw new Error(`Could not build ploy debug option for card ${action.cardId}.`);
+  }
+
+  const targetDetails = getPloyDebugTargetDetails(game, action.targetFighterId);
+
+  return {
+    actionKey: getPloyDebugActionKey(action),
+    action,
+    cardName: cardWithDefinition.definition.name,
+    targetFighterName: targetDetails.targetFighterName,
+    targetOwnerPlayerName: targetDetails.targetOwnerPlayerName,
+  };
+}
+
+function getPloyDebugActionKey(action: PlayPloyAction): string {
+  return `${action.cardId}:${action.targetFighterId ?? "none"}`;
+}
+
+function getPloyDebugTargetDetails(
+  game: Game,
+  targetFighterId: string | null,
+): {
+  targetFighterName: string | null;
+  targetOwnerPlayerName: string | null;
+} {
+  if (targetFighterId === null) {
+    return {
+      targetFighterName: null,
+      targetOwnerPlayerName: null,
+    };
+  }
+
+  for (const player of game.players) {
+    const fighterDefinition = player.getFighterDefinition(targetFighterId);
+    if (fighterDefinition !== undefined) {
+      return {
+        targetFighterName: fighterDefinition.name,
+        targetOwnerPlayerName: player.name,
+      };
+    }
+  }
+
+  return {
+    targetFighterName: targetFighterId,
+    targetOwnerPlayerName: null,
   };
 }
