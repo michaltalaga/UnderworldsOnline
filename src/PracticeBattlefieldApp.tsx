@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import "./PracticeBattlefieldApp.css";
 import {
   AttackDieFace,
@@ -80,7 +80,7 @@ export default function PracticeBattlefieldApp() {
     game.turnStep === TurnStep.Action
       ? pendingChargeHexId === null
         ? "Select a fighter, then click a teal hex to move or click a gold hex and then a red target to charge."
-        : `Charge from ${pendingChargeHexId} selected. Click a red target to complete it.`
+        : `Charge from ${pendingChargeHexId} selected. Click it again, press Escape, or click a red target to continue.`
       : "The selected fighter has already acted. Pass the power step or reset the board.";
 
   function selectFighter(fighterId: FighterId | null): void {
@@ -127,6 +127,25 @@ export default function PracticeBattlefieldApp() {
       applyAction(chargeAction);
     }
   }
+
+  function cancelPendingCharge(): void {
+    setPendingChargeHexId(null);
+  }
+
+  useEffect(() => {
+    if (pendingChargeHexId === null) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.key === "Escape") {
+        setPendingChargeHexId(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [pendingChargeHexId]);
 
   function resetBattlefield(): void {
     const nextGame = createActionStepPracticeGame();
@@ -201,6 +220,7 @@ export default function PracticeBattlefieldApp() {
             selectedFighterId={selectedFighterId}
             actionLens={actionLens}
             pendingChargeHexId={pendingChargeHexId}
+            onCancelPendingCharge={cancelPendingCharge}
             onCompleteChargeAgainstTarget={completeChargeAgainstTarget}
             onMoveToHex={moveToHex}
             onStartChargeToHex={startChargeToHex}
@@ -339,7 +359,7 @@ export default function PracticeBattlefieldApp() {
                 <strong>Move:</strong> highlighted in teal, with the field background changing when legal.
               </p>
               <p>
-                <strong>Charge:</strong> click a gold destination, then click a red target if more than one fighter can be charged.
+                <strong>Charge:</strong> click a gold destination, then click a red target. Click the armed hex again or press Escape to cancel.
               </p>
               <p>
                 <strong>Guard:</strong> the selected fighter gets a white ring when guard is legal.
@@ -415,6 +435,7 @@ function BoardMap({
   actionLens,
   game,
   pendingChargeHexId,
+  onCancelPendingCharge,
   onCompleteChargeAgainstTarget,
   onMoveToHex,
   onStartChargeToHex,
@@ -426,6 +447,7 @@ function BoardMap({
   actionLens: FighterActionLens;
   game: Game;
   pendingChargeHexId: HexId | null;
+  onCancelPendingCharge: () => void;
   onCompleteChargeAgainstTarget: (targetId: FighterId) => void;
   onMoveToHex: (hexId: HexId) => void;
   onStartChargeToHex: (hexId: HexId) => void;
@@ -497,6 +519,11 @@ function BoardMap({
                   return;
                 }
 
+                if (isPendingChargeHex) {
+                  onCancelPendingCharge();
+                  return;
+                }
+
                 if (isClickableChargeTarget && fighter !== null) {
                   onCompleteChargeAgainstTarget(fighter.id);
                   return;
@@ -520,6 +547,11 @@ function BoardMap({
 
                 if (isSelectableFighter) {
                   onSelectFighter(fighter.id);
+                  return;
+                }
+
+                if (isPendingChargeHex) {
+                  onCancelPendingCharge();
                   return;
                 }
 
