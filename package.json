@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "setup:practice": "tsx scripts/setup-practice.ts"
+    "setup:practice": "tsx scripts/setup-practice.ts",
+    "debug:end-phase": "tsx scripts/debug-end-phase.ts"
   },
   "dependencies": {
     "react": "^19.2.4",
