@@ -5,6 +5,7 @@ import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
 import { PassAction } from "../actions/PassAction";
+import { PlayPloyAction } from "../actions/PlayPloyAction";
 import { PlayUpgradeAction } from "../actions/PlayUpgradeAction";
 import { UseWarscrollAbilityAction } from "../actions/UseWarscrollAbilityAction";
 import { Game } from "../state/Game";
@@ -54,6 +55,7 @@ export class CombatActionService extends LegalActionService {
     if (game.turnStep === TurnStep.Power) {
       return [
         ...this.getLegalDelveActions(game, player),
+        ...this.getLegalPlayPloyActions(game, player),
         ...this.getLegalPlayUpgradeActions(game, player),
         ...this.getLegalUseWarscrollAbilityActions(game, player),
         new PassAction(playerId),
@@ -253,6 +255,23 @@ export class CombatActionService extends LegalActionService {
       player.glory >= cardWithDefinition.definition.gloryValue &&
       !fighter.isSlain &&
       fighter.currentHexId !== null
+    );
+  }
+
+  public isLegalPlayPloyAction(game: Game, action: PlayPloyAction): boolean {
+    if (!this.isCombatTurnStep(game, action.playerId, TurnStep.Power)) {
+      return false;
+    }
+
+    const player = game.getPlayer(action.playerId);
+    const cardWithDefinition = player?.getCardWithDefinition(action.cardId);
+    if (cardWithDefinition === undefined) {
+      return false;
+    }
+
+    return (
+      cardWithDefinition.definition.kind === CardKind.Ploy &&
+      cardWithDefinition.card.zone === CardZone.PowerHand
     );
   }
 
@@ -519,6 +538,22 @@ export class CombatActionService extends LegalActionService {
           : []
       ),
     );
+  }
+
+  private getLegalPlayPloyActions(
+    game: Game,
+    player: PlayerState,
+  ): PlayPloyAction[] {
+    if (!this.isCombatTurnStep(game, player.id, TurnStep.Power)) {
+      return [];
+    }
+
+    return player.powerHand.flatMap((card) => {
+      const definition = player.getCardDefinition(card.id);
+      return definition?.kind === CardKind.Ploy
+        ? [new PlayPloyAction(player.id, card.id)]
+        : [];
+    });
   }
 
   private getLegalUseWarscrollAbilityActions(

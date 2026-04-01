@@ -63,6 +63,7 @@ import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
 import { PassAction } from "../actions/PassAction";
+import { PlayPloyAction } from "../actions/PlayPloyAction";
 import { PlayUpgradeAction } from "../actions/PlayUpgradeAction";
 import { PlaceFeatureTokenAction } from "../setup/PlaceFeatureTokenAction";
 import { UseWarscrollAbilityAction } from "../actions/UseWarscrollAbilityAction";
@@ -185,6 +186,11 @@ export class GameEngine {
 
     if (action instanceof DelveAction) {
       this.applyDelveAction(game, action);
+      return game;
+    }
+
+    if (action instanceof PlayPloyAction) {
+      this.applyPlayPloyAction(game, action);
       return game;
     }
 
@@ -786,6 +792,38 @@ export class GameEngine {
       `${player.name} delved feature token ${featureToken.id} with fighter ${fighter.id}. `
       + `It is now a ${featureToken.side} token and ${fighter.id} gained a stagger token.`,
     );
+  }
+
+  private applyPlayPloyAction(game: Game, action: PlayPloyAction): void {
+    this.assertCombatTurnStep(game, TurnStep.Power);
+    if (!this.combatActionService.isLegalPlayPloyAction(game, action)) {
+      throw new Error(`Ploy play is not legal for card ${action.cardId}.`);
+    }
+
+    const player = this.requirePlayer(game, action.playerId);
+    this.assertActivePlayer(game, player.id);
+
+    const cardWithDefinition = player.getCardWithDefinition(action.cardId);
+    if (cardWithDefinition === undefined) {
+      throw new Error(`Player ${player.name} does not have ploy card ${action.cardId}.`);
+    }
+
+    if (cardWithDefinition.definition.kind !== CardKind.Ploy) {
+      throw new Error(`Card ${cardWithDefinition.definition.name} is not a ploy.`);
+    }
+
+    const handIndex = player.powerHand.findIndex((card) => card.id === cardWithDefinition.card.id);
+    if (handIndex === -1) {
+      throw new Error(`Could not find ploy ${cardWithDefinition.card.id} in ${player.name}'s power hand.`);
+    }
+
+    player.powerHand.splice(handIndex, 1);
+    cardWithDefinition.card.zone = CardZone.PowerDiscard;
+    cardWithDefinition.card.attachedToFighterId = null;
+    cardWithDefinition.card.revealed = true;
+    player.powerDeck.discardPile.push(cardWithDefinition.card);
+    game.consecutivePasses = 0;
+    game.eventLog.push(`${player.name} played ploy ${cardWithDefinition.definition.name}.`);
   }
 
   private applyPlayUpgradeAction(game: Game, action: PlayUpgradeAction): void {
