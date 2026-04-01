@@ -70,19 +70,24 @@ export default function PracticeBattlefieldApp() {
   const chargeOptions = getChargeOptions(game, actionLens);
   const [selectedMoveHexId, setSelectedMoveHexId] = useState<HexId | null>(null);
   const [selectedChargeKey, setSelectedChargeKey] = useState<string | null>(null);
+  const [pendingChargeHexId, setPendingChargeHexId] = useState<HexId | null>(null);
   const selectedMoveOption = moveOptions.find((option) => option.hexId === selectedMoveHexId) ?? moveOptions[0] ?? null;
   const selectedChargeOption = chargeOptions.find((option) => option.key === selectedChargeKey) ?? chargeOptions[0] ?? null;
-  const chargeTargetNames = [...actionLens.chargeTargetIds].map((fighterId) => getFighterName(game, fighterId));
+  const visibleChargeTargetIds = getChargeTargetIdsForHex(actionLens, pendingChargeHexId);
+  const chargeTargetNames = [...visibleChargeTargetIds].map((fighterId) => getFighterName(game, fighterId));
   const selectedFighterName = selectedFighter === null ? "none" : getFighterName(game, selectedFighter.id);
   const actionPrompt =
     game.turnStep === TurnStep.Action
-      ? "Select a fighter, then click a teal hex to move there or use the controls below."
+      ? pendingChargeHexId === null
+        ? "Select a fighter, then click a teal hex to move or a gold hex to start a charge."
+        : `Charge from ${pendingChargeHexId} selected. Click a red target to complete it.`
       : "The selected fighter has already acted. Pass the power step or reset the board.";
 
   function selectFighter(fighterId: FighterId | null): void {
     setSelectedFighterId(fighterId);
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
+    setPendingChargeHexId(null);
   }
 
   function refreshGame(): void {
@@ -95,6 +100,7 @@ export default function PracticeBattlefieldApp() {
     demoEngine.applyGameAction(game, action);
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
+    setPendingChargeHexId(null);
     setSelectedFighterId(getNextSelectedFighterId(game, previousActivePlayerId, previousSelectedFighterId));
     refreshGame();
   }
@@ -106,12 +112,35 @@ export default function PracticeBattlefieldApp() {
     }
   }
 
+  function startChargeToHex(hexId: HexId): void {
+    const chargeActions = getChargeActionsForHex(actionLens, hexId);
+    const uniqueTargetIds = [...new Set(chargeActions.map((action) => action.targetId))];
+
+    if (uniqueTargetIds.length <= 1) {
+      const chargeAction = chargeActions[0] ?? null;
+      if (chargeAction !== null) {
+        applyAction(chargeAction);
+      }
+      return;
+    }
+
+    setPendingChargeHexId(hexId);
+  }
+
+  function completeChargeAgainstTarget(targetId: FighterId): void {
+    const chargeAction = getChargeActionForTarget(actionLens, pendingChargeHexId, targetId);
+    if (chargeAction !== null) {
+      applyAction(chargeAction);
+    }
+  }
+
   function resetBattlefield(): void {
     const nextGame = createActionStepPracticeGame();
     setGame(nextGame);
     setSelectedFighterId(getDefaultSelectableFighterId(nextGame));
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
+    setPendingChargeHexId(null);
   }
 
   return (
@@ -177,7 +206,10 @@ export default function PracticeBattlefieldApp() {
             activePlayerId={activePlayer?.id ?? null}
             selectedFighterId={selectedFighterId}
             actionLens={actionLens}
+            pendingChargeHexId={pendingChargeHexId}
+            onCompleteChargeAgainstTarget={completeChargeAgainstTarget}
             onMoveToHex={moveToHex}
+            onStartChargeToHex={startChargeToHex}
             onSelectFighter={selectFighter}
             positionedHexes={boardProjection.positionedHexes}
           />
@@ -313,7 +345,7 @@ export default function PracticeBattlefieldApp() {
                 <strong>Move:</strong> highlighted in teal, with the field background changing when legal.
               </p>
               <p>
-                <strong>Charge:</strong> destinations change to gold, and legal enemy targets change to red.
+                <strong>Charge:</strong> click a gold destination, then click a red target if more than one fighter can be charged.
               </p>
               <p>
                 <strong>Guard:</strong> the selected fighter gets a white ring when guard is legal.
@@ -388,7 +420,10 @@ function BoardMap({
   activePlayerId,
   actionLens,
   game,
+  pendingChargeHexId,
+  onCompleteChargeAgainstTarget,
   onMoveToHex,
+  onStartChargeToHex,
   onSelectFighter,
   positionedHexes,
   selectedFighterId,
@@ -396,13 +431,17 @@ function BoardMap({
   activePlayerId: FighterState["ownerPlayerId"] | null;
   actionLens: FighterActionLens;
   game: Game;
+  pendingChargeHexId: HexId | null;
+  onCompleteChargeAgainstTarget: (targetId: FighterId) => void;
   onMoveToHex: (hexId: HexId) => void;
+  onStartChargeToHex: (hexId: HexId) => void;
   onSelectFighter: (fighterId: FighterId | null) => void;
   positionedHexes: PositionedHex[];
   selectedFighterId: FighterId | null;
 }) {
   const width = Math.max(...positionedHexes.map((hex) => hex.left + hexWidth)) + boardPadding;
   const height = Math.max(...positionedHexes.map((hex) => hex.top + hexHeight)) + boardPadding;
+  const visibleChargeTargetHexIds = getChargeTargetHexIdsForHex(game, actionLens, pendingChargeHexId);
 
   return (
     <div className="battlefield-board-frame">
@@ -420,9 +459,19 @@ function BoardMap({
           const isSelectedHex = fighter?.id === selectedFighterId;
           const isMoveDestination = actionLens.moveHexIds.has(hex.id);
           const isChargeDestination = actionLens.chargeHexIds.has(hex.id);
-          const isChargeTarget = actionLens.chargeTargetHexIds.has(hex.id);
+          const isChargeTarget = visibleChargeTargetHexIds.has(hex.id);
           const isClickableMoveDestination = isMoveDestination && game.turnStep === TurnStep.Action;
-          const isInteractiveHex = isSelectableFighter || isClickableMoveDestination;
+          const isClickableChargeDestination = isChargeDestination && game.turnStep === TurnStep.Action;
+          const isClickableChargeTarget =
+            pendingChargeHexId !== null &&
+            isChargeTarget &&
+            fighter !== null &&
+            fighter.ownerPlayerId !== activePlayerId;
+          const isInteractiveHex =
+            isSelectableFighter ||
+            isClickableChargeTarget ||
+            isClickableChargeDestination ||
+            isClickableMoveDestination;
           const actionBadge = getHexActionBadge({
             isChargeDestination,
             isChargeTarget,
@@ -451,6 +500,16 @@ function BoardMap({
                   return;
                 }
 
+                if (isClickableChargeTarget && fighter !== null) {
+                  onCompleteChargeAgainstTarget(fighter.id);
+                  return;
+                }
+
+                if (isClickableChargeDestination) {
+                  onStartChargeToHex(hex.id);
+                  return;
+                }
+
                 if (isClickableMoveDestination) {
                   onMoveToHex(hex.id);
                 }
@@ -464,6 +523,16 @@ function BoardMap({
 
                 if (isSelectableFighter) {
                   onSelectFighter(fighter.id);
+                  return;
+                }
+
+                if (isClickableChargeTarget && fighter !== null) {
+                  onCompleteChargeAgainstTarget(fighter.id);
+                  return;
+                }
+
+                if (isClickableChargeDestination) {
+                  onStartChargeToHex(hex.id);
                   return;
                 }
 
@@ -901,6 +970,62 @@ function getMoveActionForHex(actionLens: FighterActionLens, hexId: HexId): MoveA
     }
 
     if (bestAction === null || action.path.length < bestAction.path.length) {
+      bestAction = action;
+    }
+  }
+
+  return bestAction;
+}
+
+function getChargeActionsForHex(actionLens: FighterActionLens, hexId: HexId): ChargeAction[] {
+  return actionLens.chargeActions.filter((action) => action.path[action.path.length - 1] === hexId);
+}
+
+function getChargeTargetIdsForHex(
+  actionLens: FighterActionLens,
+  hexId: HexId | null,
+): Set<FighterId> {
+  if (hexId === null) {
+    return actionLens.chargeTargetIds;
+  }
+
+  return new Set(getChargeActionsForHex(actionLens, hexId).map((action) => action.targetId));
+}
+
+function getChargeTargetHexIdsForHex(
+  game: Game,
+  actionLens: FighterActionLens,
+  hexId: HexId | null,
+): Set<HexId> {
+  const targetIds = getChargeTargetIdsForHex(actionLens, hexId);
+
+  return new Set(
+    [...targetIds].flatMap((fighterId) => {
+      const target = game.getFighter(fighterId);
+      return target?.currentHexId === null || target?.currentHexId === undefined
+        ? []
+        : [target.currentHexId];
+    }),
+  );
+}
+
+function getChargeActionForTarget(
+  actionLens: FighterActionLens,
+  hexId: HexId | null,
+  targetId: FighterId,
+): ChargeAction | null {
+  if (hexId === null) {
+    return null;
+  }
+
+  let bestAction: ChargeAction | null = null;
+
+  for (const action of getChargeActionsForHex(actionLens, hexId)) {
+    if (action.targetId !== targetId) {
+      continue;
+    }
+
+    if (bestAction === null || (bestAction.selectedAbility !== null && action.selectedAbility === null)) {
       bestAction = action;
     }
   }
