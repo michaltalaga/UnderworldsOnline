@@ -817,7 +817,12 @@ export class GameEngine {
       throw new Error(`Card ${cardWithDefinition.definition.name} is not a ploy.`);
     }
 
-    const effectDescriptions = this.ployEffectResolver.resolve(game, player, cardWithDefinition.definition);
+    const effectDescriptions = this.ployEffectResolver.resolve(
+      game,
+      player,
+      cardWithDefinition.definition,
+      action.targetFighterId,
+    );
     const handIndex = player.powerHand.findIndex((card) => card.id === cardWithDefinition.card.id);
     if (handIndex === -1) {
       throw new Error(`Could not find ploy ${cardWithDefinition.card.id} in ${player.name}'s power hand.`);

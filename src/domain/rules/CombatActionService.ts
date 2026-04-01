@@ -281,7 +281,12 @@ export class CombatActionService extends LegalActionService {
     return (
       cardWithDefinition.definition.kind === CardKind.Ploy &&
       cardWithDefinition.card.zone === CardZone.PowerHand &&
-      this.ployEffectResolver.canResolve(game, player, cardWithDefinition.definition)
+      this.ployEffectResolver.canResolve(
+        game,
+        player,
+        cardWithDefinition.definition,
+        action.targetFighterId,
+      )
     );
   }
 
@@ -560,12 +565,19 @@ export class CombatActionService extends LegalActionService {
 
     return player.powerHand.flatMap((card) => {
       const definition = player.getCardDefinition(card.id);
-      return (
-        definition?.kind === CardKind.Ploy &&
-        this.ployEffectResolver.canResolve(game, player, definition)
-      )
-        ? [new PlayPloyAction(player.id, card.id)]
-        : [];
+      if (definition?.kind !== CardKind.Ploy) {
+        return [];
+      }
+
+      const untargetedAction = new PlayPloyAction(player.id, card.id);
+      if (this.isLegalPlayPloyAction(game, untargetedAction)) {
+        return [untargetedAction];
+      }
+
+      return player.fighters.flatMap((fighter) => {
+        const targetedAction = new PlayPloyAction(player.id, card.id, fighter.id);
+        return this.isLegalPlayPloyAction(game, targetedAction) ? [targetedAction] : [];
+      });
     });
   }
 

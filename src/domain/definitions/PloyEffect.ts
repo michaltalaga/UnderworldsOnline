@@ -1,4 +1,4 @@
-import { PloyEffectKind } from "../values/enums";
+import { PloyEffectKind, PloyEffectTargetKind } from "../values/enums";
 
 export type PloyEffect =
   | {
@@ -8,4 +8,8 @@ export type PloyEffect =
   | {
     kind: typeof PloyEffectKind.GainWarscrollTokens;
     tokens: Readonly<Record<string, number>>;
+  }
+  | {
+    kind: typeof PloyEffectKind.GainGuardToken;
+    target: typeof PloyEffectTargetKind.FriendlyFighter;
   };
