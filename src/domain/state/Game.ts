@@ -1,17 +1,9 @@
-import { CleanupResolution } from "../endPhase/CleanupResolution";
 import type { CardId, FighterId, GameId, PlayerId } from "../values/ids";
-import { ObjectiveDrawResolution } from "../endPhase/ObjectiveDrawResolution";
-import { ObjectiveScoringResolution } from "../endPhase/ObjectiveScoringResolution";
-import { PowerDrawResolution } from "../endPhase/PowerDrawResolution";
 import { EndPhaseStep, Phase, SetupStep, TurnStep } from "../values/enums";
-import { CombatResult } from "../rules/CombatResult";
-import { DelveResolution } from "../rules/DelveResolution";
-import { PloyResolution } from "../rules/PloyResolution";
-import { UpgradeResolution } from "../rules/UpgradeResolution";
-import { WarscrollAbilityResolution } from "../rules/WarscrollAbilityResolution";
 import { BoardState } from "./BoardState";
 import { CardInstance } from "./CardInstance";
 import { FighterState } from "./FighterState";
+import { type GameRecord, type GameRecordDataByKind, type GameRecordKind } from "./GameRecord";
 import {
   canTransitionGameState,
   createGameStateFromLegacyFields,
@@ -27,24 +19,7 @@ export class Game {
   public maxRounds: number;
   public consecutivePasses: number;
   public winnerPlayerId: PlayerId | null;
-  public lastCombatResult: CombatResult | null;
-  public combatHistory: CombatResult[];
-  public lastDelveResolution: DelveResolution | null;
-  public delveHistory: DelveResolution[];
-  public lastPloyResolution: PloyResolution | null;
-  public ployHistory: PloyResolution[];
-  public lastUpgradeResolution: UpgradeResolution | null;
-  public upgradeHistory: UpgradeResolution[];
-  public lastWarscrollAbilityResolution: WarscrollAbilityResolution | null;
-  public warscrollAbilityHistory: WarscrollAbilityResolution[];
-  public lastObjectiveScoringResolution: ObjectiveScoringResolution | null;
-  public objectiveScoringHistory: ObjectiveScoringResolution[];
-  public lastObjectiveDrawResolution: ObjectiveDrawResolution | null;
-  public objectiveDrawHistory: ObjectiveDrawResolution[];
-  public lastPowerDrawResolution: PowerDrawResolution | null;
-  public powerDrawHistory: PowerDrawResolution[];
-  public lastCleanupResolution: CleanupResolution | null;
-  public cleanupHistory: CleanupResolution[];
+  public records: GameRecord[];
   public eventLog: string[];
   private flowState: GameState;
 
@@ -63,7 +38,7 @@ export class Game {
     priorityPlayerId: PlayerId | null = null,
     consecutivePasses: number = 0,
     winnerPlayerId: PlayerId | null = null,
-    lastCombatResult: CombatResult | null = null,
+    records: GameRecord[] = [],
     eventLog: string[] = [],
   ) {
     this.id = id;
@@ -73,24 +48,7 @@ export class Game {
     this.maxRounds = maxRounds;
     this.consecutivePasses = consecutivePasses;
     this.winnerPlayerId = winnerPlayerId;
-    this.lastCombatResult = lastCombatResult;
-    this.combatHistory = [];
-    this.lastDelveResolution = null;
-    this.delveHistory = [];
-    this.lastPloyResolution = null;
-    this.ployHistory = [];
-    this.lastUpgradeResolution = null;
-    this.upgradeHistory = [];
-    this.lastWarscrollAbilityResolution = null;
-    this.warscrollAbilityHistory = [];
-    this.lastObjectiveScoringResolution = null;
-    this.objectiveScoringHistory = [];
-    this.lastObjectiveDrawResolution = null;
-    this.objectiveDrawHistory = [];
-    this.lastPowerDrawResolution = null;
-    this.powerDrawHistory = [];
-    this.lastCleanupResolution = null;
-    this.cleanupHistory = [];
+    this.records = records;
     this.eventLog = eventLog;
     this.flowState = createGameStateFromLegacyFields({
       phase,
@@ -167,6 +125,34 @@ export class Game {
     this.flowState = nextState;
   }
 
+  public addRecord<TKind extends GameRecordKind>(
+    kind: TKind,
+    data: GameRecordDataByKind[TKind],
+  ): void {
+    this.records.push({ kind, data });
+  }
+
+  public getLatestRecord<TKind extends GameRecordKind>(
+    kind: TKind,
+  ): GameRecordDataByKind[TKind] | null {
+    for (let index = this.records.length - 1; index >= 0; index -= 1) {
+      const record = this.records[index];
+      if (record.kind === kind) {
+        return record.data as GameRecordDataByKind[TKind];
+      }
+    }
+
+    return null;
+  }
+
+  public getRecordHistory<TKind extends GameRecordKind>(
+    kind: TKind,
+  ): GameRecordDataByKind[TKind][] {
+    return this.records.flatMap((record) =>
+      record.kind === kind ? [record.data as GameRecordDataByKind[TKind]] : [],
+    );
+  }
+
   public toJSON(): object {
     return {
       id: this.id,
@@ -184,24 +170,7 @@ export class Game {
       priorityPlayerId: this.priorityPlayerId,
       consecutivePasses: this.consecutivePasses,
       winnerPlayerId: this.winnerPlayerId,
-      lastCombatResult: this.lastCombatResult,
-      combatHistory: this.combatHistory,
-      lastDelveResolution: this.lastDelveResolution,
-      delveHistory: this.delveHistory,
-      lastPloyResolution: this.lastPloyResolution,
-      ployHistory: this.ployHistory,
-      lastUpgradeResolution: this.lastUpgradeResolution,
-      upgradeHistory: this.upgradeHistory,
-      lastWarscrollAbilityResolution: this.lastWarscrollAbilityResolution,
-      warscrollAbilityHistory: this.warscrollAbilityHistory,
-      lastObjectiveScoringResolution: this.lastObjectiveScoringResolution,
-      objectiveScoringHistory: this.objectiveScoringHistory,
-      lastObjectiveDrawResolution: this.lastObjectiveDrawResolution,
-      objectiveDrawHistory: this.objectiveDrawHistory,
-      lastPowerDrawResolution: this.lastPowerDrawResolution,
-      powerDrawHistory: this.powerDrawHistory,
-      lastCleanupResolution: this.lastCleanupResolution,
-      cleanupHistory: this.cleanupHistory,
+      records: this.records,
       eventLog: this.eventLog,
     };
   }

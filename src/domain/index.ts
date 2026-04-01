@@ -64,6 +64,7 @@ export * from "./state/DeckState";
 export * from "./state/FeatureTokenState";
 export * from "./state/FighterState";
 export * from "./state/Game";
+export * from "./state/GameRecord";
 export * from "./state/GameState";
 export * from "./state/HexCell";
 export * from "./state/PlayerState";

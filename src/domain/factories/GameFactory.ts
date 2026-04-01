@@ -58,7 +58,7 @@ export class GameFactory {
       null,
       0,
       null,
-      null,
+      [],
       [
         `Created game ${params.gameId}.`,
         ...players.map((player) => `${player.name} entered with ${player.warband.name}.`),

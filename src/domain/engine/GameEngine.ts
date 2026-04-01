@@ -9,6 +9,7 @@ import {
 import { FeatureTokenState } from "../state/FeatureTokenState";
 import { FighterState } from "../state/FighterState";
 import { Game } from "../state/Game";
+import { GameRecordKind } from "../state/GameRecord";
 import {
   createCombatChooseFirstPlayerGameState,
   createCombatReadyGameState,
@@ -816,8 +817,7 @@ export class GameEngine {
       holderAfterDelve?.fighterId ?? null,
       holderAfterDelve?.fighterName ?? null,
     );
-    game.lastDelveResolution = resolution;
-    game.delveHistory.push(resolution);
+    game.addRecord(GameRecordKind.Delve, resolution);
     game.consecutivePasses = 0;
     game.eventLog.push(
       `${player.name} delved feature token ${featureToken.id} with fighter ${fighter.id}. `
@@ -873,8 +873,7 @@ export class GameEngine {
       cardWithDefinition.definition.ployEffects,
       effectDescriptions,
     );
-    game.lastPloyResolution = resolution;
-    game.ployHistory.push(resolution);
+    game.addRecord(GameRecordKind.Ploy, resolution);
     game.consecutivePasses = 0;
     const effectSuffix = effectDescriptions.length > 0 ? ` and ${effectDescriptions.join(", ")}` : "";
     game.eventLog.push(`${player.name} played ploy ${cardWithDefinition.definition.name}${effectSuffix}.`);
@@ -931,8 +930,7 @@ export class GameEngine {
       fighterDefinition.name,
       upgradeCost,
     );
-    game.lastUpgradeResolution = resolution;
-    game.upgradeHistory.push(resolution);
+    game.addRecord(GameRecordKind.Upgrade, resolution);
     game.consecutivePasses = 0;
     game.eventLog.push(
       `${player.name} played upgrade ${cardWithDefinition.definition.name} on fighter ${fighter.id} for ${upgradeCost} glory.`,
@@ -974,8 +972,7 @@ export class GameEngine {
       effectSummaries,
     );
 
-    game.lastWarscrollAbilityResolution = resolution;
-    game.warscrollAbilityHistory.push(resolution);
+    game.addRecord(GameRecordKind.WarscrollAbility, resolution);
     game.consecutivePasses = 0;
     game.eventLog.push(
       `${player.name} used warscroll ability ${ability.name} and ${resolution.effectSummaries.join(" and ")}.`,
@@ -1070,8 +1067,7 @@ export class GameEngine {
     }
 
     const resolution = new ObjectiveScoringResolution(game.roundNumber, playerResolutions);
-    game.lastObjectiveScoringResolution = resolution;
-    game.objectiveScoringHistory.push(resolution);
+    game.addRecord(GameRecordKind.ObjectiveScoring, resolution);
     game.transitionTo(
       createEndPhaseGameState(
         EndPhaseStep.EquipUpgrades,
@@ -1153,8 +1149,7 @@ export class GameEngine {
     }
 
     const resolution = new ObjectiveDrawResolution(game.roundNumber, playerResolutions);
-    game.lastObjectiveDrawResolution = resolution;
-    game.objectiveDrawHistory.push(resolution);
+    game.addRecord(GameRecordKind.ObjectiveDraw, resolution);
     game.transitionTo(
       createEndPhaseGameState(
         EndPhaseStep.DrawPowerCards,
@@ -1212,8 +1207,7 @@ export class GameEngine {
     }
 
     const resolution = new PowerDrawResolution(game.roundNumber, playerResolutions);
-    game.lastPowerDrawResolution = resolution;
-    game.powerDrawHistory.push(resolution);
+    game.addRecord(GameRecordKind.PowerDraw, resolution);
     game.transitionTo(
       createEndPhaseGameState(
         EndPhaseStep.Cleanup,
@@ -1285,8 +1279,7 @@ export class GameEngine {
         outcome.winnerPlayerId,
         outcome.reason,
       );
-      game.lastCleanupResolution = resolution;
-      game.cleanupHistory.push(resolution);
+      game.addRecord(GameRecordKind.Cleanup, resolution);
 
       if (outcome.winnerPlayerId === null) {
         game.eventLog.push(`Cleanup complete. Game finished in a draw. ${outcome.reason}`);
@@ -1308,8 +1301,7 @@ export class GameEngine {
       CleanupTransitionKind.CombatReady,
       game.roundNumber,
     );
-    game.lastCleanupResolution = resolution;
-    game.cleanupHistory.push(resolution);
+    game.addRecord(GameRecordKind.Cleanup, resolution);
     game.eventLog.push(
       `Cleanup complete. Round ${completedRoundNumber + 1} is ready to begin.`,
     );
@@ -1617,8 +1609,7 @@ export class GameEngine {
       throw new Error("Driven back movement is not yet supported.");
     }
 
-    game.lastCombatResult = combatResult;
-    game.combatHistory.push(combatResult);
+    game.addRecord(GameRecordKind.Combat, combatResult);
     target.damage += combatResult.damageInflicted;
     if (combatResult.staggerApplied) {
       target.hasStaggerToken = true;

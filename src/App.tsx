@@ -1,6 +1,7 @@
 import { useState } from "react";
 import "./App.css";
 import {
+  GameRecordKind,
   WeaponAbilityDefinition,
   WeaponAbilityKind,
   WarscrollAbilityEffectKind,
@@ -61,7 +62,8 @@ function App() {
   const ployDebugGame = ployDebugSnapshot.game;
   const upgradeDebugGame = upgradeDebugSnapshot.game;
   const debugGame = debugSnapshot.game;
-  const latestCombat = debugGame.lastCombatResult;
+  const latestCombat = getLatestCombatResult(debugGame);
+  const combatHistory = getCombatHistory(debugGame);
   const recentEvents = debugGame.eventLog.slice(-8).reverse();
 
   return (
@@ -221,7 +223,7 @@ function App() {
           </div>
           <div>
             <dt>Combat History</dt>
-            <dd>{debugGame.combatHistory.length}</dd>
+            <dd>{combatHistory.length}</dd>
           </div>
         </dl>
       </section>
@@ -324,8 +326,8 @@ function App() {
               <p className="combat-label">Power Step Snapshot</p>
               <h3>{formatPloyHeadline(ployDebugGame)}</h3>
             </div>
-            <span className={`status-badge ${getResolutionStatusClass(ployDebugGame.lastPloyResolution)}`}>
-              {getResolutionStatusLabel(ployDebugGame.lastPloyResolution)}
+            <span className={`status-badge ${getResolutionStatusClass(getLatestPloyResolution(ployDebugGame))}`}>
+              {getResolutionStatusLabel(getLatestPloyResolution(ployDebugGame))}
             </span>
           </div>
           <p className="combat-meta">
@@ -356,12 +358,12 @@ function App() {
             </div>
             <div>
               <dt>History</dt>
-              <dd>{ployDebugGame.ployHistory.length}</dd>
+              <dd>{getPloyHistory(ployDebugGame).length}</dd>
             </div>
           </dl>
         </article>
         <div className="ability-status-list">
-          {ployDebugGame.ployHistory.length === 0 ? (
+          {getPloyHistory(ployDebugGame).length === 0 ? (
             <article className="ability-status-card">
               <div>
                 <p className="combat-label">No Ploy Yet</p>
@@ -374,7 +376,7 @@ function App() {
               <span className="status-badge status-idle">idle</span>
             </article>
           ) : null}
-          {ployDebugGame.ployHistory.map((resolution, index) => (
+          {getPloyHistory(ployDebugGame).map((resolution, index) => (
             <article className="ability-status-card" key={`${resolution.cardId}:${index}`}>
               <div>
                 <p className="combat-label">Ploy {index + 1}</p>
@@ -400,8 +402,8 @@ function App() {
               <p className="combat-label">Power Step Snapshot</p>
               <h3>{formatDelveHeadline(delveDebugGame)}</h3>
             </div>
-            <span className={`status-badge ${getResolutionStatusClass(delveDebugGame.lastDelveResolution)}`}>
-              {getResolutionStatusLabel(delveDebugGame.lastDelveResolution)}
+            <span className={`status-badge ${getResolutionStatusClass(getLatestDelveResolution(delveDebugGame))}`}>
+              {getResolutionStatusLabel(getLatestDelveResolution(delveDebugGame))}
             </span>
           </div>
           <p className="combat-meta">
@@ -431,7 +433,7 @@ function App() {
             </div>
             <div>
               <dt>History</dt>
-              <dd>{delveDebugGame.delveHistory.length}</dd>
+              <dd>{getDelveHistory(delveDebugGame).length}</dd>
             </div>
           </dl>
         </article>
@@ -444,8 +446,8 @@ function App() {
             {formatDelveDetails(delveDebugGame).map((detail) => (
               <p className="fighter-meta" key={detail}>{detail}</p>
             ))}
-            <span className={`status-badge ${getResolutionStatusClass(delveDebugGame.lastDelveResolution)}`}>
-              {getResolutionStatusLabel(delveDebugGame.lastDelveResolution)}
+            <span className={`status-badge ${getResolutionStatusClass(getLatestDelveResolution(delveDebugGame))}`}>
+              {getResolutionStatusLabel(getLatestDelveResolution(delveDebugGame))}
             </span>
           </article>
         </div>
@@ -524,7 +526,7 @@ function App() {
             </div>
             <div>
               <dt>History</dt>
-              <dd>{upgradeDebugGame.upgradeHistory.length}</dd>
+              <dd>{getUpgradeHistory(upgradeDebugGame).length}</dd>
             </div>
           </dl>
         </article>
@@ -605,7 +607,7 @@ function App() {
             </div>
             <div>
               <dt>History</dt>
-              <dd>{debugGame.warscrollAbilityHistory.length}</dd>
+              <dd>{getWarscrollAbilityHistory(debugGame).length}</dd>
             </div>
           </dl>
         </article>
@@ -654,19 +656,19 @@ function App() {
             </div>
             <div>
               <dt>Scoring History</dt>
-              <dd>{endPhaseDebugGame.objectiveScoringHistory.length}</dd>
+              <dd>{getObjectiveScoringHistory(endPhaseDebugGame).length}</dd>
             </div>
             <div>
               <dt>Objective Draw History</dt>
-              <dd>{endPhaseDebugGame.objectiveDrawHistory.length}</dd>
+              <dd>{getObjectiveDrawHistory(endPhaseDebugGame).length}</dd>
             </div>
             <div>
               <dt>Power Draw History</dt>
-              <dd>{endPhaseDebugGame.powerDrawHistory.length}</dd>
+              <dd>{getPowerDrawHistory(endPhaseDebugGame).length}</dd>
             </div>
             <div>
               <dt>Cleanup History</dt>
-              <dd>{endPhaseDebugGame.cleanupHistory.length}</dd>
+              <dd>{getCleanupHistory(endPhaseDebugGame).length}</dd>
             </div>
             <div>
               <dt>Last Cleanup</dt>
@@ -683,8 +685,8 @@ function App() {
             {formatObjectiveScoringDetails(endPhaseDebugGame).map((detail) => (
               <p className="fighter-meta" key={detail}>{detail}</p>
             ))}
-            <span className={`status-badge ${getResolutionStatusClass(endPhaseDebugGame.lastObjectiveScoringResolution)}`}>
-              {getResolutionStatusLabel(endPhaseDebugGame.lastObjectiveScoringResolution)}
+            <span className={`status-badge ${getResolutionStatusClass(getLatestObjectiveScoringResolution(endPhaseDebugGame))}`}>
+              {getResolutionStatusLabel(getLatestObjectiveScoringResolution(endPhaseDebugGame))}
             </span>
           </article>
           <article className="ability-status-card">
@@ -695,8 +697,8 @@ function App() {
             {formatObjectiveDrawDetails(endPhaseDebugGame).map((detail) => (
               <p className="fighter-meta" key={detail}>{detail}</p>
             ))}
-            <span className={`status-badge ${getResolutionStatusClass(endPhaseDebugGame.lastObjectiveDrawResolution)}`}>
-              {getResolutionStatusLabel(endPhaseDebugGame.lastObjectiveDrawResolution)}
+            <span className={`status-badge ${getResolutionStatusClass(getLatestObjectiveDrawResolution(endPhaseDebugGame))}`}>
+              {getResolutionStatusLabel(getLatestObjectiveDrawResolution(endPhaseDebugGame))}
             </span>
           </article>
           <article className="ability-status-card">
@@ -707,8 +709,8 @@ function App() {
             {formatPowerDrawDetails(endPhaseDebugGame).map((detail) => (
               <p className="fighter-meta" key={detail}>{detail}</p>
             ))}
-            <span className={`status-badge ${getResolutionStatusClass(endPhaseDebugGame.lastPowerDrawResolution)}`}>
-              {getResolutionStatusLabel(endPhaseDebugGame.lastPowerDrawResolution)}
+            <span className={`status-badge ${getResolutionStatusClass(getLatestPowerDrawResolution(endPhaseDebugGame))}`}>
+              {getResolutionStatusLabel(getLatestPowerDrawResolution(endPhaseDebugGame))}
             </span>
           </article>
           <article className="ability-status-card">
@@ -719,8 +721,8 @@ function App() {
             {formatCleanupDetails(endPhaseDebugGame).map((detail) => (
               <p className="fighter-meta" key={detail}>{detail}</p>
             ))}
-            <span className={`status-badge ${getResolutionStatusClass(endPhaseDebugGame.lastCleanupResolution)}`}>
-              {getResolutionStatusLabel(endPhaseDebugGame.lastCleanupResolution)}
+            <span className={`status-badge ${getResolutionStatusClass(getLatestCleanupResolution(endPhaseDebugGame))}`}>
+              {getResolutionStatusLabel(getLatestCleanupResolution(endPhaseDebugGame))}
             </span>
           </article>
         </div>
@@ -732,7 +734,7 @@ function App() {
           <h2>Combat results</h2>
         </div>
         <div className="history-list">
-          {debugGame.combatHistory.map((result, index) => (
+          {combatHistory.map((result, index) => (
             <CombatResultCard
               key={`${result.context.attackerFighterId}:${result.context.targetFighterId}:${index}`}
               game={debugGame}
@@ -894,6 +896,78 @@ function getWeaponName(game: Game, fighterId: string, weaponId: string): string 
   return weaponId;
 }
 
+function getLatestCombatResult(game: Game) {
+  return game.getLatestRecord(GameRecordKind.Combat);
+}
+
+function getCombatHistory(game: Game) {
+  return game.getRecordHistory(GameRecordKind.Combat);
+}
+
+function getLatestDelveResolution(game: Game) {
+  return game.getLatestRecord(GameRecordKind.Delve);
+}
+
+function getDelveHistory(game: Game) {
+  return game.getRecordHistory(GameRecordKind.Delve);
+}
+
+function getLatestPloyResolution(game: Game) {
+  return game.getLatestRecord(GameRecordKind.Ploy);
+}
+
+function getPloyHistory(game: Game) {
+  return game.getRecordHistory(GameRecordKind.Ploy);
+}
+
+function getLatestUpgradeResolution(game: Game) {
+  return game.getLatestRecord(GameRecordKind.Upgrade);
+}
+
+function getUpgradeHistory(game: Game) {
+  return game.getRecordHistory(GameRecordKind.Upgrade);
+}
+
+function getLatestWarscrollAbilityResolution(game: Game) {
+  return game.getLatestRecord(GameRecordKind.WarscrollAbility);
+}
+
+function getWarscrollAbilityHistory(game: Game) {
+  return game.getRecordHistory(GameRecordKind.WarscrollAbility);
+}
+
+function getLatestObjectiveScoringResolution(game: Game) {
+  return game.getLatestRecord(GameRecordKind.ObjectiveScoring);
+}
+
+function getObjectiveScoringHistory(game: Game) {
+  return game.getRecordHistory(GameRecordKind.ObjectiveScoring);
+}
+
+function getLatestObjectiveDrawResolution(game: Game) {
+  return game.getLatestRecord(GameRecordKind.ObjectiveDraw);
+}
+
+function getObjectiveDrawHistory(game: Game) {
+  return game.getRecordHistory(GameRecordKind.ObjectiveDraw);
+}
+
+function getLatestPowerDrawResolution(game: Game) {
+  return game.getLatestRecord(GameRecordKind.PowerDraw);
+}
+
+function getPowerDrawHistory(game: Game) {
+  return game.getRecordHistory(GameRecordKind.PowerDraw);
+}
+
+function getLatestCleanupResolution(game: Game) {
+  return game.getLatestRecord(GameRecordKind.Cleanup);
+}
+
+function getCleanupHistory(game: Game) {
+  return game.getRecordHistory(GameRecordKind.Cleanup);
+}
+
 function formatRoll(roll: readonly string[]): string {
   return roll.length === 0 ? "None" : roll.join(" / ");
 }
@@ -1020,7 +1094,7 @@ function formatAbilityList(
 }
 
 function formatSelectedWarscrollDescription(debugSnapshot: CombatDebugSnapshot): string {
-  const resolution = debugSnapshot.game.lastWarscrollAbilityResolution;
+  const resolution = getLatestWarscrollAbilityResolution(debugSnapshot.game);
 
   if (debugSnapshot.warscrollAbilityOptions.length === 0) {
     return `${debugSnapshot.playerWarscrollName} defines no warscroll abilities in this debug snapshot.`;
@@ -1088,7 +1162,7 @@ function isSingleTokenAmount(tokens: Readonly<Record<string, number>>): boolean 
 }
 
 function formatWarscrollResolution(game: Game): string {
-  const resolution = game.lastWarscrollAbilityResolution;
+  const resolution = getLatestWarscrollAbilityResolution(game);
   if (resolution === null) {
     return "none";
   }
@@ -1097,7 +1171,7 @@ function formatWarscrollResolution(game: Game): string {
 }
 
 function formatPloyHeadline(game: Game): string {
-  const resolution = game.lastPloyResolution;
+  const resolution = getLatestPloyResolution(game);
   if (resolution === null) {
     return "No ploy recorded";
   }
@@ -1106,7 +1180,7 @@ function formatPloyHeadline(game: Game): string {
 }
 
 function formatPloyTargetHeadline(game: Game): string {
-  const resolution = game.lastPloyResolution;
+  const resolution = getLatestPloyResolution(game);
   if (resolution === null || resolution.targetFighterId === null) {
     return "none";
   }
@@ -1115,7 +1189,7 @@ function formatPloyTargetHeadline(game: Game): string {
 }
 
 function formatPloyEffectHeadline(game: Game): string {
-  const resolution = game.lastPloyResolution;
+  const resolution = getLatestPloyResolution(game);
   if (resolution === null) {
     return "none";
   }
@@ -1124,7 +1198,7 @@ function formatPloyEffectHeadline(game: Game): string {
 }
 
 function formatPloyResolutionTarget(
-  resolution: NonNullable<Game["lastPloyResolution"]>,
+  resolution: NonNullable<ReturnType<typeof getLatestPloyResolution>>,
 ): string {
   if (resolution.targetFighterId === null) {
     return "No fighter target";
@@ -1175,7 +1249,7 @@ function formatPloyOptionTitle(option: PloyDebugOption): string {
 }
 
 function formatDelveHeadline(game: Game): string {
-  const resolution = game.lastDelveResolution;
+  const resolution = getLatestDelveResolution(game);
   if (resolution === null) {
     return "No delve recorded";
   }
@@ -1184,7 +1258,7 @@ function formatDelveHeadline(game: Game): string {
 }
 
 function formatDelveFeatureToken(game: Game): string {
-  const resolution = game.lastDelveResolution;
+  const resolution = getLatestDelveResolution(game);
   if (resolution === null) {
     return "none";
   }
@@ -1193,7 +1267,7 @@ function formatDelveFeatureToken(game: Game): string {
 }
 
 function formatDelveTransition(game: Game): string {
-  const resolution = game.lastDelveResolution;
+  const resolution = getLatestDelveResolution(game);
   if (resolution === null) {
     return "none";
   }
@@ -1202,7 +1276,7 @@ function formatDelveTransition(game: Game): string {
 }
 
 function formatDelveHolderAfter(game: Game): string {
-  const resolution = game.lastDelveResolution;
+  const resolution = getLatestDelveResolution(game);
   if (resolution === null || resolution.holderAfterFighterId === null) {
     return "none";
   }
@@ -1211,7 +1285,7 @@ function formatDelveHolderAfter(game: Game): string {
 }
 
 function formatDelveStagger(game: Game): string {
-  const resolution = game.lastDelveResolution;
+  const resolution = getLatestDelveResolution(game);
   if (resolution === null) {
     return "none";
   }
@@ -1220,7 +1294,7 @@ function formatDelveStagger(game: Game): string {
 }
 
 function formatDelveDetails(game: Game): string[] {
-  const resolution = game.lastDelveResolution;
+  const resolution = getLatestDelveResolution(game);
   if (resolution === null) {
     return ["The debug snapshot did not record a delve action."];
   }
@@ -1259,7 +1333,7 @@ function formatSelectedUpgradeDescription(
     return `${formatUpgradeOptionTitle(selectedOption)} failed during replay.`;
   }
 
-  const resolution = upgradeDebugSnapshot.game.lastUpgradeResolution;
+  const resolution = getLatestUpgradeResolution(upgradeDebugSnapshot.game);
   if (resolution === null) {
     return `${formatUpgradeOptionTitle(selectedOption)} resolved, but no upgrade resolution was recorded.`;
   }
@@ -1276,7 +1350,7 @@ function formatUpgradeOptionTitle(option: UpgradeDebugOption): string {
 }
 
 function formatUpgradeHeadline(game: Game): string {
-  const resolution = game.lastUpgradeResolution;
+  const resolution = getLatestUpgradeResolution(game);
   if (resolution === null) {
     return "No upgrade recorded";
   }
@@ -1285,7 +1359,7 @@ function formatUpgradeHeadline(game: Game): string {
 }
 
 function formatLatestUpgradeTarget(game: Game): string {
-  const resolution = game.lastUpgradeResolution;
+  const resolution = getLatestUpgradeResolution(game);
   if (resolution === null) {
     return "none";
   }
@@ -1296,7 +1370,7 @@ function formatLatestUpgradeTarget(game: Game): string {
 function formatLatestUpgradeResult(
   upgradeDebugSnapshot: ReturnType<typeof createUpgradeDebugSnapshot>,
 ): string {
-  const resolution = upgradeDebugSnapshot.game.lastUpgradeResolution;
+  const resolution = getLatestUpgradeResolution(upgradeDebugSnapshot.game);
   if (resolution === null) {
     return "No upgrade has been replayed yet.";
   }
@@ -1322,7 +1396,7 @@ function getUpgradeUsageLabel(
     return "failed";
   }
 
-  return getResolutionStatusLabel(upgradeDebugSnapshot.game.lastUpgradeResolution);
+  return getResolutionStatusLabel(getLatestUpgradeResolution(upgradeDebugSnapshot.game));
 }
 
 function getUpgradeUsageStatusClass(
@@ -1336,7 +1410,7 @@ function getUpgradeUsageStatusClass(
     return "status-unsupported";
   }
 
-  return getResolutionStatusClass(upgradeDebugSnapshot.game.lastUpgradeResolution);
+  return getResolutionStatusClass(getLatestUpgradeResolution(upgradeDebugSnapshot.game));
 }
 
 function getWarscrollUsageLabel(debugSnapshot: CombatDebugSnapshot): string {
@@ -1380,7 +1454,7 @@ function getWarscrollAbilityStatusClass(
 }
 
 function formatObjectiveScoringHeadline(game: Game): string {
-  const resolution = game.lastObjectiveScoringResolution;
+  const resolution = getLatestObjectiveScoringResolution(game);
   if (resolution === null) {
     return "No scoring recorded";
   }
@@ -1389,7 +1463,7 @@ function formatObjectiveScoringHeadline(game: Game): string {
 }
 
 function formatObjectiveScoringDetails(game: Game): string[] {
-  const resolution = game.lastObjectiveScoringResolution;
+  const resolution = getLatestObjectiveScoringResolution(game);
   if (resolution === null) {
     return ["The debug snapshot did not record objective scoring."];
   }
@@ -1407,7 +1481,7 @@ function formatObjectiveScoringDetails(game: Game): string[] {
 }
 
 function formatObjectiveDrawHeadline(game: Game): string {
-  const resolution = game.lastObjectiveDrawResolution;
+  const resolution = getLatestObjectiveDrawResolution(game);
   if (resolution === null) {
     return "No objective draw recorded";
   }
@@ -1416,7 +1490,7 @@ function formatObjectiveDrawHeadline(game: Game): string {
 }
 
 function formatObjectiveDrawDetails(game: Game): string[] {
-  const resolution = game.lastObjectiveDrawResolution;
+  const resolution = getLatestObjectiveDrawResolution(game);
   if (resolution === null) {
     return ["The debug snapshot did not record objective refills."];
   }
@@ -1431,7 +1505,7 @@ function formatObjectiveDrawDetails(game: Game): string[] {
 }
 
 function formatPowerDrawHeadline(game: Game): string {
-  const resolution = game.lastPowerDrawResolution;
+  const resolution = getLatestPowerDrawResolution(game);
   if (resolution === null) {
     return "No power draw recorded";
   }
@@ -1440,7 +1514,7 @@ function formatPowerDrawHeadline(game: Game): string {
 }
 
 function formatPowerDrawDetails(game: Game): string[] {
-  const resolution = game.lastPowerDrawResolution;
+  const resolution = getLatestPowerDrawResolution(game);
   if (resolution === null) {
     return ["The debug snapshot did not record power refills."];
   }
@@ -1455,7 +1529,7 @@ function formatPowerDrawDetails(game: Game): string[] {
 }
 
 function formatCleanupHeadline(game: Game): string {
-  const resolution = game.lastCleanupResolution;
+  const resolution = getLatestCleanupResolution(game);
   if (resolution === null) {
     return "No cleanup recorded";
   }
@@ -1470,7 +1544,7 @@ function formatCleanupHeadline(game: Game): string {
 }
 
 function formatCleanupDetails(game: Game): string[] {
-  const resolution = game.lastCleanupResolution;
+  const resolution = getLatestCleanupResolution(game);
   if (resolution === null) {
     return ["The debug snapshot did not record cleanup."];
   }
