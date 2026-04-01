@@ -522,7 +522,9 @@ export class GameEngine {
     const destinationHex = this.requireHex(game, destinationHexId);
 
     currentHex.occupantFighterId = null;
+    this.syncFeatureTokenHolderAtHex(game, currentHex.id);
     destinationHex.occupantFighterId = fighter.id;
+    this.syncFeatureTokenHolderAtHex(game, destinationHex.id);
     fighter.currentHexId = destinationHex.id;
     fighter.hasMoveToken = true;
     if (destinationHex.kind === HexKind.Stagger) {
@@ -654,7 +656,9 @@ export class GameEngine {
     const currentHex = this.requireHex(game, currentHexId);
     const destinationHex = this.requireHex(game, destinationHexId);
     currentHex.occupantFighterId = null;
+    this.syncFeatureTokenHolderAtHex(game, currentHex.id);
     destinationHex.occupantFighterId = attacker.id;
+    this.syncFeatureTokenHolderAtHex(game, destinationHex.id);
     attacker.currentHexId = destinationHex.id;
     if (destinationHex.kind === HexKind.Stagger) {
       attacker.hasStaggerToken = true;
@@ -767,6 +771,7 @@ export class GameEngine {
       throw new Error(`Feature token ${featureToken.id} cannot be delved from side ${featureToken.side}.`);
     }
 
+    this.syncFeatureTokenHolderAtHex(game, fighterHex.id);
     fighter.hasStaggerToken = true;
     player.hasDelvedThisPowerStep = true;
     game.consecutivePasses = 0;
@@ -1470,11 +1475,31 @@ export class GameEngine {
 
       const targetHex = this.requireHex(game, targetHexId);
       targetHex.occupantFighterId = null;
+      this.syncFeatureTokenHolderAtHex(game, targetHex.id);
       target.currentHexId = null;
       target.isSlain = true;
       attackerPlayer.glory += targetDefinition.bounty;
     }
 
     return { combatResult, targetSlain };
+  }
+
+  private syncFeatureTokenHolderAtHex(game: Game, hexId: HexId): void {
+    const hex = this.requireHex(game, hexId);
+    if (hex.featureTokenId === null) {
+      return;
+    }
+
+    const featureToken = game.board.getFeatureToken(hex.featureTokenId);
+    if (featureToken === undefined) {
+      throw new Error(`Unknown feature token ${hex.featureTokenId} on hex ${hex.id}.`);
+    }
+
+    if (featureToken.hexId !== hex.id) {
+      throw new Error(`Feature token ${featureToken.id} is not on expected hex ${hex.id}.`);
+    }
+
+    featureToken.heldByFighterId =
+      featureToken.side === FeatureTokenSide.Treasure ? hex.occupantFighterId : null;
   }
 }
