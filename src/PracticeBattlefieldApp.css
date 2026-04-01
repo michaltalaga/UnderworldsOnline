@@ -127,6 +127,54 @@ body {
   font-weight: 700;
 }
 
+.battlefield-attack-profile-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.battlefield-attack-profile-card {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(244, 233, 238, 0.86);
+  border: 1px solid rgba(128, 57, 84, 0.16);
+}
+
+.battlefield-attack-profile-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  color: #4f2334;
+}
+
+.battlefield-attack-profile-chip {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(123, 28, 58, 0.92);
+  color: #fff4f8;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.battlefield-attack-profile-primary,
+.battlefield-attack-profile-meta,
+.battlefield-attack-profile-empty {
+  margin: 6px 0 0;
+}
+
+.battlefield-attack-profile-primary {
+  color: #3d2230;
+  font-weight: 700;
+}
+
+.battlefield-attack-profile-meta,
+.battlefield-attack-profile-empty {
+  color: #645345;
+}
+
 .battlefield-action-controls {
   display: grid;
   gap: 12px;
