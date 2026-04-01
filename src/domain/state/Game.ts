@@ -1,6 +1,7 @@
 import type { CardId, FighterId, GameId, PlayerId } from "../values/ids";
 import { ObjectiveDrawResolution } from "../endPhase/ObjectiveDrawResolution";
 import { ObjectiveScoringResolution } from "../endPhase/ObjectiveScoringResolution";
+import { PowerDrawResolution } from "../endPhase/PowerDrawResolution";
 import { EndPhaseStep, Phase, SetupStep, TurnStep } from "../values/enums";
 import { CombatResult } from "../rules/CombatResult";
 import { WarscrollAbilityResolution } from "../rules/WarscrollAbilityResolution";
@@ -30,6 +31,8 @@ export class Game {
   public objectiveScoringHistory: ObjectiveScoringResolution[];
   public lastObjectiveDrawResolution: ObjectiveDrawResolution | null;
   public objectiveDrawHistory: ObjectiveDrawResolution[];
+  public lastPowerDrawResolution: PowerDrawResolution | null;
+  public powerDrawHistory: PowerDrawResolution[];
   public eventLog: string[];
   private flowState: GameState;
 
@@ -66,6 +69,8 @@ export class Game {
     this.objectiveScoringHistory = [];
     this.lastObjectiveDrawResolution = null;
     this.objectiveDrawHistory = [];
+    this.lastPowerDrawResolution = null;
+    this.powerDrawHistory = [];
     this.eventLog = eventLog;
     this.flowState = createGameStateFromLegacyFields({
       phase,
@@ -167,6 +172,8 @@ export class Game {
       objectiveScoringHistory: this.objectiveScoringHistory,
       lastObjectiveDrawResolution: this.lastObjectiveDrawResolution,
       objectiveDrawHistory: this.objectiveDrawHistory,
+      lastPowerDrawResolution: this.lastPowerDrawResolution,
+      powerDrawHistory: this.powerDrawHistory,
       eventLog: this.eventLog,
     };
   }

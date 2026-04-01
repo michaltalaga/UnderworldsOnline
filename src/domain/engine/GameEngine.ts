@@ -44,6 +44,11 @@ import {
   type ObjectiveScoringCardResolution,
   type ObjectiveScoringPlayerResolution,
 } from "../endPhase/ObjectiveScoringResolution";
+import {
+  PowerDrawResolution,
+  type PowerDrawCardResolution,
+  type PowerDrawPlayerResolution,
+} from "../endPhase/PowerDrawResolution";
 import { AttackAction } from "../actions/AttackAction";
 import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
@@ -863,9 +868,18 @@ export class GameEngine {
   private applyResolveDrawPowerCards(game: Game): void {
     this.assertEndPhaseStep(game, EndPhaseStep.DrawPowerCards);
 
+    const playerResolutions: PowerDrawPlayerResolution[] = [];
     for (const player of game.players) {
+      const handSizeBefore = player.powerHand.length;
       const cardsToDraw = Math.max(0, GameEngine.powerHandSize - player.powerHand.length);
+      const drawnCards: PowerDrawCardResolution[] = [];
+
       if (cardsToDraw === 0) {
+        playerResolutions.push({
+          playerId: player.id,
+          playerName: player.name,
+          cardsDrawn: drawnCards,
+        });
         continue;
       }
 
@@ -875,9 +889,31 @@ export class GameEngine {
         cardsToDraw,
         CardZone.PowerHand,
       );
+
+      for (const card of player.powerHand.slice(handSizeBefore)) {
+        const cardWithDefinition = player.getCardWithDefinition(card.id);
+        if (cardWithDefinition === undefined) {
+          throw new Error(`Power card ${card.id} is missing definition data after draw.`);
+        }
+
+        drawnCards.push({
+          cardId: cardWithDefinition.card.id,
+          cardDefinitionId: cardWithDefinition.card.definitionId,
+          cardName: cardWithDefinition.definition.name,
+        });
+      }
+
+      playerResolutions.push({
+        playerId: player.id,
+        playerName: player.name,
+        cardsDrawn: drawnCards,
+      });
       game.eventLog.push(`${player.name} drew ${cardsToDraw} power card${cardsToDraw === 1 ? "" : "s"}.`);
     }
 
+    const resolution = new PowerDrawResolution(game.roundNumber, playerResolutions);
+    game.lastPowerDrawResolution = resolution;
+    game.powerDrawHistory.push(resolution);
     game.transitionTo(
       createEndPhaseGameState(
         EndPhaseStep.Cleanup,

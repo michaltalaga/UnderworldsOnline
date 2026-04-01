@@ -24,6 +24,7 @@ export * from "./endPhase/EndPhaseAction";
 export * from "./endPhase/EndPhaseActionService";
 export * from "./endPhase/ObjectiveDrawResolution";
 export * from "./endPhase/ObjectiveScoringResolution";
+export * from "./endPhase/PowerDrawResolution";
 export * from "./endPhase/ResolveCleanupAction";
 export * from "./endPhase/ResolveDiscardCardsAction";
 export * from "./endPhase/ResolveDrawObjectivesAction";
