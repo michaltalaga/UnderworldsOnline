@@ -2,11 +2,13 @@ import { useEffect, useState, type CSSProperties } from "react";
 import "./PracticeBattlefieldApp.css";
 import {
   AttackDieFace,
+  AttackAction,
   ChargeAction,
   CombatActionService,
   createCombatReadySetupPracticeGame,
   FeatureTokenSide,
   GameEngine,
+  GameRecordKind,
   GuardAction,
   HexKind,
   MoveAction,
@@ -37,14 +39,18 @@ type PositionedHex = {
 
 type FighterActionLens = {
   fighter: FighterState | null;
+  attackTargetHexIds: Set<HexId>;
+  attackTargetIds: Set<FighterId>;
   moveHexIds: Set<HexId>;
   chargeHexIds: Set<HexId>;
   chargeTargetHexIds: Set<HexId>;
   chargeTargetIds: Set<FighterId>;
+  attackActions: AttackAction[];
   moveActions: MoveAction[];
   chargeActions: ChargeAction[];
   guardAction: GuardAction | null;
   passAction: PassAction | null;
+  attackCount: number;
   moveCount: number;
   chargeCount: number;
   guardAvailable: boolean;
@@ -77,9 +83,20 @@ export default function PracticeBattlefieldApp() {
   const selectedChargeOption = chargeOptions.find((option) => option.key === selectedChargeKey) ?? chargeOptions[0] ?? null;
   const visibleChargeTargetIds = getChargeTargetIdsForHex(actionLens, pendingChargeHexId);
   const chargeTargetNames = [...visibleChargeTargetIds].map((fighterId) => getFighterName(game, fighterId));
+  const attackTargetNames = [...actionLens.attackTargetIds].map((fighterId) => getFighterName(game, fighterId));
   const selectedFighterName = selectedFighter === null ? "none" : getFighterName(game, selectedFighter.id);
   const pendingChargeTargetName =
     pendingChargeTargetId === null ? null : getFighterName(game, pendingChargeTargetId);
+  const latestCombat = game.getLatestRecord(GameRecordKind.Combat);
+  const recentCombat =
+    latestCombat !== null &&
+    selectedFighterId !== null &&
+    latestCombat.context.attackerFighterId === selectedFighterId
+      ? latestCombat
+      : null;
+  const recentCombatTargetId = recentCombat?.context.targetFighterId ?? null;
+  const recentCombatTargetName =
+    recentCombatTargetId === null ? null : getFighterName(game, recentCombatTargetId);
   const actionPrompt =
     game.turnStep === TurnStep.Action
       ? pendingChargeTargetId !== null && pendingChargeHexId !== null
@@ -89,7 +106,9 @@ export default function PracticeBattlefieldApp() {
           : pendingMoveHexId !== null
             ? `Move to ${pendingMoveHexId} selected. Click the same teal hex again to confirm, press Escape to cancel, or choose another teal hex.`
             : "Select a fighter, then click a teal hex to move or click a gold hex and then a red target to charge."
-      : "The selected fighter has already acted. Pass the power step or reset the board.";
+      : recentCombatTargetName === null
+        ? "The selected fighter has already acted. Pass the power step or reset the board."
+        : `Recent combat: ${recentCombatTargetName} remains marked on the map. Pass the power step or reset the board.`;
 
   function selectFighter(fighterId: FighterId | null): void {
     setSelectedFighterId(fighterId);
@@ -254,6 +273,7 @@ export default function PracticeBattlefieldApp() {
             pendingMoveHexId={pendingMoveHexId}
             pendingChargeHexId={pendingChargeHexId}
             pendingChargeTargetId={pendingChargeTargetId}
+            recentCombatTargetId={recentCombatTargetId}
             onCancelPendingCharge={cancelPendingCharge}
             onCompleteChargeAgainstTarget={completeChargeAgainstTarget}
             onMoveToHex={moveToHex}
@@ -272,6 +292,8 @@ export default function PracticeBattlefieldApp() {
             <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-move" label="Move destination" />
             <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-charge" label="Charge destination" />
             <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-target" label="Charge target" />
+            <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-attack" label="Attack target" />
+            <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-combat" label="Recent combat target" />
           </div>
         </section>
 
@@ -292,6 +314,10 @@ export default function PracticeBattlefieldApp() {
               <div>
                 <dt>Move Hexes</dt>
                 <dd>{actionLens.moveCount}</dd>
+              </div>
+              <div>
+                <dt>Attack Targets</dt>
+                <dd>{actionLens.attackCount}</dd>
               </div>
               <div>
                 <dt>Charge Paths</dt>
@@ -390,6 +416,9 @@ export default function PracticeBattlefieldApp() {
             </div>
             <div className="battlefield-action-notes">
               <p>
+                <strong>Attack:</strong> enemy hexes glow crimson when the selected fighter can attack them now.
+              </p>
+              <p>
                 <strong>Move:</strong> click a teal hex to arm it, then click the same teal hex again to confirm.
               </p>
               <p>
@@ -399,9 +428,18 @@ export default function PracticeBattlefieldApp() {
                 <strong>Guard:</strong> the selected fighter gets a white ring when guard is legal.
               </p>
               <p>
+                <strong>Attack targets:</strong>{" "}
+                {attackTargetNames.length === 0 ? "none" : attackTargetNames.join(", ")}
+              </p>
+              <p>
                 <strong>Charge targets:</strong>{" "}
                 {chargeTargetNames.length === 0 ? "none" : chargeTargetNames.join(", ")}
               </p>
+              {recentCombatTargetName === null ? null : (
+                <p>
+                  <strong>Recent combat target:</strong> {recentCombatTargetName}
+                </p>
+              )}
             </div>
           </section>
 
@@ -471,6 +509,7 @@ function BoardMap({
   pendingMoveHexId,
   pendingChargeHexId,
   pendingChargeTargetId,
+  recentCombatTargetId,
   onCancelPendingCharge,
   onCompleteChargeAgainstTarget,
   onMoveToHex,
@@ -485,6 +524,7 @@ function BoardMap({
   pendingMoveHexId: HexId | null;
   pendingChargeHexId: HexId | null;
   pendingChargeTargetId: FighterId | null;
+  recentCombatTargetId: FighterId | null;
   onCancelPendingCharge: () => void;
   onCompleteChargeAgainstTarget: (targetId: FighterId) => void;
   onMoveToHex: (hexId: HexId) => void;
@@ -517,6 +557,14 @@ function BoardMap({
           const isPendingChargeHex = pendingChargeHexId === hex.id;
           const isChargeTarget = visibleChargeTargetHexIds.has(hex.id);
           const isPendingChargeTarget = fighter?.id === pendingChargeTargetId;
+          const isAttackTarget =
+            pendingChargeHexId === null &&
+            game.turnStep === TurnStep.Action &&
+            actionLens.attackTargetHexIds.has(hex.id);
+          const isRecentCombatTarget =
+            pendingChargeHexId === null &&
+            game.turnStep === TurnStep.Power &&
+            fighter?.id === recentCombatTargetId;
           const isClickableMoveDestination = isMoveDestination && game.turnStep === TurnStep.Action;
           const isClickableChargeDestination = isChargeDestination && game.turnStep === TurnStep.Action;
           const isClickableChargeTarget =
@@ -530,12 +578,14 @@ function BoardMap({
             isClickableChargeDestination ||
             isClickableMoveDestination;
           const actionBadge = getHexActionBadge({
+            isAttackTarget,
             isChargeDestination,
             isPendingChargeHex,
             isPendingChargeTarget,
             isChargeTarget,
             isPendingMoveHex,
             isMoveDestination,
+            isRecentCombatTarget,
           });
           const style: CSSProperties = {
             left: `${left}px`,
@@ -546,6 +596,7 @@ function BoardMap({
             <article
               key={hex.id}
               className={getHexClassName(game, hex, {
+                isAttackTarget,
                 isChargeDestination,
                 isPendingChargeHex,
                 isPendingChargeTarget,
@@ -553,6 +604,7 @@ function BoardMap({
                 isClickableHex: isInteractiveHex,
                 isPendingMoveHex,
                 isMoveDestination,
+                isRecentCombatTarget,
                 isSelectedHex,
                 isSelectableHex: isSelectableFighter,
                 isGuardReadyHex: isSelectedHex && actionLens.guardAvailable,
@@ -830,6 +882,7 @@ function getHexClassName(
   game: Game,
   hex: HexCell,
   state: {
+    isAttackTarget: boolean;
     isChargeDestination: boolean;
     isPendingChargeHex: boolean;
     isPendingChargeTarget: boolean;
@@ -837,6 +890,7 @@ function getHexClassName(
     isClickableHex: boolean;
     isPendingMoveHex: boolean;
     isMoveDestination: boolean;
+    isRecentCombatTarget: boolean;
     isSelectedHex: boolean;
     isSelectableHex: boolean;
     isGuardReadyHex: boolean;
@@ -896,6 +950,14 @@ function getHexClassName(
     classes.push("battlefield-map-hex-charge-target-armed");
   }
 
+  if (state.isAttackTarget) {
+    classes.push("battlefield-map-hex-attack-target");
+  }
+
+  if (state.isRecentCombatTarget) {
+    classes.push("battlefield-map-hex-combat-target");
+  }
+
   if (state.isSelectedHex) {
     classes.push("battlefield-map-hex-selected");
   }
@@ -920,13 +982,15 @@ function formatWeaponAccuracy(accuracy: string): string {
 }
 
 function getHexActionBadge(state: {
+  isAttackTarget: boolean;
   isChargeDestination: boolean;
   isPendingChargeHex: boolean;
   isPendingChargeTarget: boolean;
   isChargeTarget: boolean;
   isPendingMoveHex: boolean;
   isMoveDestination: boolean;
-}): "move" | "charge" | "armed" | "target" | "confirm" | null {
+  isRecentCombatTarget: boolean;
+}): "move" | "charge" | "armed" | "target" | "confirm" | "attack" | "last" | null {
   if (state.isPendingChargeTarget) {
     return "confirm";
   }
@@ -945,6 +1009,14 @@ function getHexActionBadge(state: {
 
   if (state.isChargeDestination) {
     return "charge";
+  }
+
+  if (state.isAttackTarget) {
+    return "attack";
+  }
+
+  if (state.isRecentCombatTarget) {
+    return "last";
   }
 
   if (state.isMoveDestination) {
@@ -973,6 +1045,9 @@ function getFighterActionLens(
     return createEmptyActionLens(passAction);
   }
 
+  const attackActions = legalActions.filter(
+    (action): action is AttackAction => action instanceof AttackAction && action.attackerId === selectedFighterId,
+  );
   const moveActions = legalActions.filter(
     (action): action is MoveAction => action instanceof MoveAction && action.fighterId === selectedFighterId,
   );
@@ -983,6 +1058,15 @@ function getFighterActionLens(
     (action): action is GuardAction => action instanceof GuardAction && action.fighterId === selectedFighterId,
   ) ?? null;
 
+  const attackTargetIds = new Set<FighterId>(attackActions.map((action) => action.targetId));
+  const attackTargetHexIds = new Set<HexId>(
+    [...attackTargetIds].flatMap((fighterId) => {
+      const target = game.getFighter(fighterId);
+      return target?.currentHexId === null || target?.currentHexId === undefined
+        ? []
+        : [target.currentHexId];
+    }),
+  );
   const moveHexIds = new Set<HexId>(
     moveActions.flatMap((action) => {
       const destinationHexId = action.path[action.path.length - 1];
@@ -1013,14 +1097,18 @@ function getFighterActionLens(
 
   return {
     fighter,
+    attackTargetHexIds,
+    attackTargetIds,
     moveHexIds,
     chargeHexIds,
     chargeTargetHexIds,
     chargeTargetIds,
+    attackActions,
     moveActions,
     chargeActions,
     guardAction,
     passAction,
+    attackCount: attackTargetIds.size,
     moveCount: moveHexIds.size,
     chargeCount: uniqueChargeOptions.size,
     guardAvailable: guardAction !== null,
@@ -1030,14 +1118,18 @@ function getFighterActionLens(
 function createEmptyActionLens(passAction: PassAction | null): FighterActionLens {
   return {
     fighter: null,
+    attackTargetHexIds: new Set<HexId>(),
+    attackTargetIds: new Set<FighterId>(),
     moveHexIds: new Set<HexId>(),
     chargeHexIds: new Set<HexId>(),
     chargeTargetHexIds: new Set<HexId>(),
     chargeTargetIds: new Set<FighterId>(),
+    attackActions: [],
     moveActions: [],
     chargeActions: [],
     guardAction: null,
     passAction,
+    attackCount: 0,
     moveCount: 0,
     chargeCount: 0,
     guardAvailable: false,
