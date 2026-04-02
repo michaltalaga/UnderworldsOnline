@@ -23,6 +23,7 @@ import {
   ScoringResolver,
   UseWarscrollAbilityAction,
   WeaponAbilityKind,
+  type CardPlayContext,
   createCombatReadySetupPracticeGame,
   type CardInstance,
   type Game,
@@ -555,9 +556,9 @@ class DebugEndPhaseScoringResolver extends ScoringResolver {
   public override getScorableObjectives(
     game: Game,
     playerId: string,
-    timing: ObjectiveConditionTiming,
+    context: CardPlayContext,
   ): CardInstance[] {
-    if (timing !== ObjectiveConditionTiming.EndPhase) {
+    if (context.timing !== ObjectiveConditionTiming.EndPhase) {
       return [];
     }
 

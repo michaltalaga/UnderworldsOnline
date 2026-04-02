@@ -1,5 +1,10 @@
 import type { CardDefinitionId, FighterId } from "../values/ids";
-import { CardKind, type ObjectiveConditionTiming } from "../values/enums";
+import {
+  CardKind,
+  type EndPhaseActionKind,
+  type GameActionKind,
+  type ObjectiveConditionTiming,
+} from "../values/enums";
 import type { PloyEffect } from "./PloyEffect";
 import type { CardInstance } from "../state/CardInstance";
 import type { GameEventLogState } from "../state/GameEventLogState";
@@ -10,6 +15,7 @@ export type CardPlayContext = {
   timing?: ObjectiveConditionTiming;
   targetFighterId?: FighterId | null;
   equippedFighterId?: FighterId | null;
+  triggerActionKind?: GameActionKind | EndPhaseActionKind | null;
 };
 
 export class CardDefinition {

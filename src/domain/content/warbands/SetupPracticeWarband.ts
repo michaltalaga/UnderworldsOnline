@@ -15,6 +15,7 @@ import type { PlayerState } from "../../state/PlayerState";
 import {
   CardZone,
   CardKind,
+  GameActionKind,
   FeatureTokenSide,
   FighterTokenKind,
   ObjectiveConditionTiming,
@@ -174,7 +175,14 @@ class PracticeObjective01CardDefinition extends PracticeObjectiveCardDefinition 
       return false;
     }
 
-    const latestCombat = world.getLatestBatchEvent(GameRecordKind.Combat);
+    if (
+      context.triggerActionKind !== GameActionKind.Attack &&
+      context.triggerActionKind !== GameActionKind.Charge
+    ) {
+      return false;
+    }
+
+    const latestCombat = world.getLatestEvent(GameRecordKind.Combat);
     if (latestCombat === null || latestCombat.invokedByPlayerId !== player.id) {
       return false;
     }
@@ -206,7 +214,14 @@ class PracticeObjective02CardDefinition extends PracticeObjectiveCardDefinition 
       return false;
     }
 
-    const latestCombat = world.getLatestBatchEvent(GameRecordKind.Combat);
+    if (
+      context.triggerActionKind !== GameActionKind.Attack &&
+      context.triggerActionKind !== GameActionKind.Charge
+    ) {
+      return false;
+    }
+
+    const latestCombat = world.getLatestEvent(GameRecordKind.Combat);
     if (
       latestCombat === null ||
       latestCombat.invokedByPlayerId !== player.id ||
@@ -247,7 +262,11 @@ class PracticeObjective03CardDefinition extends PracticeObjectiveCardDefinition 
       return false;
     }
 
-    const latestDelve = world.getLatestBatchEvent(GameRecordKind.Delve);
+    if (context.triggerActionKind !== GameActionKind.Delve) {
+      return false;
+    }
+
+    const latestDelve = world.getLatestEvent(GameRecordKind.Delve);
     if (latestDelve === null || latestDelve.invokedByPlayerId !== player.id) {
       return false;
     }

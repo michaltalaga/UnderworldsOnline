@@ -1,5 +1,5 @@
 import { CardInstance } from "../state/CardInstance";
-import { CardDefinition } from "../definitions/CardDefinition";
+import { CardDefinition, type CardPlayContext } from "../definitions/CardDefinition";
 import { WeaponAbilityDefinition } from "../definitions/WeaponAbilityDefinition";
 import {
   CleanupResolution,
@@ -189,65 +189,63 @@ export class GameEngine {
   }
 
   public applyGameAction(game: Game, action: GameAction): Game {
-    const batchStartIndex = game.records.length;
-
     if (action instanceof AttackAction) {
       this.applyAttackAction(game, action);
-      this.finishEventBatch(game, batchStartIndex);
+      this.finishEventBatch(game, { timing: ObjectiveConditionTiming.Immediate, triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof ChargeAction) {
       this.applyChargeAction(game, action);
-      this.finishEventBatch(game, batchStartIndex);
+      this.finishEventBatch(game, { timing: ObjectiveConditionTiming.Immediate, triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof MoveAction) {
       this.applyMoveAction(game, action);
-      this.finishEventBatch(game, batchStartIndex);
+      this.finishEventBatch(game, { timing: ObjectiveConditionTiming.Immediate, triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof GuardAction) {
       this.applyGuardAction(game, action);
-      this.finishEventBatch(game, batchStartIndex);
+      this.finishEventBatch(game, { timing: ObjectiveConditionTiming.Immediate, triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof DelveAction) {
       this.applyDelveAction(game, action);
-      this.finishEventBatch(game, batchStartIndex);
+      this.finishEventBatch(game, { timing: ObjectiveConditionTiming.Immediate, triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof FocusAction) {
       this.applyFocusAction(game, action);
-      this.finishEventBatch(game, batchStartIndex);
+      this.finishEventBatch(game, { timing: ObjectiveConditionTiming.Immediate, triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof PlayPloyAction) {
       this.applyPlayPloyAction(game, action);
-      this.finishEventBatch(game, batchStartIndex);
+      this.finishEventBatch(game, { timing: ObjectiveConditionTiming.Immediate, triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof PlayUpgradeAction) {
       this.applyPlayUpgradeAction(game, action);
-      this.finishEventBatch(game, batchStartIndex);
+      this.finishEventBatch(game, { timing: ObjectiveConditionTiming.Immediate, triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof UseWarscrollAbilityAction) {
       this.applyUseWarscrollAbilityAction(game, action);
-      this.finishEventBatch(game, batchStartIndex);
+      this.finishEventBatch(game, { timing: ObjectiveConditionTiming.Immediate, triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof PassAction) {
       this.applyPassAction(game, action);
-      this.finishEventBatch(game, batchStartIndex);
+      this.finishEventBatch(game, { timing: ObjectiveConditionTiming.Immediate, triggerActionKind: action.kind });
       return game;
     }
 
@@ -255,41 +253,39 @@ export class GameEngine {
   }
 
   public applyEndPhaseAction(game: Game, action: EndPhaseAction): Game {
-    const batchStartIndex = game.records.length;
-
     if (action instanceof ResolveScoreObjectivesAction) {
       this.applyResolveScoreObjectives(game);
-      this.finishEventBatch(game, batchStartIndex);
+      this.finishEventBatch(game, { triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof ResolveEquipUpgradesAction) {
       this.applyResolveEquipUpgrades(game);
-      this.finishEventBatch(game, batchStartIndex);
+      this.finishEventBatch(game, { triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof ResolveDiscardCardsAction) {
       this.applyResolveDiscardCards(game);
-      this.finishEventBatch(game, batchStartIndex);
+      this.finishEventBatch(game, { triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof ResolveDrawObjectivesAction) {
       this.applyResolveDrawObjectives(game);
-      this.finishEventBatch(game, batchStartIndex);
+      this.finishEventBatch(game, { triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof ResolveDrawPowerCardsAction) {
       this.applyResolveDrawPowerCards(game);
-      this.finishEventBatch(game, batchStartIndex);
+      this.finishEventBatch(game, { triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof ResolveCleanupAction) {
       this.applyResolveCleanup(game);
-      this.finishEventBatch(game, batchStartIndex);
+      this.finishEventBatch(game, { triggerActionKind: action.kind });
       return game;
     }
 
@@ -337,7 +333,6 @@ export class GameEngine {
     chooserPlayerId: PlayerId,
     firstPlayerId: PlayerId,
   ): Game {
-    const batchStartIndex = game.records.length;
     this.assertStateKind(game, "combatChooseFirstPlayer");
 
     if (game.priorityPlayerId !== chooserPlayerId) {
@@ -367,7 +362,7 @@ export class GameEngine {
     game.eventLog.push(
       `${chooser.name} chose ${firstPlayer.name} to take the first turn. ${rollOffLoser.name} drew 1 power card.`,
     );
-    this.finishEventBatch(game, batchStartIndex);
+    this.finishEventBatch(game, {});
 
     return game;
   }
@@ -1403,7 +1398,14 @@ export class GameEngine {
     const playerResolutions: ObjectiveScoringPlayerResolution[] = [];
     for (const player of game.players) {
       playerResolutions.push(
-        this.scoreObjectivesForPlayer(game, player, ObjectiveConditionTiming.EndPhase),
+        this.scoreObjectivesForPlayer(
+          game,
+          player,
+          {
+            timing: ObjectiveConditionTiming.EndPhase,
+            triggerActionKind: EndPhaseActionKind.ResolveScoreObjectives,
+          },
+        ),
       );
     }
 
@@ -2005,16 +2007,19 @@ export class GameEngine {
     }
   }
 
-  private finishEventBatch(game: Game, batchStartIndex: number): void {
-    const triggeredScoring = this.evaluateTriggeredCards(game, batchStartIndex);
+  private finishEventBatch(
+    game: Game,
+    context: CardPlayContext,
+  ): void {
+    const triggeredScoring = this.evaluateTriggeredCards(game, context);
     this.appendTriggeredObjectiveSummaryToLatestEventLog(game, triggeredScoring);
   }
 
   private evaluateTriggeredCards(
     game: Game,
-    batchStartIndex: number,
+    context: CardPlayContext,
   ): ObjectiveScoringPlayerResolution[] {
-    if (game.records.length <= batchStartIndex) {
+    if (context.timing !== ObjectiveConditionTiming.Immediate) {
       return [];
     }
 
@@ -2026,10 +2031,10 @@ export class GameEngine {
         const resolution = this.scoreObjectivesForPlayer(
           game,
           player,
-          ObjectiveConditionTiming.Immediate,
+          context,
           false,
           true,
-          game.getEventLogState(batchStartIndex),
+          game.getEventLogState(),
         );
         if (resolution.scoredObjectives.length === 0) {
           continue;
@@ -2082,12 +2087,22 @@ export class GameEngine {
   private scoreObjectivesForPlayer(
     game: Game,
     player: PlayerState,
-    timing: ObjectiveConditionTiming,
+    context: CardPlayContext,
     logEachObjective: boolean = true,
     recordResolution: boolean = false,
     world: ReturnType<Game["getEventLogState"]> = game.getEventLogState(),
   ): ObjectiveScoringPlayerResolution {
-    const scorableObjectives = this.scoringResolver.getScorableObjectives(game, player.id, timing, world);
+    const timing = context.timing;
+    if (timing === undefined) {
+      return {
+        playerId: player.id,
+        playerName: player.name,
+        gloryGained: 0,
+        scoredObjectives: [],
+      };
+    }
+
+    const scorableObjectives = this.scoringResolver.getScorableObjectives(game, player.id, context, world);
     const uniqueObjectiveIds = new Set(scorableObjectives.map((card) => card.id));
     const scoredObjectives: ObjectiveScoringCardResolution[] = [];
     let gloryGained = 0;
@@ -2106,11 +2121,12 @@ export class GameEngine {
         {
           invokedByPlayerId: player.id,
           invokedByCardId: objective.card.id,
+          actionKind: context.triggerActionKind ?? null,
         },
         { timing },
       );
       const world = game.getEventLogState();
-      objective.definition.play(game, world, player, objective.card, { timing });
+      objective.definition.play(game, world, player, objective.card, context);
       const scoredObjective = {
         cardId: objective.card.id,
         cardDefinitionId: objective.card.definitionId,
@@ -2129,6 +2145,7 @@ export class GameEngine {
         {
           invokedByPlayerId: player.id,
           invokedByCardId: objective.card.id,
+          actionKind: context.triggerActionKind ?? null,
         },
         { timing },
       );
@@ -2155,6 +2172,7 @@ export class GameEngine {
           invokedByPlayerId: player.id,
           invokedByCardId:
             scoredObjectives.length === 1 ? scoredObjectives[0].cardId : null,
+          actionKind: context.triggerActionKind ?? null,
         },
       );
     }

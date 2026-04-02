@@ -192,8 +192,8 @@ export class Game {
     return this.getEventHistory(kind).map((event) => event.data);
   }
 
-  public getEventLogState(batchStartIndex: number = 0): GameEventLogState {
-    return new GameEventLogState(this.records, batchStartIndex);
+  public getEventLogState(): GameEventLogState {
+    return new GameEventLogState(this.records);
   }
 
   public toJSON(): object {

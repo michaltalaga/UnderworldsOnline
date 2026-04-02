@@ -2,14 +2,14 @@ import type { PlayerId } from "../values/ids";
 import { CardInstance } from "../state/CardInstance";
 import type { GameEventLogState } from "../state/GameEventLogState";
 import { Game } from "../state/Game";
-import { ObjectiveConditionTiming } from "../values/enums";
+import type { CardPlayContext } from "../definitions/CardDefinition";
 import { ScoringResolver } from "./ScoringResolver";
 
 export class DefaultScoringResolver extends ScoringResolver {
   public getScorableObjectives(
     game: Game,
     playerId: PlayerId,
-    timing: ObjectiveConditionTiming,
+    context: CardPlayContext,
     world: GameEventLogState = game.getEventLogState(),
   ): CardInstance[] {
     const player = game.getPlayer(playerId);
@@ -23,7 +23,7 @@ export class DefaultScoringResolver extends ScoringResolver {
         return false;
       }
 
-      return definition.canPlay(game, world, player, card, { timing });
+      return definition.canPlay(game, world, player, card, context);
     });
   }
 }
