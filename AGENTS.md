@@ -40,11 +40,8 @@ Do not put volatile game-progress or handoff state here. That belongs in `docs/a
 
 ### Rules source material
 
-- `Rules/rules.txt` exists and is important.
-- `Rules/rules.html` exists and is important.
-- `Rules/whuh_core_rules_eng_11-1cdg56z5qs-86cxcaddgg.pdf` exists and is important.
+- For rules work, use the primary files in `Rules/`: `rules.txt`, `rules.html`, and `whuh_core_rules_eng_11-1cdg56z5qs-86cxcaddgg.pdf`.
 - Do not replace these with condensed notes when implementing rules work.
-- If a task depends on game rules, consult the files in `Rules/` directly instead of relying on a short summary.
 
 ### Engine
 
