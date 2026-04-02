@@ -132,6 +132,8 @@ type ArmedPathModel = {
   stepByHexId: Map<HexId, number>;
 };
 
+type AttackPreviewModel = Map<FighterId, string[]>;
+
 export default function PracticeBattlefieldApp() {
   const [game, setGame] = useState<Game>(() => createActionStepPracticeGame());
   const [, setRefreshTick] = useState(0);
@@ -184,6 +186,7 @@ export default function PracticeBattlefieldApp() {
   const chargeTargetNames = [...visibleChargeTargetIds].map((fighterId) => getFighterName(game, fighterId));
   const attackTargetNames = [...actionLens.attackTargetIds].map((fighterId) => getFighterName(game, fighterId));
   const attackProfiles = getAttackProfiles(game, activePlayer, actionLens, selectedAttackKeysByTarget);
+  const attackPreviewByTarget = getAttackPreviewByTarget(attackProfiles);
   const chargeProfiles = getChargeProfiles(
     game,
     activePlayer,
@@ -571,6 +574,7 @@ export default function PracticeBattlefieldApp() {
             powerOverlay={powerOverlay}
             boardTurnHeader={boardTurnHeader}
             recentCombatTargetId={recentCombatTargetId}
+            attackPreviewByTarget={attackPreviewByTarget}
             armedPath={armedPath}
             lastResolvedAction={lastResolvedAction}
             resultFlash={resultFlash}
@@ -921,6 +925,7 @@ function BoardMap({
   powerOverlay,
   boardTurnHeader,
   recentCombatTargetId,
+  attackPreviewByTarget,
   armedPath,
   lastResolvedAction,
   resultFlash,
@@ -954,6 +959,7 @@ function BoardMap({
   powerOverlay: PowerOverlayModel;
   boardTurnHeader: BoardTurnHeaderModel;
   recentCombatTargetId: FighterId | null;
+  attackPreviewByTarget: AttackPreviewModel;
   armedPath: ArmedPathModel | null;
   lastResolvedAction: BattlefieldResultFlash | null;
   resultFlash: BattlefieldResultFlash | null;
@@ -1158,6 +1164,14 @@ function BoardMap({
             game.turnStep === TurnStep.Action &&
             actionLens.attackTargetHexIds.has(hex.id);
           const isPendingAttackTarget = fighter?.id === pendingAttackTargetId;
+          const attackPreviewLabels = fighter === null ? [] : attackPreviewByTarget.get(fighter.id) ?? [];
+          const visibleAttackPreviewLabels = attackPreviewLabels.slice(0, 2);
+          const remainingAttackPreviewCount = Math.max(0, attackPreviewLabels.length - visibleAttackPreviewLabels.length);
+          const shouldShowAttackPreview =
+            isAttackTarget &&
+            pendingAttackTargetId === null &&
+            pendingChargeHexId === null &&
+            attackPreviewLabels.length > 0;
           const armedPathStep = armedPath?.stepByHexId.get(hex.id) ?? null;
           const isArmedPathHex = armedPathStep !== null;
           const isRecentCombatTarget =
@@ -1384,6 +1398,27 @@ function BoardMap({
                     {actionBadge.label}
                   </span>
                 )}
+                {shouldShowAttackPreview ? (
+                  <div className="battlefield-hex-profile-preview-list">
+                    {visibleAttackPreviewLabels.map((label) => (
+                      <span
+                        key={label}
+                        className="battlefield-hex-profile-preview-chip"
+                        title={label}
+                      >
+                        {label}
+                      </span>
+                    ))}
+                    {remainingAttackPreviewCount === 0 ? null : (
+                      <span
+                        className="battlefield-hex-profile-preview-chip battlefield-hex-profile-preview-chip-more"
+                        title={attackPreviewLabels.join(" | ")}
+                      >
+                        +{remainingAttackPreviewCount}
+                      </span>
+                    )}
+                  </div>
+                ) : null}
                 {fighter === null ? (
                   <span className="battlefield-empty-hex-dot" aria-hidden="true" />
                 ) : (
@@ -2524,6 +2559,27 @@ function getArmedPathModel(
     tone: "charge",
     stepByHexId: new Map(selectedChargeAction.path.map((hexId, index) => [hexId, index + 1])),
   };
+}
+
+function getAttackPreviewByTarget(
+  attackProfiles: AttackProfileSummary[],
+): AttackPreviewModel {
+  return new Map(
+    attackProfiles.map((profile) => {
+      const labels = [...new Set(profile.options.map((option) => formatAttackPreviewLabel(option.label)))];
+      return [profile.targetId, labels];
+    }),
+  );
+}
+
+function formatAttackPreviewLabel(label: string): string {
+  const abilityMarker = " using ";
+  const compactLabel =
+    label.includes(abilityMarker)
+      ? label.slice(label.indexOf(abilityMarker) + abilityMarker.length)
+      : label;
+
+  return compactLabel.length <= 16 ? compactLabel : `${compactLabel.slice(0, 15)}…`;
 }
 
 function getAttackProfiles(
