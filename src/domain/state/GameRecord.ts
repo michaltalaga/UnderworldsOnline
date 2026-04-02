@@ -4,6 +4,7 @@ import { ObjectiveScoringResolution } from "../endPhase/ObjectiveScoringResoluti
 import { PowerDrawResolution } from "../endPhase/PowerDrawResolution";
 import { CombatResult } from "../rules/CombatResult";
 import { DelveResolution } from "../rules/DelveResolution";
+import { FighterSlainResolution } from "../rules/FighterSlainResolution";
 import { FocusResolution } from "../rules/FocusResolution";
 import { GuardResolution } from "../rules/GuardResolution";
 import { MoveResolution } from "../rules/MoveResolution";
@@ -11,6 +12,7 @@ import { PassResolution } from "../rules/PassResolution";
 import { PloyResolution } from "../rules/PloyResolution";
 import { RoundStartResolution } from "../rules/RoundStartResolution";
 import { TurnStepChangeResolution } from "../rules/TurnStepChangeResolution";
+import { TurnStartedResolution } from "../rules/TurnStartedResolution";
 import { UpgradeResolution } from "../rules/UpgradeResolution";
 import { WarscrollAbilityResolution } from "../rules/WarscrollAbilityResolution";
 import type { EndPhaseActionKind, GameActionKind, SetupActionKind } from "../values/enums";
@@ -18,8 +20,10 @@ import type { CardId, FighterId, PlayerId } from "../values/ids";
 
 export const GameEventKind = {
   RoundStart: "roundStart",
+  TurnStarted: "turnStarted",
   Move: "move",
   Combat: "combat",
+  FighterSlain: "fighterSlain",
   Guard: "guard",
   Pass: "pass",
   TurnStepChanged: "turnStepChanged",
@@ -38,8 +42,10 @@ export type GameEventKind = (typeof GameEventKind)[keyof typeof GameEventKind];
 
 export type GameEventDataByKind = {
   [GameEventKind.RoundStart]: RoundStartResolution;
+  [GameEventKind.TurnStarted]: TurnStartedResolution;
   [GameEventKind.Move]: MoveResolution;
   [GameEventKind.Combat]: CombatResult;
+  [GameEventKind.FighterSlain]: FighterSlainResolution;
   [GameEventKind.Guard]: GuardResolution;
   [GameEventKind.Pass]: PassResolution;
   [GameEventKind.TurnStepChanged]: TurnStepChangeResolution;

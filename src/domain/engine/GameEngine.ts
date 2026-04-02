@@ -89,6 +89,7 @@ import { DefaultScoringResolver } from "../rules/DefaultScoringResolver";
 import { DefaultWarscrollEffectResolver } from "../rules/DefaultWarscrollEffectResolver";
 import { DefaultVictoryResolver } from "../rules/DefaultVictoryResolver";
 import { DelveResolution } from "../rules/DelveResolution";
+import { FighterSlainResolution } from "../rules/FighterSlainResolution";
 import { FocusResolution, type FocusCardResolution } from "../rules/FocusResolution";
 import { GuardResolution } from "../rules/GuardResolution";
 import { MoveResolution } from "../rules/MoveResolution";
@@ -101,6 +102,7 @@ import { type RollOffRoundInput } from "../rules/RollOffRound";
 import { RollOffResult } from "../rules/RollOffResult";
 import { ScoringResolver } from "../rules/ScoringResolver";
 import { TurnStepChangeResolution } from "../rules/TurnStepChangeResolution";
+import { TurnStartedResolution } from "../rules/TurnStartedResolution";
 import { UpgradeResolution } from "../rules/UpgradeResolution";
 import { WarscrollAbilityResolution } from "../rules/WarscrollAbilityResolution";
 import { VictoryResolver } from "../rules/VictoryResolver";
@@ -325,12 +327,12 @@ export class GameEngine {
       player.hasDelvedThisPowerStep = false;
     }
 
+    this.recordRoundStart(game, firstPlayer.id);
     this.transitionToState(
       game,
       createCombatTurnGameState(firstPlayer.id, firstPlayer.id, TurnStep.Action),
       { invokedByPlayerId: chooser.id },
     );
-    this.recordRoundStart(game, firstPlayer.id);
     game.consecutivePasses = 0;
     game.eventLog.push(
       `${chooser.name} chose ${firstPlayer.name} to take the first turn. ${rollOffLoser.name} drew 1 power card.`,
@@ -642,6 +644,7 @@ export class GameEngine {
       attackerPlayer,
       defenderPlayer,
       attacker,
+      attackerDefinition,
       target,
       targetDefinition,
       weapon.id,
@@ -774,6 +777,7 @@ export class GameEngine {
       attackerPlayer,
       defenderPlayer,
       attacker,
+      attackerDefinition,
       target,
       targetDefinition,
       weapon.id,
@@ -1648,6 +1652,18 @@ export class GameEngine {
       ),
       metadata,
     );
+
+    if (
+      currentState.kind === "combatTurn" &&
+      currentState.turnStep === TurnStep.Action &&
+      currentState.activePlayerId !== null &&
+      (
+        previousState.turnStep !== TurnStep.Action ||
+        previousState.activePlayerId !== currentState.activePlayerId
+      )
+    ) {
+      this.recordTurnStarted(game, currentState.activePlayerId, metadata);
+    }
   }
 
   private recordMoveEvent(
@@ -1674,6 +1690,29 @@ export class GameEngine {
         path,
         destinationHexKind,
         staggerApplied,
+      ),
+      metadata,
+    );
+  }
+
+  private recordTurnStarted(
+    game: Game,
+    playerId: PlayerId,
+    metadata: GameEventMetadata = {},
+  ): void {
+    const player = this.requirePlayer(game, playerId);
+    const roundTurnNumber =
+      game.players.reduce((total, currentPlayer) => total + currentPlayer.turnsTakenThisRound, 0) + 1;
+
+    game.addRecord(
+      GameRecordKind.TurnStarted,
+      new TurnStartedResolution(
+        game.roundNumber,
+        player.id,
+        player.name,
+        player.turnsTakenThisRound + 1,
+        roundTurnNumber,
+        roundTurnNumber === 1,
       ),
       metadata,
     );
@@ -2070,6 +2109,7 @@ export class GameEngine {
     attackerPlayer: PlayerState,
     defenderPlayer: PlayerState,
     attacker: FighterState,
+    attackerDefinition: PlayerState["warband"]["fighters"][number],
     target: FighterState,
     targetDefinition: PlayerState["warband"]["fighters"][number],
     weaponId: string,
@@ -2119,6 +2159,26 @@ export class GameEngine {
       target.currentHexId = null;
       target.isSlain = true;
       attackerPlayer.glory += targetDefinition.bounty;
+      game.addRecord(
+        GameRecordKind.FighterSlain,
+        new FighterSlainResolution(
+          attackerPlayer.id,
+          attackerPlayer.name,
+          attacker.id,
+          attackerDefinition.name,
+          defenderPlayer.id,
+          defenderPlayer.name,
+          target.id,
+          targetDefinition.name,
+          targetHex.id,
+          targetDefinition.bounty,
+        ),
+        {
+          invokedByPlayerId: attackerPlayer.id,
+          invokedByFighterId: attacker.id,
+          actionKind,
+        },
+      );
     }
 
     return { combatResult, targetSlain };
