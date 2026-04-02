@@ -160,6 +160,7 @@ export default function PracticeBattlefieldApp() {
   const [selectedChargeKey, setSelectedChargeKey] = useState<string | null>(null);
   const [pendingMoveHexId, setPendingMoveHexId] = useState<HexId | null>(null);
   const [pendingDelveFeatureTokenId, setPendingDelveFeatureTokenId] = useState<FeatureTokenState["id"] | null>(null);
+  const [pendingGuardFighterId, setPendingGuardFighterId] = useState<FighterId | null>(null);
   const [pendingPowerOptionKey, setPendingPowerOptionKey] = useState<string | null>(null);
   const [pendingChargeHexId, setPendingChargeHexId] = useState<HexId | null>(null);
   const [pendingChargeTargetId, setPendingChargeTargetId] = useState<FighterId | null>(null);
@@ -223,7 +224,9 @@ export default function PracticeBattlefieldApp() {
           : `Recent combat: ${recentCombatTargetName} remains marked on the map. Pass the power step or reset the board.`;
   const actionPrompt =
     game.turnStep === TurnStep.Action
-      ? pendingAttackTargetId !== null
+      ? pendingGuardFighterId !== null
+        ? `Guard is armed for ${selectedFighterName}. Click Guard again to confirm, press Escape to cancel, or choose another action.`
+        : pendingAttackTargetId !== null
         ? `${pendingAttackTargetName ?? pendingAttackTargetId} selected with ${pendingAttackOption?.label ?? "the current profile"}. Click the same crimson target again to confirm the attack, press Escape to cancel, or pick a different crimson target.`
         : pendingChargeTargetId !== null && pendingChargeHexId !== null
           ? `${pendingChargeTargetName ?? pendingChargeTargetId} selected from ${pendingChargeHexId} with ${pendingChargeOption?.label ?? "the current profile"}. Click the same red target again to confirm, press Escape to cancel, or pick a different target.`
@@ -242,8 +245,10 @@ export default function PracticeBattlefieldApp() {
     pendingChargeHexId,
     pendingChargeTargetName,
     pendingDelveFeatureTokenId,
+    pendingGuardFighterId,
     pendingMoveHexId,
     pendingPowerOption,
+    selectedFighterName,
     selectedFeatureToken,
   });
 
@@ -263,6 +268,7 @@ export default function PracticeBattlefieldApp() {
   function clearPendingInteractions(): void {
     setPendingMoveHexId(null);
     setPendingDelveFeatureTokenId(null);
+    setPendingGuardFighterId(null);
     setPendingPowerOptionKey(null);
     setPendingChargeHexId(null);
     setPendingChargeTargetId(null);
@@ -341,6 +347,20 @@ export default function PracticeBattlefieldApp() {
     applyAction(actionLens.delveAction);
   }
 
+  function guardSelectedFighter(): void {
+    if (actionLens.guardAction === null || selectedFighterId === null) {
+      return;
+    }
+
+    if (pendingGuardFighterId !== selectedFighterId) {
+      clearPendingInteractions();
+      setPendingGuardFighterId(selectedFighterId);
+      return;
+    }
+
+    applyAction(actionLens.guardAction);
+  }
+
   function attackTarget(targetId: FighterId): void {
     if (pendingAttackTargetId !== targetId) {
       clearPendingInteractions();
@@ -390,6 +410,7 @@ export default function PracticeBattlefieldApp() {
     if (
       pendingMoveHexId === null &&
       pendingDelveFeatureTokenId === null &&
+      pendingGuardFighterId === null &&
       pendingPowerOptionKey === null &&
       pendingChargeHexId === null &&
       pendingChargeTargetId === null &&
@@ -406,7 +427,7 @@ export default function PracticeBattlefieldApp() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [pendingMoveHexId, pendingDelveFeatureTokenId, pendingPowerOptionKey, pendingChargeHexId, pendingChargeTargetId, pendingAttackTargetId]);
+  }, [pendingMoveHexId, pendingDelveFeatureTokenId, pendingGuardFighterId, pendingPowerOptionKey, pendingChargeHexId, pendingChargeTargetId, pendingAttackTargetId]);
 
   useEffect(() => {
     if (resultFlash === null) {
@@ -498,6 +519,7 @@ export default function PracticeBattlefieldApp() {
             actionLens={actionLens}
             pendingMoveHexId={pendingMoveHexId}
             pendingDelveFeatureTokenId={pendingDelveFeatureTokenId}
+            pendingGuardFighterId={pendingGuardFighterId}
             pendingPowerOptionKey={pendingPowerOptionKey}
             pendingChargeHexId={pendingChargeHexId}
             pendingChargeTargetId={pendingChargeTargetId}
@@ -510,11 +532,7 @@ export default function PracticeBattlefieldApp() {
             resultFlash={resultFlash}
             onApplyPowerAction={selectPowerOption}
             onDelveSelectedFighter={delveSelectedFighter}
-            onGuardSelectedFighter={() => {
-              if (actionLens.guardAction !== null) {
-                applyAction(actionLens.guardAction);
-              }
-            }}
+            onGuardSelectedFighter={guardSelectedFighter}
             onPassTurn={() => {
               if (actionLens.passAction !== null) {
                 applyAction(actionLens.passAction);
@@ -723,14 +741,10 @@ export default function PracticeBattlefieldApp() {
               <div className="battlefield-button-row">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (actionLens.guardAction !== null) {
-                      applyAction(actionLens.guardAction);
-                    }
-                  }}
+                  onClick={guardSelectedFighter}
                   disabled={actionLens.guardAction === null || game.turnStep !== TurnStep.Action}
                 >
-                  Guard
+                  {pendingGuardFighterId === selectedFighterId && selectedFighterId !== null ? "Confirm Guard" : "Guard"}
                 </button>
                 <button
                   type="button"
@@ -763,7 +777,7 @@ export default function PracticeBattlefieldApp() {
                 <strong>Charge profiles:</strong> after you arm a gold destination, pick a target profile card to control which charge attack the map uses.
               </p>
               <p>
-                <strong>Guard:</strong> the selected fighter gets a white ring when guard is legal.
+                <strong>Guard:</strong> the selected fighter gets a white ring when guard is legal. Click Guard once to arm it, click Guard again to confirm, or press Escape to cancel.
               </p>
               <p>
                 <strong>Board buttons:</strong> guard appears on the map during action step, and pass power appears on the map during power step.
@@ -858,6 +872,7 @@ function BoardMap({
   game,
   pendingMoveHexId,
   pendingDelveFeatureTokenId,
+  pendingGuardFighterId,
   pendingPowerOptionKey,
   pendingChargeHexId,
   pendingChargeTargetId,
@@ -887,6 +902,7 @@ function BoardMap({
   game: Game;
   pendingMoveHexId: HexId | null;
   pendingDelveFeatureTokenId: FeatureTokenState["id"] | null;
+  pendingGuardFighterId: FighterId | null;
   pendingPowerOptionKey: string | null;
   pendingChargeHexId: HexId | null;
   pendingChargeTargetId: FighterId | null;
@@ -972,10 +988,16 @@ function BoardMap({
           {game.turnStep === TurnStep.Action && actionLens.guardAction !== null && selectedFighterName !== null ? (
             <button
               type="button"
-              className="battlefield-board-action battlefield-board-action-guard"
+              className={[
+                "battlefield-board-action",
+                "battlefield-board-action-guard",
+                pendingGuardFighterId === selectedFighterId && selectedFighterId !== null
+                  ? "battlefield-board-action-guard-armed"
+                  : "",
+              ].filter(Boolean).join(" ")}
               onClick={onGuardSelectedFighter}
             >
-              Guard {selectedFighterName}
+              {pendingGuardFighterId === selectedFighterId && selectedFighterId !== null ? "Confirm Guard" : "Guard"} {selectedFighterName}
             </button>
           ) : null}
           {game.turnStep === TurnStep.Power && actionLens.passAction !== null ? (
@@ -1091,6 +1113,11 @@ function BoardMap({
             featureToken !== null &&
             actionLens.delveAction?.featureTokenId === featureToken.id &&
             fighter?.id === selectedFighterId;
+          const isPendingGuardHex =
+            game.turnStep === TurnStep.Action &&
+            fighter?.id !== undefined &&
+            fighter.id === pendingGuardFighterId &&
+            fighter.id === selectedFighterId;
           const isPendingDelveFeature =
             isDelveReadyFeature &&
             featureToken !== null &&
@@ -1117,6 +1144,7 @@ function BoardMap({
             isAttackTarget,
             isChargeDestination,
             isPendingDelveHex: isPendingDelveFeature,
+            isPendingGuardHex,
             isPendingAttackTarget,
             isPendingChargeHex,
             pendingChargeBadgeLabel,
@@ -1153,6 +1181,7 @@ function BoardMap({
                 isAttackTarget,
                 isChargeDestination,
                 isPendingDelveHex: isPendingDelveFeature,
+                isPendingGuardHex,
                 isPendingAttackTarget,
                 isPendingChargeHex,
                 isPendingChargeTarget,
@@ -1534,6 +1563,7 @@ function getHexClassName(
     isAttackTarget: boolean;
     isChargeDestination: boolean;
     isPendingDelveHex: boolean;
+    isPendingGuardHex: boolean;
     isPendingAttackTarget: boolean;
     isPendingChargeHex: boolean;
     isPendingChargeTarget: boolean;
@@ -1589,6 +1619,10 @@ function getHexClassName(
 
   if (state.isPendingDelveHex) {
     classes.push("battlefield-map-hex-delve-armed");
+  }
+
+  if (state.isPendingGuardHex) {
+    classes.push("battlefield-map-hex-guard-armed");
   }
 
   if (state.isChargeDestination) {
@@ -1654,6 +1688,7 @@ function getHexActionBadge(state: {
   isAttackTarget: boolean;
   isChargeDestination: boolean;
   isPendingDelveHex: boolean;
+  isPendingGuardHex: boolean;
   isPendingAttackTarget: boolean;
   isPendingChargeHex: boolean;
   pendingChargeBadgeLabel: string | null;
@@ -1677,6 +1712,10 @@ function getHexActionBadge(state: {
   }
 
   if (state.isPendingDelveHex) {
+    return { tone: "confirm", label: "confirm", detailed: false };
+  }
+
+  if (state.isPendingGuardHex) {
     return { tone: "confirm", label: "confirm", detailed: false };
   }
 
@@ -1953,8 +1992,10 @@ function getBoardTurnHeaderModel({
   pendingChargeHexId,
   pendingChargeTargetName,
   pendingDelveFeatureTokenId,
+  pendingGuardFighterId,
   pendingMoveHexId,
   pendingPowerOption,
+  selectedFighterName,
   selectedFeatureToken,
 }: {
   activePlayerName: string;
@@ -1965,11 +2006,23 @@ function getBoardTurnHeaderModel({
   pendingChargeHexId: HexId | null;
   pendingChargeTargetName: string | null;
   pendingDelveFeatureTokenId: FeatureTokenState["id"] | null;
+  pendingGuardFighterId: FighterId | null;
   pendingMoveHexId: HexId | null;
   pendingPowerOption: PowerOverlayOption | null;
+  selectedFighterName: string;
   selectedFeatureToken: FeatureTokenState | null;
 }): BoardTurnHeaderModel {
   if (game.turnStep === TurnStep.Action) {
+    if (pendingGuardFighterId !== null) {
+      return {
+        activePlayerName,
+        interactionLabel: `Guard is armed for ${selectedFighterName}`,
+        isArmed: true,
+        stepLabel: "Action Step",
+        tone: "action",
+      };
+    }
+
     if (pendingAttackTargetName !== null) {
       return {
         activePlayerName,

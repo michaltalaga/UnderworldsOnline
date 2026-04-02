@@ -415,6 +415,14 @@ body {
   color: #2f3941;
 }
 
+.battlefield-board-action-guard-armed {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(214, 220, 228, 1));
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.94),
+    0 0 0 4px rgba(193, 205, 216, 0.24),
+    0 12px 24px rgba(35, 24, 18, 0.18);
+}
+
 .battlefield-board-action-pass {
   background: linear-gradient(180deg, rgba(240, 231, 220, 0.98), rgba(223, 204, 184, 0.98));
   color: #4c3a2e;
@@ -850,6 +858,16 @@ body {
     inset 0 0 0 2px rgba(255, 255, 255, 0.84),
     0 0 0 4px rgba(255, 255, 255, 0.28),
     0 10px 20px rgba(48, 37, 28, 0.18);
+}
+
+.battlefield-map-hex-guard-armed {
+  border-color: rgba(111, 125, 139, 0.9);
+  background: linear-gradient(180deg, rgba(251, 252, 255, 1), rgba(214, 220, 228, 1));
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.96),
+    0 0 0 4px rgba(192, 202, 212, 0.32),
+    0 0 18px rgba(186, 197, 207, 0.34),
+    0 10px 20px rgba(48, 37, 28, 0.2);
 }
 
 .battlefield-hex-meta-row,
