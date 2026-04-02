@@ -9,7 +9,7 @@ import {
 import { FeatureTokenState } from "../state/FeatureTokenState";
 import { FighterState } from "../state/FighterState";
 import { Game } from "../state/Game";
-import { GameRecordKind } from "../state/GameRecord";
+import { type GameEventMetadata, GameRecordKind } from "../state/GameRecord";
 import {
   createCombatChooseFirstPlayerGameState,
   createCombatReadyGameState,
@@ -22,6 +22,7 @@ import {
   createSetupDrawStartingHandsGameState,
   createSetupMulliganGameState,
   createSetupPlaceFeatureTokensGameState,
+  type GameState,
 } from "../state/GameState";
 import { HexCell } from "../state/HexCell";
 import { PlayerState } from "../state/PlayerState";
@@ -89,6 +90,9 @@ import { DefaultWarscrollEffectResolver } from "../rules/DefaultWarscrollEffectR
 import { DefaultVictoryResolver } from "../rules/DefaultVictoryResolver";
 import { DelveResolution } from "../rules/DelveResolution";
 import { FocusResolution, type FocusCardResolution } from "../rules/FocusResolution";
+import { GuardResolution } from "../rules/GuardResolution";
+import { MoveResolution } from "../rules/MoveResolution";
+import { PassResolution } from "../rules/PassResolution";
 import { PloyResolution } from "../rules/PloyResolution";
 import { RoundStartResolution, type RoundStartFeatureTokenResolution } from "../rules/RoundStartResolution";
 import { RollOffContext } from "../rules/RollOffContext";
@@ -96,6 +100,7 @@ import { RollOffResolver } from "../rules/RollOffResolver";
 import { type RollOffRoundInput } from "../rules/RollOffRound";
 import { RollOffResult } from "../rules/RollOffResult";
 import { ScoringResolver } from "../rules/ScoringResolver";
+import { TurnStepChangeResolution } from "../rules/TurnStepChangeResolution";
 import { UpgradeResolution } from "../rules/UpgradeResolution";
 import { WarscrollAbilityResolution } from "../rules/WarscrollAbilityResolution";
 import { VictoryResolver } from "../rules/VictoryResolver";
@@ -320,7 +325,11 @@ export class GameEngine {
       player.hasDelvedThisPowerStep = false;
     }
 
-    game.transitionTo(createCombatTurnGameState(firstPlayer.id, firstPlayer.id, TurnStep.Action));
+    this.transitionToState(
+      game,
+      createCombatTurnGameState(firstPlayer.id, firstPlayer.id, TurnStep.Action),
+      { invokedByPlayerId: chooser.id },
+    );
     this.recordRoundStart(game, firstPlayer.id);
     game.consecutivePasses = 0;
     game.eventLog.push(
@@ -536,6 +545,11 @@ export class GameEngine {
     this.assertActivePlayer(game, player.id);
 
     const fighter = this.requireOwnedDeployedFighter(player, action.fighterId);
+    const fighterDefinition = player.getFighterDefinition(fighter.id);
+    if (fighterDefinition === undefined) {
+      throw new Error(`Could not find fighter definition for ${fighter.id}.`);
+    }
+
     const currentHexId = fighter.currentHexId;
     if (currentHexId === null) {
       throw new Error(`Fighter ${fighter.id} is not deployed on the board.`);
@@ -555,9 +569,26 @@ export class GameEngine {
     this.syncFeatureTokenHolderAtHex(game, destinationHex.id);
     fighter.currentHexId = destinationHex.id;
     fighter.hasMoveToken = true;
+    const hadStaggerTokenBeforeMove = fighter.hasStaggerToken;
     if (destinationHex.kind === HexKind.Stagger) {
       fighter.hasStaggerToken = true;
     }
+    this.recordMoveEvent(
+      game,
+      player,
+      fighter.id,
+      fighterDefinition.name,
+      currentHex.id,
+      destinationHex.id,
+      action.path,
+      destinationHex.kind,
+      !hadStaggerTokenBeforeMove && fighter.hasStaggerToken,
+      {
+        invokedByPlayerId: player.id,
+        invokedByFighterId: fighter.id,
+        actionKind: action.kind,
+      },
+    );
 
     const firstPlayerId = game.firstPlayerId;
     if (firstPlayerId === null) {
@@ -565,7 +596,15 @@ export class GameEngine {
     }
 
     game.consecutivePasses = 0;
-    game.transitionTo(createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power));
+    this.transitionToState(
+      game,
+      createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power),
+      {
+        invokedByPlayerId: player.id,
+        invokedByFighterId: fighter.id,
+        actionKind: action.kind,
+      },
+    );
     game.eventLog.push(`${player.name} moved fighter ${fighter.id} to ${destinationHex.id}.`);
   }
 
@@ -625,7 +664,15 @@ export class GameEngine {
     }
 
     game.consecutivePasses = 0;
-    game.transitionTo(createCombatTurnGameState(firstPlayerId, attackerPlayer.id, TurnStep.Power));
+    this.transitionToState(
+      game,
+      createCombatTurnGameState(firstPlayerId, attackerPlayer.id, TurnStep.Power),
+      {
+        invokedByPlayerId: attackerPlayer.id,
+        invokedByFighterId: attacker.id,
+        actionKind: action.kind,
+      },
+    );
 
     const damageText = combatResult.damageInflicted === 0
       ? "dealt no damage"
@@ -666,9 +713,11 @@ export class GameEngine {
 
     const defenderPlayer = this.requireOpponent(game, attackerPlayer.id);
     const attacker = this.requireOwnedDeployedFighter(attackerPlayer, action.fighterId);
+    const attackerDefinition = attackerPlayer.getFighterDefinition(attacker.id);
     const target = defenderPlayer.getFighter(action.targetId);
     const targetDefinition = defenderPlayer.getFighterDefinition(action.targetId);
     if (
+      attackerDefinition === undefined ||
       target === undefined ||
       targetDefinition === undefined ||
       target.currentHexId === null ||
@@ -699,9 +748,26 @@ export class GameEngine {
     destinationHex.occupantFighterId = attacker.id;
     this.syncFeatureTokenHolderAtHex(game, destinationHex.id);
     attacker.currentHexId = destinationHex.id;
+    const hadStaggerTokenBeforeMove = attacker.hasStaggerToken;
     if (destinationHex.kind === HexKind.Stagger) {
       attacker.hasStaggerToken = true;
     }
+    this.recordMoveEvent(
+      game,
+      attackerPlayer,
+      attacker.id,
+      attackerDefinition.name,
+      currentHex.id,
+      destinationHex.id,
+      action.path,
+      destinationHex.kind,
+      !hadStaggerTokenBeforeMove && attacker.hasStaggerToken,
+      {
+        invokedByPlayerId: attackerPlayer.id,
+        invokedByFighterId: attacker.id,
+        actionKind: action.kind,
+      },
+    );
 
     const { combatResult, targetSlain } = this.resolveCombatAction(
       game,
@@ -732,7 +798,15 @@ export class GameEngine {
     }
 
     game.consecutivePasses = 0;
-    game.transitionTo(createCombatTurnGameState(firstPlayerId, attackerPlayer.id, TurnStep.Power));
+    this.transitionToState(
+      game,
+      createCombatTurnGameState(firstPlayerId, attackerPlayer.id, TurnStep.Power),
+      {
+        invokedByPlayerId: attackerPlayer.id,
+        invokedByFighterId: attacker.id,
+        actionKind: action.kind,
+      },
+    );
 
     const damageText = combatResult.damageInflicted === 0
       ? "dealt no damage"
@@ -772,7 +846,21 @@ export class GameEngine {
     this.assertActivePlayer(game, player.id);
 
     const fighter = this.requireOwnedDeployedFighter(player, action.fighterId);
+    const fighterDefinition = player.getFighterDefinition(fighter.id);
+    if (fighterDefinition === undefined) {
+      throw new Error(`Could not find fighter definition for ${fighter.id}.`);
+    }
+
     fighter.hasGuardToken = true;
+    game.addRecord(
+      GameRecordKind.Guard,
+      new GuardResolution(player.id, player.name, fighter.id, fighterDefinition.name),
+      {
+        invokedByPlayerId: player.id,
+        invokedByFighterId: fighter.id,
+        actionKind: action.kind,
+      },
+    );
 
     const firstPlayerId = game.firstPlayerId;
     if (firstPlayerId === null) {
@@ -780,7 +868,15 @@ export class GameEngine {
     }
 
     game.consecutivePasses = 0;
-    game.transitionTo(createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power));
+    this.transitionToState(
+      game,
+      createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power),
+      {
+        invokedByPlayerId: player.id,
+        invokedByFighterId: fighter.id,
+        actionKind: action.kind,
+      },
+    );
     game.eventLog.push(`${player.name} put fighter ${fighter.id} on guard.`);
   }
 
@@ -941,7 +1037,14 @@ export class GameEngine {
       throw new Error("Focus requires a combat turn with a first player.");
     }
 
-    game.transitionTo(createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power));
+    this.transitionToState(
+      game,
+      createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power),
+      {
+        invokedByPlayerId: player.id,
+        actionKind: action.kind,
+      },
+    );
     game.eventLog.push(
       `${player.name} focused, discarded ${discardedObjectives.length} objective card${discardedObjectives.length === 1 ? "" : "s"} `
       + `and ${discardedPowerCards.length} power card${discardedPowerCards.length === 1 ? "" : "s"}, `
@@ -1112,19 +1215,81 @@ export class GameEngine {
     }
 
     if (game.turnStep === TurnStep.Action) {
+      const consecutivePassesBefore = game.consecutivePasses;
+      const turnsTakenBefore = player.turnsTakenThisRound;
+      const nextState = createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power);
       game.consecutivePasses += 1;
-      game.transitionTo(createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power));
+      game.addRecord(
+        GameRecordKind.Pass,
+        new PassResolution(
+          player.id,
+          player.name,
+          TurnStep.Action,
+          nextState.phase,
+          consecutivePassesBefore,
+          game.consecutivePasses,
+          turnsTakenBefore,
+          player.turnsTakenThisRound,
+          player.id,
+          player.name,
+          nextState.turnStep,
+          false,
+        ),
+        {
+          invokedByPlayerId: player.id,
+          actionKind: action.kind,
+        },
+      );
+      this.transitionToState(
+        game,
+        nextState,
+        {
+          invokedByPlayerId: player.id,
+          actionKind: action.kind,
+        },
+      );
       game.eventLog.push(`${player.name} passed their action step.`);
       return;
     }
 
     if (game.turnStep === TurnStep.Power) {
+      const consecutivePassesBefore = game.consecutivePasses;
+      const turnsTakenBefore = player.turnsTakenThisRound;
       player.turnsTakenThisRound += 1;
       player.hasDelvedThisPowerStep = false;
 
       if (this.haveAllPlayersCompletedRoundTurns(game)) {
+        const nextState = createEndPhaseGameState(EndPhaseStep.ScoreObjectives, null, firstPlayerId);
         game.consecutivePasses = 0;
-        game.transitionTo(createEndPhaseGameState(EndPhaseStep.ScoreObjectives, null, firstPlayerId));
+        game.addRecord(
+          GameRecordKind.Pass,
+          new PassResolution(
+            player.id,
+            player.name,
+            TurnStep.Power,
+            nextState.phase,
+            consecutivePassesBefore,
+            game.consecutivePasses,
+            turnsTakenBefore,
+            player.turnsTakenThisRound,
+            null,
+            null,
+            nextState.turnStep,
+            true,
+          ),
+          {
+            invokedByPlayerId: player.id,
+            actionKind: action.kind,
+          },
+        );
+        this.transitionToState(
+          game,
+          nextState,
+          {
+            invokedByPlayerId: player.id,
+            actionKind: action.kind,
+          },
+        );
         game.eventLog.push(`Round ${game.roundNumber} combat turns complete. End phase begins.`);
         return;
       }
@@ -1132,8 +1297,37 @@ export class GameEngine {
       const nextPlayer = this.requireOpponent(game, player.id);
       nextPlayer.hasDelvedThisPowerStep = false;
 
+      const nextState = createCombatTurnGameState(firstPlayerId, nextPlayer.id, TurnStep.Action);
       game.consecutivePasses += 1;
-      game.transitionTo(createCombatTurnGameState(firstPlayerId, nextPlayer.id, TurnStep.Action));
+      game.addRecord(
+        GameRecordKind.Pass,
+        new PassResolution(
+          player.id,
+          player.name,
+          TurnStep.Power,
+          nextState.phase,
+          consecutivePassesBefore,
+          game.consecutivePasses,
+          turnsTakenBefore,
+          player.turnsTakenThisRound,
+          nextPlayer.id,
+          nextPlayer.name,
+          nextState.turnStep,
+          false,
+        ),
+        {
+          invokedByPlayerId: player.id,
+          actionKind: action.kind,
+        },
+      );
+      this.transitionToState(
+        game,
+        nextState,
+        {
+          invokedByPlayerId: player.id,
+          actionKind: action.kind,
+        },
+      );
       game.eventLog.push(`${player.name} passed their power step.`);
       return;
     }
@@ -1421,6 +1615,67 @@ export class GameEngine {
       {
         invokedByPlayerId: firstPlayerId,
       },
+    );
+  }
+
+  private transitionToState(
+    game: Game,
+    nextState: GameState,
+    metadata: GameEventMetadata = {},
+  ): void {
+    const previousState = game.state;
+    game.transitionTo(nextState);
+    const currentState = game.state;
+
+    if (
+      previousState.turnStep === currentState.turnStep &&
+      previousState.activePlayerId === currentState.activePlayerId
+    ) {
+      return;
+    }
+
+    game.addRecord(
+      GameRecordKind.TurnStepChanged,
+      new TurnStepChangeResolution(
+        previousState.kind,
+        currentState.kind,
+        previousState.phase,
+        currentState.phase,
+        previousState.turnStep,
+        currentState.turnStep,
+        previousState.activePlayerId,
+        currentState.activePlayerId,
+      ),
+      metadata,
+    );
+  }
+
+  private recordMoveEvent(
+    game: Game,
+    player: PlayerState,
+    fighterId: FighterId,
+    fighterName: string,
+    fromHexId: HexId,
+    toHexId: HexId,
+    path: readonly HexId[],
+    destinationHexKind: HexKind,
+    staggerApplied: boolean,
+    metadata: GameEventMetadata = {},
+  ): void {
+    game.addRecord(
+      GameRecordKind.Move,
+      new MoveResolution(
+        player.id,
+        player.name,
+        fighterId,
+        fighterName,
+        fromHexId,
+        toHexId,
+        path,
+        destinationHexKind,
+        staggerApplied,
+      ),
+      metadata,
     );
   }
 
