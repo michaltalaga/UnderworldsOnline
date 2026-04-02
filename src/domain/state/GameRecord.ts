@@ -9,9 +9,11 @@ import { FocusResolution } from "../rules/FocusResolution";
 import { GuardResolution } from "../rules/GuardResolution";
 import { MoveResolution } from "../rules/MoveResolution";
 import { PassResolution } from "../rules/PassResolution";
+import { PowerStepEndedResolution } from "../rules/PowerStepEndedResolution";
 import { PloyResolution } from "../rules/PloyResolution";
 import { RoundStartResolution } from "../rules/RoundStartResolution";
 import { TurnStepChangeResolution } from "../rules/TurnStepChangeResolution";
+import { TurnEndedResolution } from "../rules/TurnEndedResolution";
 import { TurnStartedResolution } from "../rules/TurnStartedResolution";
 import { UpgradeResolution } from "../rules/UpgradeResolution";
 import { WarscrollAbilityResolution } from "../rules/WarscrollAbilityResolution";
@@ -26,6 +28,8 @@ export const GameEventKind = {
   FighterSlain: "fighterSlain",
   Guard: "guard",
   Pass: "pass",
+  PowerStepEnded: "powerStepEnded",
+  TurnEnded: "turnEnded",
   TurnStepChanged: "turnStepChanged",
   Focus: "focus",
   Delve: "delve",
@@ -48,6 +52,8 @@ export type GameEventDataByKind = {
   [GameEventKind.FighterSlain]: FighterSlainResolution;
   [GameEventKind.Guard]: GuardResolution;
   [GameEventKind.Pass]: PassResolution;
+  [GameEventKind.PowerStepEnded]: PowerStepEndedResolution;
+  [GameEventKind.TurnEnded]: TurnEndedResolution;
   [GameEventKind.TurnStepChanged]: TurnStepChangeResolution;
   [GameEventKind.Focus]: FocusResolution;
   [GameEventKind.Delve]: DelveResolution;

@@ -94,6 +94,7 @@ import { FocusResolution, type FocusCardResolution } from "../rules/FocusResolut
 import { GuardResolution } from "../rules/GuardResolution";
 import { MoveResolution } from "../rules/MoveResolution";
 import { PassResolution } from "../rules/PassResolution";
+import { PowerStepEndedResolution } from "../rules/PowerStepEndedResolution";
 import { PloyResolution } from "../rules/PloyResolution";
 import { RoundStartResolution, type RoundStartFeatureTokenResolution } from "../rules/RoundStartResolution";
 import { RollOffContext } from "../rules/RollOffContext";
@@ -101,6 +102,7 @@ import { RollOffResolver } from "../rules/RollOffResolver";
 import { type RollOffRoundInput } from "../rules/RollOffRound";
 import { RollOffResult } from "../rules/RollOffResult";
 import { ScoringResolver } from "../rules/ScoringResolver";
+import { TurnEndedResolution } from "../rules/TurnEndedResolution";
 import { TurnStepChangeResolution } from "../rules/TurnStepChangeResolution";
 import { TurnStartedResolution } from "../rules/TurnStartedResolution";
 import { UpgradeResolution } from "../rules/UpgradeResolution";
@@ -1632,6 +1634,21 @@ export class GameEngine {
     const currentState = game.state;
 
     if (
+      previousState.kind === "combatTurn" &&
+      previousState.turnStep === TurnStep.Power &&
+      previousState.activePlayerId !== null &&
+      (
+        currentState.kind !== "combatTurn" ||
+        currentState.turnStep !== TurnStep.Power ||
+        currentState.activePlayerId !== previousState.activePlayerId
+      )
+    ) {
+      const previousPowerPlayer = this.requirePlayer(game, previousState.activePlayerId);
+      this.recordPowerStepEnded(game, previousPowerPlayer, currentState, metadata);
+      this.recordTurnEnded(game, previousPowerPlayer, currentState, metadata);
+    }
+
+    if (
       previousState.turnStep === currentState.turnStep &&
       previousState.activePlayerId === currentState.activePlayerId
     ) {
@@ -1713,6 +1730,70 @@ export class GameEngine {
         player.turnsTakenThisRound + 1,
         roundTurnNumber,
         roundTurnNumber === 1,
+      ),
+      metadata,
+    );
+  }
+
+  private recordPowerStepEnded(
+    game: Game,
+    player: PlayerState,
+    nextState: GameState,
+    metadata: GameEventMetadata = {},
+  ): void {
+    const completedRoundTurnNumber = game.players.reduce(
+      (total, currentPlayer) => total + currentPlayer.turnsTakenThisRound,
+      0,
+    );
+    const nextActivePlayer =
+      nextState.activePlayerId === null ? null : game.getPlayer(nextState.activePlayerId);
+
+    game.addRecord(
+      GameRecordKind.PowerStepEnded,
+      new PowerStepEndedResolution(
+        game.roundNumber,
+        player.id,
+        player.name,
+        player.turnsTakenThisRound,
+        completedRoundTurnNumber,
+        nextState.kind,
+        nextState.phase,
+        nextState.turnStep,
+        nextState.activePlayerId,
+        nextActivePlayer?.name ?? null,
+        nextState.kind === "endPhase",
+      ),
+      metadata,
+    );
+  }
+
+  private recordTurnEnded(
+    game: Game,
+    player: PlayerState,
+    nextState: GameState,
+    metadata: GameEventMetadata = {},
+  ): void {
+    const completedRoundTurnNumber = game.players.reduce(
+      (total, currentPlayer) => total + currentPlayer.turnsTakenThisRound,
+      0,
+    );
+    const nextActivePlayer =
+      nextState.activePlayerId === null ? null : game.getPlayer(nextState.activePlayerId);
+
+    game.addRecord(
+      GameRecordKind.TurnEnded,
+      new TurnEndedResolution(
+        game.roundNumber,
+        player.id,
+        player.name,
+        player.turnsTakenThisRound,
+        completedRoundTurnNumber,
+        nextState.kind,
+        nextState.phase,
+        nextState.turnStep,
+        nextState.activePlayerId,
+        nextActivePlayer?.name ?? null,
+        nextState.kind === "endPhase",
       ),
       metadata,
     );
