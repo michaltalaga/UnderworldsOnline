@@ -389,6 +389,63 @@ body {
   color: #5f4d3f;
 }
 
+.battlefield-board-last-action {
+  position: absolute;
+  top: 126px;
+  right: 16px;
+  z-index: 12;
+  display: grid;
+  gap: 4px;
+  width: min(320px, calc(100% - 32px));
+  padding: 10px 12px;
+  border-radius: 18px;
+  background: rgba(255, 251, 245, 0.96);
+  border: 1px solid rgba(112, 91, 66, 0.14);
+  box-shadow: 0 14px 28px rgba(35, 24, 18, 0.14);
+}
+
+.battlefield-board-last-action-move {
+  border-color: rgba(22, 118, 123, 0.2);
+}
+
+.battlefield-board-last-action-attack {
+  border-color: rgba(140, 34, 61, 0.18);
+}
+
+.battlefield-board-last-action-charge {
+  border-color: rgba(156, 111, 22, 0.18);
+}
+
+.battlefield-board-last-action-power {
+  border-color: rgba(96, 129, 72, 0.18);
+}
+
+.battlefield-board-last-action-eyebrow,
+.battlefield-board-last-action-title,
+.battlefield-board-last-action-detail {
+  margin: 0;
+}
+
+.battlefield-board-last-action-eyebrow {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #7a624d;
+}
+
+.battlefield-board-last-action-title {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #35291f;
+}
+
+.battlefield-board-last-action-detail {
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: #5f4d3f;
+}
+
 .battlefield-board-quick-actions {
   position: absolute;
   top: 16px;
@@ -584,7 +641,7 @@ body {
 
 .battlefield-board-flash {
   position: absolute;
-  top: 116px;
+  top: 224px;
   right: 16px;
   z-index: 12;
   width: min(280px, calc(100% - 32px));

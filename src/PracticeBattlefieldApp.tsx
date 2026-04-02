@@ -131,6 +131,7 @@ export default function PracticeBattlefieldApp() {
   const [game, setGame] = useState<Game>(() => createActionStepPracticeGame());
   const [, setRefreshTick] = useState(0);
   const [resultFlash, setResultFlash] = useState<BattlefieldResultFlash | null>(null);
+  const [lastResolvedAction, setLastResolvedAction] = useState<BattlefieldResultFlash | null>(null);
   const boardProjection = projectBoard(game.board);
   const recentEvents = [...game.eventLog].slice(-10).reverse();
   const activePlayer = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
@@ -284,7 +285,9 @@ export default function PracticeBattlefieldApp() {
     const previousActivePlayerId = game.activePlayerId;
     const previousSelectedFighterId = selectedFighterId;
     demoEngine.applyGameAction(game, action);
-    setResultFlash(buildBattlefieldResultFlash(game, action));
+    const nextResolvedAction = buildBattlefieldResultFlash(game, action);
+    setResultFlash(nextResolvedAction);
+    setLastResolvedAction(nextResolvedAction);
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
     clearPendingInteractions();
@@ -470,6 +473,7 @@ export default function PracticeBattlefieldApp() {
     const nextGame = createActionStepPracticeGame();
     setGame(nextGame);
     setResultFlash(null);
+    setLastResolvedAction(null);
     setSelectedFighterId(getDefaultSelectableFighterId(nextGame));
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
@@ -555,6 +559,7 @@ export default function PracticeBattlefieldApp() {
             powerOverlay={powerOverlay}
             boardTurnHeader={boardTurnHeader}
             recentCombatTargetId={recentCombatTargetId}
+            lastResolvedAction={lastResolvedAction}
             resultFlash={resultFlash}
             onApplyPowerAction={selectPowerOption}
             onDelveSelectedFighter={delveSelectedFighter}
@@ -903,6 +908,7 @@ function BoardMap({
   powerOverlay,
   boardTurnHeader,
   recentCombatTargetId,
+  lastResolvedAction,
   resultFlash,
   selectedFeatureToken,
   onApplyPowerAction,
@@ -934,6 +940,7 @@ function BoardMap({
   powerOverlay: PowerOverlayModel;
   boardTurnHeader: BoardTurnHeaderModel;
   recentCombatTargetId: FighterId | null;
+  lastResolvedAction: BattlefieldResultFlash | null;
   resultFlash: BattlefieldResultFlash | null;
   selectedFeatureToken: FeatureTokenState | null;
   onApplyPowerAction: (option: PowerOverlayOption) => void;
@@ -990,6 +997,16 @@ function BoardMap({
         <strong className="battlefield-board-status-player">{boardTurnHeader.activePlayerName}</strong>
         <p className="battlefield-board-status-copy">{boardTurnHeader.interactionLabel}</p>
       </section>
+      {lastResolvedAction === null ? null : (
+        <section
+          className={`battlefield-board-last-action battlefield-board-last-action-${lastResolvedAction.tone}`}
+          aria-live="polite"
+        >
+          <p className="battlefield-board-last-action-eyebrow">Last Resolved</p>
+          <strong className="battlefield-board-last-action-title">{lastResolvedAction.title}</strong>
+          <p className="battlefield-board-last-action-detail">{lastResolvedAction.detail}</p>
+        </section>
+      )}
       {(game.turnStep === TurnStep.Power && actionLens.passAction !== null) ||
       (game.turnStep === TurnStep.Power && actionLens.delveAction !== null && selectedFeatureToken !== null) ||
       (game.turnStep === TurnStep.Action && actionLens.guardAction !== null && selectedFighterName !== null) ? (
