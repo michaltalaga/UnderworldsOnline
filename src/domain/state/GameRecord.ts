@@ -4,7 +4,9 @@ import { ObjectiveScoringResolution } from "../endPhase/ObjectiveScoringResoluti
 import { PowerDrawResolution } from "../endPhase/PowerDrawResolution";
 import { ActionStepEndedResolution } from "../rules/ActionStepEndedResolution";
 import { ActionStepStartedResolution } from "../rules/ActionStepStartedResolution";
+import { CombatEndedResolution } from "../rules/CombatEndedResolution";
 import { CombatResult } from "../rules/CombatResult";
+import { CombatStartedResolution } from "../rules/CombatStartedResolution";
 import { DelveResolution } from "../rules/DelveResolution";
 import { FighterSlainResolution } from "../rules/FighterSlainResolution";
 import { FocusResolution } from "../rules/FocusResolution";
@@ -27,7 +29,9 @@ export const GameEventKind = {
   ActionStepStarted: "actionStepStarted",
   TurnStarted: "turnStarted",
   Move: "move",
+  CombatStarted: "combatStarted",
   Combat: "combat",
+  CombatEnded: "combatEnded",
   FighterSlain: "fighterSlain",
   Guard: "guard",
   Pass: "pass",
@@ -53,7 +57,9 @@ export type GameEventDataByKind = {
   [GameEventKind.ActionStepStarted]: ActionStepStartedResolution;
   [GameEventKind.TurnStarted]: TurnStartedResolution;
   [GameEventKind.Move]: MoveResolution;
+  [GameEventKind.CombatStarted]: CombatStartedResolution;
   [GameEventKind.Combat]: CombatResult;
+  [GameEventKind.CombatEnded]: CombatEndedResolution;
   [GameEventKind.FighterSlain]: FighterSlainResolution;
   [GameEventKind.Guard]: GuardResolution;
   [GameEventKind.Pass]: PassResolution;

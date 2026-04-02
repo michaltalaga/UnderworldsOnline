@@ -85,12 +85,14 @@ import { ResolveEquipUpgradesAction } from "../endPhase/ResolveEquipUpgradesActi
 import { ResolveScoreObjectivesAction } from "../endPhase/ResolveScoreObjectivesAction";
 import { CombatActionService } from "../rules/CombatActionService";
 import { CombatContext } from "../rules/CombatContext";
+import { CombatEndedResolution } from "../rules/CombatEndedResolution";
 import { CombatResolver } from "../rules/CombatResolver";
 import { DefaultCombatResolver } from "../rules/DefaultCombatResolver";
 import { DefaultScoringResolver } from "../rules/DefaultScoringResolver";
 import { DefaultWarscrollEffectResolver } from "../rules/DefaultWarscrollEffectResolver";
 import { DefaultVictoryResolver } from "../rules/DefaultVictoryResolver";
 import { DelveResolution } from "../rules/DelveResolution";
+import { CombatStartedResolution } from "../rules/CombatStartedResolution";
 import { FighterSlainResolution } from "../rules/FighterSlainResolution";
 import { FocusResolution, type FocusCardResolution } from "../rules/FocusResolution";
 import { GuardResolution } from "../rules/GuardResolution";
@@ -652,6 +654,7 @@ export class GameEngine {
       target,
       targetDefinition,
       weapon.id,
+      weapon.name,
       action.selectedAbility,
       action.attackRoll,
       action.saveRoll,
@@ -785,6 +788,7 @@ export class GameEngine {
       target,
       targetDefinition,
       weapon.id,
+      weapon.name,
       action.selectedAbility,
       action.attackRoll,
       action.saveRoll,
@@ -2263,11 +2267,34 @@ export class GameEngine {
     target: FighterState,
     targetDefinition: PlayerState["warband"]["fighters"][number],
     weaponId: string,
+    weaponName: string,
     selectedAbility: AttackAction["selectedAbility"],
     attackRoll: AttackAction["attackRoll"],
     saveRoll: AttackAction["saveRoll"],
     actionKind: GameActionKind,
   ): { combatResult: ReturnType<CombatResolver["resolve"]>; targetSlain: boolean } {
+    game.addRecord(
+      GameRecordKind.CombatStarted,
+      new CombatStartedResolution(
+        attackerPlayer.id,
+        attackerPlayer.name,
+        attacker.id,
+        attackerDefinition.name,
+        defenderPlayer.id,
+        defenderPlayer.name,
+        target.id,
+        targetDefinition.name,
+        weaponId,
+        weaponName,
+        selectedAbility,
+      ),
+      {
+        invokedByPlayerId: attackerPlayer.id,
+        invokedByFighterId: attacker.id,
+        actionKind,
+      },
+    );
+
     const combatResult = this.combatResolver.resolve(
       game,
       new CombatContext(
@@ -2330,6 +2357,40 @@ export class GameEngine {
         },
       );
     }
+
+    game.addRecord(
+      GameRecordKind.CombatEnded,
+      new CombatEndedResolution(
+        attackerPlayer.id,
+        attackerPlayer.name,
+        attacker.id,
+        attackerDefinition.name,
+        defenderPlayer.id,
+        defenderPlayer.name,
+        target.id,
+        targetDefinition.name,
+        weaponId,
+        weaponName,
+        selectedAbility,
+        combatResult.selectedAbilityRequiresCritical,
+        combatResult.selectedAbilityTriggered,
+        combatResult.attackRoll,
+        combatResult.saveRoll,
+        combatResult.outcome,
+        combatResult.attackSuccesses,
+        combatResult.saveSuccesses,
+        combatResult.attackCriticals,
+        combatResult.saveCriticals,
+        combatResult.damageInflicted,
+        targetSlain,
+        combatResult.staggerApplied,
+      ),
+      {
+        invokedByPlayerId: attackerPlayer.id,
+        invokedByFighterId: attacker.id,
+        actionKind,
+      },
+    );
 
     return { combatResult, targetSlain };
   }
