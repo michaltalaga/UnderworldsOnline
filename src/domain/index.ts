@@ -51,6 +51,7 @@ export * from "./rules/FocusResolution";
 export * from "./rules/LegalActionService";
 export * from "./rules/PloyResolution";
 export * from "./rules/PloyEffectResolver";
+export * from "./rules/RoundStartResolution";
 export * from "./rules/RollOffContext";
 export * from "./rules/RollOffResolver";
 export * from "./rules/RollOffResult";

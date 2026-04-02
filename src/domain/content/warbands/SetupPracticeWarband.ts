@@ -132,6 +132,7 @@ function createObjectiveCards(): CardDefinition[] {
     const isAllSuccessesObjective = index === 0;
     const isSlayLeaderOrEqualOrGreaterHealthObjective = index === 1;
     const isDelveTerritoryObjective = index === 2;
+    const isDelveTreasureRoundObjective = index === 3;
     const objectiveConditions: ObjectiveCondition[] = isAllSuccessesObjective
       ? [
         {
@@ -153,6 +154,13 @@ function createObjectiveCards(): CardDefinition[] {
               timing: ObjectiveConditionTiming.Immediate,
             },
           ]
+          : isDelveTreasureRoundObjective
+            ? [
+              {
+                kind: ObjectiveConditionKind.DelveThreeTreasureTokensThisRoundOrEnemyHeldAtRoundStart,
+                timing: ObjectiveConditionTiming.EndPhase,
+              },
+            ]
       : [];
 
     return new CardDefinition(
@@ -165,6 +173,8 @@ function createObjectiveCards(): CardDefinition[] {
           ? "Score this immediately after an enemy fighter is slain by a friendly fighter if the target was a leader or the target's Health characteristic was equal to or greater than the attacker's."
           : isDelveTerritoryObjective
             ? "Score this immediately after a friendly fighter Delves in enemy territory. If you are the underdog, that Delve can be in friendly territory instead."
+            : isDelveTreasureRoundObjective
+              ? "Score this in an end phase if 3 or more different treasure tokens were Delved by your warband this battle round or if a treasure token held by an enemy fighter at the start of the battle round was Delved by your warband this battle round."
         : "",
       1,
       [],

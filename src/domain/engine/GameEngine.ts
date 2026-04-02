@@ -91,6 +91,7 @@ import { DelveResolution } from "../rules/DelveResolution";
 import { FocusResolution, type FocusCardResolution } from "../rules/FocusResolution";
 import { PloyEffectResolver } from "../rules/PloyEffectResolver";
 import { PloyResolution } from "../rules/PloyResolution";
+import { RoundStartResolution, type RoundStartFeatureTokenResolution } from "../rules/RoundStartResolution";
 import { RollOffContext } from "../rules/RollOffContext";
 import { RollOffResolver } from "../rules/RollOffResolver";
 import { type RollOffRoundInput } from "../rules/RollOffRound";
@@ -324,6 +325,7 @@ export class GameEngine {
     }
 
     game.transitionTo(createCombatTurnGameState(firstPlayer.id, firstPlayer.id, TurnStep.Action));
+    this.recordRoundStart(game, firstPlayer.id);
     game.consecutivePasses = 0;
     game.eventLog.push(
       `${chooser.name} chose ${firstPlayer.name} to take the first turn. ${rollOffLoser.name} drew 1 power card.`,
@@ -833,6 +835,7 @@ export class GameEngine {
     player.hasDelvedThisPowerStep = true;
     const holderAfterDelve = this.getPloyTargetDetails(game, featureToken.heldByFighterId);
     const resolution = new DelveResolution(
+      game.roundNumber,
       player.id,
       player.name,
       fighter.id,
@@ -1385,6 +1388,25 @@ export class GameEngine {
     game.addRecord(GameRecordKind.Cleanup, resolution);
     game.eventLog.push(
       `Cleanup complete. Round ${completedRoundNumber + 1} is ready to begin.`,
+    );
+  }
+
+  private recordRoundStart(game: Game, firstPlayerId: PlayerId): void {
+    const featureTokens: RoundStartFeatureTokenResolution[] = game.board.featureTokens.map((featureToken) => {
+      const holderDetails = this.getPloyTargetDetails(game, featureToken.heldByFighterId);
+      return {
+        featureTokenId: featureToken.id,
+        featureTokenHexId: featureToken.hexId,
+        side: featureToken.side,
+        heldByFighterId: holderDetails?.fighterId ?? null,
+        heldByFighterName: holderDetails?.fighterName ?? null,
+        holderOwnerPlayerId: holderDetails?.ownerPlayerId ?? null,
+      };
+    });
+
+    game.addRecord(
+      GameRecordKind.RoundStart,
+      new RoundStartResolution(game.roundNumber, firstPlayerId, featureTokens),
     );
   }
 

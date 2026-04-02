@@ -6,10 +6,12 @@ import { CombatResult } from "../rules/CombatResult";
 import { DelveResolution } from "../rules/DelveResolution";
 import { FocusResolution } from "../rules/FocusResolution";
 import { PloyResolution } from "../rules/PloyResolution";
+import { RoundStartResolution } from "../rules/RoundStartResolution";
 import { UpgradeResolution } from "../rules/UpgradeResolution";
 import { WarscrollAbilityResolution } from "../rules/WarscrollAbilityResolution";
 
 export const GameRecordKind = {
+  RoundStart: "roundStart",
   Combat: "combat",
   Focus: "focus",
   Delve: "delve",
@@ -25,6 +27,7 @@ export const GameRecordKind = {
 export type GameRecordKind = (typeof GameRecordKind)[keyof typeof GameRecordKind];
 
 export type GameRecordDataByKind = {
+  [GameRecordKind.RoundStart]: RoundStartResolution;
   [GameRecordKind.Combat]: CombatResult;
   [GameRecordKind.Focus]: FocusResolution;
   [GameRecordKind.Delve]: DelveResolution;

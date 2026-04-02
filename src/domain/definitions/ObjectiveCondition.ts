@@ -18,7 +18,13 @@ export type DelveInEnemyTerritoryOrFriendlyIfUnderdogObjectiveCondition = {
   timing: typeof ObjectiveConditionTiming.Immediate;
 };
 
+export type DelveThreeTreasureTokensThisRoundOrEnemyHeldAtRoundStartObjectiveCondition = {
+  kind: typeof ObjectiveConditionKind.DelveThreeTreasureTokensThisRoundOrEnemyHeldAtRoundStart;
+  timing: typeof ObjectiveConditionTiming.EndPhase;
+};
+
 export type ObjectiveCondition =
   | AttackRollAllSuccessesObjectiveCondition
   | SlayLeaderOrEqualOrGreaterHealthObjectiveCondition
-  | DelveInEnemyTerritoryOrFriendlyIfUnderdogObjectiveCondition;
+  | DelveInEnemyTerritoryOrFriendlyIfUnderdogObjectiveCondition
+  | DelveThreeTreasureTokensThisRoundOrEnemyHeldAtRoundStartObjectiveCondition;

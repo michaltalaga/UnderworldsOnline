@@ -99,6 +99,7 @@ export const ObjectiveConditionKind = {
   AttackRollAllSuccesses: "attackRollAllSuccesses",
   SlayLeaderOrEqualOrGreaterHealth: "slayLeaderOrEqualOrGreaterHealth",
   DelveInEnemyTerritoryOrFriendlyIfUnderdog: "delveInEnemyTerritoryOrFriendlyIfUnderdog",
+  DelveThreeTreasureTokensThisRoundOrEnemyHeldAtRoundStart: "delveThreeTreasureTokensThisRoundOrEnemyHeldAtRoundStart",
 } as const;
 
 export type ObjectiveConditionKind =

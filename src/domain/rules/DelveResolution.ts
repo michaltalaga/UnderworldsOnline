@@ -2,6 +2,7 @@ import type { FeatureTokenSide } from "../values/enums";
 import type { FeatureTokenId, FighterId, HexId, PlayerId } from "../values/ids";
 
 export class DelveResolution {
+  public readonly roundNumber: number;
   public readonly playerId: PlayerId;
   public readonly playerName: string;
   public readonly fighterId: FighterId;
@@ -15,6 +16,7 @@ export class DelveResolution {
   public readonly holderAfterFighterName: string | null;
 
   public constructor(
+    roundNumber: number,
     playerId: PlayerId,
     playerName: string,
     fighterId: FighterId,
@@ -27,6 +29,7 @@ export class DelveResolution {
     holderAfterFighterId: FighterId | null,
     holderAfterFighterName: string | null,
   ) {
+    this.roundNumber = roundNumber;
     this.playerId = playerId;
     this.playerName = playerName;
     this.fighterId = fighterId;
