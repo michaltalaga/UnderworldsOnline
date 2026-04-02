@@ -580,10 +580,7 @@ export class CombatActionService extends LegalActionService {
     const world = game.getEventLogState();
     const upgradeCards = player.powerHand.filter((card) => {
       const definition = player.getCardDefinition(card.id);
-      return (
-        definition?.kind === CardKind.Upgrade &&
-        definition.canPlay(game, world, player, card, {})
-      );
+      return definition?.kind === CardKind.Upgrade;
     });
 
     return upgradeCards.flatMap((card) =>

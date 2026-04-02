@@ -1,4 +1,5 @@
 import { CardInstance } from "../state/CardInstance";
+import { CardDefinition } from "../definitions/CardDefinition";
 import { WeaponAbilityDefinition } from "../definitions/WeaponAbilityDefinition";
 import {
   CleanupResolution,
@@ -63,6 +64,8 @@ import {
 import { ActionStepEndedResolution } from "../rules/ActionStepEndedResolution";
 import { ActionStepStartedResolution } from "../rules/ActionStepStartedResolution";
 import { AttackAction } from "../actions/AttackAction";
+import { CardPlayedResolution } from "../rules/CardPlayedResolution";
+import { CardResolvedResolution } from "../rules/CardResolvedResolution";
 import { ChargeAction } from "../actions/ChargeAction";
 import { DelveAction } from "../actions/DelveAction";
 import { FocusAction } from "../actions/FocusAction";
@@ -1084,6 +1087,18 @@ export class GameEngine {
     }
 
     const ployTarget = this.getPloyTargetDetails(game, action.targetFighterId);
+    this.recordCardPlayed(
+      game,
+      player,
+      cardWithDefinition.definition,
+      cardWithDefinition.card,
+      {
+        invokedByPlayerId: player.id,
+        invokedByCardId: cardWithDefinition.card.id,
+        actionKind: action.kind,
+      },
+      { target: ployTarget },
+    );
     const world = game.getEventLogState();
     const effectDescriptions = cardWithDefinition.definition.play(
       game,
@@ -1110,6 +1125,20 @@ export class GameEngine {
       invokedByCardId: cardWithDefinition.card.id,
       actionKind: action.kind,
     });
+    this.recordCardResolved(
+      game,
+      player,
+      cardWithDefinition.definition,
+      cardWithDefinition.card,
+      effectDescriptions,
+      0,
+      {
+        invokedByPlayerId: player.id,
+        invokedByCardId: cardWithDefinition.card.id,
+        actionKind: action.kind,
+      },
+      { target: ployTarget },
+    );
     game.consecutivePasses = 0;
     const effectSuffix = effectDescriptions.length > 0 ? ` and ${effectDescriptions.join(", ")}` : "";
     game.eventLog.push(`${player.name} played ploy ${cardWithDefinition.definition.name}${effectSuffix}.`);
@@ -1139,8 +1168,22 @@ export class GameEngine {
       throw new Error(`Could not find fighter definition for ${fighter.id}.`);
     }
 
+    const upgradeTarget = this.getPloyTargetDetails(game, fighter.id);
+    this.recordCardPlayed(
+      game,
+      player,
+      cardWithDefinition.definition,
+      cardWithDefinition.card,
+      {
+        invokedByPlayerId: player.id,
+        invokedByFighterId: fighter.id,
+        invokedByCardId: cardWithDefinition.card.id,
+        actionKind: action.kind,
+      },
+      { target: upgradeTarget },
+    );
     const world = game.getEventLogState();
-    cardWithDefinition.definition.play(
+    const effectDescriptions = cardWithDefinition.definition.play(
       game,
       world,
       player,
@@ -1164,6 +1207,21 @@ export class GameEngine {
       invokedByCardId: cardWithDefinition.card.id,
       actionKind: action.kind,
     });
+    this.recordCardResolved(
+      game,
+      player,
+      cardWithDefinition.definition,
+      cardWithDefinition.card,
+      [...effectDescriptions, `equipped to ${fighterDefinition.name}`, `paid ${upgradeCost} glory`],
+      -upgradeCost,
+      {
+        invokedByPlayerId: player.id,
+        invokedByFighterId: fighter.id,
+        invokedByCardId: cardWithDefinition.card.id,
+        actionKind: action.kind,
+      },
+      { target: upgradeTarget },
+    );
     game.consecutivePasses = 0;
     game.eventLog.push(
       `${player.name} played upgrade ${cardWithDefinition.definition.name} on fighter ${fighter.id} for ${upgradeCost} glory.`,
@@ -1733,6 +1791,72 @@ export class GameEngine {
     );
   }
 
+  private recordCardPlayed(
+    game: Game,
+    player: PlayerState,
+    definition: CardDefinition,
+    card: CardInstance,
+    metadata: GameEventMetadata = {},
+    options: {
+      timing?: ObjectiveConditionTiming | null;
+      target?: ReturnType<GameEngine["getPloyTargetDetails"]>;
+    } = {},
+  ): void {
+    game.addRecord(
+      GameRecordKind.CardPlayed,
+      new CardPlayedResolution(
+        player.id,
+        player.name,
+        card.id,
+        card.definitionId,
+        definition.kind,
+        definition.name,
+        card.zone,
+        options.target?.fighterId ?? null,
+        options.target?.fighterName ?? null,
+        options.target?.ownerPlayerId ?? null,
+        options.target?.ownerPlayerName ?? null,
+        options.timing ?? null,
+      ),
+      metadata,
+    );
+  }
+
+  private recordCardResolved(
+    game: Game,
+    player: PlayerState,
+    definition: CardDefinition,
+    card: CardInstance,
+    effectSummaries: readonly string[],
+    gloryDelta: number,
+    metadata: GameEventMetadata = {},
+    options: {
+      timing?: ObjectiveConditionTiming | null;
+      target?: ReturnType<GameEngine["getPloyTargetDetails"]>;
+    } = {},
+  ): void {
+    game.addRecord(
+      GameRecordKind.CardResolved,
+      new CardResolvedResolution(
+        player.id,
+        player.name,
+        card.id,
+        card.definitionId,
+        definition.kind,
+        definition.name,
+        card.zone,
+        options.target?.fighterId ?? null,
+        options.target?.fighterName ?? null,
+        options.target?.ownerPlayerId ?? null,
+        options.target?.ownerPlayerName ?? null,
+        options.timing ?? null,
+        gloryDelta,
+        effectSummaries,
+      ),
+      metadata,
+    );
+  }
+
   private recordTurnStarted(
     game: Game,
     playerId: PlayerId,
@@ -1901,13 +2025,24 @@ export class GameEngine {
     const scoredObjectives: ObjectiveScoringCardResolution[] = [];
     let gloryGained = 0;
 
-    const world = game.getEventLogState();
     for (const objectiveId of uniqueObjectiveIds) {
       const objective = player.getCardWithDefinition(objectiveId);
       if (objective === undefined || objective.card.zone !== CardZone.ObjectiveHand) {
         throw new Error(`Objective card ${objectiveId} is not available to score for ${player.name}.`);
       }
 
+      this.recordCardPlayed(
+        game,
+        player,
+        objective.definition,
+        objective.card,
+        {
+          invokedByPlayerId: player.id,
+          invokedByCardId: objective.card.id,
+        },
+        { timing },
+      );
+      const world = game.getEventLogState();
       objective.definition.play(game, world, player, objective.card, { timing });
       const scoredObjective = {
         cardId: objective.card.id,
@@ -1917,6 +2052,19 @@ export class GameEngine {
       };
       gloryGained += scoredObjective.gloryValue;
       scoredObjectives.push(scoredObjective);
+      this.recordCardResolved(
+        game,
+        player,
+        objective.definition,
+        objective.card,
+        [`scored for ${scoredObjective.gloryValue} glory`],
+        scoredObjective.gloryValue,
+        {
+          invokedByPlayerId: player.id,
+          invokedByCardId: objective.card.id,
+        },
+        { timing },
+      );
 
       if (logEachObjective) {
         game.eventLog.push(
