@@ -987,6 +987,11 @@ function BoardMap({
   const selectedFighterName =
     selectedFighterId === null ? null : getFighterName(game, selectedFighterId);
   const [actionTooltip, setActionTooltip] = useState<{ label: string; left: number; top: number } | null>(null);
+  const [hoveredChargeTargetId, setHoveredChargeTargetId] = useState<FighterId | null>(null);
+  const hoveredChargeDestinationHexIds =
+    pendingChargeHexId === null
+      ? getChargeDestinationHexIdsForTarget(actionLens, hoveredChargeTargetId)
+      : new Set<HexId>();
 
   useEffect(() => {
     if (actionTooltip === null) {
@@ -1007,6 +1012,17 @@ function BoardMap({
       });
     }
   }, [actionTooltip, pendingAttackBadgeLabel, pendingChargeBadgeLabel]);
+
+  useEffect(() => {
+    if (pendingChargeHexId !== null) {
+      setHoveredChargeTargetId(null);
+      return;
+    }
+
+    if (hoveredChargeTargetId !== null && !actionLens.chargeTargetIds.has(hoveredChargeTargetId)) {
+      setHoveredChargeTargetId(null);
+    }
+  }, [actionLens.chargeTargetIds, hoveredChargeTargetId, pendingChargeHexId]);
 
   return (
     <div className="battlefield-board-frame">
@@ -1160,8 +1176,14 @@ function BoardMap({
           const isMoveDestination = actionLens.moveHexIds.has(hex.id);
           const isPendingMoveHex = pendingMoveHexId === hex.id;
           const isChargeDestination = actionLens.chargeHexIds.has(hex.id);
+          const isHoveredChargeDestination = hoveredChargeDestinationHexIds.has(hex.id);
           const isPendingChargeHex = pendingChargeHexId === hex.id;
           const isChargeTarget = visibleChargeTargetHexIds.has(hex.id);
+          const isHoveredChargeTarget =
+            pendingChargeHexId === null &&
+            fighter?.id !== undefined &&
+            fighter.id === hoveredChargeTargetId &&
+            isChargeTarget;
           const isPendingChargeTarget = fighter?.id === pendingChargeTargetId;
           const isAttackTarget =
             pendingChargeHexId === null &&
@@ -1259,6 +1281,20 @@ function BoardMap({
           const hideActionTooltip = () => {
             setActionTooltip((current) => (current?.label === actionBadge?.label ? null : current));
           };
+          const showHoveredChargeTarget = () => {
+            if (pendingChargeHexId !== null || fighter === null || !isChargeTarget || fighter.ownerPlayerId === activePlayerId) {
+              return;
+            }
+
+            setHoveredChargeTargetId(fighter.id);
+          };
+          const clearHoveredChargeTarget = () => {
+            if (fighter === null) {
+              return;
+            }
+
+            setHoveredChargeTargetId((current) => (current === fighter.id ? null : current));
+          };
 
           return (
             <article
@@ -1267,12 +1303,14 @@ function BoardMap({
                 getHexClassName(game, hex, {
                   isAttackTarget,
                   isChargeDestination,
+                  isHoveredChargeDestination,
                   isPendingDelveHex: isPendingDelveFeature,
                   isPendingGuardHex,
                   isPendingAttackTarget,
                   isPendingChargeHex,
                   isPendingChargeTarget,
                   isChargeTarget,
+                  isHoveredChargeTarget,
                   isClickableHex: isInteractiveHex,
                   isPendingMoveHex,
                   isMoveDestination,
@@ -1316,8 +1354,14 @@ function BoardMap({
                   onMoveToHex(hex.id);
                 }
               }}
-              onBlur={hideActionTooltip}
-              onFocus={showActionTooltip}
+              onBlur={() => {
+                hideActionTooltip();
+                clearHoveredChargeTarget();
+              }}
+              onFocus={() => {
+                showActionTooltip();
+                showHoveredChargeTarget();
+              }}
               onKeyDown={(event) => {
                 if (!isInteractiveHex || (event.key !== "Enter" && event.key !== " ")) {
                   return;
@@ -1354,8 +1398,14 @@ function BoardMap({
                   onMoveToHex(hex.id);
                 }
               }}
-              onMouseEnter={showActionTooltip}
-              onMouseLeave={hideActionTooltip}
+              onMouseEnter={() => {
+                showActionTooltip();
+                showHoveredChargeTarget();
+              }}
+              onMouseLeave={() => {
+                hideActionTooltip();
+                clearHoveredChargeTarget();
+              }}
               role={isInteractiveHex ? "button" : undefined}
               style={style}
               tabIndex={isInteractiveHex ? 0 : undefined}
@@ -1701,12 +1751,14 @@ function getHexClassName(
   state: {
     isAttackTarget: boolean;
     isChargeDestination: boolean;
+    isHoveredChargeDestination: boolean;
     isPendingDelveHex: boolean;
     isPendingGuardHex: boolean;
     isPendingAttackTarget: boolean;
     isPendingChargeHex: boolean;
     isPendingChargeTarget: boolean;
     isChargeTarget: boolean;
+    isHoveredChargeTarget: boolean;
     isClickableHex: boolean;
     isDelveReadyHex: boolean;
     isPendingMoveHex: boolean;
@@ -1768,12 +1820,20 @@ function getHexClassName(
     classes.push("battlefield-map-hex-charge");
   }
 
+  if (state.isHoveredChargeDestination) {
+    classes.push("battlefield-map-hex-charge-planned");
+  }
+
   if (state.isPendingChargeHex) {
     classes.push("battlefield-map-hex-charge-armed");
   }
 
   if (state.isChargeTarget) {
     classes.push("battlefield-map-hex-charge-target");
+  }
+
+  if (state.isHoveredChargeTarget) {
+    classes.push("battlefield-map-hex-charge-target-hovered");
   }
 
   if (state.isPendingAttackTarget) {
@@ -2455,6 +2515,26 @@ function getChargeTargetHexIdsForHex(
       return target?.currentHexId === null || target?.currentHexId === undefined
         ? []
         : [target.currentHexId];
+    }),
+  );
+}
+
+function getChargeDestinationHexIdsForTarget(
+  actionLens: FighterActionLens,
+  targetId: FighterId | null,
+): Set<HexId> {
+  if (targetId === null) {
+    return new Set();
+  }
+
+  return new Set(
+    actionLens.chargeActions.flatMap((action) => {
+      if (action.targetId !== targetId) {
+        return [];
+      }
+
+      const destinationHexId = action.path[action.path.length - 1];
+      return destinationHexId === undefined ? [] : [destinationHexId];
     }),
   );
 }
