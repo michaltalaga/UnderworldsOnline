@@ -1,5 +1,6 @@
 import { CardDefinition } from "../../definitions/CardDefinition";
 import { FighterDefinition } from "../../definitions/FighterDefinition";
+import type { ObjectiveCondition } from "../../definitions/ObjectiveCondition";
 import { WarbandDefinition } from "../../definitions/WarbandDefinition";
 import { WeaponAbilityDefinition } from "../../definitions/WeaponAbilityDefinition";
 import { WarscrollAbilityDefinition } from "../../definitions/WarscrollAbilityDefinition";
@@ -8,6 +9,8 @@ import { WeaponDefinition } from "../../definitions/WeaponDefinition";
 import {
   CardKind,
   FighterTokenKind,
+  ObjectiveConditionKind,
+  ObjectiveConditionTiming,
   PloyEffectKind,
   PloyEffectTargetKind,
   SaveSymbol,
@@ -122,13 +125,26 @@ export const setupPracticeWarband = new WarbandDefinition(
 function createObjectiveCards(): CardDefinition[] {
   return Array.from({ length: 12 }, (_, index) => {
     const cardNumber = String(index + 1).padStart(2, "0");
+    const isAllSuccessesObjective = index === 0;
+    const objectiveConditions: ObjectiveCondition[] = isAllSuccessesObjective
+      ? [
+        {
+          kind: ObjectiveConditionKind.AttackRollAllSuccesses,
+          timing: ObjectiveConditionTiming.Immediate,
+        },
+      ]
+      : [];
 
     return new CardDefinition(
       `card-def:setup-practice:objective:${cardNumber}`,
       CardKind.Objective,
       `Practice Objective ${cardNumber}`,
-      "",
+      isAllSuccessesObjective
+        ? "Score this immediately after you make an Attack roll if all of the results were successes."
+        : "",
       1,
+      [],
+      objectiveConditions,
     );
   });
 }

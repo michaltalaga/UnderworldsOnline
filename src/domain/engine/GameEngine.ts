@@ -33,6 +33,7 @@ import {
   EndPhaseStep,
   FeatureTokenSide,
   HexKind,
+  ObjectiveConditionTiming,
   TurnStep,
 } from "../values/enums";
 import type { CardZone as CardZoneType } from "../values/enums";
@@ -611,6 +612,13 @@ export class GameEngine {
       action.attackRoll,
       action.saveRoll,
     );
+    const immediateScoringResolution = this.scoreObjectivesForPlayer(
+      game,
+      attackerPlayer,
+      ObjectiveConditionTiming.Immediate,
+      false,
+      true,
+    );
 
     const firstPlayerId = game.firstPlayerId;
     if (firstPlayerId === null) {
@@ -638,6 +646,9 @@ export class GameEngine {
         : null,
       combatResult.staggerApplied ? `staggered fighter ${target.id}` : null,
       targetSlain ? `slew fighter ${target.id} for ${targetDefinition.bounty} glory` : null,
+      immediateScoringResolution.scoredObjectives.length > 0
+        ? `scored ${immediateScoringResolution.scoredObjectives.map((objective) => objective.cardName).join(", ")} for ${immediateScoringResolution.gloryGained} glory`
+        : null,
     ].filter((text): text is string => text !== null);
     const effectSuffix = effectText.length === 0 ? "" : ` and ${effectText.join(" and ")}`;
     game.eventLog.push(
@@ -705,6 +716,13 @@ export class GameEngine {
       action.attackRoll,
       action.saveRoll,
     );
+    const immediateScoringResolution = this.scoreObjectivesForPlayer(
+      game,
+      attackerPlayer,
+      ObjectiveConditionTiming.Immediate,
+      false,
+      true,
+    );
 
     attacker.hasChargeToken = true;
 
@@ -734,6 +752,9 @@ export class GameEngine {
         : null,
       combatResult.staggerApplied ? `staggered fighter ${target.id}` : null,
       targetSlain ? `slew fighter ${target.id} for ${targetDefinition.bounty} glory` : null,
+      immediateScoringResolution.scoredObjectives.length > 0
+        ? `scored ${immediateScoringResolution.scoredObjectives.map((objective) => objective.cardName).join(", ")} for ${immediateScoringResolution.gloryGained} glory`
+        : null,
     ].filter((text): text is string => text !== null);
     const effectSuffix = effectText.length === 0 ? "" : ` and ${effectText.join(" and ")}`;
     game.eventLog.push(
@@ -1107,45 +1128,9 @@ export class GameEngine {
 
     const playerResolutions: ObjectiveScoringPlayerResolution[] = [];
     for (const player of game.players) {
-      const scorableObjectives = this.scoringResolver.getScorableObjectives(game, player.id);
-      const uniqueObjectiveIds = new Set(scorableObjectives.map((card) => card.id));
-      const scoredObjectives: ObjectiveScoringCardResolution[] = [];
-      let gloryGained = 0;
-
-      for (const objectiveId of uniqueObjectiveIds) {
-        const objective = player.getCardWithDefinition(objectiveId);
-        if (objective === undefined || objective.card.zone !== CardZone.ObjectiveHand) {
-          throw new Error(`Objective card ${objectiveId} is not available to score for ${player.name}.`);
-        }
-
-        const handIndex = player.objectiveHand.findIndex((card) => card.id === objective.card.id);
-        if (handIndex === -1) {
-          throw new Error(`Could not find objective ${objective.card.id} in ${player.name}'s hand.`);
-        }
-
-        player.objectiveHand.splice(handIndex, 1);
-        objective.card.zone = CardZone.ScoredObjectives;
-        objective.card.revealed = true;
-        player.scoredObjectives.push(objective.card);
-        player.glory += objective.definition.gloryValue;
-        gloryGained += objective.definition.gloryValue;
-        scoredObjectives.push({
-          cardId: objective.card.id,
-          cardDefinitionId: objective.card.definitionId,
-          cardName: objective.definition.name,
-          gloryValue: objective.definition.gloryValue,
-        });
-        game.eventLog.push(
-          `${player.name} scored ${objective.definition.name} for ${objective.definition.gloryValue} glory.`,
-        );
-      }
-
-      playerResolutions.push({
-        playerId: player.id,
-        playerName: player.name,
-        gloryGained,
-        scoredObjectives,
-      });
+      playerResolutions.push(
+        this.scoreObjectivesForPlayer(game, player, ObjectiveConditionTiming.EndPhase),
+      );
     }
 
     const resolution = new ObjectiveScoringResolution(game.roundNumber, playerResolutions);
@@ -1404,6 +1389,66 @@ export class GameEngine {
       card.zone = zone;
       hand.push(card);
     }
+  }
+
+  private scoreObjectivesForPlayer(
+    game: Game,
+    player: PlayerState,
+    timing: ObjectiveConditionTiming,
+    logEachObjective: boolean = true,
+    recordResolution: boolean = false,
+  ): ObjectiveScoringPlayerResolution {
+    const scorableObjectives = this.scoringResolver.getScorableObjectives(game, player.id, timing);
+    const uniqueObjectiveIds = new Set(scorableObjectives.map((card) => card.id));
+    const scoredObjectives: ObjectiveScoringCardResolution[] = [];
+    let gloryGained = 0;
+
+    for (const objectiveId of uniqueObjectiveIds) {
+      const objective = player.getCardWithDefinition(objectiveId);
+      if (objective === undefined || objective.card.zone !== CardZone.ObjectiveHand) {
+        throw new Error(`Objective card ${objectiveId} is not available to score for ${player.name}.`);
+      }
+
+      const handIndex = player.objectiveHand.findIndex((card) => card.id === objective.card.id);
+      if (handIndex === -1) {
+        throw new Error(`Could not find objective ${objective.card.id} in ${player.name}'s hand.`);
+      }
+
+      player.objectiveHand.splice(handIndex, 1);
+      objective.card.zone = CardZone.ScoredObjectives;
+      objective.card.revealed = true;
+      player.scoredObjectives.push(objective.card);
+      player.glory += objective.definition.gloryValue;
+      gloryGained += objective.definition.gloryValue;
+      scoredObjectives.push({
+        cardId: objective.card.id,
+        cardDefinitionId: objective.card.definitionId,
+        cardName: objective.definition.name,
+        gloryValue: objective.definition.gloryValue,
+      });
+
+      if (logEachObjective) {
+        game.eventLog.push(
+          `${player.name} scored ${objective.definition.name} for ${objective.definition.gloryValue} glory.`,
+        );
+      }
+    }
+
+    const playerResolution = {
+      playerId: player.id,
+      playerName: player.name,
+      gloryGained,
+      scoredObjectives,
+    };
+
+    if (recordResolution && scoredObjectives.length > 0) {
+      game.addRecord(
+        GameRecordKind.ObjectiveScoring,
+        new ObjectiveScoringResolution(game.roundNumber, [playerResolution]),
+      );
+    }
+
+    return playerResolution;
   }
 
   private drawFocusCards(

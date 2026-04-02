@@ -87,6 +87,21 @@ export const CardKind = {
 
 export type CardKind = (typeof CardKind)[keyof typeof CardKind];
 
+export const ObjectiveConditionTiming = {
+  Immediate: "immediate",
+  EndPhase: "endPhase",
+} as const;
+
+export type ObjectiveConditionTiming =
+  (typeof ObjectiveConditionTiming)[keyof typeof ObjectiveConditionTiming];
+
+export const ObjectiveConditionKind = {
+  AttackRollAllSuccesses: "attackRollAllSuccesses",
+} as const;
+
+export type ObjectiveConditionKind =
+  (typeof ObjectiveConditionKind)[keyof typeof ObjectiveConditionKind];
+
 export const CardZone = {
   ObjectiveDeck: "objectiveDeck",
   ObjectiveHand: "objectiveHand",

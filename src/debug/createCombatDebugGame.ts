@@ -9,6 +9,7 @@ import {
   GameEngine,
   GuardAction,
   MoveAction,
+  ObjectiveConditionTiming,
   PassAction,
   PlayPloyAction,
   PlayUpgradeAction,
@@ -551,7 +552,15 @@ export function createUpgradeDebugSnapshot(
 }
 
 class DebugEndPhaseScoringResolver extends ScoringResolver {
-  public override getScorableObjectives(game: Game, playerId: string): CardInstance[] {
+  public override getScorableObjectives(
+    game: Game,
+    playerId: string,
+    timing: ObjectiveConditionTiming,
+  ): CardInstance[] {
+    if (timing !== ObjectiveConditionTiming.EndPhase) {
+      return [];
+    }
+
     const player = game.getPlayer(playerId);
     if (player === undefined || player.id !== "player:one") {
       return [];

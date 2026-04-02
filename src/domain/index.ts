@@ -14,6 +14,7 @@ export * from "./content/games/SetupPracticeGame";
 export * from "./content/warbands/SetupPracticeWarband";
 export * from "./definitions/CardDefinition";
 export * from "./definitions/FighterDefinition";
+export * from "./definitions/ObjectiveCondition";
 export * from "./definitions/PloyEffect";
 export * from "./definitions/WarbandDefinition";
 export * from "./definitions/WarscrollAbilityDefinition";
