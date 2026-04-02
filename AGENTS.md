@@ -1,14 +1,12 @@
 # AGENTS.md
 
-## Project
+## Purpose
 
-Browser board game built with TypeScript, React, and Vite.
+This file is for stable working rules, technical conventions, and user preferences.
 
-- Frontend lives in `src/`
-- Domain model and engine live in `src/domain`
-- CLI/debug scripts live in `scripts/`
+Do not put volatile game-progress or handoff state here. That belongs in `docs/agent-handoff.md`.
 
-## Working Style
+## User Preferences
 
 - Inspect existing code before changing anything.
 - Make minimal, targeted changes.
@@ -16,28 +14,30 @@ Browser board game built with TypeScript, React, and Vite.
 - Implement only what was asked for.
 - Do not invent official game content unless explicitly requested.
 - Avoid debug-only work unless it is necessary to support or verify a requested change.
+- Keep naming simple and direct.
+- Prefer straightforward card-centric logic over large shared condition switches.
+- Do not auto-select things for the player unless explicitly requested.
+- Always commit finished work.
+- Always suggest a sensible next step after finishing.
 
 ## Required Workflow
 
 1. Inspect the relevant files first.
 2. Make the smallest change that fits the existing architecture.
-3. Verify the change with the narrowest relevant command.
+3. Verify with the narrowest relevant command.
 4. Commit the finished work.
-5. End by suggesting a sensible next step.
+5. End with a next-step suggestion.
 
-## Verification Defaults
+## Technical Specs
 
-Use the smallest relevant set:
+### Stack and layout
 
-- `npm run build`
-- `npm run setup:practice`
-- `npm run debug:end-phase`
+- Browser board game built with TypeScript, React, and Vite.
+- Frontend lives in `src/`.
+- Domain model and engine live in `src/domain/`.
+- Scripts live in `scripts/`.
 
-If the change is docs-only, build verification is optional.
-
-## Architecture Notes
-
-### Core engine
+### Engine
 
 - The game is a real state machine centered on `GameState`, `Game`, and `GameEngine`.
 - `Game.records` / `Game.events` is the strongly typed event log.
@@ -49,23 +49,25 @@ If the change is docs-only, build verification is optional.
 - Prefer asking cards whether they can play instead of growing special-case resolver layers.
 - Prefer `PlayerState.getPlayableCards(...)` for card discovery.
 - Do not add extra trigger metadata unless it is clearly necessary.
-- The intended model is: state + full typed log + simple context, not batch tracking.
+- The intended model is: current state + full typed log + simple context, not batch tracking.
 
 ### UI model
 
-- The battlefield map is interactive and is the main play surface.
+- The battlefield map is the main play surface.
 - Board actions follow a confirm-on-second-click pattern.
-- Avoid changing that interaction model unless explicitly asked.
+- Do not change that interaction model unless explicitly asked.
 
-## Current Preferences From The User
+## Verification Defaults
 
-- Always commit finished work.
-- Always suggest a next step.
-- Keep naming simple and direct.
-- Prefer straightforward card-centric logic over large shared condition switches.
-- Do not auto-select things for the player unless explicitly requested.
+Use the smallest relevant set:
 
-## Good File Entry Points
+- `npm run build`
+- `npm run setup:practice`
+- `npm run debug:end-phase`
+
+If the change is docs-only, build verification is optional.
+
+## Useful Entry Points
 
 - `src/domain/engine/GameEngine.ts`
 - `src/domain/rules/CombatActionService.ts`
@@ -74,4 +76,3 @@ If the change is docs-only, build verification is optional.
 - `src/domain/definitions/CardDefinition.ts`
 - `src/domain/content/warbands/SetupPracticeWarband.ts`
 - `src/PracticeBattlefieldApp.tsx`
-

@@ -1,28 +1,21 @@
 # Agent Handoff
 
-## Current Project State
+## Purpose
 
-The repo is a browser board game with:
+This file is for current game-specific context, recent refactors, and continuation notes.
 
-- TypeScript / React / Vite app
-- domain layer in `src/domain`
+Do not move stable working rules or user preferences here. Those belong in `AGENTS.md`.
+
+## Current Game State
+
+The repo currently has:
+
 - setup flow implemented through deployment
-- combat flow implemented through end phase / cleanup
+- combat round start and combat turn flow
+- end phase through cleanup
 - interactive battlefield map UI
 
-The worktree was clean at the time this handoff was written.
-
-## Stable User Preferences
-
-- Inspect before changing anything.
-- Make minimal, targeted changes only.
-- Reuse the existing engine/model.
-- Do not invent official content unless explicitly asked.
-- Always commit finished work.
-- Always suggest a next step after finishing.
-- Avoid overengineered abstractions and overlong naming.
-- Prefer cards owning their own logic.
-- Avoid prioritizing debug-only work unless needed.
+The worktree was clean when this handoff was written.
 
 ## Current Architecture
 
@@ -41,15 +34,6 @@ The worktree was clean at the time this handoff was written.
 - Card discovery should prefer `PlayerState.getPlayableCards(...)`.
 - The project has moved away from separate scoring resolver layers.
 
-### Trigger model
-
-- The engine now does a generic post-action sweep through card logic.
-- The intended model is:
-  - cards inspect full world state
-  - cards inspect full typed event history
-  - cards may use simple context such as timing / target / trigger action
-- Do not add more trigger metadata unless there is a real need.
-
 ## Recent Refactors
 
 ### `86ea0df` `Scan playable cards directly`
@@ -66,32 +50,6 @@ The worktree was clean at the time this handoff was written.
 - `CombatActionService` now uses `PlayerState.getPlayableCards(...)` for ploy/upgrade legality and action generation
 - Added helper:
   - `getPlayablePowerCards(...)`
-
-## Important Files
-
-### Core engine
-
-- `src/domain/engine/GameEngine.ts`
-- `src/domain/state/Game.ts`
-- `src/domain/state/GameState.ts`
-- `src/domain/state/GameEventLogState.ts`
-- `src/domain/state/GameRecord.ts`
-- `src/domain/state/PlayerState.ts`
-
-### Card/content layer
-
-- `src/domain/definitions/CardDefinition.ts`
-- `src/domain/content/warbands/SetupPracticeWarband.ts`
-- `src/domain/content/games/SetupPracticeGame.ts`
-
-### Action generation
-
-- `src/domain/rules/CombatActionService.ts`
-
-### Browser map
-
-- `src/PracticeBattlefieldApp.tsx`
-- `src/PracticeBattlefieldApp.css`
 
 ## Current Gameplay Coverage
 
@@ -113,7 +71,7 @@ Implemented engine slices include:
 
 Cards currently include code-driven practice objectives, ploys, and upgrades.
 
-## Battlefield UI Notes
+## Current UI Notes
 
 The battlefield map already supports:
 
@@ -127,12 +85,19 @@ The battlefield map already supports:
 
 Do not casually change the confirm-on-second-click interaction pattern.
 
-## Current Verification Commands
+## Important Current Files
 
-- `npm run build`
-- `npm run setup:practice`
-- `npm run debug:end-phase`
-- `npm run debug:end-phase:final`
+- `src/domain/engine/GameEngine.ts`
+- `src/domain/rules/CombatActionService.ts`
+- `src/domain/state/Game.ts`
+- `src/domain/state/GameEventLogState.ts`
+- `src/domain/state/GameRecord.ts`
+- `src/domain/state/PlayerState.ts`
+- `src/domain/definitions/CardDefinition.ts`
+- `src/domain/content/warbands/SetupPracticeWarband.ts`
+- `src/domain/content/games/SetupPracticeGame.ts`
+- `src/PracticeBattlefieldApp.tsx`
+- `src/PracticeBattlefieldApp.css`
 
 ## Good Next Steps
 
