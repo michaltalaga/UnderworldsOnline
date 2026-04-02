@@ -2,6 +2,7 @@ import type { CardDefinitionId, FighterId } from "../values/ids";
 import { CardKind, type ObjectiveConditionTiming } from "../values/enums";
 import type { PloyEffect } from "./PloyEffect";
 import type { CardInstance } from "../state/CardInstance";
+import type { GameEventLogState } from "../state/GameEventLogState";
 import type { Game } from "../state/Game";
 import type { PlayerState } from "../state/PlayerState";
 
@@ -37,11 +38,13 @@ export class CardDefinition {
 
   public canPlay(
     game: Game,
+    world: GameEventLogState,
     player: PlayerState,
     card: CardInstance,
     context: CardPlayContext = {},
   ): boolean {
     void game;
+    void world;
     void player;
     void card;
     void context;
@@ -50,11 +53,13 @@ export class CardDefinition {
 
   public play(
     game: Game,
+    world: GameEventLogState,
     player: PlayerState,
     card: CardInstance,
     context: CardPlayContext = {},
   ): string[] {
     void game;
+    void world;
     void player;
     void card;
     void context;

@@ -9,8 +9,10 @@ import { PloyResolution } from "../rules/PloyResolution";
 import { RoundStartResolution } from "../rules/RoundStartResolution";
 import { UpgradeResolution } from "../rules/UpgradeResolution";
 import { WarscrollAbilityResolution } from "../rules/WarscrollAbilityResolution";
+import type { EndPhaseActionKind, GameActionKind, SetupActionKind } from "../values/enums";
+import type { CardId, FighterId, PlayerId } from "../values/ids";
 
-export const GameRecordKind = {
+export const GameEventKind = {
   RoundStart: "roundStart",
   Combat: "combat",
   Focus: "focus",
@@ -24,23 +26,46 @@ export const GameRecordKind = {
   Cleanup: "cleanup",
 } as const;
 
-export type GameRecordKind = (typeof GameRecordKind)[keyof typeof GameRecordKind];
+export type GameEventKind = (typeof GameEventKind)[keyof typeof GameEventKind];
 
-export type GameRecordDataByKind = {
-  [GameRecordKind.RoundStart]: RoundStartResolution;
-  [GameRecordKind.Combat]: CombatResult;
-  [GameRecordKind.Focus]: FocusResolution;
-  [GameRecordKind.Delve]: DelveResolution;
-  [GameRecordKind.Ploy]: PloyResolution;
-  [GameRecordKind.Upgrade]: UpgradeResolution;
-  [GameRecordKind.WarscrollAbility]: WarscrollAbilityResolution;
-  [GameRecordKind.ObjectiveScoring]: ObjectiveScoringResolution;
-  [GameRecordKind.ObjectiveDraw]: ObjectiveDrawResolution;
-  [GameRecordKind.PowerDraw]: PowerDrawResolution;
-  [GameRecordKind.Cleanup]: CleanupResolution;
+export type GameEventDataByKind = {
+  [GameEventKind.RoundStart]: RoundStartResolution;
+  [GameEventKind.Combat]: CombatResult;
+  [GameEventKind.Focus]: FocusResolution;
+  [GameEventKind.Delve]: DelveResolution;
+  [GameEventKind.Ploy]: PloyResolution;
+  [GameEventKind.Upgrade]: UpgradeResolution;
+  [GameEventKind.WarscrollAbility]: WarscrollAbilityResolution;
+  [GameEventKind.ObjectiveScoring]: ObjectiveScoringResolution;
+  [GameEventKind.ObjectiveDraw]: ObjectiveDrawResolution;
+  [GameEventKind.PowerDraw]: PowerDrawResolution;
+  [GameEventKind.Cleanup]: CleanupResolution;
 };
 
-export type GameRecord<TKind extends GameRecordKind = GameRecordKind> = {
+export type GameEventInvokerKind = GameActionKind | SetupActionKind | EndPhaseActionKind;
+
+export type GameEventMetadata = {
+  roundNumber?: number;
+  invokedByPlayerId?: PlayerId | null;
+  invokedByFighterId?: FighterId | null;
+  invokedByCardId?: CardId | null;
+  actionKind?: GameEventInvokerKind | null;
+};
+
+export type GameEvent<TKind extends GameEventKind = GameEventKind> = {
   kind: TKind;
-  data: GameRecordDataByKind[TKind];
+  roundNumber: number;
+  invokedByPlayerId: PlayerId | null;
+  invokedByFighterId: FighterId | null;
+  invokedByCardId: CardId | null;
+  actionKind: GameEventInvokerKind | null;
+  data: GameEventDataByKind[TKind];
 };
+
+export const GameRecordKind = GameEventKind;
+
+export type GameRecordKind = GameEventKind;
+
+export type GameRecordDataByKind = GameEventDataByKind;
+
+export type GameRecord<TKind extends GameRecordKind = GameRecordKind> = GameEvent<TKind>;

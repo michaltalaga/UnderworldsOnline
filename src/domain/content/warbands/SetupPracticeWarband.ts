@@ -8,6 +8,7 @@ import { WeaponDefinition } from "../../definitions/WeaponDefinition";
 import type { PloyEffect } from "../../definitions/PloyEffect";
 import { GameRecordKind } from "../../state/GameRecord";
 import type { CardInstance } from "../../state/CardInstance";
+import type { GameEventLogState } from "../../state/GameEventLogState";
 import type { FighterState } from "../../state/FighterState";
 import type { Game } from "../../state/Game";
 import type { PlayerState } from "../../state/PlayerState";
@@ -134,8 +135,14 @@ abstract class PracticeObjectiveCardDefinition extends CardDefinition {
     );
   }
 
-  public override play(game: Game, player: PlayerState, card: CardInstance): string[] {
+  public override play(
+    game: Game,
+    world: GameEventLogState,
+    player: PlayerState,
+    card: CardInstance,
+  ): string[] {
     void game;
+    void world;
     return scoreObjectiveCard(this, player, card);
   }
 }
@@ -156,23 +163,25 @@ class PracticeObjective01CardDefinition extends PracticeObjectiveCardDefinition 
 
   public override canPlay(
     game: Game,
+    world: GameEventLogState,
     player: PlayerState,
     card: CardInstance,
     context: CardPlayContext = {},
   ): boolean {
+    void game;
     void card;
     if (context.timing !== ObjectiveConditionTiming.Immediate) {
       return false;
     }
 
-    const latestCombat = game.getLatestRecord(GameRecordKind.Combat);
-    if (latestCombat === null || latestCombat.context.attackerPlayerId !== player.id) {
+    const latestCombat = world.getLatestEvent(GameRecordKind.Combat);
+    if (latestCombat === null || latestCombat.invokedByPlayerId !== player.id) {
       return false;
     }
 
     return (
-      latestCombat.attackRoll.length > 0 &&
-      latestCombat.attackSuccesses === latestCombat.attackRoll.length
+      latestCombat.data.attackRoll.length > 0 &&
+      latestCombat.data.attackSuccesses === latestCombat.data.attackRoll.length
     );
   }
 }
@@ -187,6 +196,7 @@ class PracticeObjective02CardDefinition extends PracticeObjectiveCardDefinition 
 
   public override canPlay(
     game: Game,
+    world: GameEventLogState,
     player: PlayerState,
     card: CardInstance,
     context: CardPlayContext = {},
@@ -196,19 +206,19 @@ class PracticeObjective02CardDefinition extends PracticeObjectiveCardDefinition 
       return false;
     }
 
-    const latestCombat = game.getLatestRecord(GameRecordKind.Combat);
+    const latestCombat = world.getLatestEvent(GameRecordKind.Combat);
     if (
       latestCombat === null ||
-      latestCombat.context.attackerPlayerId !== player.id ||
-      !latestCombat.targetSlain
+      latestCombat.invokedByPlayerId !== player.id ||
+      !latestCombat.data.targetSlain
     ) {
       return false;
     }
 
-    const attackerPlayer = game.getPlayer(latestCombat.context.attackerPlayerId);
-    const defenderPlayer = game.getPlayer(latestCombat.context.defenderPlayerId);
-    const attackerDefinition = attackerPlayer?.getFighterDefinition(latestCombat.context.attackerFighterId);
-    const targetDefinition = defenderPlayer?.getFighterDefinition(latestCombat.context.targetFighterId);
+    const attackerPlayer = game.getPlayer(latestCombat.data.context.attackerPlayerId);
+    const defenderPlayer = game.getPlayer(latestCombat.data.context.defenderPlayerId);
+    const attackerDefinition = attackerPlayer?.getFighterDefinition(latestCombat.data.context.attackerFighterId);
+    const targetDefinition = defenderPlayer?.getFighterDefinition(latestCombat.data.context.targetFighterId);
     if (attackerDefinition === undefined || targetDefinition === undefined) {
       return false;
     }
@@ -227,6 +237,7 @@ class PracticeObjective03CardDefinition extends PracticeObjectiveCardDefinition 
 
   public override canPlay(
     game: Game,
+    world: GameEventLogState,
     player: PlayerState,
     card: CardInstance,
     context: CardPlayContext = {},
@@ -236,12 +247,12 @@ class PracticeObjective03CardDefinition extends PracticeObjectiveCardDefinition 
       return false;
     }
 
-    const latestDelve = game.getLatestRecord(GameRecordKind.Delve);
-    if (latestDelve === null || latestDelve.playerId !== player.id) {
+    const latestDelve = world.getLatestEvent(GameRecordKind.Delve);
+    if (latestDelve === null || latestDelve.invokedByPlayerId !== player.id) {
       return false;
     }
 
-    const delveHex = game.board.getHex(latestDelve.featureTokenHexId);
+    const delveHex = game.board.getHex(latestDelve.data.featureTokenHexId);
     if (delveHex?.territoryId === null || delveHex?.territoryId === undefined) {
       return false;
     }
@@ -270,6 +281,7 @@ class PracticeObjective04CardDefinition extends PracticeObjectiveCardDefinition 
 
   public override canPlay(
     game: Game,
+    world: GameEventLogState,
     player: PlayerState,
     card: CardInstance,
     context: CardPlayContext = {},
@@ -279,26 +291,28 @@ class PracticeObjective04CardDefinition extends PracticeObjectiveCardDefinition 
       return false;
     }
 
-    const thisRoundPlayerDelves = game.getRecordHistory(GameRecordKind.Delve).filter((delve) =>
-      delve.roundNumber === game.roundNumber && delve.playerId === player.id,
+    const thisRoundPlayerDelves = world.getEventHistory(GameRecordKind.Delve).filter((event) =>
+      event.roundNumber === game.roundNumber && event.invokedByPlayerId === player.id,
     );
-    const thisRoundTreasureDelves = thisRoundPlayerDelves.filter((delve) =>
-      delve.sideBeforeDelve === FeatureTokenSide.Treasure,
+    const thisRoundTreasureDelves = thisRoundPlayerDelves.filter((event) =>
+      event.data.sideBeforeDelve === FeatureTokenSide.Treasure,
     );
-    const delvedTreasureTokenIds = new Set(thisRoundTreasureDelves.map((delve) => delve.featureTokenId));
+    const delvedTreasureTokenIds = new Set(
+      thisRoundTreasureDelves.map((event) => event.data.featureTokenId),
+    );
     if (delvedTreasureTokenIds.size >= 3) {
       return true;
     }
 
-    const delvedTokenIds = new Set(thisRoundPlayerDelves.map((delve) => delve.featureTokenId));
-    const roundStartHistory = game.getRecordHistory(GameRecordKind.RoundStart);
+    const delvedTokenIds = new Set(thisRoundPlayerDelves.map((event) => event.data.featureTokenId));
+    const roundStartHistory = world.getEventHistory(GameRecordKind.RoundStart);
     for (let index = roundStartHistory.length - 1; index >= 0; index -= 1) {
       const roundStart = roundStartHistory[index];
       if (roundStart.roundNumber !== game.roundNumber) {
         continue;
       }
 
-      return roundStart.featureTokens.some((featureToken) =>
+      return roundStart.data.featureTokens.some((featureToken) =>
         featureToken.side === FeatureTokenSide.Treasure &&
         featureToken.heldByFighterId !== null &&
         featureToken.holderOwnerPlayerId !== null &&
@@ -325,10 +339,12 @@ class PracticePloyCardDefinition extends CardDefinition {
 
   public override canPlay(
     game: Game,
+    world: GameEventLogState,
     player: PlayerState,
     card: CardInstance,
     context: CardPlayContext = {},
   ): boolean {
+    void world;
     const targetFighterId = context.targetFighterId ?? null;
     const requiresTarget = this.ployEffects.some((effect) => effect.kind === PloyEffectKind.GainFighterToken);
 
@@ -342,12 +358,13 @@ class PracticePloyCardDefinition extends CardDefinition {
 
   public override play(
     game: Game,
+    world: GameEventLogState,
     player: PlayerState,
     card: CardInstance,
     context: CardPlayContext = {},
   ): string[] {
     const targetFighterId = context.targetFighterId ?? null;
-    if (!this.canPlay(game, player, card, { targetFighterId })) {
+    if (!this.canPlay(game, world, player, card, { targetFighterId })) {
       throw new Error(`Ploy ${this.name} cannot currently resolve.`);
     }
 
@@ -381,11 +398,13 @@ class PracticeUpgradeCardDefinition extends CardDefinition {
 
   public override canPlay(
     game: Game,
+    world: GameEventLogState,
     player: PlayerState,
     card: CardInstance,
     context: CardPlayContext = {},
   ): boolean {
     void game;
+    void world;
     const equippedFighterId = context.equippedFighterId ?? null;
     if (
       card.zone !== CardZone.PowerHand ||
@@ -401,13 +420,14 @@ class PracticeUpgradeCardDefinition extends CardDefinition {
 
   public override play(
     game: Game,
+    world: GameEventLogState,
     player: PlayerState,
     card: CardInstance,
     context: CardPlayContext = {},
   ): string[] {
     void game;
     const equippedFighterId = context.equippedFighterId ?? null;
-    if (!this.canPlay(game, player, card, { equippedFighterId })) {
+    if (!this.canPlay(game, world, player, card, { equippedFighterId })) {
       throw new Error(`Upgrade ${this.name} cannot currently resolve.`);
     }
 

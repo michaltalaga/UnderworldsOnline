@@ -15,13 +15,14 @@ export class DefaultScoringResolver extends ScoringResolver {
       return [];
     }
 
+    const world = game.getEventLogState();
     return player.objectiveHand.filter((card) => {
       const definition = player.getCardDefinition(card.id);
       if (definition === undefined) {
         return false;
       }
 
-      return definition.canPlay(game, player, card, { timing });
+      return definition.canPlay(game, world, player, card, { timing });
     });
   }
 }

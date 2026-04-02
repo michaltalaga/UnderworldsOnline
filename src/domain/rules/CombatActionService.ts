@@ -277,10 +277,12 @@ export class CombatActionService extends LegalActionService {
       return false;
     }
 
+    const world = game.getEventLogState();
     return (
       cardWithDefinition.definition.kind === CardKind.Upgrade &&
       cardWithDefinition.definition.canPlay(
         game,
+        world,
         player,
         cardWithDefinition.card,
         { equippedFighterId: fighter.id },
@@ -303,10 +305,12 @@ export class CombatActionService extends LegalActionService {
       return false;
     }
 
+    const world = game.getEventLogState();
     return (
       cardWithDefinition.definition.kind === CardKind.Ploy &&
       cardWithDefinition.definition.canPlay(
         game,
+        world,
         player,
         cardWithDefinition.card,
         { targetFighterId: action.targetFighterId },
@@ -573,17 +577,24 @@ export class CombatActionService extends LegalActionService {
       return [];
     }
 
+    const world = game.getEventLogState();
     const upgradeCards = player.powerHand.filter((card) => {
       const definition = player.getCardDefinition(card.id);
       return (
         definition?.kind === CardKind.Upgrade &&
-        definition.canPlay(game, player, card, {})
+        definition.canPlay(game, world, player, card, {})
       );
     });
 
     return upgradeCards.flatMap((card) =>
       player.fighters.flatMap((fighter) =>
-        player.getCardDefinition(card.id)?.canPlay(game, player, card, { equippedFighterId: fighter.id })
+        player.getCardDefinition(card.id)?.canPlay(
+          game,
+          world,
+          player,
+          card,
+          { equippedFighterId: fighter.id },
+        )
           ? [new PlayUpgradeAction(player.id, card.id, fighter.id)]
           : []
       ),

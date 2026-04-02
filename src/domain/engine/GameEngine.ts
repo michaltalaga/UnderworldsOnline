@@ -30,13 +30,14 @@ import {
   RollOffKind,
   CardKind,
   CardZone,
+  EndPhaseActionKind,
   EndPhaseStep,
   FeatureTokenSide,
   HexKind,
   ObjectiveConditionTiming,
   TurnStep,
 } from "../values/enums";
-import type { CardZone as CardZoneType } from "../values/enums";
+import type { CardZone as CardZoneType, GameActionKind } from "../values/enums";
 import type { CardId, FighterId, HexId, PlayerId, TerritoryId } from "../values/ids";
 import { ChooseTerritoryAction } from "../setup/ChooseTerritoryAction";
 import { CompleteMusterAction } from "../setup/CompleteMusterAction";
@@ -608,6 +609,7 @@ export class GameEngine {
       action.selectedAbility,
       action.attackRoll,
       action.saveRoll,
+      action.kind,
     );
     const immediateScoringResolution = this.scoreObjectivesForPlayer(
       game,
@@ -712,6 +714,7 @@ export class GameEngine {
       action.selectedAbility,
       action.attackRoll,
       action.saveRoll,
+      action.kind,
     );
     const immediateScoringResolution = this.scoreObjectivesForPlayer(
       game,
@@ -843,7 +846,11 @@ export class GameEngine {
       holderAfterDelve?.fighterId ?? null,
       holderAfterDelve?.fighterName ?? null,
     );
-    game.addRecord(GameRecordKind.Delve, resolution);
+    game.addRecord(GameRecordKind.Delve, resolution, {
+      invokedByPlayerId: player.id,
+      invokedByFighterId: fighter.id,
+      actionKind: action.kind,
+    });
     const immediateScoringResolution = this.scoreObjectivesForPlayer(
       game,
       player,
@@ -924,7 +931,10 @@ export class GameEngine {
       drawnObjectives,
       drawnPowerCards,
     );
-    game.addRecord(GameRecordKind.Focus, resolution);
+    game.addRecord(GameRecordKind.Focus, resolution, {
+      invokedByPlayerId: player.id,
+      actionKind: action.kind,
+    });
     game.consecutivePasses = 0;
     const firstPlayerId = game.firstPlayerId;
     if (firstPlayerId === null) {
@@ -959,8 +969,10 @@ export class GameEngine {
     }
 
     const ployTarget = this.getPloyTargetDetails(game, action.targetFighterId);
+    const world = game.getEventLogState();
     const effectDescriptions = cardWithDefinition.definition.play(
       game,
+      world,
       player,
       cardWithDefinition.card,
       { targetFighterId: action.targetFighterId },
@@ -978,7 +990,11 @@ export class GameEngine {
       cardWithDefinition.definition.ployEffects,
       effectDescriptions,
     );
-    game.addRecord(GameRecordKind.Ploy, resolution);
+    game.addRecord(GameRecordKind.Ploy, resolution, {
+      invokedByPlayerId: player.id,
+      invokedByCardId: cardWithDefinition.card.id,
+      actionKind: action.kind,
+    });
     game.consecutivePasses = 0;
     const effectSuffix = effectDescriptions.length > 0 ? ` and ${effectDescriptions.join(", ")}` : "";
     game.eventLog.push(`${player.name} played ploy ${cardWithDefinition.definition.name}${effectSuffix}.`);
@@ -1008,8 +1024,10 @@ export class GameEngine {
       throw new Error(`Could not find fighter definition for ${fighter.id}.`);
     }
 
+    const world = game.getEventLogState();
     cardWithDefinition.definition.play(
       game,
+      world,
       player,
       cardWithDefinition.card,
       { equippedFighterId: fighter.id },
@@ -1025,7 +1043,12 @@ export class GameEngine {
       fighterDefinition.name,
       upgradeCost,
     );
-    game.addRecord(GameRecordKind.Upgrade, resolution);
+    game.addRecord(GameRecordKind.Upgrade, resolution, {
+      invokedByPlayerId: player.id,
+      invokedByFighterId: fighter.id,
+      invokedByCardId: cardWithDefinition.card.id,
+      actionKind: action.kind,
+    });
     game.consecutivePasses = 0;
     game.eventLog.push(
       `${player.name} played upgrade ${cardWithDefinition.definition.name} on fighter ${fighter.id} for ${upgradeCost} glory.`,
@@ -1067,7 +1090,10 @@ export class GameEngine {
       effectSummaries,
     );
 
-    game.addRecord(GameRecordKind.WarscrollAbility, resolution);
+    game.addRecord(GameRecordKind.WarscrollAbility, resolution, {
+      invokedByPlayerId: player.id,
+      actionKind: action.kind,
+    });
     game.consecutivePasses = 0;
     game.eventLog.push(
       `${player.name} used warscroll ability ${ability.name} and ${resolution.effectSummaries.join(" and ")}.`,
@@ -1126,7 +1152,9 @@ export class GameEngine {
     }
 
     const resolution = new ObjectiveScoringResolution(game.roundNumber, playerResolutions);
-    game.addRecord(GameRecordKind.ObjectiveScoring, resolution);
+    game.addRecord(GameRecordKind.ObjectiveScoring, resolution, {
+      actionKind: EndPhaseActionKind.ResolveScoreObjectives,
+    });
     game.transitionTo(
       createEndPhaseGameState(
         EndPhaseStep.EquipUpgrades,
@@ -1208,7 +1236,9 @@ export class GameEngine {
     }
 
     const resolution = new ObjectiveDrawResolution(game.roundNumber, playerResolutions);
-    game.addRecord(GameRecordKind.ObjectiveDraw, resolution);
+    game.addRecord(GameRecordKind.ObjectiveDraw, resolution, {
+      actionKind: EndPhaseActionKind.ResolveDrawObjectives,
+    });
     game.transitionTo(
       createEndPhaseGameState(
         EndPhaseStep.DrawPowerCards,
@@ -1266,7 +1296,9 @@ export class GameEngine {
     }
 
     const resolution = new PowerDrawResolution(game.roundNumber, playerResolutions);
-    game.addRecord(GameRecordKind.PowerDraw, resolution);
+    game.addRecord(GameRecordKind.PowerDraw, resolution, {
+      actionKind: EndPhaseActionKind.ResolveDrawPowerCards,
+    });
     game.transitionTo(
       createEndPhaseGameState(
         EndPhaseStep.Cleanup,
@@ -1338,7 +1370,9 @@ export class GameEngine {
         outcome.winnerPlayerId,
         outcome.reason,
       );
-      game.addRecord(GameRecordKind.Cleanup, resolution);
+      game.addRecord(GameRecordKind.Cleanup, resolution, {
+        actionKind: EndPhaseActionKind.ResolveCleanup,
+      });
 
       if (outcome.winnerPlayerId === null) {
         game.eventLog.push(`Cleanup complete. Game finished in a draw. ${outcome.reason}`);
@@ -1360,7 +1394,9 @@ export class GameEngine {
       CleanupTransitionKind.CombatReady,
       game.roundNumber,
     );
-    game.addRecord(GameRecordKind.Cleanup, resolution);
+    game.addRecord(GameRecordKind.Cleanup, resolution, {
+      actionKind: EndPhaseActionKind.ResolveCleanup,
+    });
     game.eventLog.push(
       `Cleanup complete. Round ${completedRoundNumber + 1} is ready to begin.`,
     );
@@ -1382,6 +1418,9 @@ export class GameEngine {
     game.addRecord(
       GameRecordKind.RoundStart,
       new RoundStartResolution(game.roundNumber, firstPlayerId, featureTokens),
+      {
+        invokedByPlayerId: firstPlayerId,
+      },
     );
   }
 
@@ -1414,13 +1453,14 @@ export class GameEngine {
     const scoredObjectives: ObjectiveScoringCardResolution[] = [];
     let gloryGained = 0;
 
+    const world = game.getEventLogState();
     for (const objectiveId of uniqueObjectiveIds) {
       const objective = player.getCardWithDefinition(objectiveId);
       if (objective === undefined || objective.card.zone !== CardZone.ObjectiveHand) {
         throw new Error(`Objective card ${objectiveId} is not available to score for ${player.name}.`);
       }
 
-      objective.definition.play(game, player, objective.card, { timing });
+      objective.definition.play(game, world, player, objective.card, { timing });
       const scoredObjective = {
         cardId: objective.card.id,
         cardDefinitionId: objective.card.definitionId,
@@ -1448,6 +1488,11 @@ export class GameEngine {
       game.addRecord(
         GameRecordKind.ObjectiveScoring,
         new ObjectiveScoringResolution(game.roundNumber, [playerResolution]),
+        {
+          invokedByPlayerId: player.id,
+          invokedByCardId:
+            scoredObjectives.length === 1 ? scoredObjectives[0].cardId : null,
+        },
       );
     }
 
@@ -1776,6 +1821,7 @@ export class GameEngine {
     selectedAbility: AttackAction["selectedAbility"],
     attackRoll: AttackAction["attackRoll"],
     saveRoll: AttackAction["saveRoll"],
+    actionKind: GameActionKind,
   ): { combatResult: ReturnType<CombatResolver["resolve"]>; targetSlain: boolean } {
     const combatResult = this.combatResolver.resolve(
       game,
@@ -1795,7 +1841,11 @@ export class GameEngine {
       throw new Error("Driven back movement is not yet supported.");
     }
 
-    game.addRecord(GameRecordKind.Combat, combatResult);
+    game.addRecord(GameRecordKind.Combat, combatResult, {
+      invokedByPlayerId: attackerPlayer.id,
+      invokedByFighterId: attacker.id,
+      actionKind,
+    });
     target.damage += combatResult.damageInflicted;
     if (combatResult.staggerApplied) {
       target.hasStaggerToken = true;

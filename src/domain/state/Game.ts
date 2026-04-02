@@ -3,7 +3,13 @@ import { EndPhaseStep, Phase, SetupStep, TurnStep } from "../values/enums";
 import { BoardState } from "./BoardState";
 import { CardInstance } from "./CardInstance";
 import { FighterState } from "./FighterState";
-import { type GameRecord, type GameRecordDataByKind, type GameRecordKind } from "./GameRecord";
+import { GameEventLogState } from "./GameEventLogState";
+import {
+  type GameRecord,
+  type GameRecordDataByKind,
+  type GameRecordKind,
+  type GameEventMetadata,
+} from "./GameRecord";
 import {
   canTransitionGameState,
   createGameStateFromLegacyFields,
@@ -93,6 +99,10 @@ export class Game {
     return this.flowState.priorityPlayerId;
   }
 
+  public get events(): readonly GameRecord[] {
+    return this.records;
+  }
+
   public getPlayer(playerId: PlayerId): PlayerState | undefined {
     return this.players.find((player) => player.id === playerId);
   }
@@ -128,29 +138,62 @@ export class Game {
   public addRecord<TKind extends GameRecordKind>(
     kind: TKind,
     data: GameRecordDataByKind[TKind],
+    metadata: GameEventMetadata = {},
   ): void {
-    this.records.push({ kind, data });
+    this.records.push({
+      kind,
+      roundNumber: metadata.roundNumber ?? this.roundNumber,
+      invokedByPlayerId: metadata.invokedByPlayerId ?? null,
+      invokedByFighterId: metadata.invokedByFighterId ?? null,
+      invokedByCardId: metadata.invokedByCardId ?? null,
+      actionKind: metadata.actionKind ?? null,
+      data,
+    });
   }
 
-  public getLatestRecord<TKind extends GameRecordKind>(
+  public addEvent<TKind extends GameRecordKind>(
     kind: TKind,
-  ): GameRecordDataByKind[TKind] | null {
+    data: GameRecordDataByKind[TKind],
+    metadata: GameEventMetadata = {},
+  ): void {
+    this.addRecord(kind, data, metadata);
+  }
+
+  public getLatestEvent<TKind extends GameRecordKind>(
+    kind: TKind,
+  ): GameRecord<TKind> | null {
     for (let index = this.records.length - 1; index >= 0; index -= 1) {
-      const record = this.records[index];
-      if (record.kind === kind) {
-        return record.data as GameRecordDataByKind[TKind];
+      const event = this.records[index];
+      if (event.kind === kind) {
+        return event as GameRecord<TKind>;
       }
     }
 
     return null;
   }
 
+  public getEventHistory<TKind extends GameRecordKind>(
+    kind: TKind,
+  ): GameRecord<TKind>[] {
+    return this.records.flatMap((event) =>
+      event.kind === kind ? [event as GameRecord<TKind>] : [],
+    );
+  }
+
+  public getLatestRecord<TKind extends GameRecordKind>(
+    kind: TKind,
+  ): GameRecordDataByKind[TKind] | null {
+    return this.getLatestEvent(kind)?.data ?? null;
+  }
+
   public getRecordHistory<TKind extends GameRecordKind>(
     kind: TKind,
   ): GameRecordDataByKind[TKind][] {
-    return this.records.flatMap((record) =>
-      record.kind === kind ? [record.data as GameRecordDataByKind[TKind]] : [],
-    );
+    return this.getEventHistory(kind).map((event) => event.data);
+  }
+
+  public getEventLogState(): GameEventLogState {
+    return new GameEventLogState(this.records);
   }
 
   public toJSON(): object {
@@ -170,6 +213,7 @@ export class Game {
       priorityPlayerId: this.priorityPlayerId,
       consecutivePasses: this.consecutivePasses,
       winnerPlayerId: this.winnerPlayerId,
+      events: this.records,
       records: this.records,
       eventLog: this.eventLog,
     };
