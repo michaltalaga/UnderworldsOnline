@@ -310,6 +310,85 @@ body {
   border: 1px solid rgba(99, 75, 49, 0.18);
 }
 
+.battlefield-board-status {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 12;
+  display: grid;
+  gap: 6px;
+  width: min(320px, calc(100% - 32px));
+  padding: 10px 12px;
+  border-radius: 18px;
+  background: rgba(255, 251, 245, 0.96);
+  border: 1px solid rgba(112, 91, 66, 0.14);
+  box-shadow: 0 16px 30px rgba(35, 24, 18, 0.14);
+}
+
+.battlefield-board-status-action {
+  border-color: rgba(141, 92, 13, 0.2);
+}
+
+.battlefield-board-status-power {
+  border-color: rgba(68, 118, 124, 0.2);
+}
+
+.battlefield-board-status-neutral {
+  border-color: rgba(112, 91, 66, 0.14);
+}
+
+.battlefield-board-status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.battlefield-board-status-step,
+.battlefield-board-status-mode {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.battlefield-board-status-step-action {
+  background: rgba(245, 223, 170, 0.96);
+  color: #6a4a11;
+}
+
+.battlefield-board-status-step-power {
+  background: rgba(214, 241, 244, 0.98);
+  color: #214f54;
+}
+
+.battlefield-board-status-step-neutral {
+  background: rgba(239, 231, 223, 0.98);
+  color: #5d4a3c;
+}
+
+.battlefield-board-status-mode {
+  background: rgba(71, 57, 46, 0.92);
+  color: #fff7ef;
+}
+
+.battlefield-board-status-player {
+  color: #35291f;
+  font-size: 0.9rem;
+}
+
+.battlefield-board-status-copy {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: #5f4d3f;
+}
+
 .battlefield-board-quick-actions {
   position: absolute;
   top: 16px;
@@ -318,7 +397,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  max-width: calc(100% - 328px);
+  max-width: calc(100% - 360px);
 }
 
 .battlefield-board-action {
@@ -489,7 +568,7 @@ body {
 
 .battlefield-board-flash {
   position: absolute;
-  top: 16px;
+  top: 116px;
   right: 16px;
   z-index: 12;
   width: min(280px, calc(100% - 32px));

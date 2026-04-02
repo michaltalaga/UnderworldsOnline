@@ -119,6 +119,14 @@ type PowerOverlayModel = {
   hasAnyOptions: boolean;
 };
 
+type BoardTurnHeaderModel = {
+  activePlayerName: string;
+  interactionLabel: string;
+  isArmed: boolean;
+  tone: "action" | "power" | "neutral";
+  stepLabel: string;
+};
+
 export default function PracticeBattlefieldApp() {
   const [game, setGame] = useState<Game>(() => createActionStepPracticeGame());
   const [, setRefreshTick] = useState(0);
@@ -222,9 +230,22 @@ export default function PracticeBattlefieldApp() {
           : pendingChargeHexId !== null
             ? `Charge from ${pendingChargeHexId} selected. Click a red target to arm it, or choose a charge profile below first.`
             : pendingMoveHexId !== null
-              ? `Move to ${pendingMoveHexId} selected. Click the same teal hex again to confirm, press Escape to cancel, or choose another teal hex.`
-              : "Select a fighter, then click a teal hex to move or click a gold hex and then a red target to charge."
+            ? `Move to ${pendingMoveHexId} selected. Click the same teal hex again to confirm, press Escape to cancel, or choose another teal hex.`
+            : "Select a fighter, then click a teal hex to move or click a gold hex and then a red target to charge."
       : powerPrompt;
+  const boardTurnHeader = getBoardTurnHeaderModel({
+    activePlayerName: activePlayer?.name ?? "No active player",
+    game,
+    pendingAttackBadgeLabel,
+    pendingAttackTargetName,
+    pendingChargeBadgeLabel,
+    pendingChargeHexId,
+    pendingChargeTargetName,
+    pendingDelveFeatureTokenId,
+    pendingMoveHexId,
+    pendingPowerOption,
+    selectedFeatureToken,
+  });
 
   function selectFighter(fighterId: FighterId | null): void {
     setSelectedFighterId(fighterId);
@@ -484,6 +505,7 @@ export default function PracticeBattlefieldApp() {
             pendingChargeBadgeLabel={pendingChargeBadgeLabel}
             pendingAttackBadgeLabel={pendingAttackBadgeLabel}
             powerOverlay={powerOverlay}
+            boardTurnHeader={boardTurnHeader}
             recentCombatTargetId={recentCombatTargetId}
             resultFlash={resultFlash}
             onApplyPowerAction={selectPowerOption}
@@ -843,6 +865,7 @@ function BoardMap({
   pendingChargeBadgeLabel,
   pendingAttackBadgeLabel,
   powerOverlay,
+  boardTurnHeader,
   recentCombatTargetId,
   resultFlash,
   selectedFeatureToken,
@@ -871,6 +894,7 @@ function BoardMap({
   pendingChargeBadgeLabel: string | null;
   pendingAttackBadgeLabel: string | null;
   powerOverlay: PowerOverlayModel;
+  boardTurnHeader: BoardTurnHeaderModel;
   recentCombatTargetId: FighterId | null;
   resultFlash: BattlefieldResultFlash | null;
   selectedFeatureToken: FeatureTokenState | null;
@@ -916,6 +940,18 @@ function BoardMap({
 
   return (
     <div className="battlefield-board-frame">
+      <section className={`battlefield-board-status battlefield-board-status-${boardTurnHeader.tone}`}>
+        <div className="battlefield-board-status-header">
+          <span className={`battlefield-board-status-step battlefield-board-status-step-${boardTurnHeader.tone}`}>
+            {boardTurnHeader.stepLabel}
+          </span>
+          <span className="battlefield-board-status-mode">
+            {boardTurnHeader.isArmed ? "armed" : "ready"}
+          </span>
+        </div>
+        <strong className="battlefield-board-status-player">{boardTurnHeader.activePlayerName}</strong>
+        <p className="battlefield-board-status-copy">{boardTurnHeader.interactionLabel}</p>
+      </section>
       {(game.turnStep === TurnStep.Power && actionLens.passAction !== null) ||
       (game.turnStep === TurnStep.Power && actionLens.delveAction !== null && selectedFeatureToken !== null) ||
       (game.turnStep === TurnStep.Action && actionLens.guardAction !== null && selectedFighterName !== null) ? (
@@ -1906,6 +1942,126 @@ function getPowerOverlayOptionByKey(
     ...powerOverlay.ploys,
     ...powerOverlay.upgrades,
   ].find((option) => option.key === key) ?? null;
+}
+
+function getBoardTurnHeaderModel({
+  activePlayerName,
+  game,
+  pendingAttackBadgeLabel,
+  pendingAttackTargetName,
+  pendingChargeBadgeLabel,
+  pendingChargeHexId,
+  pendingChargeTargetName,
+  pendingDelveFeatureTokenId,
+  pendingMoveHexId,
+  pendingPowerOption,
+  selectedFeatureToken,
+}: {
+  activePlayerName: string;
+  game: Game;
+  pendingAttackBadgeLabel: string | null;
+  pendingAttackTargetName: string | null;
+  pendingChargeBadgeLabel: string | null;
+  pendingChargeHexId: HexId | null;
+  pendingChargeTargetName: string | null;
+  pendingDelveFeatureTokenId: FeatureTokenState["id"] | null;
+  pendingMoveHexId: HexId | null;
+  pendingPowerOption: PowerOverlayOption | null;
+  selectedFeatureToken: FeatureTokenState | null;
+}): BoardTurnHeaderModel {
+  if (game.turnStep === TurnStep.Action) {
+    if (pendingAttackTargetName !== null) {
+      return {
+        activePlayerName,
+        interactionLabel:
+          pendingAttackBadgeLabel === null
+            ? `Attack ${pendingAttackTargetName}`
+            : `Attack ${pendingAttackTargetName} with ${pendingAttackBadgeLabel}`,
+        isArmed: true,
+        stepLabel: "Action Step",
+        tone: "action",
+      };
+    }
+
+    if (pendingChargeTargetName !== null && pendingChargeHexId !== null) {
+      return {
+        activePlayerName,
+        interactionLabel:
+          pendingChargeBadgeLabel === null
+            ? `Charge from ${compactHexId(pendingChargeHexId)} into ${pendingChargeTargetName}`
+            : `Charge ${pendingChargeTargetName} from ${compactHexId(pendingChargeHexId)} with ${pendingChargeBadgeLabel}`,
+        isArmed: true,
+        stepLabel: "Action Step",
+        tone: "action",
+      };
+    }
+
+    if (pendingChargeHexId !== null) {
+      return {
+        activePlayerName,
+        interactionLabel: `Charge path armed at ${compactHexId(pendingChargeHexId)}`,
+        isArmed: true,
+        stepLabel: "Action Step",
+        tone: "action",
+      };
+    }
+
+    if (pendingMoveHexId !== null) {
+      return {
+        activePlayerName,
+        interactionLabel: `Move armed to ${compactHexId(pendingMoveHexId)}`,
+        isArmed: true,
+        stepLabel: "Action Step",
+        tone: "action",
+      };
+    }
+
+    return {
+      activePlayerName,
+      interactionLabel: "Choose move, charge, guard, or attack.",
+      isArmed: false,
+      stepLabel: "Action Step",
+      tone: "action",
+    };
+  }
+
+  if (game.turnStep === TurnStep.Power) {
+    if (pendingDelveFeatureTokenId !== null && selectedFeatureToken?.id === pendingDelveFeatureTokenId) {
+      return {
+        activePlayerName,
+        interactionLabel: `Delve ${getFeatureTokenBadge(selectedFeatureToken)} is armed`,
+        isArmed: true,
+        stepLabel: "Power Step",
+        tone: "power",
+      };
+    }
+
+    if (pendingPowerOption !== null) {
+      return {
+        activePlayerName,
+        interactionLabel: `${pendingPowerOption.title} is armed`,
+        isArmed: true,
+        stepLabel: "Power Step",
+        tone: "power",
+      };
+    }
+
+    return {
+      activePlayerName,
+      interactionLabel: "Choose a power play, delve, or pass.",
+      isArmed: false,
+      stepLabel: "Power Step",
+      tone: "power",
+    };
+  }
+
+  return {
+    activePlayerName,
+    interactionLabel: "Board is waiting for the next step.",
+    isArmed: false,
+    stepLabel: "Board State",
+    tone: "neutral",
+  };
 }
 
 function getPowerOverlayModel(
