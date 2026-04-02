@@ -247,7 +247,7 @@ export default function PracticeBattlefieldApp() {
             ? `Charge from ${pendingChargeHexId} selected. Click a red target to arm it, or choose a charge profile below first.`
             : pendingMoveHexId !== null
             ? `Move to ${pendingMoveHexId} selected. Click the same teal hex again to confirm, press Escape to cancel, or choose another teal hex.`
-            : "Select a fighter, then click a teal hex to move or click a gold hex and then a red target to charge."
+            : "Select a fighter, then click a teal hex to move, click a gold hex and then a red target to charge, or click an amber charge target to auto-arm a charge."
       : powerPrompt;
   const boardTurnHeader = getBoardTurnHeaderModel({
     activePlayerName: activePlayer?.name ?? "No active player",
@@ -334,6 +334,17 @@ export default function PracticeBattlefieldApp() {
 
     clearPendingInteractions();
     setPendingChargeHexId(hexId);
+  }
+
+  function startChargeAgainstTarget(targetId: FighterId): void {
+    const destinationHexId = getPreferredChargeDestinationForTarget(actionLens, targetId);
+    if (destinationHexId === null) {
+      return;
+    }
+
+    clearPendingInteractions();
+    setPendingChargeHexId(destinationHexId);
+    setPendingChargeTargetId(targetId);
   }
 
   function completeChargeAgainstTarget(targetId: FighterId): void {
@@ -588,6 +599,7 @@ export default function PracticeBattlefieldApp() {
             onCancelPendingCharge={cancelPendingCharge}
             onCompleteChargeAgainstTarget={completeChargeAgainstTarget}
             onMoveToHex={moveToHex}
+            onStartChargeAgainstTarget={startChargeAgainstTarget}
             onStartChargeToHex={startChargeToHex}
             onSelectFighter={selectFighter}
             positionedHexes={boardProjection.positionedHexes}
@@ -941,6 +953,7 @@ function BoardMap({
   onCancelPendingCharge,
   onCompleteChargeAgainstTarget,
   onMoveToHex,
+  onStartChargeAgainstTarget,
   onStartChargeToHex,
   onSelectFighter,
   positionedHexes,
@@ -976,6 +989,7 @@ function BoardMap({
   onCancelPendingCharge: () => void;
   onCompleteChargeAgainstTarget: (targetId: FighterId) => void;
   onMoveToHex: (hexId: HexId) => void;
+  onStartChargeAgainstTarget: (targetId: FighterId) => void;
   onStartChargeToHex: (hexId: HexId) => void;
   onSelectFighter: (fighterId: FighterId | null) => void;
   positionedHexes: PositionedHex[];
@@ -1237,6 +1251,12 @@ function BoardMap({
             isChargeTarget &&
             fighter !== null &&
             fighter.ownerPlayerId !== activePlayerId;
+          const isClickableTargetFirstChargeTarget =
+            pendingChargeHexId === null &&
+            isChargeTarget &&
+            !isAttackTarget &&
+            fighter !== null &&
+            fighter.ownerPlayerId !== activePlayerId;
           const isClickableAttackTarget =
             pendingChargeHexId === null &&
             isAttackTarget &&
@@ -1246,6 +1266,7 @@ function BoardMap({
             isSelectableFighter ||
             isClickableAttackTarget ||
             isClickableChargeTarget ||
+            isClickableTargetFirstChargeTarget ||
             isClickableChargeDestination ||
             isClickableMoveDestination;
           const actionBadge = getHexActionBadge({
@@ -1340,6 +1361,11 @@ function BoardMap({
                   return;
                 }
 
+                if (isClickableTargetFirstChargeTarget && fighter !== null) {
+                  onStartChargeAgainstTarget(fighter.id);
+                  return;
+                }
+
                 if (isClickableChargeTarget && fighter !== null) {
                   onCompleteChargeAgainstTarget(fighter.id);
                   return;
@@ -1381,6 +1407,11 @@ function BoardMap({
 
                 if (isClickableAttackTarget && fighter !== null) {
                   onAttackTarget(fighter.id);
+                  return;
+                }
+
+                if (isClickableTargetFirstChargeTarget && fighter !== null) {
+                  onStartChargeAgainstTarget(fighter.id);
                   return;
                 }
 
@@ -2537,6 +2568,41 @@ function getChargeDestinationHexIdsForTarget(
       return destinationHexId === undefined ? [] : [destinationHexId];
     }),
   );
+}
+
+function getPreferredChargeDestinationForTarget(
+  actionLens: FighterActionLens,
+  targetId: FighterId,
+): HexId | null {
+  let bestAction: ChargeAction | null = null;
+
+  for (const action of actionLens.chargeActions) {
+    if (action.targetId !== targetId) {
+      continue;
+    }
+
+    const destinationHexId = action.path[action.path.length - 1];
+    if (destinationHexId === undefined) {
+      continue;
+    }
+
+    const bestDestinationHexId = bestAction?.path[bestAction.path.length - 1];
+    if (
+      bestAction === null ||
+      action.path.length < bestAction.path.length ||
+      (action.path.length === bestAction.path.length &&
+        bestAction.selectedAbility !== null &&
+        action.selectedAbility === null) ||
+      (action.path.length === bestAction.path.length &&
+        bestAction.selectedAbility === action.selectedAbility &&
+        bestDestinationHexId !== undefined &&
+        destinationHexId.localeCompare(bestDestinationHexId) < 0)
+    ) {
+      bestAction = action;
+    }
+  }
+
+  return bestAction?.path[bestAction.path.length - 1] ?? null;
 }
 
 function getChargeActionForTarget(
