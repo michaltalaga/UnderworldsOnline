@@ -152,6 +152,7 @@ export default function PracticeBattlefieldApp() {
   const [selectedChargeKey, setSelectedChargeKey] = useState<string | null>(null);
   const [pendingMoveHexId, setPendingMoveHexId] = useState<HexId | null>(null);
   const [pendingDelveFeatureTokenId, setPendingDelveFeatureTokenId] = useState<FeatureTokenState["id"] | null>(null);
+  const [pendingPowerOptionKey, setPendingPowerOptionKey] = useState<string | null>(null);
   const [pendingChargeHexId, setPendingChargeHexId] = useState<HexId | null>(null);
   const [pendingChargeTargetId, setPendingChargeTargetId] = useState<FighterId | null>(null);
   const [pendingAttackTargetId, setPendingAttackTargetId] = useState<FighterId | null>(null);
@@ -159,6 +160,10 @@ export default function PracticeBattlefieldApp() {
   const [selectedChargeKeysByPair, setSelectedChargeKeysByPair] = useState<Record<string, string>>({});
   const selectedMoveOption = moveOptions.find((option) => option.hexId === selectedMoveHexId) ?? moveOptions[0] ?? null;
   const selectedChargeOption = chargeOptions.find((option) => option.key === selectedChargeKey) ?? chargeOptions[0] ?? null;
+  const pendingPowerOption =
+    pendingPowerOptionKey === null
+      ? null
+      : getPowerOverlayOptionByKey(powerOverlay, pendingPowerOptionKey);
   const visibleChargeTargetIds = getChargeTargetIdsForHex(actionLens, pendingChargeHexId);
   const chargeTargetNames = [...visibleChargeTargetIds].map((fighterId) => getFighterName(game, fighterId));
   const attackTargetNames = [...actionLens.attackTargetIds].map((fighterId) => getFighterName(game, fighterId));
@@ -201,6 +206,8 @@ export default function PracticeBattlefieldApp() {
   const powerPrompt =
     pendingDelveFeatureTokenId !== null && selectedFeatureToken?.id === pendingDelveFeatureTokenId
       ? `${selectedFighterName} has ${getFeatureTokenBadge(selectedFeatureToken)} armed for delve. Click the same feature chip or Delve button again to confirm, or press Escape to cancel.`
+      : pendingPowerOption !== null
+        ? `${pendingPowerOption.title} is armed. Click the same power option again to confirm, press Escape to cancel, or choose a different power play.`
       : actionLens.delveAction !== null && selectedFeatureToken !== null
         ? `${recentCombatTargetName === null ? "" : `Recent combat: ${recentCombatTargetName} remains marked on the map. `}${selectedFighterName} can delve ${getFeatureTokenBadge(selectedFeatureToken)} from the map. Click the feature chip or Delve button to arm it, then click the same control again to confirm, or pass the power step.`
         : recentCombatTargetName === null
@@ -223,17 +230,22 @@ export default function PracticeBattlefieldApp() {
     setSelectedFighterId(fighterId);
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
-    setPendingMoveHexId(null);
-    setPendingDelveFeatureTokenId(null);
-    setPendingChargeHexId(null);
-    setPendingChargeTargetId(null);
-    setPendingAttackTargetId(null);
+    clearPendingInteractions();
     setSelectedAttackKeysByTarget({});
     setSelectedChargeKeysByPair({});
   }
 
   function refreshGame(): void {
     setRefreshTick((value) => value + 1);
+  }
+
+  function clearPendingInteractions(): void {
+    setPendingMoveHexId(null);
+    setPendingDelveFeatureTokenId(null);
+    setPendingPowerOptionKey(null);
+    setPendingChargeHexId(null);
+    setPendingChargeTargetId(null);
+    setPendingAttackTargetId(null);
   }
 
   function applyAction(action: BattlefieldAppAction): void {
@@ -243,11 +255,7 @@ export default function PracticeBattlefieldApp() {
     setResultFlash(buildBattlefieldResultFlash(game, action));
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
-    setPendingMoveHexId(null);
-    setPendingDelveFeatureTokenId(null);
-    setPendingChargeHexId(null);
-    setPendingChargeTargetId(null);
-    setPendingAttackTargetId(null);
+    clearPendingInteractions();
     setSelectedAttackKeysByTarget({});
     setSelectedChargeKeysByPair({});
     setSelectedFighterId(getNextSelectedFighterId(game, previousActivePlayerId, previousSelectedFighterId));
@@ -256,11 +264,8 @@ export default function PracticeBattlefieldApp() {
 
   function moveToHex(hexId: HexId): void {
     if (pendingMoveHexId !== hexId) {
+      clearPendingInteractions();
       setPendingMoveHexId(hexId);
-      setPendingDelveFeatureTokenId(null);
-      setPendingChargeHexId(null);
-      setPendingChargeTargetId(null);
-      setPendingAttackTargetId(null);
       return;
     }
 
@@ -276,11 +281,8 @@ export default function PracticeBattlefieldApp() {
       return;
     }
 
-    setPendingMoveHexId(null);
-    setPendingDelveFeatureTokenId(null);
+    clearPendingInteractions();
     setPendingChargeHexId(hexId);
-    setPendingChargeTargetId(null);
-    setPendingAttackTargetId(null);
   }
 
   function completeChargeAgainstTarget(targetId: FighterId): void {
@@ -301,11 +303,7 @@ export default function PracticeBattlefieldApp() {
   }
 
   function cancelPendingCharge(): void {
-    setPendingMoveHexId(null);
-    setPendingDelveFeatureTokenId(null);
-    setPendingChargeHexId(null);
-    setPendingChargeTargetId(null);
-    setPendingAttackTargetId(null);
+    clearPendingInteractions();
   }
 
   function delveSelectedFighter(): void {
@@ -314,11 +312,8 @@ export default function PracticeBattlefieldApp() {
     }
 
     if (pendingDelveFeatureTokenId !== selectedFeatureToken.id) {
-      setPendingMoveHexId(null);
+      clearPendingInteractions();
       setPendingDelveFeatureTokenId(selectedFeatureToken.id);
-      setPendingChargeHexId(null);
-      setPendingChargeTargetId(null);
-      setPendingAttackTargetId(null);
       return;
     }
 
@@ -327,10 +322,7 @@ export default function PracticeBattlefieldApp() {
 
   function attackTarget(targetId: FighterId): void {
     if (pendingAttackTargetId !== targetId) {
-      setPendingMoveHexId(null);
-      setPendingDelveFeatureTokenId(null);
-      setPendingChargeHexId(null);
-      setPendingChargeTargetId(null);
+      clearPendingInteractions();
       setPendingAttackTargetId(targetId);
       return;
     }
@@ -363,10 +355,21 @@ export default function PracticeBattlefieldApp() {
     }));
   }
 
+  function selectPowerOption(option: PowerOverlayOption): void {
+    if (pendingPowerOptionKey !== option.key) {
+      clearPendingInteractions();
+      setPendingPowerOptionKey(option.key);
+      return;
+    }
+
+    applyAction(option.action);
+  }
+
   useEffect(() => {
     if (
       pendingMoveHexId === null &&
       pendingDelveFeatureTokenId === null &&
+      pendingPowerOptionKey === null &&
       pendingChargeHexId === null &&
       pendingChargeTargetId === null &&
       pendingAttackTargetId === null
@@ -376,17 +379,13 @@ export default function PracticeBattlefieldApp() {
 
     function handleKeyDown(event: KeyboardEvent): void {
       if (event.key === "Escape") {
-        setPendingMoveHexId(null);
-        setPendingDelveFeatureTokenId(null);
-        setPendingChargeHexId(null);
-        setPendingChargeTargetId(null);
-        setPendingAttackTargetId(null);
+        clearPendingInteractions();
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [pendingMoveHexId, pendingDelveFeatureTokenId, pendingChargeHexId, pendingChargeTargetId, pendingAttackTargetId]);
+  }, [pendingMoveHexId, pendingDelveFeatureTokenId, pendingPowerOptionKey, pendingChargeHexId, pendingChargeTargetId, pendingAttackTargetId]);
 
   useEffect(() => {
     if (resultFlash === null) {
@@ -407,11 +406,7 @@ export default function PracticeBattlefieldApp() {
     setSelectedFighterId(getDefaultSelectableFighterId(nextGame));
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
-    setPendingMoveHexId(null);
-    setPendingDelveFeatureTokenId(null);
-    setPendingChargeHexId(null);
-    setPendingChargeTargetId(null);
-    setPendingAttackTargetId(null);
+    clearPendingInteractions();
     setSelectedAttackKeysByTarget({});
     setSelectedChargeKeysByPair({});
   }
@@ -482,6 +477,7 @@ export default function PracticeBattlefieldApp() {
             actionLens={actionLens}
             pendingMoveHexId={pendingMoveHexId}
             pendingDelveFeatureTokenId={pendingDelveFeatureTokenId}
+            pendingPowerOptionKey={pendingPowerOptionKey}
             pendingChargeHexId={pendingChargeHexId}
             pendingChargeTargetId={pendingChargeTargetId}
             pendingAttackTargetId={pendingAttackTargetId}
@@ -490,7 +486,7 @@ export default function PracticeBattlefieldApp() {
             powerOverlay={powerOverlay}
             recentCombatTargetId={recentCombatTargetId}
             resultFlash={resultFlash}
-            onApplyPowerAction={applyAction}
+            onApplyPowerAction={selectPowerOption}
             onDelveSelectedFighter={delveSelectedFighter}
             onGuardSelectedFighter={() => {
               if (actionLens.guardAction !== null) {
@@ -754,7 +750,7 @@ export default function PracticeBattlefieldApp() {
                 <strong>Power step cue:</strong> the active player&apos;s fighters glow teal during power step response windows.
               </p>
               <p>
-                <strong>Power overlay:</strong> legal ploys, upgrades, and warscroll abilities appear on the map during power step.
+                <strong>Power overlay:</strong> legal ploys, upgrades, and warscroll abilities appear on the map during power step. Click once to arm a power play, click the same option again to confirm, or press Escape to cancel.
               </p>
               <p>
                 <strong>Delve:</strong> if the selected fighter is standing on a revealed feature token during power step, the feature chip and board button both become delve controls. Click once to arm, click the same control again to confirm, or press Escape to cancel.
@@ -840,6 +836,7 @@ function BoardMap({
   game,
   pendingMoveHexId,
   pendingDelveFeatureTokenId,
+  pendingPowerOptionKey,
   pendingChargeHexId,
   pendingChargeTargetId,
   pendingAttackTargetId,
@@ -867,6 +864,7 @@ function BoardMap({
   game: Game;
   pendingMoveHexId: HexId | null;
   pendingDelveFeatureTokenId: FeatureTokenState["id"] | null;
+  pendingPowerOptionKey: string | null;
   pendingChargeHexId: HexId | null;
   pendingChargeTargetId: FighterId | null;
   pendingAttackTargetId: FighterId | null;
@@ -876,7 +874,7 @@ function BoardMap({
   recentCombatTargetId: FighterId | null;
   resultFlash: BattlefieldResultFlash | null;
   selectedFeatureToken: FeatureTokenState | null;
-  onApplyPowerAction: (action: BattlefieldAppAction) => void;
+  onApplyPowerAction: (option: PowerOverlayOption) => void;
   onDelveSelectedFighter: () => void;
   onGuardSelectedFighter: () => void;
   onPassTurn: () => void;
@@ -966,15 +964,13 @@ function BoardMap({
               <p className="battlefield-power-overlay-label">Warscroll</p>
               <div className="battlefield-power-option-list">
                 {powerOverlay.warscrollAbilities.map((option) => (
-                  <button
+                  <PowerOverlayOptionButton
                     key={option.key}
-                    type="button"
-                    className="battlefield-power-option battlefield-power-option-warscroll"
-                    onClick={() => onApplyPowerAction(option.action)}
-                  >
-                    <strong>{option.title}</strong>
-                    <span>{option.detail}</span>
-                  </button>
+                    option={option}
+                    isPending={pendingPowerOptionKey === option.key}
+                    onSelect={onApplyPowerAction}
+                    toneClassName="battlefield-power-option-warscroll"
+                  />
                 ))}
               </div>
             </div>
@@ -984,15 +980,13 @@ function BoardMap({
               <p className="battlefield-power-overlay-label">Ploys</p>
               <div className="battlefield-power-option-list">
                 {powerOverlay.ploys.map((option) => (
-                  <button
+                  <PowerOverlayOptionButton
                     key={option.key}
-                    type="button"
-                    className="battlefield-power-option battlefield-power-option-ploy"
-                    onClick={() => onApplyPowerAction(option.action)}
-                  >
-                    <strong>{option.title}</strong>
-                    <span>{option.detail}</span>
-                  </button>
+                    option={option}
+                    isPending={pendingPowerOptionKey === option.key}
+                    onSelect={onApplyPowerAction}
+                    toneClassName="battlefield-power-option-ploy"
+                  />
                 ))}
               </div>
             </div>
@@ -1002,15 +996,13 @@ function BoardMap({
               <p className="battlefield-power-overlay-label">Upgrades</p>
               <div className="battlefield-power-option-list">
                 {powerOverlay.upgrades.map((option) => (
-                  <button
+                  <PowerOverlayOptionButton
                     key={option.key}
-                    type="button"
-                    className="battlefield-power-option battlefield-power-option-upgrade"
-                    onClick={() => onApplyPowerAction(option.action)}
-                  >
-                    <strong>{option.title}</strong>
-                    <span>{option.detail}</span>
-                  </button>
+                    option={option}
+                    isPending={pendingPowerOptionKey === option.key}
+                    onSelect={onApplyPowerAction}
+                    toneClassName="battlefield-power-option-upgrade"
+                  />
                 ))}
               </div>
             </div>
@@ -1438,6 +1430,40 @@ function LegendItem({
       <span className={swatchClassName} aria-hidden="true" />
       <span>{label}</span>
     </div>
+  );
+}
+
+function PowerOverlayOptionButton({
+  isPending,
+  onSelect,
+  option,
+  toneClassName,
+}: {
+  isPending: boolean;
+  onSelect: (option: PowerOverlayOption) => void;
+  option: PowerOverlayOption;
+  toneClassName: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={isPending}
+      className={[
+        "battlefield-power-option",
+        toneClassName,
+        isPending ? "battlefield-power-option-armed" : "",
+      ].filter(Boolean).join(" ")}
+      onClick={() => onSelect(option)}
+    >
+      <span className="battlefield-power-option-title-row">
+        <strong>{option.title}</strong>
+        {isPending ? <span className="battlefield-power-option-chip">confirm</span> : null}
+      </span>
+      <span>{option.detail}</span>
+      {isPending ? (
+        <span className="battlefield-power-option-confirm-copy">Click again to confirm.</span>
+      ) : null}
+    </button>
   );
 }
 
@@ -1869,6 +1895,17 @@ function buildCombatFlashTitle(
   }
 
   return `${capitalizedAction} missed`;
+}
+
+function getPowerOverlayOptionByKey(
+  powerOverlay: PowerOverlayModel,
+  key: string,
+): PowerOverlayOption | null {
+  return [
+    ...powerOverlay.warscrollAbilities,
+    ...powerOverlay.ploys,
+    ...powerOverlay.upgrades,
+  ].find((option) => option.key === key) ?? null;
 }
 
 function getPowerOverlayModel(
