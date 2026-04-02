@@ -161,6 +161,7 @@ export default function PracticeBattlefieldApp() {
   const [pendingMoveHexId, setPendingMoveHexId] = useState<HexId | null>(null);
   const [pendingDelveFeatureTokenId, setPendingDelveFeatureTokenId] = useState<FeatureTokenState["id"] | null>(null);
   const [pendingGuardFighterId, setPendingGuardFighterId] = useState<FighterId | null>(null);
+  const [pendingPassPower, setPendingPassPower] = useState(false);
   const [pendingPowerOptionKey, setPendingPowerOptionKey] = useState<string | null>(null);
   const [pendingChargeHexId, setPendingChargeHexId] = useState<HexId | null>(null);
   const [pendingChargeTargetId, setPendingChargeTargetId] = useState<FighterId | null>(null);
@@ -215,6 +216,8 @@ export default function PracticeBattlefieldApp() {
   const powerPrompt =
     pendingDelveFeatureTokenId !== null && selectedFeatureToken?.id === pendingDelveFeatureTokenId
       ? `${selectedFighterName} has ${getFeatureTokenBadge(selectedFeatureToken)} armed for delve. Click the same feature chip or Delve button again to confirm, or press Escape to cancel.`
+      : pendingPassPower
+        ? "Pass Power is armed. Click Pass Power again to confirm, press Escape to cancel, or choose a different power response."
       : pendingPowerOption !== null
         ? `${pendingPowerOption.title} is armed. Click the same power option again to confirm, press Escape to cancel, or choose a different power play.`
       : actionLens.delveAction !== null && selectedFeatureToken !== null
@@ -247,6 +250,7 @@ export default function PracticeBattlefieldApp() {
     pendingDelveFeatureTokenId,
     pendingGuardFighterId,
     pendingMoveHexId,
+    pendingPassPower,
     pendingPowerOption,
     selectedFighterName,
     selectedFeatureToken,
@@ -269,6 +273,7 @@ export default function PracticeBattlefieldApp() {
     setPendingMoveHexId(null);
     setPendingDelveFeatureTokenId(null);
     setPendingGuardFighterId(null);
+    setPendingPassPower(false);
     setPendingPowerOptionKey(null);
     setPendingChargeHexId(null);
     setPendingChargeTargetId(null);
@@ -361,6 +366,25 @@ export default function PracticeBattlefieldApp() {
     applyAction(actionLens.guardAction);
   }
 
+  function passTurn(): void {
+    if (actionLens.passAction === null) {
+      return;
+    }
+
+    if (game.turnStep !== TurnStep.Power) {
+      applyAction(actionLens.passAction);
+      return;
+    }
+
+    if (!pendingPassPower) {
+      clearPendingInteractions();
+      setPendingPassPower(true);
+      return;
+    }
+
+    applyAction(actionLens.passAction);
+  }
+
   function attackTarget(targetId: FighterId): void {
     if (pendingAttackTargetId !== targetId) {
       clearPendingInteractions();
@@ -411,6 +435,7 @@ export default function PracticeBattlefieldApp() {
       pendingMoveHexId === null &&
       pendingDelveFeatureTokenId === null &&
       pendingGuardFighterId === null &&
+      !pendingPassPower &&
       pendingPowerOptionKey === null &&
       pendingChargeHexId === null &&
       pendingChargeTargetId === null &&
@@ -427,7 +452,7 @@ export default function PracticeBattlefieldApp() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [pendingMoveHexId, pendingDelveFeatureTokenId, pendingGuardFighterId, pendingPowerOptionKey, pendingChargeHexId, pendingChargeTargetId, pendingAttackTargetId]);
+  }, [pendingMoveHexId, pendingDelveFeatureTokenId, pendingGuardFighterId, pendingPassPower, pendingPowerOptionKey, pendingChargeHexId, pendingChargeTargetId, pendingAttackTargetId]);
 
   useEffect(() => {
     if (resultFlash === null) {
@@ -520,6 +545,7 @@ export default function PracticeBattlefieldApp() {
             pendingMoveHexId={pendingMoveHexId}
             pendingDelveFeatureTokenId={pendingDelveFeatureTokenId}
             pendingGuardFighterId={pendingGuardFighterId}
+            pendingPassPower={pendingPassPower}
             pendingPowerOptionKey={pendingPowerOptionKey}
             pendingChargeHexId={pendingChargeHexId}
             pendingChargeTargetId={pendingChargeTargetId}
@@ -533,11 +559,7 @@ export default function PracticeBattlefieldApp() {
             onApplyPowerAction={selectPowerOption}
             onDelveSelectedFighter={delveSelectedFighter}
             onGuardSelectedFighter={guardSelectedFighter}
-            onPassTurn={() => {
-              if (actionLens.passAction !== null) {
-                applyAction(actionLens.passAction);
-              }
-            }}
+            onPassTurn={passTurn}
             onAttackTarget={attackTarget}
             onCancelPendingCharge={cancelPendingCharge}
             onCompleteChargeAgainstTarget={completeChargeAgainstTarget}
@@ -748,14 +770,12 @@ export default function PracticeBattlefieldApp() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (actionLens.passAction !== null) {
-                      applyAction(actionLens.passAction);
-                    }
-                  }}
+                  onClick={passTurn}
                   disabled={actionLens.passAction === null}
                 >
-                  {game.turnStep === TurnStep.Power ? "Pass Power" : "Pass"}
+                  {game.turnStep === TurnStep.Power
+                    ? pendingPassPower ? "Confirm Pass Power" : "Pass Power"
+                    : "Pass"}
                 </button>
                 <button type="button" onClick={resetBattlefield}>Reset</button>
               </div>
@@ -780,7 +800,7 @@ export default function PracticeBattlefieldApp() {
                 <strong>Guard:</strong> the selected fighter gets a white ring when guard is legal. Click Guard once to arm it, click Guard again to confirm, or press Escape to cancel.
               </p>
               <p>
-                <strong>Board buttons:</strong> guard appears on the map during action step, and pass power appears on the map during power step.
+                <strong>Board buttons:</strong> guard appears on the map during action step, and pass power appears on the map during power step. Both now arm on the first click and confirm on the second.
               </p>
               <p>
                 <strong>Power step cue:</strong> the active player&apos;s fighters glow teal during power step response windows.
@@ -873,6 +893,7 @@ function BoardMap({
   pendingMoveHexId,
   pendingDelveFeatureTokenId,
   pendingGuardFighterId,
+  pendingPassPower,
   pendingPowerOptionKey,
   pendingChargeHexId,
   pendingChargeTargetId,
@@ -903,6 +924,7 @@ function BoardMap({
   pendingMoveHexId: HexId | null;
   pendingDelveFeatureTokenId: FeatureTokenState["id"] | null;
   pendingGuardFighterId: FighterId | null;
+  pendingPassPower: boolean;
   pendingPowerOptionKey: string | null;
   pendingChargeHexId: HexId | null;
   pendingChargeTargetId: FighterId | null;
@@ -1003,10 +1025,14 @@ function BoardMap({
           {game.turnStep === TurnStep.Power && actionLens.passAction !== null ? (
             <button
               type="button"
-              className="battlefield-board-action battlefield-board-action-pass"
+              className={[
+                "battlefield-board-action",
+                "battlefield-board-action-pass",
+                pendingPassPower ? "battlefield-board-action-pass-armed" : "",
+              ].filter(Boolean).join(" ")}
               onClick={onPassTurn}
             >
-              Pass Power
+              {pendingPassPower ? "Confirm Pass Power" : "Pass Power"}
             </button>
           ) : null}
         </div>
@@ -1994,6 +2020,7 @@ function getBoardTurnHeaderModel({
   pendingDelveFeatureTokenId,
   pendingGuardFighterId,
   pendingMoveHexId,
+  pendingPassPower,
   pendingPowerOption,
   selectedFighterName,
   selectedFeatureToken,
@@ -2008,6 +2035,7 @@ function getBoardTurnHeaderModel({
   pendingDelveFeatureTokenId: FeatureTokenState["id"] | null;
   pendingGuardFighterId: FighterId | null;
   pendingMoveHexId: HexId | null;
+  pendingPassPower: boolean;
   pendingPowerOption: PowerOverlayOption | null;
   selectedFighterName: string;
   selectedFeatureToken: FeatureTokenState | null;
@@ -2083,6 +2111,16 @@ function getBoardTurnHeaderModel({
       return {
         activePlayerName,
         interactionLabel: `Delve ${getFeatureTokenBadge(selectedFeatureToken)} is armed`,
+        isArmed: true,
+        stepLabel: "Power Step",
+        tone: "power",
+      };
+    }
+
+    if (pendingPassPower) {
+      return {
+        activePlayerName,
+        interactionLabel: "Pass Power is armed",
         isArmed: true,
         stepLabel: "Power Step",
         tone: "power",

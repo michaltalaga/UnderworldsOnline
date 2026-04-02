@@ -428,6 +428,14 @@ body {
   color: #4c3a2e;
 }
 
+.battlefield-board-action-pass-armed {
+  background: linear-gradient(180deg, rgba(248, 238, 223, 1), rgba(210, 184, 151, 1));
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 248, 240, 0.92),
+    0 0 0 4px rgba(188, 147, 102, 0.22),
+    0 12px 24px rgba(35, 24, 18, 0.18);
+}
+
 .battlefield-board-action-delve {
   background: linear-gradient(180deg, rgba(234, 246, 225, 0.98), rgba(195, 225, 169, 0.98));
   color: #355425;
