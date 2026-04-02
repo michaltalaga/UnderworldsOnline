@@ -127,6 +127,11 @@ type BoardTurnHeaderModel = {
   stepLabel: string;
 };
 
+type ArmedPathModel = {
+  tone: "move" | "charge";
+  stepByHexId: Map<HexId, number>;
+};
+
 export default function PracticeBattlefieldApp() {
   const [game, setGame] = useState<Game>(() => createActionStepPracticeGame());
   const [, setRefreshTick] = useState(0);
@@ -256,6 +261,13 @@ export default function PracticeBattlefieldApp() {
     selectedFighterName,
     selectedFeatureToken,
   });
+  const armedPath = getArmedPathModel(
+    actionLens,
+    pendingMoveHexId,
+    pendingChargeHexId,
+    pendingChargeTargetId,
+    selectedChargeKeysByPair,
+  );
 
   function selectFighter(fighterId: FighterId | null): void {
     setSelectedFighterId(fighterId);
@@ -559,6 +571,7 @@ export default function PracticeBattlefieldApp() {
             powerOverlay={powerOverlay}
             boardTurnHeader={boardTurnHeader}
             recentCombatTargetId={recentCombatTargetId}
+            armedPath={armedPath}
             lastResolvedAction={lastResolvedAction}
             resultFlash={resultFlash}
             onApplyPowerAction={selectPowerOption}
@@ -908,6 +921,7 @@ function BoardMap({
   powerOverlay,
   boardTurnHeader,
   recentCombatTargetId,
+  armedPath,
   lastResolvedAction,
   resultFlash,
   selectedFeatureToken,
@@ -940,6 +954,7 @@ function BoardMap({
   powerOverlay: PowerOverlayModel;
   boardTurnHeader: BoardTurnHeaderModel;
   recentCombatTargetId: FighterId | null;
+  armedPath: ArmedPathModel | null;
   lastResolvedAction: BattlefieldResultFlash | null;
   resultFlash: BattlefieldResultFlash | null;
   selectedFeatureToken: FeatureTokenState | null;
@@ -1143,6 +1158,8 @@ function BoardMap({
             game.turnStep === TurnStep.Action &&
             actionLens.attackTargetHexIds.has(hex.id);
           const isPendingAttackTarget = fighter?.id === pendingAttackTargetId;
+          const armedPathStep = armedPath?.stepByHexId.get(hex.id) ?? null;
+          const isArmedPathHex = armedPathStep !== null;
           const isRecentCombatTarget =
             pendingChargeHexId === null &&
             game.turnStep === TurnStep.Power &&
@@ -1220,25 +1237,29 @@ function BoardMap({
           return (
             <article
               key={hex.id}
-              className={getHexClassName(game, hex, {
-                isAttackTarget,
-                isChargeDestination,
-                isPendingDelveHex: isPendingDelveFeature,
-                isPendingGuardHex,
-                isPendingAttackTarget,
-                isPendingChargeHex,
-                isPendingChargeTarget,
-                isChargeTarget,
-                isClickableHex: isInteractiveHex,
-                isPendingMoveHex,
-                isMoveDestination,
-                isDelveReadyHex: isDelveReadyFeature,
-                isPowerResponseHex: isPowerResponseFighter,
-                isRecentCombatTarget,
-                isSelectedHex,
-                isSelectableHex: isSelectableFighter,
-                isGuardReadyHex: isSelectedHex && actionLens.guardAvailable,
-              })}
+              className={[
+                getHexClassName(game, hex, {
+                  isAttackTarget,
+                  isChargeDestination,
+                  isPendingDelveHex: isPendingDelveFeature,
+                  isPendingGuardHex,
+                  isPendingAttackTarget,
+                  isPendingChargeHex,
+                  isPendingChargeTarget,
+                  isChargeTarget,
+                  isClickableHex: isInteractiveHex,
+                  isPendingMoveHex,
+                  isMoveDestination,
+                  isDelveReadyHex: isDelveReadyFeature,
+                  isPowerResponseHex: isPowerResponseFighter,
+                  isRecentCombatTarget,
+                  isSelectedHex,
+                  isSelectableHex: isSelectableFighter,
+                  isGuardReadyHex: isSelectedHex && actionLens.guardAvailable,
+                }),
+                isArmedPathHex ? "battlefield-map-hex-path" : "",
+                isArmedPathHex && armedPath !== null ? `battlefield-map-hex-path-${armedPath.tone}` : "",
+              ].filter(Boolean).join(" ")}
               onClick={() => {
                 if (isSelectableFighter) {
                   onSelectFighter(fighter.id);
@@ -1316,7 +1337,14 @@ function BoardMap({
             >
               <div className="battlefield-hex-meta-row">
                 <span className="battlefield-hex-id">{compactHexId(hex.id)}</span>
-                {hex.isStartingHex ? <span className="battlefield-hex-tag">start</span> : null}
+                <div className="battlefield-hex-meta-tags">
+                  {armedPathStep === null || armedPath === null ? null : (
+                    <span className={`battlefield-hex-path-step battlefield-hex-path-step-${armedPath.tone}`}>
+                      {armedPathStep}
+                    </span>
+                  )}
+                  {hex.isStartingHex ? <span className="battlefield-hex-tag">start</span> : null}
+                </div>
               </div>
 
               <div className="battlefield-hex-center">
@@ -2310,6 +2338,27 @@ function getMoveActionForHex(actionLens: FighterActionLens, hexId: HexId): MoveA
   return bestAction;
 }
 
+function getChargePreviewActionForHex(
+  actionLens: FighterActionLens,
+  hexId: HexId,
+): ChargeAction | null {
+  let bestAction: ChargeAction | null = null;
+
+  for (const action of getChargeActionsForHex(actionLens, hexId)) {
+    if (
+      bestAction === null ||
+      action.path.length < bestAction.path.length ||
+      (action.path.length === bestAction.path.length &&
+        bestAction.selectedAbility !== null &&
+        action.selectedAbility === null)
+    ) {
+      bestAction = action;
+    }
+  }
+
+  return bestAction;
+}
+
 function getChargeActionsForHex(actionLens: FighterActionLens, hexId: HexId): ChargeAction[] {
   return actionLens.chargeActions.filter((action) => action.path[action.path.length - 1] === hexId);
 }
@@ -2434,6 +2483,47 @@ function getSelectedAttackKeyForTarget(
   targetId: FighterId,
 ): string | null {
   return selectedAttackKeysByTarget[targetId] ?? null;
+}
+
+function getArmedPathModel(
+  actionLens: FighterActionLens,
+  pendingMoveHexId: HexId | null,
+  pendingChargeHexId: HexId | null,
+  pendingChargeTargetId: FighterId | null,
+  selectedChargeKeysByPair: Record<string, string>,
+): ArmedPathModel | null {
+  const moveAction =
+    pendingMoveHexId === null ? null : getMoveActionForHex(actionLens, pendingMoveHexId);
+
+  if (moveAction !== null) {
+    return {
+      tone: "move",
+      stepByHexId: new Map(moveAction.path.map((hexId, index) => [hexId, index + 1])),
+    };
+  }
+
+  if (pendingChargeHexId === null) {
+    return null;
+  }
+
+  const selectedChargeAction =
+    pendingChargeTargetId === null
+      ? getChargePreviewActionForHex(actionLens, pendingChargeHexId)
+      : getChargeActionForTarget(
+          actionLens,
+          pendingChargeHexId,
+          pendingChargeTargetId,
+          getSelectedChargeKeyForPair(selectedChargeKeysByPair, pendingChargeHexId, pendingChargeTargetId),
+        );
+
+  if (selectedChargeAction === null) {
+    return null;
+  }
+
+  return {
+    tone: "charge",
+    stepByHexId: new Map(selectedChargeAction.path.map((hexId, index) => [hexId, index + 1])),
+  };
 }
 
 function getAttackProfiles(

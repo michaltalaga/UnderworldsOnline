@@ -733,6 +733,23 @@ body {
   transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
 
+.battlefield-map-hex-path::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border-radius: 16px;
+  border: 2px dashed transparent;
+  pointer-events: none;
+}
+
+.battlefield-map-hex-path-move::before {
+  border-color: rgba(20, 136, 140, 0.78);
+}
+
+.battlefield-map-hex-path-charge::before {
+  border-color: rgba(178, 118, 17, 0.82);
+}
+
 .battlefield-map-hex-neutral {
   background: linear-gradient(180deg, rgba(228, 218, 201, 0.96), rgba(209, 196, 176, 0.96));
 }
@@ -949,11 +966,42 @@ body {
   font-weight: 700;
 }
 
+.battlefield-hex-meta-tags {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
 .battlefield-hex-tag {
   padding: 2px 6px;
   border-radius: 999px;
   background: rgba(255, 248, 220, 0.8);
   border: 1px solid rgba(128, 98, 60, 0.24);
+}
+
+.battlefield-hex-path-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 6px 12px rgba(36, 26, 18, 0.14);
+}
+
+.battlefield-hex-path-step-move {
+  background: rgba(17, 103, 109, 0.96);
+  color: #ebfffd;
+}
+
+.battlefield-hex-path-step-charge {
+  background: rgba(142, 95, 15, 0.96);
+  color: #fff8e6;
 }
 
 .battlefield-hex-center {
