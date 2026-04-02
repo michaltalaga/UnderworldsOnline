@@ -4,12 +4,14 @@ import {
   CardZone,
   CombatActionService,
   DelveAction,
+  DelveResolution,
   EndPhaseStep,
   FeatureTokenSide,
+  GameActionKind,
   GameEngine,
+  GameRecordKind,
   GuardAction,
   MoveAction,
-  ObjectiveConditionTiming,
   PassAction,
   PlayPloyAction,
   PlayUpgradeAction,
@@ -20,13 +22,12 @@ import {
   ResolveEquipUpgradesAction,
   ResolveScoreObjectivesAction,
   SaveDieFace,
-  ScoringResolver,
   UseWarscrollAbilityAction,
   WeaponAbilityKind,
-  type CardPlayContext,
   createCombatReadySetupPracticeGame,
   type CardInstance,
   type Game,
+  type PlayerState,
   type WarscrollAbilityDefinition,
   type WeaponDefinition,
 } from "../domain";
@@ -337,7 +338,7 @@ export function createEndPhaseDebugSnapshot(
       ? "game:setup-practice:end-phase-debug:final"
       : "game:setup-practice:end-phase-debug";
   const game = createCombatReadySetupPracticeGame(gameId);
-  const engine = new GameEngine(undefined, undefined, undefined, new DebugEndPhaseScoringResolver());
+  const engine = new GameEngine();
   const playerOne = game.getPlayer("player:one");
 
   if (playerOne === undefined) {
@@ -349,6 +350,7 @@ export function createEndPhaseDebugSnapshot(
     game.eventLog.push("Debug setup forced the game to its final round before round start.");
   }
 
+  seedEndPhaseDebugObjective(game, playerOne);
   movePowerCardsToDiscard(playerOne.powerHand, playerOne.powerDeck.discardPile, 2);
   game.eventLog.push("Debug setup moved 2 power cards from Player One hand to discard before round start.");
 
@@ -369,6 +371,8 @@ export function createEndPhaseDebugSnapshot(
   while (game.state.kind === "combatTurn") {
     engine.applyGameAction(game, new PassAction(game.activePlayerId!));
   }
+
+  seedEndPhaseDebugDelves(game, playerOne);
 
   if (game.endPhaseStep !== EndPhaseStep.ScoreObjectives) {
     throw new Error(`Expected end-phase debug setup to reach scoreObjectives, got ${game.endPhaseStep}.`);
@@ -552,25 +556,6 @@ export function createUpgradeDebugSnapshot(
   };
 }
 
-class DebugEndPhaseScoringResolver extends ScoringResolver {
-  public override getScorableObjectives(
-    game: Game,
-    playerId: string,
-    context: CardPlayContext,
-  ): CardInstance[] {
-    if (context.timing !== ObjectiveConditionTiming.EndPhase) {
-      return [];
-    }
-
-    const player = game.getPlayer(playerId);
-    if (player === undefined || player.id !== "player:one") {
-      return [];
-    }
-
-    return player.objectiveHand.slice(0, 1);
-  }
-}
-
 function movePowerCardsToDiscard(
   hand: CardInstance[],
   discardPile: CardInstance[],
@@ -667,6 +652,73 @@ function getDefenderFeatureTokenSnapshot(
     featureTokenSide: featureToken.side,
     heldByFighterId: featureToken.heldByFighterId,
   };
+}
+
+function seedEndPhaseDebugObjective(game: Game, player: PlayerState): void {
+  const objectiveDefinitionId = "card-def:setup-practice:objective:04";
+  const existingObjective = player.objectiveHand.find((card) => card.definitionId === objectiveDefinitionId);
+  if (existingObjective !== undefined) {
+    return;
+  }
+
+  const sourceIndex = player.objectiveDeck.drawPile.findIndex(
+    (card) => card.definitionId === objectiveDefinitionId,
+  );
+  if (sourceIndex === -1) {
+    throw new Error(`Could not find ${objectiveDefinitionId} in Player One objective deck for debug setup.`);
+  }
+
+  const replacementCard = player.objectiveHand.shift();
+  const objectiveCard = player.objectiveDeck.drawPile.splice(sourceIndex, 1)[0];
+  if (replacementCard === undefined || objectiveCard === undefined) {
+    throw new Error("Could not swap in the end-phase debug objective.");
+  }
+
+  replacementCard.zone = CardZone.ObjectiveDeck;
+  player.objectiveDeck.drawPile.push(replacementCard);
+  objectiveCard.zone = CardZone.ObjectiveHand;
+  player.objectiveHand.push(objectiveCard);
+  game.eventLog.push("Debug setup swapped Practice Objective 04 into Player One's hand.");
+}
+
+function seedEndPhaseDebugDelves(game: Game, player: PlayerState): void {
+  const fighter = player.fighters[0];
+  const fighterDefinition = fighter === undefined ? undefined : player.getFighterDefinition(fighter.id);
+  if (fighter === undefined || fighterDefinition === undefined) {
+    throw new Error("Could not find a fighter to seed end-phase delve history.");
+  }
+
+  const treasureTokens = game.board.featureTokens.slice(0, 3);
+  if (treasureTokens.length < 3) {
+    throw new Error("End-phase debug setup expected at least 3 feature tokens.");
+  }
+
+  for (const featureToken of treasureTokens) {
+    game.addRecord(
+      GameRecordKind.Delve,
+      new DelveResolution(
+        game.roundNumber,
+        player.id,
+        player.name,
+        fighter.id,
+        fighterDefinition.name,
+        featureToken.id,
+        featureToken.hexId,
+        FeatureTokenSide.Treasure,
+        FeatureTokenSide.Cover,
+        true,
+        null,
+        null,
+      ),
+      {
+        invokedByPlayerId: player.id,
+        invokedByFighterId: fighter.id,
+        actionKind: GameActionKind.Delve,
+      },
+    );
+  }
+
+  game.eventLog.push("Debug setup seeded 3 treasure delve events for Player One this round.");
 }
 
 function createPloyDebugOption(

@@ -7,11 +7,14 @@ import type {
   WeaponDefinitionId,
 } from "../values/ids";
 import { DeckKind } from "../values/enums";
+import type { CardPlayContext } from "../definitions/CardDefinition";
 import { CardDefinition } from "../definitions/CardDefinition";
 import { FighterDefinition } from "../definitions/FighterDefinition";
 import { WarscrollDefinition } from "../definitions/WarscrollDefinition";
 import { WeaponDefinition } from "../definitions/WeaponDefinition";
 import { WarbandDefinition } from "../definitions/WarbandDefinition";
+import type { Game } from "./Game";
+import type { GameEventLogState } from "./GameEventLogState";
 import { CardInstance } from "./CardInstance";
 import { DeckState } from "./DeckState";
 import { FighterState } from "./FighterState";
@@ -159,6 +162,24 @@ export class PlayerState {
       ...this.scoredObjectives,
       ...this.equippedUpgrades,
     ];
+  }
+
+  public getPlayableCards(
+    game: Game,
+    world: GameEventLogState,
+    context: CardPlayContext = {},
+    cards: readonly CardInstance[] = [...this.objectiveHand, ...this.powerHand],
+  ): PlayerCardWithDefinition[] {
+    return cards.flatMap((card) => {
+      const definition = this.findCardDefinition(card.definitionId);
+      if (definition === undefined) {
+        return [];
+      }
+
+      return definition.canPlay(game, world, this, card, context)
+        ? [{ card, definition }]
+        : [];
+    });
   }
 
   public getUndeployedFighters(): FighterState[] {

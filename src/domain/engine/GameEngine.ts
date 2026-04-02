@@ -91,7 +91,6 @@ import { CombatContext } from "../rules/CombatContext";
 import { CombatEndedResolution } from "../rules/CombatEndedResolution";
 import { CombatResolver } from "../rules/CombatResolver";
 import { DefaultCombatResolver } from "../rules/DefaultCombatResolver";
-import { DefaultScoringResolver } from "../rules/DefaultScoringResolver";
 import { DefaultWarscrollEffectResolver } from "../rules/DefaultWarscrollEffectResolver";
 import { DefaultVictoryResolver } from "../rules/DefaultVictoryResolver";
 import { DelveResolution } from "../rules/DelveResolution";
@@ -108,7 +107,6 @@ import { RollOffContext } from "../rules/RollOffContext";
 import { RollOffResolver } from "../rules/RollOffResolver";
 import { type RollOffRoundInput } from "../rules/RollOffRound";
 import { RollOffResult } from "../rules/RollOffResult";
-import { ScoringResolver } from "../rules/ScoringResolver";
 import { TurnEndedResolution } from "../rules/TurnEndedResolution";
 import { TurnStepChangeResolution } from "../rules/TurnStepChangeResolution";
 import { TurnStartedResolution } from "../rules/TurnStartedResolution";
@@ -127,7 +125,6 @@ export class GameEngine {
   private readonly rollOffResolver: RollOffResolver;
   private readonly combatActionService: CombatActionService;
   private readonly combatResolver: CombatResolver;
-  private readonly scoringResolver: ScoringResolver;
   private readonly victoryResolver: VictoryResolver;
   private readonly warscrollEffectResolver: WarscrollEffectResolver;
 
@@ -135,7 +132,6 @@ export class GameEngine {
     shuffleCards: GameEngineShuffleCards = GameEngine.copyCards,
     rollOffResolver: RollOffResolver = new RollOffResolver(),
     combatResolver: CombatResolver = new DefaultCombatResolver(),
-    scoringResolver: ScoringResolver = new DefaultScoringResolver(),
     victoryResolver: VictoryResolver = new DefaultVictoryResolver(),
     warscrollEffectResolver: WarscrollEffectResolver = new DefaultWarscrollEffectResolver(),
     combatActionService: CombatActionService = new CombatActionService(warscrollEffectResolver),
@@ -144,7 +140,6 @@ export class GameEngine {
     this.rollOffResolver = rollOffResolver;
     this.combatActionService = combatActionService;
     this.combatResolver = combatResolver;
-    this.scoringResolver = scoringResolver;
     this.victoryResolver = victoryResolver;
     this.warscrollEffectResolver = warscrollEffectResolver;
   }
@@ -191,61 +186,61 @@ export class GameEngine {
   public applyGameAction(game: Game, action: GameAction): Game {
     if (action instanceof AttackAction) {
       this.applyAttackAction(game, action);
-      this.resolveTriggeredCards(game, this.createImmediateTriggerContext(action.kind));
+      this.resolveAutoPlayableCards(game, this.createImmediateTriggerContext(action.kind));
       return game;
     }
 
     if (action instanceof ChargeAction) {
       this.applyChargeAction(game, action);
-      this.resolveTriggeredCards(game, this.createImmediateTriggerContext(action.kind));
+      this.resolveAutoPlayableCards(game, this.createImmediateTriggerContext(action.kind));
       return game;
     }
 
     if (action instanceof MoveAction) {
       this.applyMoveAction(game, action);
-      this.resolveTriggeredCards(game, this.createImmediateTriggerContext(action.kind));
+      this.resolveAutoPlayableCards(game, this.createImmediateTriggerContext(action.kind));
       return game;
     }
 
     if (action instanceof GuardAction) {
       this.applyGuardAction(game, action);
-      this.resolveTriggeredCards(game, this.createImmediateTriggerContext(action.kind));
+      this.resolveAutoPlayableCards(game, this.createImmediateTriggerContext(action.kind));
       return game;
     }
 
     if (action instanceof DelveAction) {
       this.applyDelveAction(game, action);
-      this.resolveTriggeredCards(game, this.createImmediateTriggerContext(action.kind));
+      this.resolveAutoPlayableCards(game, this.createImmediateTriggerContext(action.kind));
       return game;
     }
 
     if (action instanceof FocusAction) {
       this.applyFocusAction(game, action);
-      this.resolveTriggeredCards(game, this.createImmediateTriggerContext(action.kind));
+      this.resolveAutoPlayableCards(game, this.createImmediateTriggerContext(action.kind));
       return game;
     }
 
     if (action instanceof PlayPloyAction) {
       this.applyPlayPloyAction(game, action);
-      this.resolveTriggeredCards(game, this.createImmediateTriggerContext(action.kind));
+      this.resolveAutoPlayableCards(game, this.createImmediateTriggerContext(action.kind));
       return game;
     }
 
     if (action instanceof PlayUpgradeAction) {
       this.applyPlayUpgradeAction(game, action);
-      this.resolveTriggeredCards(game, this.createImmediateTriggerContext(action.kind));
+      this.resolveAutoPlayableCards(game, this.createImmediateTriggerContext(action.kind));
       return game;
     }
 
     if (action instanceof UseWarscrollAbilityAction) {
       this.applyUseWarscrollAbilityAction(game, action);
-      this.resolveTriggeredCards(game, this.createImmediateTriggerContext(action.kind));
+      this.resolveAutoPlayableCards(game, this.createImmediateTriggerContext(action.kind));
       return game;
     }
 
     if (action instanceof PassAction) {
       this.applyPassAction(game, action);
-      this.resolveTriggeredCards(game, this.createImmediateTriggerContext(action.kind));
+      this.resolveAutoPlayableCards(game, this.createImmediateTriggerContext(action.kind));
       return game;
     }
 
@@ -255,37 +250,37 @@ export class GameEngine {
   public applyEndPhaseAction(game: Game, action: EndPhaseAction): Game {
     if (action instanceof ResolveScoreObjectivesAction) {
       this.applyResolveScoreObjectives(game);
-      this.resolveTriggeredCards(game, { triggerActionKind: action.kind });
+      this.resolveAutoPlayableCards(game, { triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof ResolveEquipUpgradesAction) {
       this.applyResolveEquipUpgrades(game);
-      this.resolveTriggeredCards(game, { triggerActionKind: action.kind });
+      this.resolveAutoPlayableCards(game, { triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof ResolveDiscardCardsAction) {
       this.applyResolveDiscardCards(game);
-      this.resolveTriggeredCards(game, { triggerActionKind: action.kind });
+      this.resolveAutoPlayableCards(game, { triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof ResolveDrawObjectivesAction) {
       this.applyResolveDrawObjectives(game);
-      this.resolveTriggeredCards(game, { triggerActionKind: action.kind });
+      this.resolveAutoPlayableCards(game, { triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof ResolveDrawPowerCardsAction) {
       this.applyResolveDrawPowerCards(game);
-      this.resolveTriggeredCards(game, { triggerActionKind: action.kind });
+      this.resolveAutoPlayableCards(game, { triggerActionKind: action.kind });
       return game;
     }
 
     if (action instanceof ResolveCleanupAction) {
       this.applyResolveCleanup(game);
-      this.resolveTriggeredCards(game, { triggerActionKind: action.kind });
+      this.resolveAutoPlayableCards(game, { triggerActionKind: action.kind });
       return game;
     }
 
@@ -362,7 +357,7 @@ export class GameEngine {
     game.eventLog.push(
       `${chooser.name} chose ${firstPlayer.name} to take the first turn. ${rollOffLoser.name} drew 1 power card.`,
     );
-    this.resolveTriggeredCards(game, {});
+    this.resolveAutoPlayableCards(game, {});
 
     return game;
   }
@@ -2015,23 +2010,19 @@ export class GameEngine {
     };
   }
 
-  private resolveTriggeredCards(
+  private resolveAutoPlayableCards(
     game: Game,
     context: CardPlayContext,
   ): void {
-    const triggeredScoring = this.resolveTriggeredObjectiveScores(game, context);
-    this.appendTriggeredObjectiveSummaryToLatestEventLog(game, triggeredScoring);
+    const autoPlayedObjectives = this.resolveAutoPlayableObjectives(game, context);
+    this.appendTriggeredObjectiveSummaryToLatestEventLog(game, autoPlayedObjectives);
   }
 
-  private resolveTriggeredObjectiveScores(
+  private resolveAutoPlayableObjectives(
     game: Game,
     context: CardPlayContext,
   ): ObjectiveScoringPlayerResolution[] {
-    if (context.timing !== ObjectiveConditionTiming.Immediate) {
-      return [];
-    }
-
-    const triggeredScoring: ObjectiveScoringPlayerResolution[] = [];
+    const autoPlayedObjectives: ObjectiveScoringPlayerResolution[] = [];
     let scoredObjectives = false;
     do {
       scoredObjectives = false;
@@ -2048,12 +2039,12 @@ export class GameEngine {
           continue;
         }
 
-        triggeredScoring.push(resolution);
+        autoPlayedObjectives.push(resolution);
         scoredObjectives = true;
       }
     } while (scoredObjectives);
 
-    return triggeredScoring;
+    return autoPlayedObjectives;
   }
 
   private appendTriggeredObjectiveSummaryToLatestEventLog(
@@ -2110,15 +2101,15 @@ export class GameEngine {
       };
     }
 
-    const scorableObjectives = this.scoringResolver.getScorableObjectives(game, player.id, context, world);
-    const uniqueObjectiveIds = new Set(scorableObjectives.map((card) => card.id));
+    const scorableObjectives = player
+      .getPlayableCards(game, world, context, player.objectiveHand)
+      .filter((playableCard) => playableCard.definition.kind === CardKind.Objective);
     const scoredObjectives: ObjectiveScoringCardResolution[] = [];
     let gloryGained = 0;
 
-    for (const objectiveId of uniqueObjectiveIds) {
-      const objective = player.getCardWithDefinition(objectiveId);
-      if (objective === undefined || objective.card.zone !== CardZone.ObjectiveHand) {
-        throw new Error(`Objective card ${objectiveId} is not available to score for ${player.name}.`);
+    for (const objective of scorableObjectives) {
+      if (objective.card.zone !== CardZone.ObjectiveHand) {
+        throw new Error(`Objective card ${objective.card.id} is not available to score for ${player.name}.`);
       }
 
       this.recordCardPlayed(
