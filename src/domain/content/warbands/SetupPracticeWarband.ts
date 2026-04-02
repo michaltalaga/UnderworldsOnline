@@ -1,7 +1,10 @@
 import { CardDefinition } from "../../definitions/CardDefinition";
 import { FighterDefinition } from "../../definitions/FighterDefinition";
-import type { ObjectiveCondition } from "../../definitions/ObjectiveCondition";
 import { WarbandDefinition } from "../../definitions/WarbandDefinition";
+import { PracticeObjective01Rule } from "../../rules/objectives/AttackRollAllSuccessesObjectiveRule";
+import { PracticeObjective03Rule } from "../../rules/objectives/DelveInEnemyTerritoryOrFriendlyIfUnderdogObjectiveRule";
+import { PracticeObjective04Rule } from "../../rules/objectives/DelveThreeTreasureTokensThisRoundOrEnemyHeldAtRoundStartObjectiveRule";
+import { PracticeObjective02Rule } from "../../rules/objectives/SlayLeaderOrEqualOrGreaterHealthObjectiveRule";
 import { WeaponAbilityDefinition } from "../../definitions/WeaponAbilityDefinition";
 import { WarscrollAbilityDefinition } from "../../definitions/WarscrollAbilityDefinition";
 import { WarscrollDefinition } from "../../definitions/WarscrollDefinition";
@@ -9,8 +12,6 @@ import { WeaponDefinition } from "../../definitions/WeaponDefinition";
 import {
   CardKind,
   FighterTokenKind,
-  ObjectiveConditionKind,
-  ObjectiveConditionTiming,
   PloyEffectKind,
   PloyEffectTargetKind,
   SaveSymbol,
@@ -133,35 +134,15 @@ function createObjectiveCards(): CardDefinition[] {
     const isSlayLeaderOrEqualOrGreaterHealthObjective = index === 1;
     const isDelveTerritoryObjective = index === 2;
     const isDelveTreasureRoundObjective = index === 3;
-    const objectiveConditions: ObjectiveCondition[] = isAllSuccessesObjective
-      ? [
-        {
-          kind: ObjectiveConditionKind.AttackRollAllSuccesses,
-          timing: ObjectiveConditionTiming.Immediate,
-        },
-      ]
+    const objectiveRule = isAllSuccessesObjective
+      ? new PracticeObjective01Rule()
       : isSlayLeaderOrEqualOrGreaterHealthObjective
-        ? [
-          {
-            kind: ObjectiveConditionKind.SlayLeaderOrEqualOrGreaterHealth,
-            timing: ObjectiveConditionTiming.Immediate,
-          },
-        ]
+        ? new PracticeObjective02Rule()
         : isDelveTerritoryObjective
-          ? [
-            {
-              kind: ObjectiveConditionKind.DelveInEnemyTerritoryOrFriendlyIfUnderdog,
-              timing: ObjectiveConditionTiming.Immediate,
-            },
-          ]
+          ? new PracticeObjective03Rule()
           : isDelveTreasureRoundObjective
-            ? [
-              {
-                kind: ObjectiveConditionKind.DelveThreeTreasureTokensThisRoundOrEnemyHeldAtRoundStart,
-                timing: ObjectiveConditionTiming.EndPhase,
-              },
-            ]
-      : [];
+            ? new PracticeObjective04Rule()
+            : null;
 
     return new CardDefinition(
       `card-def:setup-practice:objective:${cardNumber}`,
@@ -178,7 +159,7 @@ function createObjectiveCards(): CardDefinition[] {
         : "",
       1,
       [],
-      objectiveConditions,
+      objectiveRule,
     );
   });
 }

@@ -1,4 +1,5 @@
 import { CardInstance } from "../state/CardInstance";
+import { CardDefinition } from "../definitions/CardDefinition";
 import { WeaponAbilityDefinition } from "../definitions/WeaponAbilityDefinition";
 import {
   CleanupResolution,
@@ -1445,23 +1446,12 @@ export class GameEngine {
         throw new Error(`Objective card ${objectiveId} is not available to score for ${player.name}.`);
       }
 
-      const handIndex = player.objectiveHand.findIndex((card) => card.id === objective.card.id);
-      if (handIndex === -1) {
-        throw new Error(`Could not find objective ${objective.card.id} in ${player.name}'s hand.`);
-      }
-
-      player.objectiveHand.splice(handIndex, 1);
-      objective.card.zone = CardZone.ScoredObjectives;
-      objective.card.revealed = true;
-      player.scoredObjectives.push(objective.card);
-      player.glory += objective.definition.gloryValue;
-      gloryGained += objective.definition.gloryValue;
-      scoredObjectives.push({
-        cardId: objective.card.id,
-        cardDefinitionId: objective.card.definitionId,
-        cardName: objective.definition.name,
-        gloryValue: objective.definition.gloryValue,
-      });
+      const objectiveRule = objective.definition.objectiveRule;
+      const scoredObjective = objectiveRule === null
+        ? this.scoreObjectiveCard(player, objective.card, objective.definition)
+        : objectiveRule.score(game, player, objective.card, objective.definition);
+      gloryGained += scoredObjective.gloryValue;
+      scoredObjectives.push(scoredObjective);
 
       if (logEachObjective) {
         game.eventLog.push(
@@ -1485,6 +1475,30 @@ export class GameEngine {
     }
 
     return playerResolution;
+  }
+
+  private scoreObjectiveCard(
+    player: PlayerState,
+    objectiveCard: CardInstance,
+    definition: CardDefinition,
+  ): ObjectiveScoringCardResolution {
+    const handIndex = player.objectiveHand.findIndex((card) => card.id === objectiveCard.id);
+    if (handIndex === -1) {
+      throw new Error(`Could not find objective ${objectiveCard.id} in ${player.name}'s hand.`);
+    }
+
+    player.objectiveHand.splice(handIndex, 1);
+    objectiveCard.zone = CardZone.ScoredObjectives;
+    objectiveCard.revealed = true;
+    player.scoredObjectives.push(objectiveCard);
+    player.glory += definition.gloryValue;
+
+    return {
+      cardId: objectiveCard.id,
+      cardDefinitionId: objectiveCard.definitionId,
+      cardName: definition.name,
+      gloryValue: definition.gloryValue,
+    };
   }
 
   private drawFocusCards(

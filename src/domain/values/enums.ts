@@ -95,16 +95,6 @@ export const ObjectiveConditionTiming = {
 export type ObjectiveConditionTiming =
   (typeof ObjectiveConditionTiming)[keyof typeof ObjectiveConditionTiming];
 
-export const ObjectiveConditionKind = {
-  AttackRollAllSuccesses: "attackRollAllSuccesses",
-  SlayLeaderOrEqualOrGreaterHealth: "slayLeaderOrEqualOrGreaterHealth",
-  DelveInEnemyTerritoryOrFriendlyIfUnderdog: "delveInEnemyTerritoryOrFriendlyIfUnderdog",
-  DelveThreeTreasureTokensThisRoundOrEnemyHeldAtRoundStart: "delveThreeTreasureTokensThisRoundOrEnemyHeldAtRoundStart",
-} as const;
-
-export type ObjectiveConditionKind =
-  (typeof ObjectiveConditionKind)[keyof typeof ObjectiveConditionKind];
-
 export const CardZone = {
   ObjectiveDeck: "objectiveDeck",
   ObjectiveHand: "objectiveHand",
