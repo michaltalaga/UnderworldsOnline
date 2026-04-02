@@ -46,6 +46,7 @@ export * from "./rules/CombatResolver";
 export * from "./rules/CombatResult";
 export * from "./rules/DefaultVictoryResolver";
 export * from "./rules/GameOutcome";
+export * from "./rules/FocusResolution";
 export * from "./rules/LegalActionService";
 export * from "./rules/PloyResolution";
 export * from "./rules/PloyEffectResolver";

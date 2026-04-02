@@ -1,6 +1,7 @@
 import { AttackAction } from "../actions/AttackAction";
 import { ChargeAction } from "../actions/ChargeAction";
 import { DelveAction } from "../actions/DelveAction";
+import { FocusAction } from "../actions/FocusAction";
 import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
@@ -76,6 +77,7 @@ export class CombatActionService extends LegalActionService {
       ...player.fighters.flatMap((fighter) => this.getLegalChargeActionsForFighter(game, player, fighter.id)),
       ...player.fighters.flatMap((fighter) => this.getLegalAttackActionsForFighter(game, player, fighter.id)),
       ...player.fighters.flatMap((fighter) => this.getLegalGuardActionsForFighter(game, player, fighter.id)),
+      ...this.getLegalFocusActions(game, player),
       new PassAction(playerId),
     ];
   }
@@ -204,6 +206,32 @@ export class CombatActionService extends LegalActionService {
     }
 
     return this.canFighterGuard(fighter);
+  }
+
+  public isLegalFocusAction(game: Game, action: FocusAction): boolean {
+    if (!this.isCombatActionStep(game, action.playerId)) {
+      return false;
+    }
+
+    const player = game.getPlayer(action.playerId);
+    if (player === undefined) {
+      return false;
+    }
+
+    const uniqueObjectiveIds = new Set(action.objectiveCardIds);
+    if (uniqueObjectiveIds.size !== action.objectiveCardIds.length) {
+      return false;
+    }
+
+    const uniquePowerIds = new Set(action.powerCardIds);
+    if (uniquePowerIds.size !== action.powerCardIds.length) {
+      return false;
+    }
+
+    return (
+      action.objectiveCardIds.every((cardId) => player.objectiveHand.some((card) => card.id === cardId))
+      && action.powerCardIds.every((cardId) => player.powerHand.some((card) => card.id === cardId))
+    );
   }
 
   public isLegalDelveAction(game: Game, action: DelveAction): boolean {
@@ -494,6 +522,17 @@ export class CombatActionService extends LegalActionService {
     }
 
     return [new GuardAction(player.id, fighter.id)];
+  }
+
+  private getLegalFocusActions(
+    game: Game,
+    player: PlayerState,
+  ): FocusAction[] {
+    if (!this.isCombatActionStep(game, player.id)) {
+      return [];
+    }
+
+    return [new FocusAction(player.id)];
   }
 
   private getLegalDelveActions(

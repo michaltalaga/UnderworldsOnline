@@ -4,12 +4,14 @@ import { ObjectiveScoringResolution } from "../endPhase/ObjectiveScoringResoluti
 import { PowerDrawResolution } from "../endPhase/PowerDrawResolution";
 import { CombatResult } from "../rules/CombatResult";
 import { DelveResolution } from "../rules/DelveResolution";
+import { FocusResolution } from "../rules/FocusResolution";
 import { PloyResolution } from "../rules/PloyResolution";
 import { UpgradeResolution } from "../rules/UpgradeResolution";
 import { WarscrollAbilityResolution } from "../rules/WarscrollAbilityResolution";
 
 export const GameRecordKind = {
   Combat: "combat",
+  Focus: "focus",
   Delve: "delve",
   Ploy: "ploy",
   Upgrade: "upgrade",
@@ -24,6 +26,7 @@ export type GameRecordKind = (typeof GameRecordKind)[keyof typeof GameRecordKind
 
 export type GameRecordDataByKind = {
   [GameRecordKind.Combat]: CombatResult;
+  [GameRecordKind.Focus]: FocusResolution;
   [GameRecordKind.Delve]: DelveResolution;
   [GameRecordKind.Ploy]: PloyResolution;
   [GameRecordKind.Upgrade]: UpgradeResolution;

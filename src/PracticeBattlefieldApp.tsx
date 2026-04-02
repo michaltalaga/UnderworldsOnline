@@ -8,6 +8,7 @@ import {
   createCombatReadySetupPracticeGame,
   DelveAction,
   FeatureTokenSide,
+  FocusAction,
   GameAction,
   GameEngine,
   GameRecordKind,
@@ -20,6 +21,7 @@ import {
   TurnStep,
   UseWarscrollAbilityAction,
   type BoardState,
+  type CardId,
   type CombatResult,
   type FeatureTokenState,
   type FighterState,
@@ -55,12 +57,14 @@ type FighterActionLens = {
   moveActions: MoveAction[];
   chargeActions: ChargeAction[];
   delveAction: DelveAction | null;
+  focusAction: FocusAction | null;
   guardAction: GuardAction | null;
   passAction: PassAction | null;
   attackCount: number;
   moveCount: number;
   chargeCount: number;
   delveAvailable: boolean;
+  focusAvailable: boolean;
   guardAvailable: boolean;
 };
 
@@ -99,11 +103,23 @@ type BattlefieldAppAction =
   | ChargeAction
   | AttackAction
   | DelveAction
+  | FocusAction
   | GuardAction
   | PassAction
   | PlayPloyAction
   | PlayUpgradeAction
   | UseWarscrollAbilityAction;
+
+type FocusOverlayCard = {
+  cardId: CardId;
+  name: string;
+};
+
+type FocusOverlayModel = {
+  objectiveCards: FocusOverlayCard[];
+  powerCards: FocusOverlayCard[];
+  hasAnyCards: boolean;
+};
 
 type PowerOverlayOption = {
   key: string;
@@ -162,18 +178,22 @@ export default function PracticeBattlefieldApp() {
       : game.board.getFeatureToken(selectedFighterHex.featureTokenId) ?? null;
   const actionLens = getFighterActionLens(game, activePlayer, selectedFighterId, legalActions);
   const powerOverlay = getPowerOverlayModel(game, activePlayer, legalActions);
+  const focusOverlay = getFocusOverlayModel(game, activePlayer);
   const moveOptions = getMoveOptions(actionLens);
   const chargeOptions = getChargeOptions(game, actionLens);
   const [selectedMoveHexId, setSelectedMoveHexId] = useState<HexId | null>(null);
   const [selectedChargeKey, setSelectedChargeKey] = useState<string | null>(null);
   const [pendingMoveHexId, setPendingMoveHexId] = useState<HexId | null>(null);
   const [pendingDelveFeatureTokenId, setPendingDelveFeatureTokenId] = useState<FeatureTokenState["id"] | null>(null);
+  const [pendingFocus, setPendingFocus] = useState(false);
   const [pendingGuardFighterId, setPendingGuardFighterId] = useState<FighterId | null>(null);
   const [pendingPassPower, setPendingPassPower] = useState(false);
   const [pendingPowerOptionKey, setPendingPowerOptionKey] = useState<string | null>(null);
   const [pendingChargeHexId, setPendingChargeHexId] = useState<HexId | null>(null);
   const [pendingChargeTargetId, setPendingChargeTargetId] = useState<FighterId | null>(null);
   const [pendingAttackTargetId, setPendingAttackTargetId] = useState<FighterId | null>(null);
+  const [selectedFocusObjectiveIds, setSelectedFocusObjectiveIds] = useState<CardId[]>([]);
+  const [selectedFocusPowerIds, setSelectedFocusPowerIds] = useState<CardId[]>([]);
   const [selectedAttackKeysByTarget, setSelectedAttackKeysByTarget] = useState<Record<string, string>>({});
   const [selectedChargeKeysByPair, setSelectedChargeKeysByPair] = useState<Record<string, string>>({});
   const selectedMoveOption = moveOptions.find((option) => option.hexId === selectedMoveHexId) ?? moveOptions[0] ?? null;
@@ -213,6 +233,11 @@ export default function PracticeBattlefieldApp() {
   );
   const pendingAttackOption = pendingAttackProfile?.options.find((option) => option.key === pendingAttackProfile.selectedKey) ?? null;
   const pendingAttackBadgeLabel = pendingAttackOption?.label ?? null;
+  const selectedFocusCardCount = selectedFocusObjectiveIds.length + selectedFocusPowerIds.length;
+  const focusSelectionSummary =
+    selectedFocusCardCount === 0
+      ? "Discard nothing and draw 1 additional power card."
+      : `Discard ${selectedFocusObjectiveIds.length} objective card${selectedFocusObjectiveIds.length === 1 ? "" : "s"} and ${selectedFocusPowerIds.length} power card${selectedFocusPowerIds.length === 1 ? "" : "s"}, then draw ${selectedFocusObjectiveIds.length} objective card${selectedFocusObjectiveIds.length === 1 ? "" : "s"} and ${selectedFocusPowerIds.length + 1} power card${selectedFocusPowerIds.length + 1 === 1 ? "" : "s"}.`;
   const latestCombat = game.getLatestRecord(GameRecordKind.Combat);
   const recentCombat =
     latestCombat !== null &&
@@ -237,7 +262,9 @@ export default function PracticeBattlefieldApp() {
           : `Recent combat: ${recentCombatTargetName} remains marked on the map. Pass the power step or reset the board.`;
   const actionPrompt =
     game.turnStep === TurnStep.Action
-      ? pendingGuardFighterId !== null
+      ? pendingFocus
+        ? `Focus is armed. Select any objective or power cards to discard, then click Focus again to confirm, or press Escape to cancel. ${focusSelectionSummary}`
+        : pendingGuardFighterId !== null
         ? `Guard is armed for ${selectedFighterName}. Click Guard again to confirm, press Escape to cancel, or choose another action.`
         : pendingAttackTargetId !== null
         ? `${pendingAttackTargetName ?? pendingAttackTargetId} selected with ${pendingAttackOption?.label ?? "the current profile"}. Click the same crimson target again to confirm the attack, press Escape to cancel, or pick a different crimson target.`
@@ -247,7 +274,7 @@ export default function PracticeBattlefieldApp() {
             ? `Charge from ${pendingChargeHexId} selected. Click a red target to arm it, or choose a charge profile below first.`
             : pendingMoveHexId !== null
             ? `Move to ${pendingMoveHexId} selected. Click the same teal hex again to confirm, press Escape to cancel, or choose another teal hex.`
-            : "Select a fighter, then click a teal hex to move, click a gold hex and then a red target to charge, or click an amber charge target to auto-arm a charge."
+            : "Select a fighter, then click a teal hex to move, click a gold hex and then a red target to charge, click an amber charge target to auto-arm a charge, or use Focus to cycle cards."
       : powerPrompt;
   const boardTurnHeader = getBoardTurnHeaderModel({
     activePlayerName: activePlayer?.name ?? "No active player",
@@ -258,6 +285,7 @@ export default function PracticeBattlefieldApp() {
     pendingChargeHexId,
     pendingChargeTargetName,
     pendingDelveFeatureTokenId,
+    pendingFocus,
     pendingGuardFighterId,
     pendingMoveHexId,
     pendingPassPower,
@@ -289,12 +317,15 @@ export default function PracticeBattlefieldApp() {
   function clearPendingInteractions(): void {
     setPendingMoveHexId(null);
     setPendingDelveFeatureTokenId(null);
+    setPendingFocus(false);
     setPendingGuardFighterId(null);
     setPendingPassPower(false);
     setPendingPowerOptionKey(null);
     setPendingChargeHexId(null);
     setPendingChargeTargetId(null);
     setPendingAttackTargetId(null);
+    setSelectedFocusObjectiveIds([]);
+    setSelectedFocusPowerIds([]);
   }
 
   function applyAction(action: BattlefieldAppAction): void {
@@ -382,6 +413,34 @@ export default function PracticeBattlefieldApp() {
     applyAction(actionLens.delveAction);
   }
 
+  function focusHand(): void {
+    if (actionLens.focusAction === null) {
+      return;
+    }
+
+    if (!pendingFocus) {
+      clearPendingInteractions();
+      setPendingFocus(true);
+      return;
+    }
+
+    applyAction(
+      new FocusAction(
+        actionLens.focusAction.playerId,
+        selectedFocusObjectiveIds,
+        selectedFocusPowerIds,
+      ),
+    );
+  }
+
+  function toggleFocusObjectiveCard(cardId: CardId): void {
+    setSelectedFocusObjectiveIds((current) => toggleFocusCardId(current, cardId));
+  }
+
+  function toggleFocusPowerCard(cardId: CardId): void {
+    setSelectedFocusPowerIds((current) => toggleFocusCardId(current, cardId));
+  }
+
   function guardSelectedFighter(): void {
     if (actionLens.guardAction === null || selectedFighterId === null) {
       return;
@@ -464,6 +523,7 @@ export default function PracticeBattlefieldApp() {
     if (
       pendingMoveHexId === null &&
       pendingDelveFeatureTokenId === null &&
+      !pendingFocus &&
       pendingGuardFighterId === null &&
       !pendingPassPower &&
       pendingPowerOptionKey === null &&
@@ -482,7 +542,7 @@ export default function PracticeBattlefieldApp() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [pendingMoveHexId, pendingDelveFeatureTokenId, pendingGuardFighterId, pendingPassPower, pendingPowerOptionKey, pendingChargeHexId, pendingChargeTargetId, pendingAttackTargetId]);
+  }, [pendingMoveHexId, pendingDelveFeatureTokenId, pendingFocus, pendingGuardFighterId, pendingPassPower, pendingPowerOptionKey, pendingChargeHexId, pendingChargeTargetId, pendingAttackTargetId]);
 
   useEffect(() => {
     if (resultFlash === null) {
@@ -575,6 +635,7 @@ export default function PracticeBattlefieldApp() {
             actionLens={actionLens}
             pendingMoveHexId={pendingMoveHexId}
             pendingDelveFeatureTokenId={pendingDelveFeatureTokenId}
+            pendingFocus={pendingFocus}
             pendingGuardFighterId={pendingGuardFighterId}
             pendingPassPower={pendingPassPower}
             pendingPowerOptionKey={pendingPowerOptionKey}
@@ -583,6 +644,10 @@ export default function PracticeBattlefieldApp() {
             pendingAttackTargetId={pendingAttackTargetId}
             pendingChargeBadgeLabel={pendingChargeBadgeLabel}
             pendingAttackBadgeLabel={pendingAttackBadgeLabel}
+            focusOverlay={focusOverlay}
+            focusSelectionSummary={focusSelectionSummary}
+            selectedFocusObjectiveIds={selectedFocusObjectiveIds}
+            selectedFocusPowerIds={selectedFocusPowerIds}
             powerOverlay={powerOverlay}
             boardTurnHeader={boardTurnHeader}
             recentCombatTargetId={recentCombatTargetId}
@@ -593,6 +658,7 @@ export default function PracticeBattlefieldApp() {
             resultFlash={resultFlash}
             onApplyPowerAction={selectPowerOption}
             onDelveSelectedFighter={delveSelectedFighter}
+            onFocusHand={focusHand}
             onGuardSelectedFighter={guardSelectedFighter}
             onPassTurn={passTurn}
             onAttackTarget={attackTarget}
@@ -601,6 +667,8 @@ export default function PracticeBattlefieldApp() {
             onMoveToHex={moveToHex}
             onStartChargeAgainstTarget={startChargeAgainstTarget}
             onStartChargeToHex={startChargeToHex}
+            onToggleFocusObjectiveCard={toggleFocusObjectiveCard}
+            onToggleFocusPowerCard={toggleFocusPowerCard}
             onSelectFighter={selectFighter}
             positionedHexes={boardProjection.positionedHexes}
           />
@@ -649,6 +717,10 @@ export default function PracticeBattlefieldApp() {
               <div>
                 <dt>Delve</dt>
                 <dd>{actionLens.delveAvailable ? "legal" : "no"}</dd>
+              </div>
+              <div>
+                <dt>Focus</dt>
+                <dd>{actionLens.focusAvailable ? "legal" : "no"}</dd>
               </div>
               <div>
                 <dt>Guard</dt>
@@ -799,6 +871,13 @@ export default function PracticeBattlefieldApp() {
               <div className="battlefield-button-row">
                 <button
                   type="button"
+                  onClick={focusHand}
+                  disabled={actionLens.focusAction === null || game.turnStep !== TurnStep.Action}
+                >
+                  {pendingFocus ? "Confirm Focus" : "Focus"}
+                </button>
+                <button
+                  type="button"
                   onClick={guardSelectedFighter}
                   disabled={actionLens.guardAction === null || game.turnStep !== TurnStep.Action}
                 >
@@ -831,6 +910,9 @@ export default function PracticeBattlefieldApp() {
               </p>
               <p>
                 <strong>Charge profiles:</strong> after you arm a gold destination, pick a target profile card to control which charge attack the map uses.
+              </p>
+              <p>
+                <strong>Focus:</strong> click Focus once to open the hand overlay, toggle any objective and power cards you want to discard, then click Focus again to confirm, or press Escape to cancel.
               </p>
               <p>
                 <strong>Guard:</strong> the selected fighter gets a white ring when guard is legal. Click Guard once to arm it, click Guard again to confirm, or press Escape to cancel.
@@ -928,6 +1010,7 @@ function BoardMap({
   game,
   pendingMoveHexId,
   pendingDelveFeatureTokenId,
+  pendingFocus,
   pendingGuardFighterId,
   pendingPassPower,
   pendingPowerOptionKey,
@@ -936,6 +1019,10 @@ function BoardMap({
   pendingAttackTargetId,
   pendingChargeBadgeLabel,
   pendingAttackBadgeLabel,
+  focusOverlay,
+  focusSelectionSummary,
+  selectedFocusObjectiveIds,
+  selectedFocusPowerIds,
   powerOverlay,
   boardTurnHeader,
   recentCombatTargetId,
@@ -947,6 +1034,7 @@ function BoardMap({
   selectedFeatureToken,
   onApplyPowerAction,
   onDelveSelectedFighter,
+  onFocusHand,
   onGuardSelectedFighter,
   onPassTurn,
   onAttackTarget,
@@ -955,6 +1043,8 @@ function BoardMap({
   onMoveToHex,
   onStartChargeAgainstTarget,
   onStartChargeToHex,
+  onToggleFocusObjectiveCard,
+  onToggleFocusPowerCard,
   onSelectFighter,
   positionedHexes,
   selectedFighterId,
@@ -964,6 +1054,7 @@ function BoardMap({
   game: Game;
   pendingMoveHexId: HexId | null;
   pendingDelveFeatureTokenId: FeatureTokenState["id"] | null;
+  pendingFocus: boolean;
   pendingGuardFighterId: FighterId | null;
   pendingPassPower: boolean;
   pendingPowerOptionKey: string | null;
@@ -972,6 +1063,10 @@ function BoardMap({
   pendingAttackTargetId: FighterId | null;
   pendingChargeBadgeLabel: string | null;
   pendingAttackBadgeLabel: string | null;
+  focusOverlay: FocusOverlayModel;
+  focusSelectionSummary: string;
+  selectedFocusObjectiveIds: CardId[];
+  selectedFocusPowerIds: CardId[];
   powerOverlay: PowerOverlayModel;
   boardTurnHeader: BoardTurnHeaderModel;
   recentCombatTargetId: FighterId | null;
@@ -983,6 +1078,7 @@ function BoardMap({
   selectedFeatureToken: FeatureTokenState | null;
   onApplyPowerAction: (option: PowerOverlayOption) => void;
   onDelveSelectedFighter: () => void;
+  onFocusHand: () => void;
   onGuardSelectedFighter: () => void;
   onPassTurn: () => void;
   onAttackTarget: (targetId: FighterId) => void;
@@ -991,6 +1087,8 @@ function BoardMap({
   onMoveToHex: (hexId: HexId) => void;
   onStartChargeAgainstTarget: (targetId: FighterId) => void;
   onStartChargeToHex: (hexId: HexId) => void;
+  onToggleFocusObjectiveCard: (cardId: CardId) => void;
+  onToggleFocusPowerCard: (cardId: CardId) => void;
   onSelectFighter: (fighterId: FighterId | null) => void;
   positionedHexes: PositionedHex[];
   selectedFighterId: FighterId | null;
@@ -1002,6 +1100,8 @@ function BoardMap({
     selectedFighterId === null ? null : getFighterName(game, selectedFighterId);
   const [actionTooltip, setActionTooltip] = useState<{ label: string; left: number; top: number } | null>(null);
   const [hoveredChargeTargetId, setHoveredChargeTargetId] = useState<FighterId | null>(null);
+  const selectedFocusObjectiveIdSet = new Set(selectedFocusObjectiveIds);
+  const selectedFocusPowerIdSet = new Set(selectedFocusPowerIds);
   const hoveredChargeDestinationHexIds =
     pendingChargeHexId === null
       ? getChargeDestinationHexIdsForTarget(actionLens, hoveredChargeTargetId)
@@ -1062,10 +1162,24 @@ function BoardMap({
           <p className="battlefield-board-last-action-detail">{lastResolvedAction.detail}</p>
         </section>
       )}
-      {(game.turnStep === TurnStep.Power && actionLens.passAction !== null) ||
+      {(game.turnStep === TurnStep.Action && actionLens.focusAction !== null) ||
+      (game.turnStep === TurnStep.Power && actionLens.passAction !== null) ||
       (game.turnStep === TurnStep.Power && actionLens.delveAction !== null && selectedFeatureToken !== null) ||
       (game.turnStep === TurnStep.Action && actionLens.guardAction !== null && selectedFighterName !== null) ? (
         <div className="battlefield-board-quick-actions">
+          {game.turnStep === TurnStep.Action && actionLens.focusAction !== null ? (
+            <button
+              type="button"
+              className={[
+                "battlefield-board-action",
+                "battlefield-board-action-focus",
+                pendingFocus ? "battlefield-board-action-focus-armed" : "",
+              ].filter(Boolean).join(" ")}
+              onClick={onFocusHand}
+            >
+              {pendingFocus ? "Confirm Focus" : "Focus"}
+            </button>
+          ) : null}
           {game.turnStep === TurnStep.Power && actionLens.delveAction !== null && selectedFeatureToken !== null ? (
             <button
               type="button"
@@ -1108,6 +1222,65 @@ function BoardMap({
             </button>
           ) : null}
         </div>
+      ) : null}
+      {game.turnStep === TurnStep.Action && actionLens.focusAction !== null && pendingFocus ? (
+        <section className="battlefield-focus-overlay">
+          <div className="battlefield-focus-overlay-header">
+            <p className="battlefield-focus-overlay-eyebrow">Focus</p>
+            <strong>Choose cards to discard before you confirm</strong>
+            <p className="battlefield-focus-overlay-copy">{focusSelectionSummary}</p>
+          </div>
+          <div className="battlefield-focus-overlay-section">
+            <p className="battlefield-focus-overlay-label">Objectives</p>
+            <div className="battlefield-focus-card-list">
+              {focusOverlay.objectiveCards.length === 0 ? (
+                <p className="battlefield-focus-empty">No objective cards in hand.</p>
+              ) : (
+                focusOverlay.objectiveCards.map((card) => (
+                  <button
+                    key={card.cardId}
+                    type="button"
+                    className={[
+                      "battlefield-focus-card-option",
+                      selectedFocusObjectiveIdSet.has(card.cardId) ? "battlefield-focus-card-option-selected" : "",
+                    ].filter(Boolean).join(" ")}
+                    onClick={() => onToggleFocusObjectiveCard(card.cardId)}
+                  >
+                    <span>{card.name}</span>
+                    <span className="battlefield-focus-card-option-tag">
+                      {selectedFocusObjectiveIdSet.has(card.cardId) ? "discard" : "keep"}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+          <div className="battlefield-focus-overlay-section">
+            <p className="battlefield-focus-overlay-label">Power</p>
+            <div className="battlefield-focus-card-list">
+              {focusOverlay.powerCards.length === 0 ? (
+                <p className="battlefield-focus-empty">No power cards in hand.</p>
+              ) : (
+                focusOverlay.powerCards.map((card) => (
+                  <button
+                    key={card.cardId}
+                    type="button"
+                    className={[
+                      "battlefield-focus-card-option",
+                      selectedFocusPowerIdSet.has(card.cardId) ? "battlefield-focus-card-option-selected" : "",
+                    ].filter(Boolean).join(" ")}
+                    onClick={() => onToggleFocusPowerCard(card.cardId)}
+                  >
+                    <span>{card.name}</span>
+                    <span className="battlefield-focus-card-option-tag">
+                      {selectedFocusPowerIdSet.has(card.cardId) ? "discard" : "keep"}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </section>
       ) : null}
       {game.turnStep === TurnStep.Power && powerOverlay.hasAnyOptions ? (
         <section className="battlefield-power-overlay">
@@ -1997,14 +2170,17 @@ function getFighterActionLens(
   const passAction = legalActions.find(
     (action): action is PassAction => action instanceof PassAction,
   ) ?? null;
+  const focusAction = legalActions.find(
+    (action): action is FocusAction => action instanceof FocusAction,
+  ) ?? null;
 
   if (activePlayer === null || selectedFighterId === null) {
-    return createEmptyActionLens(passAction);
+    return createEmptyActionLens(passAction, focusAction);
   }
 
   const fighter = activePlayer.getFighter(selectedFighterId) ?? null;
   if (fighter === null) {
-    return createEmptyActionLens(passAction);
+    return createEmptyActionLens(passAction, focusAction);
   }
 
   const attackActions = legalActions.filter(
@@ -2072,12 +2248,14 @@ function getFighterActionLens(
     moveActions,
     chargeActions,
     delveAction,
+    focusAction,
     guardAction,
     passAction,
     attackCount: attackTargetIds.size,
     moveCount: moveHexIds.size,
     chargeCount: uniqueChargeOptions.size,
     delveAvailable: delveAction !== null,
+    focusAvailable: focusAction !== null,
     guardAvailable: guardAction !== null,
   };
 }
@@ -2137,6 +2315,18 @@ function buildBattlefieldResultFlash(
       title: delveResult === null
         ? "Delved feature token"
         : `Delved to ${formatFeatureTokenSide(delveResult.sideAfterDelve)}`,
+      detail,
+    };
+  }
+
+  if (action instanceof FocusAction) {
+    const focusResult = game.getLatestRecord(GameRecordKind.Focus);
+    const discardedCardCount =
+      (focusResult?.discardedObjectives.length ?? 0) + (focusResult?.discardedPowerCards.length ?? 0);
+    return {
+      id: Date.now(),
+      tone: "power",
+      title: discardedCardCount === 0 ? "Focused hand" : `Focused ${discardedCardCount} card${discardedCardCount === 1 ? "" : "s"}`,
       detail,
     };
   }
@@ -2222,6 +2412,7 @@ function getBoardTurnHeaderModel({
   pendingChargeHexId,
   pendingChargeTargetName,
   pendingDelveFeatureTokenId,
+  pendingFocus,
   pendingGuardFighterId,
   pendingMoveHexId,
   pendingPassPower,
@@ -2237,6 +2428,7 @@ function getBoardTurnHeaderModel({
   pendingChargeHexId: HexId | null;
   pendingChargeTargetName: string | null;
   pendingDelveFeatureTokenId: FeatureTokenState["id"] | null;
+  pendingFocus: boolean;
   pendingGuardFighterId: FighterId | null;
   pendingMoveHexId: HexId | null;
   pendingPassPower: boolean;
@@ -2245,6 +2437,16 @@ function getBoardTurnHeaderModel({
   selectedFeatureToken: FeatureTokenState | null;
 }): BoardTurnHeaderModel {
   if (game.turnStep === TurnStep.Action) {
+    if (pendingFocus) {
+      return {
+        activePlayerName,
+        interactionLabel: "Focus is armed",
+        isArmed: true,
+        stepLabel: "Action Step",
+        tone: "action",
+      };
+    }
+
     if (pendingGuardFighterId !== null) {
       return {
         activePlayerName,
@@ -2303,7 +2505,7 @@ function getBoardTurnHeaderModel({
 
     return {
       activePlayerName,
-      interactionLabel: "Choose move, charge, guard, or attack.",
+      interactionLabel: "Choose focus, move, charge, guard, or attack.",
       isArmed: false,
       stepLabel: "Action Step",
       tone: "action",
@@ -2438,7 +2640,38 @@ function getPowerOverlayModel(
   };
 }
 
-function createEmptyActionLens(passAction: PassAction | null): FighterActionLens {
+function getFocusOverlayModel(
+  game: Game,
+  activePlayer: PlayerState | null,
+): FocusOverlayModel {
+  if (activePlayer === null || game.turnStep !== TurnStep.Action) {
+    return {
+      objectiveCards: [],
+      powerCards: [],
+      hasAnyCards: false,
+    };
+  }
+
+  const objectiveCards = activePlayer.objectiveHand.map((card) => ({
+    cardId: card.id,
+    name: activePlayer.getCardDefinition(card.id)?.name ?? card.definitionId,
+  }));
+  const powerCards = activePlayer.powerHand.map((card) => ({
+    cardId: card.id,
+    name: activePlayer.getCardDefinition(card.id)?.name ?? card.definitionId,
+  }));
+
+  return {
+    objectiveCards,
+    powerCards,
+    hasAnyCards: objectiveCards.length > 0 || powerCards.length > 0,
+  };
+}
+
+function createEmptyActionLens(
+  passAction: PassAction | null,
+  focusAction: FocusAction | null,
+): FighterActionLens {
   return {
     fighter: null,
     attackTargetHexIds: new Set<HexId>(),
@@ -2451,14 +2684,22 @@ function createEmptyActionLens(passAction: PassAction | null): FighterActionLens
     moveActions: [],
     chargeActions: [],
     delveAction: null,
+    focusAction,
     guardAction: null,
     passAction,
     attackCount: 0,
     moveCount: 0,
     chargeCount: 0,
     delveAvailable: false,
+    focusAvailable: focusAction !== null,
     guardAvailable: false,
   };
+}
+
+function toggleFocusCardId(current: CardId[], cardId: CardId): CardId[] {
+  return current.includes(cardId)
+    ? current.filter((currentCardId) => currentCardId !== cardId)
+    : [...current, cardId];
 }
 
 function getMoveOptions(actionLens: FighterActionLens): Array<{

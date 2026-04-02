@@ -36,7 +36,7 @@ import {
   TurnStep,
 } from "../values/enums";
 import type { CardZone as CardZoneType } from "../values/enums";
-import type { FighterId, HexId, PlayerId, TerritoryId } from "../values/ids";
+import type { CardId, FighterId, HexId, PlayerId, TerritoryId } from "../values/ids";
 import { ChooseTerritoryAction } from "../setup/ChooseTerritoryAction";
 import { CompleteMusterAction } from "../setup/CompleteMusterAction";
 import { DeployFighterAction } from "../setup/DeployFighterAction";
@@ -60,6 +60,7 @@ import {
 import { AttackAction } from "../actions/AttackAction";
 import { ChargeAction } from "../actions/ChargeAction";
 import { DelveAction } from "../actions/DelveAction";
+import { FocusAction } from "../actions/FocusAction";
 import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
@@ -86,6 +87,7 @@ import { DefaultScoringResolver } from "../rules/DefaultScoringResolver";
 import { DefaultWarscrollEffectResolver } from "../rules/DefaultWarscrollEffectResolver";
 import { DefaultVictoryResolver } from "../rules/DefaultVictoryResolver";
 import { DelveResolution } from "../rules/DelveResolution";
+import { FocusResolution, type FocusCardResolution } from "../rules/FocusResolution";
 import { PloyEffectResolver } from "../rules/PloyEffectResolver";
 import { PloyResolution } from "../rules/PloyResolution";
 import { RollOffContext } from "../rules/RollOffContext";
@@ -195,6 +197,11 @@ export class GameEngine {
 
     if (action instanceof DelveAction) {
       this.applyDelveAction(game, action);
+      return game;
+    }
+
+    if (action instanceof FocusAction) {
+      this.applyFocusAction(game, action);
       return game;
     }
 
@@ -825,6 +832,81 @@ export class GameEngine {
     );
   }
 
+  private applyFocusAction(game: Game, action: FocusAction): void {
+    this.assertCombatTurnStep(game, TurnStep.Action);
+    if (!this.combatActionService.isLegalFocusAction(game, action)) {
+      throw new Error(`Focus action is not legal for player ${action.playerId}.`);
+    }
+
+    const player = this.requirePlayer(game, action.playerId);
+    this.assertActivePlayer(game, player.id);
+
+    const discardedObjectives = action.objectiveCardIds.map((cardId) =>
+      this.discardFocusCard(
+        player,
+        cardId,
+        player.objectiveHand,
+        player.objectiveDeck.discardPile,
+        CardZone.ObjectiveDiscard,
+      ),
+    );
+    const discardedPowerCards = action.powerCardIds.map((cardId) =>
+      this.discardFocusCard(
+        player,
+        cardId,
+        player.powerHand,
+        player.powerDeck.discardPile,
+        CardZone.PowerDiscard,
+      ),
+    );
+    const drawnObjectives = this.drawFocusCards(
+      player,
+      player.objectiveDeck.drawPile,
+      player.objectiveHand,
+      discardedObjectives.length,
+      CardZone.ObjectiveHand,
+    );
+    const drawnPowerCards = [
+      ...this.drawFocusCards(
+        player,
+        player.powerDeck.drawPile,
+        player.powerHand,
+        discardedPowerCards.length,
+        CardZone.PowerHand,
+      ),
+      ...this.drawFocusCards(
+        player,
+        player.powerDeck.drawPile,
+        player.powerHand,
+        1,
+        CardZone.PowerHand,
+      ),
+    ];
+
+    const resolution = new FocusResolution(
+      player.id,
+      player.name,
+      discardedObjectives,
+      discardedPowerCards,
+      drawnObjectives,
+      drawnPowerCards,
+    );
+    game.addRecord(GameRecordKind.Focus, resolution);
+    game.consecutivePasses = 0;
+    const firstPlayerId = game.firstPlayerId;
+    if (firstPlayerId === null) {
+      throw new Error("Focus requires a combat turn with a first player.");
+    }
+
+    game.transitionTo(createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power));
+    game.eventLog.push(
+      `${player.name} focused, discarded ${discardedObjectives.length} objective card${discardedObjectives.length === 1 ? "" : "s"} `
+      + `and ${discardedPowerCards.length} power card${discardedPowerCards.length === 1 ? "" : "s"}, `
+      + `then drew ${drawnObjectives.length} objective card${drawnObjectives.length === 1 ? "" : "s"} `
+      + `and ${drawnPowerCards.length} power card${drawnPowerCards.length === 1 ? "" : "s"}.`,
+    );
+  }
+
   private applyPlayPloyAction(game: Game, action: PlayPloyAction): void {
     this.assertCombatTurnStep(game, TurnStep.Power);
     if (!this.combatActionService.isLegalPlayPloyAction(game, action)) {
@@ -1322,6 +1404,62 @@ export class GameEngine {
       card.zone = zone;
       hand.push(card);
     }
+  }
+
+  private drawFocusCards(
+    player: PlayerState,
+    drawPile: CardInstance[],
+    hand: CardInstance[],
+    amount: number,
+    zone: CardZoneType,
+  ): FocusCardResolution[] {
+    const drawnCards: FocusCardResolution[] = [];
+
+    for (let drawIndex = 0; drawIndex < amount; drawIndex += 1) {
+      const card = drawPile.shift();
+      if (card === undefined) {
+        break;
+      }
+
+      card.zone = zone;
+      hand.push(card);
+      const definition = player.getCardDefinition(card.id);
+      drawnCards.push({
+        cardId: card.id,
+        cardDefinitionId: card.definitionId,
+        cardName: definition?.name ?? card.definitionId,
+      });
+    }
+
+    return drawnCards;
+  }
+
+  private discardFocusCard(
+    player: PlayerState,
+    cardId: CardId,
+    hand: CardInstance[],
+    discardPile: CardInstance[],
+    discardZone: CardZoneType,
+  ): FocusCardResolution {
+    const cardWithDefinition = player.getCardWithDefinition(cardId);
+    if (cardWithDefinition === undefined) {
+      throw new Error(`Player ${player.name} does not have focus card ${cardId}.`);
+    }
+
+    const handIndex = hand.findIndex((card) => card.id === cardWithDefinition.card.id);
+    if (handIndex === -1) {
+      throw new Error(`Could not find focus card ${cardWithDefinition.card.id} in ${player.name}'s hand.`);
+    }
+
+    hand.splice(handIndex, 1);
+    cardWithDefinition.card.zone = discardZone;
+    cardWithDefinition.card.revealed = true;
+    discardPile.push(cardWithDefinition.card);
+    return {
+      cardId: cardWithDefinition.card.id,
+      cardDefinitionId: cardWithDefinition.card.definitionId,
+      cardName: cardWithDefinition.definition.name,
+    };
   }
 
   private redrawHand(
