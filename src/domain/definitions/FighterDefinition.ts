@@ -5,6 +5,7 @@ import { WeaponDefinition } from "./WeaponDefinition";
 export class FighterDefinition {
   public readonly id: FighterDefinitionId;
   public readonly name: string;
+  public readonly isLeader: boolean;
   public readonly move: number;
   public readonly saveDice: number;
   public readonly saveSymbol: SaveSymbol;
@@ -15,6 +16,7 @@ export class FighterDefinition {
   public constructor(
     id: FighterDefinitionId,
     name: string,
+    isLeader: boolean,
     move: number,
     saveDice: number,
     saveSymbol: SaveSymbol,
@@ -24,6 +26,7 @@ export class FighterDefinition {
   ) {
     this.id = id;
     this.name = name;
+    this.isLeader = isLeader;
     this.move = move;
     this.saveDice = saveDice;
     this.saveSymbol = saveSymbol;

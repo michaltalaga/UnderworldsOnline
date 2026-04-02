@@ -8,5 +8,11 @@ export type AttackRollAllSuccessesObjectiveCondition = {
   timing: typeof ObjectiveConditionTiming.Immediate;
 };
 
+export type SlayLeaderOrEqualOrGreaterHealthObjectiveCondition = {
+  kind: typeof ObjectiveConditionKind.SlayLeaderOrEqualOrGreaterHealth;
+  timing: typeof ObjectiveConditionTiming.Immediate;
+};
+
 export type ObjectiveCondition =
-  | AttackRollAllSuccessesObjectiveCondition;
+  | AttackRollAllSuccessesObjectiveCondition
+  | SlayLeaderOrEqualOrGreaterHealthObjectiveCondition;

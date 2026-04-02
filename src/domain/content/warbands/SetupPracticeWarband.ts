@@ -24,6 +24,7 @@ const fighters = [
   new FighterDefinition(
     "fighter-def:setup-practice:1",
     "Practice Fighter 1",
+    true,
     3,
     1,
     SaveSymbol.Shield,
@@ -50,6 +51,7 @@ const fighters = [
   new FighterDefinition(
     "fighter-def:setup-practice:2",
     "Practice Fighter 2",
+    false,
     3,
     1,
     SaveSymbol.Shield,
@@ -60,6 +62,7 @@ const fighters = [
   new FighterDefinition(
     "fighter-def:setup-practice:3",
     "Practice Fighter 3",
+    false,
     4,
     1,
     SaveSymbol.Dodge,
@@ -70,6 +73,7 @@ const fighters = [
   new FighterDefinition(
     "fighter-def:setup-practice:4",
     "Practice Fighter 4",
+    false,
     3,
     1,
     SaveSymbol.Shield,
@@ -126,6 +130,7 @@ function createObjectiveCards(): CardDefinition[] {
   return Array.from({ length: 12 }, (_, index) => {
     const cardNumber = String(index + 1).padStart(2, "0");
     const isAllSuccessesObjective = index === 0;
+    const isSlayLeaderOrEqualOrGreaterHealthObjective = index === 1;
     const objectiveConditions: ObjectiveCondition[] = isAllSuccessesObjective
       ? [
         {
@@ -133,6 +138,13 @@ function createObjectiveCards(): CardDefinition[] {
           timing: ObjectiveConditionTiming.Immediate,
         },
       ]
+      : isSlayLeaderOrEqualOrGreaterHealthObjective
+        ? [
+          {
+            kind: ObjectiveConditionKind.SlayLeaderOrEqualOrGreaterHealth,
+            timing: ObjectiveConditionTiming.Immediate,
+          },
+        ]
       : [];
 
     return new CardDefinition(
@@ -141,6 +153,8 @@ function createObjectiveCards(): CardDefinition[] {
       `Practice Objective ${cardNumber}`,
       isAllSuccessesObjective
         ? "Score this immediately after you make an Attack roll if all of the results were successes."
+        : isSlayLeaderOrEqualOrGreaterHealthObjective
+          ? "Score this immediately after an enemy fighter is slain by a friendly fighter if the target was a leader or the target's Health characteristic was equal to or greater than the attacker's."
         : "",
       1,
       [],

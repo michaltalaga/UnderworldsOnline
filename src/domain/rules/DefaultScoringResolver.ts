@@ -45,6 +45,8 @@ export class DefaultScoringResolver extends ScoringResolver {
     switch (condition.kind) {
       case ObjectiveConditionKind.AttackRollAllSuccesses:
         return this.didPlayerMakeAnAllSuccessesAttackRoll(game, playerId);
+      case ObjectiveConditionKind.SlayLeaderOrEqualOrGreaterHealth:
+        return this.didPlayerSlayLeaderOrEqualOrGreaterHealthEnemy(game, playerId);
       default:
         return false;
     }
@@ -57,5 +59,29 @@ export class DefaultScoringResolver extends ScoringResolver {
     }
 
     return latestCombat.attackRoll.length > 0 && latestCombat.attackSuccesses === latestCombat.attackRoll.length;
+  }
+
+  private didPlayerSlayLeaderOrEqualOrGreaterHealthEnemy(game: Game, playerId: PlayerId): boolean {
+    const latestCombat = game.getLatestRecord(GameRecordKind.Combat);
+    if (
+      latestCombat === null ||
+      latestCombat.context.attackerPlayerId !== playerId ||
+      !latestCombat.targetSlain
+    ) {
+      return false;
+    }
+
+    const attackerPlayer = game.getPlayer(latestCombat.context.attackerPlayerId);
+    const defenderPlayer = game.getPlayer(latestCombat.context.defenderPlayerId);
+    const attackerDefinition = attackerPlayer?.getFighterDefinition(latestCombat.context.attackerFighterId);
+    const targetDefinition = defenderPlayer?.getFighterDefinition(latestCombat.context.targetFighterId);
+    if (
+      attackerDefinition === undefined ||
+      targetDefinition === undefined
+    ) {
+      return false;
+    }
+
+    return targetDefinition.isLeader || targetDefinition.health >= attackerDefinition.health;
   }
 }
