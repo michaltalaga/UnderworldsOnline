@@ -346,6 +346,14 @@ body {
   color: #355425;
 }
 
+.battlefield-board-action-delve-armed {
+  background: linear-gradient(180deg, rgba(213, 242, 177, 1), rgba(137, 184, 69, 1));
+  box-shadow:
+    inset 0 0 0 2px rgba(247, 255, 235, 0.9),
+    0 0 0 4px rgba(140, 184, 60, 0.2),
+    0 12px 24px rgba(35, 24, 18, 0.18);
+}
+
 .battlefield-board-action:hover {
   transform: translateY(-1px);
 }
@@ -703,6 +711,16 @@ body {
     0 10px 20px rgba(48, 37, 28, 0.18);
 }
 
+.battlefield-map-hex-delve-armed {
+  border-color: rgba(90, 132, 32, 0.96);
+  background: linear-gradient(180deg, rgba(235, 249, 206, 1), rgba(165, 206, 88, 1));
+  box-shadow:
+    inset 0 0 0 2px rgba(251, 255, 244, 0.92),
+    0 0 0 4px rgba(125, 171, 47, 0.28),
+    0 0 18px rgba(119, 166, 41, 0.34),
+    0 10px 20px rgba(48, 37, 28, 0.2);
+}
+
 .battlefield-map-hex-guard-ready {
   box-shadow:
     inset 0 0 0 2px rgba(255, 255, 255, 0.84),
@@ -860,6 +878,15 @@ body {
     inset 0 0 0 1px rgba(250, 255, 244, 0.84),
     0 0 0 3px rgba(152, 191, 74, 0.18),
     0 8px 18px rgba(41, 33, 20, 0.14);
+}
+
+.battlefield-feature-chip-delve-armed {
+  border-color: rgba(90, 132, 32, 0.44);
+  background: rgba(239, 251, 220, 0.98);
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 255, 244, 0.94),
+    0 0 0 3px rgba(125, 171, 47, 0.24),
+    0 8px 18px rgba(41, 33, 20, 0.16);
 }
 
 .battlefield-feature-hidden {

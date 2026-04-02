@@ -151,6 +151,7 @@ export default function PracticeBattlefieldApp() {
   const [selectedMoveHexId, setSelectedMoveHexId] = useState<HexId | null>(null);
   const [selectedChargeKey, setSelectedChargeKey] = useState<string | null>(null);
   const [pendingMoveHexId, setPendingMoveHexId] = useState<HexId | null>(null);
+  const [pendingDelveFeatureTokenId, setPendingDelveFeatureTokenId] = useState<FeatureTokenState["id"] | null>(null);
   const [pendingChargeHexId, setPendingChargeHexId] = useState<HexId | null>(null);
   const [pendingChargeTargetId, setPendingChargeTargetId] = useState<FighterId | null>(null);
   const [pendingAttackTargetId, setPendingAttackTargetId] = useState<FighterId | null>(null);
@@ -197,28 +198,33 @@ export default function PracticeBattlefieldApp() {
   const recentCombatTargetId = recentCombat?.context.targetFighterId ?? null;
   const recentCombatTargetName =
     recentCombatTargetId === null ? null : getFighterName(game, recentCombatTargetId);
+  const powerPrompt =
+    pendingDelveFeatureTokenId !== null && selectedFeatureToken?.id === pendingDelveFeatureTokenId
+      ? `${selectedFighterName} has ${getFeatureTokenBadge(selectedFeatureToken)} armed for delve. Click the same feature chip or Delve button again to confirm, or press Escape to cancel.`
+      : actionLens.delveAction !== null && selectedFeatureToken !== null
+        ? `${recentCombatTargetName === null ? "" : `Recent combat: ${recentCombatTargetName} remains marked on the map. `}${selectedFighterName} can delve ${getFeatureTokenBadge(selectedFeatureToken)} from the map. Click the feature chip or Delve button to arm it, then click the same control again to confirm, or pass the power step.`
+        : recentCombatTargetName === null
+          ? "The selected fighter has already acted. Pass the power step or reset the board."
+          : `Recent combat: ${recentCombatTargetName} remains marked on the map. Pass the power step or reset the board.`;
   const actionPrompt =
     game.turnStep === TurnStep.Action
       ? pendingAttackTargetId !== null
         ? `${pendingAttackTargetName ?? pendingAttackTargetId} selected with ${pendingAttackOption?.label ?? "the current profile"}. Click the same crimson target again to confirm the attack, press Escape to cancel, or pick a different crimson target.`
         : pendingChargeTargetId !== null && pendingChargeHexId !== null
-        ? `${pendingChargeTargetName ?? pendingChargeTargetId} selected from ${pendingChargeHexId} with ${pendingChargeOption?.label ?? "the current profile"}. Click the same red target again to confirm, press Escape to cancel, or pick a different target.`
-        : pendingChargeHexId !== null
-          ? `Charge from ${pendingChargeHexId} selected. Click a red target to arm it, or choose a charge profile below first.`
-          : pendingMoveHexId !== null
-            ? `Move to ${pendingMoveHexId} selected. Click the same teal hex again to confirm, press Escape to cancel, or choose another teal hex.`
-            : "Select a fighter, then click a teal hex to move or click a gold hex and then a red target to charge."
-      : recentCombatTargetName === null
-        ? actionLens.delveAction !== null && selectedFeatureToken !== null
-          ? `${selectedFighterName} can delve ${getFeatureTokenBadge(selectedFeatureToken)} from the map or pass the power step.`
-          : "The selected fighter has already acted. Pass the power step or reset the board."
-        : `Recent combat: ${recentCombatTargetName} remains marked on the map. Pass the power step or reset the board.`;
+          ? `${pendingChargeTargetName ?? pendingChargeTargetId} selected from ${pendingChargeHexId} with ${pendingChargeOption?.label ?? "the current profile"}. Click the same red target again to confirm, press Escape to cancel, or pick a different target.`
+          : pendingChargeHexId !== null
+            ? `Charge from ${pendingChargeHexId} selected. Click a red target to arm it, or choose a charge profile below first.`
+            : pendingMoveHexId !== null
+              ? `Move to ${pendingMoveHexId} selected. Click the same teal hex again to confirm, press Escape to cancel, or choose another teal hex.`
+              : "Select a fighter, then click a teal hex to move or click a gold hex and then a red target to charge."
+      : powerPrompt;
 
   function selectFighter(fighterId: FighterId | null): void {
     setSelectedFighterId(fighterId);
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
     setPendingMoveHexId(null);
+    setPendingDelveFeatureTokenId(null);
     setPendingChargeHexId(null);
     setPendingChargeTargetId(null);
     setPendingAttackTargetId(null);
@@ -238,6 +244,7 @@ export default function PracticeBattlefieldApp() {
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
     setPendingMoveHexId(null);
+    setPendingDelveFeatureTokenId(null);
     setPendingChargeHexId(null);
     setPendingChargeTargetId(null);
     setPendingAttackTargetId(null);
@@ -250,6 +257,7 @@ export default function PracticeBattlefieldApp() {
   function moveToHex(hexId: HexId): void {
     if (pendingMoveHexId !== hexId) {
       setPendingMoveHexId(hexId);
+      setPendingDelveFeatureTokenId(null);
       setPendingChargeHexId(null);
       setPendingChargeTargetId(null);
       setPendingAttackTargetId(null);
@@ -269,6 +277,7 @@ export default function PracticeBattlefieldApp() {
     }
 
     setPendingMoveHexId(null);
+    setPendingDelveFeatureTokenId(null);
     setPendingChargeHexId(hexId);
     setPendingChargeTargetId(null);
     setPendingAttackTargetId(null);
@@ -293,14 +302,33 @@ export default function PracticeBattlefieldApp() {
 
   function cancelPendingCharge(): void {
     setPendingMoveHexId(null);
+    setPendingDelveFeatureTokenId(null);
     setPendingChargeHexId(null);
     setPendingChargeTargetId(null);
     setPendingAttackTargetId(null);
   }
 
+  function delveSelectedFighter(): void {
+    if (actionLens.delveAction === null || selectedFeatureToken === null) {
+      return;
+    }
+
+    if (pendingDelveFeatureTokenId !== selectedFeatureToken.id) {
+      setPendingMoveHexId(null);
+      setPendingDelveFeatureTokenId(selectedFeatureToken.id);
+      setPendingChargeHexId(null);
+      setPendingChargeTargetId(null);
+      setPendingAttackTargetId(null);
+      return;
+    }
+
+    applyAction(actionLens.delveAction);
+  }
+
   function attackTarget(targetId: FighterId): void {
     if (pendingAttackTargetId !== targetId) {
       setPendingMoveHexId(null);
+      setPendingDelveFeatureTokenId(null);
       setPendingChargeHexId(null);
       setPendingChargeTargetId(null);
       setPendingAttackTargetId(targetId);
@@ -338,6 +366,7 @@ export default function PracticeBattlefieldApp() {
   useEffect(() => {
     if (
       pendingMoveHexId === null &&
+      pendingDelveFeatureTokenId === null &&
       pendingChargeHexId === null &&
       pendingChargeTargetId === null &&
       pendingAttackTargetId === null
@@ -348,6 +377,7 @@ export default function PracticeBattlefieldApp() {
     function handleKeyDown(event: KeyboardEvent): void {
       if (event.key === "Escape") {
         setPendingMoveHexId(null);
+        setPendingDelveFeatureTokenId(null);
         setPendingChargeHexId(null);
         setPendingChargeTargetId(null);
         setPendingAttackTargetId(null);
@@ -356,7 +386,7 @@ export default function PracticeBattlefieldApp() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [pendingMoveHexId, pendingChargeHexId, pendingChargeTargetId, pendingAttackTargetId]);
+  }, [pendingMoveHexId, pendingDelveFeatureTokenId, pendingChargeHexId, pendingChargeTargetId, pendingAttackTargetId]);
 
   useEffect(() => {
     if (resultFlash === null) {
@@ -378,6 +408,7 @@ export default function PracticeBattlefieldApp() {
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
     setPendingMoveHexId(null);
+    setPendingDelveFeatureTokenId(null);
     setPendingChargeHexId(null);
     setPendingChargeTargetId(null);
     setPendingAttackTargetId(null);
@@ -450,6 +481,7 @@ export default function PracticeBattlefieldApp() {
             selectedFeatureToken={selectedFeatureToken}
             actionLens={actionLens}
             pendingMoveHexId={pendingMoveHexId}
+            pendingDelveFeatureTokenId={pendingDelveFeatureTokenId}
             pendingChargeHexId={pendingChargeHexId}
             pendingChargeTargetId={pendingChargeTargetId}
             pendingAttackTargetId={pendingAttackTargetId}
@@ -459,11 +491,7 @@ export default function PracticeBattlefieldApp() {
             recentCombatTargetId={recentCombatTargetId}
             resultFlash={resultFlash}
             onApplyPowerAction={applyAction}
-            onDelveSelectedFighter={() => {
-              if (actionLens.delveAction !== null) {
-                applyAction(actionLens.delveAction);
-              }
-            }}
+            onDelveSelectedFighter={delveSelectedFighter}
             onGuardSelectedFighter={() => {
               if (actionLens.guardAction !== null) {
                 applyAction(actionLens.guardAction);
@@ -729,7 +757,7 @@ export default function PracticeBattlefieldApp() {
                 <strong>Power overlay:</strong> legal ploys, upgrades, and warscroll abilities appear on the map during power step.
               </p>
               <p>
-                <strong>Delve:</strong> if the selected fighter is standing on a revealed feature token during power step, the feature chip and board button both become delve controls.
+                <strong>Delve:</strong> if the selected fighter is standing on a revealed feature token during power step, the feature chip and board button both become delve controls. Click once to arm, click the same control again to confirm, or press Escape to cancel.
               </p>
               <p>
                 <strong>Attack targets:</strong>{" "}
@@ -811,6 +839,7 @@ function BoardMap({
   actionLens,
   game,
   pendingMoveHexId,
+  pendingDelveFeatureTokenId,
   pendingChargeHexId,
   pendingChargeTargetId,
   pendingAttackTargetId,
@@ -837,6 +866,7 @@ function BoardMap({
   actionLens: FighterActionLens;
   game: Game;
   pendingMoveHexId: HexId | null;
+  pendingDelveFeatureTokenId: FeatureTokenState["id"] | null;
   pendingChargeHexId: HexId | null;
   pendingChargeTargetId: FighterId | null;
   pendingAttackTargetId: FighterId | null;
@@ -895,10 +925,14 @@ function BoardMap({
           {game.turnStep === TurnStep.Power && actionLens.delveAction !== null && selectedFeatureToken !== null ? (
             <button
               type="button"
-              className="battlefield-board-action battlefield-board-action-delve"
+              className={[
+                "battlefield-board-action",
+                "battlefield-board-action-delve",
+                pendingDelveFeatureTokenId === selectedFeatureToken.id ? "battlefield-board-action-delve-armed" : "",
+              ].filter(Boolean).join(" ")}
               onClick={onDelveSelectedFighter}
             >
-              Delve {getFeatureTokenBadge(selectedFeatureToken)}
+              {pendingDelveFeatureTokenId === selectedFeatureToken.id ? "Confirm" : "Delve"} {getFeatureTokenBadge(selectedFeatureToken)}
             </button>
           ) : null}
           {game.turnStep === TurnStep.Action && actionLens.guardAction !== null && selectedFighterName !== null ? (
@@ -1029,6 +1063,10 @@ function BoardMap({
             featureToken !== null &&
             actionLens.delveAction?.featureTokenId === featureToken.id &&
             fighter?.id === selectedFighterId;
+          const isPendingDelveFeature =
+            isDelveReadyFeature &&
+            featureToken !== null &&
+            featureToken.id === pendingDelveFeatureTokenId;
           const isClickableMoveDestination = isMoveDestination && game.turnStep === TurnStep.Action;
           const isClickableChargeDestination = isChargeDestination && game.turnStep === TurnStep.Action;
           const isClickableChargeTarget =
@@ -1050,6 +1088,7 @@ function BoardMap({
           const actionBadge = getHexActionBadge({
             isAttackTarget,
             isChargeDestination,
+            isPendingDelveHex: isPendingDelveFeature,
             isPendingAttackTarget,
             isPendingChargeHex,
             pendingChargeBadgeLabel,
@@ -1085,6 +1124,7 @@ function BoardMap({
               className={getHexClassName(game, hex, {
                 isAttackTarget,
                 isChargeDestination,
+                isPendingDelveHex: isPendingDelveFeature,
                 isPendingAttackTarget,
                 isPendingChargeHex,
                 isPendingChargeTarget,
@@ -1184,13 +1224,19 @@ function BoardMap({
                   isDelveReadyFeature ? (
                     <button
                       type="button"
-                      className={`battlefield-feature-chip battlefield-feature-${featureToken.side} battlefield-feature-chip-button battlefield-feature-chip-delve`}
+                      className={[
+                        "battlefield-feature-chip",
+                        `battlefield-feature-${featureToken.side}`,
+                        "battlefield-feature-chip-button",
+                        "battlefield-feature-chip-delve",
+                        isPendingDelveFeature ? "battlefield-feature-chip-delve-armed" : "",
+                      ].join(" ")}
                       onClick={(event) => {
                         event.stopPropagation();
                         onDelveSelectedFighter();
                       }}
                     >
-                      Delve {getFeatureTokenBadge(featureToken)}
+                      {isPendingDelveFeature ? "Confirm" : "Delve"} {getFeatureTokenBadge(featureToken)}
                     </button>
                   ) : (
                     <span className={`battlefield-feature-chip battlefield-feature-${featureToken.side}`}>
@@ -1425,6 +1471,7 @@ function getHexClassName(
   state: {
     isAttackTarget: boolean;
     isChargeDestination: boolean;
+    isPendingDelveHex: boolean;
     isPendingAttackTarget: boolean;
     isPendingChargeHex: boolean;
     isPendingChargeTarget: boolean;
@@ -1476,6 +1523,10 @@ function getHexClassName(
 
   if (state.isPendingMoveHex) {
     classes.push("battlefield-map-hex-move-armed");
+  }
+
+  if (state.isPendingDelveHex) {
+    classes.push("battlefield-map-hex-delve-armed");
   }
 
   if (state.isChargeDestination) {
@@ -1540,6 +1591,7 @@ function formatWeaponAccuracy(accuracy: string): string {
 function getHexActionBadge(state: {
   isAttackTarget: boolean;
   isChargeDestination: boolean;
+  isPendingDelveHex: boolean;
   isPendingAttackTarget: boolean;
   isPendingChargeHex: boolean;
   pendingChargeBadgeLabel: string | null;
@@ -1560,6 +1612,10 @@ function getHexActionBadge(state: {
       label: state.pendingAttackBadgeLabel ?? "confirm",
       detailed: state.pendingAttackBadgeLabel !== null,
     };
+  }
+
+  if (state.isPendingDelveHex) {
+    return { tone: "confirm", label: "confirm", detailed: false };
   }
 
   if (state.isPendingChargeTarget) {
