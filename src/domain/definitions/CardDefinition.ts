@@ -1,7 +1,15 @@
-import type { CardDefinitionId } from "../values/ids";
-import { CardKind } from "../values/enums";
+import type { CardDefinitionId, FighterId } from "../values/ids";
+import { CardKind, type ObjectiveConditionTiming } from "../values/enums";
 import type { PloyEffect } from "./PloyEffect";
-import type { ObjectiveRule } from "../rules/objectives/ObjectiveRule";
+import type { CardInstance } from "../state/CardInstance";
+import type { Game } from "../state/Game";
+import type { PlayerState } from "../state/PlayerState";
+
+export type CardPlayContext = {
+  timing?: ObjectiveConditionTiming;
+  targetFighterId?: FighterId | null;
+  equippedFighterId?: FighterId | null;
+};
 
 export class CardDefinition {
   public readonly id: CardDefinitionId;
@@ -10,7 +18,6 @@ export class CardDefinition {
   public readonly text: string;
   public readonly gloryValue: number;
   public readonly ployEffects: readonly PloyEffect[];
-  public readonly objectiveRule: ObjectiveRule | null;
 
   public constructor(
     id: CardDefinitionId,
@@ -19,7 +26,6 @@ export class CardDefinition {
     text: string,
     gloryValue: number = 0,
     ployEffects: readonly PloyEffect[] = [],
-    objectiveRule: ObjectiveRule | null = null,
   ) {
     this.id = id;
     this.kind = kind;
@@ -27,6 +33,31 @@ export class CardDefinition {
     this.text = text;
     this.gloryValue = gloryValue;
     this.ployEffects = ployEffects;
-    this.objectiveRule = objectiveRule;
+  }
+
+  public canPlay(
+    game: Game,
+    player: PlayerState,
+    card: CardInstance,
+    context: CardPlayContext = {},
+  ): boolean {
+    void game;
+    void player;
+    void card;
+    void context;
+    return false;
+  }
+
+  public play(
+    game: Game,
+    player: PlayerState,
+    card: CardInstance,
+    context: CardPlayContext = {},
+  ): string[] {
+    void game;
+    void player;
+    void card;
+    void context;
+    throw new Error(`Card ${this.name} cannot be played.`);
   }
 }

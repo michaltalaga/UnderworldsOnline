@@ -21,12 +21,7 @@ export class DefaultScoringResolver extends ScoringResolver {
         return false;
       }
 
-      const objectiveRule = definition.objectiveRule;
-      if (objectiveRule === null || objectiveRule.timing !== timing) {
-        return false;
-      }
-
-      return objectiveRule.canScore(game, player.id);
+      return definition.canPlay(game, player, card, { timing });
     });
   }
 }

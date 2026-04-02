@@ -1,5 +1,4 @@
 import { CardInstance } from "../state/CardInstance";
-import { CardDefinition } from "../definitions/CardDefinition";
 import { WeaponAbilityDefinition } from "../definitions/WeaponAbilityDefinition";
 import {
   CleanupResolution,
@@ -84,13 +83,11 @@ import { CombatActionService } from "../rules/CombatActionService";
 import { CombatContext } from "../rules/CombatContext";
 import { CombatResolver } from "../rules/CombatResolver";
 import { DefaultCombatResolver } from "../rules/DefaultCombatResolver";
-import { DefaultPloyEffectResolver } from "../rules/DefaultPloyEffectResolver";
 import { DefaultScoringResolver } from "../rules/DefaultScoringResolver";
 import { DefaultWarscrollEffectResolver } from "../rules/DefaultWarscrollEffectResolver";
 import { DefaultVictoryResolver } from "../rules/DefaultVictoryResolver";
 import { DelveResolution } from "../rules/DelveResolution";
 import { FocusResolution, type FocusCardResolution } from "../rules/FocusResolution";
-import { PloyEffectResolver } from "../rules/PloyEffectResolver";
 import { PloyResolution } from "../rules/PloyResolution";
 import { RoundStartResolution, type RoundStartFeatureTokenResolution } from "../rules/RoundStartResolution";
 import { RollOffContext } from "../rules/RollOffContext";
@@ -116,7 +113,6 @@ export class GameEngine {
   private readonly scoringResolver: ScoringResolver;
   private readonly victoryResolver: VictoryResolver;
   private readonly warscrollEffectResolver: WarscrollEffectResolver;
-  private readonly ployEffectResolver: PloyEffectResolver;
 
   public constructor(
     shuffleCards: GameEngineShuffleCards = GameEngine.copyCards,
@@ -125,8 +121,7 @@ export class GameEngine {
     scoringResolver: ScoringResolver = new DefaultScoringResolver(),
     victoryResolver: VictoryResolver = new DefaultVictoryResolver(),
     warscrollEffectResolver: WarscrollEffectResolver = new DefaultWarscrollEffectResolver(),
-    ployEffectResolver: PloyEffectResolver = new DefaultPloyEffectResolver(),
-    combatActionService: CombatActionService = new CombatActionService(warscrollEffectResolver, ployEffectResolver),
+    combatActionService: CombatActionService = new CombatActionService(warscrollEffectResolver),
   ) {
     this.shuffleCards = shuffleCards;
     this.rollOffResolver = rollOffResolver;
@@ -135,7 +130,6 @@ export class GameEngine {
     this.scoringResolver = scoringResolver;
     this.victoryResolver = victoryResolver;
     this.warscrollEffectResolver = warscrollEffectResolver;
-    this.ployEffectResolver = ployEffectResolver;
   }
 
   public applySetupAction(game: Game, action: SetupAction): Game {
@@ -965,22 +959,12 @@ export class GameEngine {
     }
 
     const ployTarget = this.getPloyTargetDetails(game, action.targetFighterId);
-    const effectDescriptions = this.ployEffectResolver.resolve(
+    const effectDescriptions = cardWithDefinition.definition.play(
       game,
       player,
-      cardWithDefinition.definition,
-      action.targetFighterId,
+      cardWithDefinition.card,
+      { targetFighterId: action.targetFighterId },
     );
-    const handIndex = player.powerHand.findIndex((card) => card.id === cardWithDefinition.card.id);
-    if (handIndex === -1) {
-      throw new Error(`Could not find ploy ${cardWithDefinition.card.id} in ${player.name}'s power hand.`);
-    }
-
-    player.powerHand.splice(handIndex, 1);
-    cardWithDefinition.card.zone = CardZone.PowerDiscard;
-    cardWithDefinition.card.attachedToFighterId = null;
-    cardWithDefinition.card.revealed = true;
-    player.powerDeck.discardPile.push(cardWithDefinition.card);
     const resolution = new PloyResolution(
       player.id,
       player.name,
@@ -1024,23 +1008,13 @@ export class GameEngine {
       throw new Error(`Could not find fighter definition for ${fighter.id}.`);
     }
 
+    cardWithDefinition.definition.play(
+      game,
+      player,
+      cardWithDefinition.card,
+      { equippedFighterId: fighter.id },
+    );
     const upgradeCost = cardWithDefinition.definition.gloryValue;
-    if (player.glory < upgradeCost) {
-      throw new Error(`${player.name} does not have enough glory to play ${cardWithDefinition.definition.name}.`);
-    }
-
-    const handIndex = player.powerHand.findIndex((card) => card.id === cardWithDefinition.card.id);
-    if (handIndex === -1) {
-      throw new Error(`Could not find upgrade ${cardWithDefinition.card.id} in ${player.name}'s power hand.`);
-    }
-
-    player.powerHand.splice(handIndex, 1);
-    cardWithDefinition.card.zone = CardZone.Equipped;
-    cardWithDefinition.card.attachedToFighterId = fighter.id;
-    cardWithDefinition.card.revealed = true;
-    player.equippedUpgrades.push(cardWithDefinition.card);
-    fighter.upgradeCardIds.push(cardWithDefinition.card.id);
-    player.glory -= upgradeCost;
     const resolution = new UpgradeResolution(
       player.id,
       player.name,
@@ -1446,10 +1420,13 @@ export class GameEngine {
         throw new Error(`Objective card ${objectiveId} is not available to score for ${player.name}.`);
       }
 
-      const objectiveRule = objective.definition.objectiveRule;
-      const scoredObjective = objectiveRule === null
-        ? this.scoreObjectiveCard(player, objective.card, objective.definition)
-        : objectiveRule.score(game, player, objective.card, objective.definition);
+      objective.definition.play(game, player, objective.card, { timing });
+      const scoredObjective = {
+        cardId: objective.card.id,
+        cardDefinitionId: objective.card.definitionId,
+        cardName: objective.definition.name,
+        gloryValue: objective.definition.gloryValue,
+      };
       gloryGained += scoredObjective.gloryValue;
       scoredObjectives.push(scoredObjective);
 
@@ -1475,30 +1452,6 @@ export class GameEngine {
     }
 
     return playerResolution;
-  }
-
-  private scoreObjectiveCard(
-    player: PlayerState,
-    objectiveCard: CardInstance,
-    definition: CardDefinition,
-  ): ObjectiveScoringCardResolution {
-    const handIndex = player.objectiveHand.findIndex((card) => card.id === objectiveCard.id);
-    if (handIndex === -1) {
-      throw new Error(`Could not find objective ${objectiveCard.id} in ${player.name}'s hand.`);
-    }
-
-    player.objectiveHand.splice(handIndex, 1);
-    objectiveCard.zone = CardZone.ScoredObjectives;
-    objectiveCard.revealed = true;
-    player.scoredObjectives.push(objectiveCard);
-    player.glory += definition.gloryValue;
-
-    return {
-      cardId: objectiveCard.id,
-      cardDefinitionId: objectiveCard.definitionId,
-      cardName: definition.name,
-      gloryValue: definition.gloryValue,
-    };
   }
 
   private drawFocusCards(

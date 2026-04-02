@@ -1,17 +1,22 @@
-import { CardDefinition } from "../../definitions/CardDefinition";
+import { CardDefinition, type CardPlayContext } from "../../definitions/CardDefinition";
 import { FighterDefinition } from "../../definitions/FighterDefinition";
 import { WarbandDefinition } from "../../definitions/WarbandDefinition";
-import { PracticeObjective01Rule } from "../../rules/objectives/AttackRollAllSuccessesObjectiveRule";
-import { PracticeObjective03Rule } from "../../rules/objectives/DelveInEnemyTerritoryOrFriendlyIfUnderdogObjectiveRule";
-import { PracticeObjective04Rule } from "../../rules/objectives/DelveThreeTreasureTokensThisRoundOrEnemyHeldAtRoundStartObjectiveRule";
-import { PracticeObjective02Rule } from "../../rules/objectives/SlayLeaderOrEqualOrGreaterHealthObjectiveRule";
 import { WeaponAbilityDefinition } from "../../definitions/WeaponAbilityDefinition";
 import { WarscrollAbilityDefinition } from "../../definitions/WarscrollAbilityDefinition";
 import { WarscrollDefinition } from "../../definitions/WarscrollDefinition";
 import { WeaponDefinition } from "../../definitions/WeaponDefinition";
+import type { PloyEffect } from "../../definitions/PloyEffect";
+import { GameRecordKind } from "../../state/GameRecord";
+import type { CardInstance } from "../../state/CardInstance";
+import type { FighterState } from "../../state/FighterState";
+import type { Game } from "../../state/Game";
+import type { PlayerState } from "../../state/PlayerState";
 import {
+  CardZone,
   CardKind,
+  FeatureTokenSide,
   FighterTokenKind,
+  ObjectiveConditionTiming,
   PloyEffectKind,
   PloyEffectTargetKind,
   SaveSymbol,
@@ -118,6 +123,319 @@ const warscroll = new WarscrollDefinition(
   ],
 );
 
+abstract class PracticeObjectiveCardDefinition extends CardDefinition {
+  protected constructor(cardNumber: string, text: string) {
+    super(
+      `card-def:setup-practice:objective:${cardNumber}`,
+      CardKind.Objective,
+      `Practice Objective ${cardNumber}`,
+      text,
+      1,
+    );
+  }
+
+  public override play(game: Game, player: PlayerState, card: CardInstance): string[] {
+    void game;
+    return scoreObjectiveCard(this, player, card);
+  }
+}
+
+class PracticeBlankObjectiveCardDefinition extends PracticeObjectiveCardDefinition {
+  public constructor(cardNumber: string) {
+    super(cardNumber, "");
+  }
+}
+
+class PracticeObjective01CardDefinition extends PracticeObjectiveCardDefinition {
+  public constructor() {
+    super(
+      "01",
+      "Score this immediately after you make an Attack roll if all of the results were successes.",
+    );
+  }
+
+  public override canPlay(
+    game: Game,
+    player: PlayerState,
+    card: CardInstance,
+    context: CardPlayContext = {},
+  ): boolean {
+    void card;
+    if (context.timing !== ObjectiveConditionTiming.Immediate) {
+      return false;
+    }
+
+    const latestCombat = game.getLatestRecord(GameRecordKind.Combat);
+    if (latestCombat === null || latestCombat.context.attackerPlayerId !== player.id) {
+      return false;
+    }
+
+    return (
+      latestCombat.attackRoll.length > 0 &&
+      latestCombat.attackSuccesses === latestCombat.attackRoll.length
+    );
+  }
+}
+
+class PracticeObjective02CardDefinition extends PracticeObjectiveCardDefinition {
+  public constructor() {
+    super(
+      "02",
+      "Score this immediately after an enemy fighter is slain by a friendly fighter if the target was a leader or the target's Health characteristic was equal to or greater than the attacker's.",
+    );
+  }
+
+  public override canPlay(
+    game: Game,
+    player: PlayerState,
+    card: CardInstance,
+    context: CardPlayContext = {},
+  ): boolean {
+    void card;
+    if (context.timing !== ObjectiveConditionTiming.Immediate) {
+      return false;
+    }
+
+    const latestCombat = game.getLatestRecord(GameRecordKind.Combat);
+    if (
+      latestCombat === null ||
+      latestCombat.context.attackerPlayerId !== player.id ||
+      !latestCombat.targetSlain
+    ) {
+      return false;
+    }
+
+    const attackerPlayer = game.getPlayer(latestCombat.context.attackerPlayerId);
+    const defenderPlayer = game.getPlayer(latestCombat.context.defenderPlayerId);
+    const attackerDefinition = attackerPlayer?.getFighterDefinition(latestCombat.context.attackerFighterId);
+    const targetDefinition = defenderPlayer?.getFighterDefinition(latestCombat.context.targetFighterId);
+    if (attackerDefinition === undefined || targetDefinition === undefined) {
+      return false;
+    }
+
+    return targetDefinition.isLeader || targetDefinition.health >= attackerDefinition.health;
+  }
+}
+
+class PracticeObjective03CardDefinition extends PracticeObjectiveCardDefinition {
+  public constructor() {
+    super(
+      "03",
+      "Score this immediately after a friendly fighter Delves in enemy territory. If you are the underdog, that Delve can be in friendly territory instead.",
+    );
+  }
+
+  public override canPlay(
+    game: Game,
+    player: PlayerState,
+    card: CardInstance,
+    context: CardPlayContext = {},
+  ): boolean {
+    void card;
+    if (context.timing !== ObjectiveConditionTiming.Immediate) {
+      return false;
+    }
+
+    const latestDelve = game.getLatestRecord(GameRecordKind.Delve);
+    if (latestDelve === null || latestDelve.playerId !== player.id) {
+      return false;
+    }
+
+    const delveHex = game.board.getHex(latestDelve.featureTokenHexId);
+    if (delveHex?.territoryId === null || delveHex?.territoryId === undefined) {
+      return false;
+    }
+
+    const territory = game.board.getTerritory(delveHex.territoryId);
+    if (territory?.ownerPlayerId === null || territory?.ownerPlayerId === undefined) {
+      return false;
+    }
+
+    if (territory.ownerPlayerId !== player.id) {
+      return true;
+    }
+
+    const opponent = game.getOpponent(player.id);
+    return opponent !== undefined && player.glory < opponent.glory;
+  }
+}
+
+class PracticeObjective04CardDefinition extends PracticeObjectiveCardDefinition {
+  public constructor() {
+    super(
+      "04",
+      "Score this in an end phase if 3 or more different treasure tokens were Delved by your warband this battle round or if a treasure token held by an enemy fighter at the start of the battle round was Delved by your warband this battle round.",
+    );
+  }
+
+  public override canPlay(
+    game: Game,
+    player: PlayerState,
+    card: CardInstance,
+    context: CardPlayContext = {},
+  ): boolean {
+    void card;
+    if (context.timing !== ObjectiveConditionTiming.EndPhase) {
+      return false;
+    }
+
+    const thisRoundPlayerDelves = game.getRecordHistory(GameRecordKind.Delve).filter((delve) =>
+      delve.roundNumber === game.roundNumber && delve.playerId === player.id,
+    );
+    const thisRoundTreasureDelves = thisRoundPlayerDelves.filter((delve) =>
+      delve.sideBeforeDelve === FeatureTokenSide.Treasure,
+    );
+    const delvedTreasureTokenIds = new Set(thisRoundTreasureDelves.map((delve) => delve.featureTokenId));
+    if (delvedTreasureTokenIds.size >= 3) {
+      return true;
+    }
+
+    const delvedTokenIds = new Set(thisRoundPlayerDelves.map((delve) => delve.featureTokenId));
+    const roundStartHistory = game.getRecordHistory(GameRecordKind.RoundStart);
+    for (let index = roundStartHistory.length - 1; index >= 0; index -= 1) {
+      const roundStart = roundStartHistory[index];
+      if (roundStart.roundNumber !== game.roundNumber) {
+        continue;
+      }
+
+      return roundStart.featureTokens.some((featureToken) =>
+        featureToken.side === FeatureTokenSide.Treasure &&
+        featureToken.heldByFighterId !== null &&
+        featureToken.holderOwnerPlayerId !== null &&
+        featureToken.holderOwnerPlayerId !== player.id &&
+        delvedTokenIds.has(featureToken.featureTokenId),
+      );
+    }
+
+    return false;
+  }
+}
+
+class PracticePloyCardDefinition extends CardDefinition {
+  public constructor(cardNumber: string, text: string, ployEffects: readonly PloyEffect[]) {
+    super(
+      `card-def:setup-practice:ploy:${cardNumber}`,
+      CardKind.Ploy,
+      `Practice Ploy ${cardNumber}`,
+      text,
+      0,
+      ployEffects,
+    );
+  }
+
+  public override canPlay(
+    game: Game,
+    player: PlayerState,
+    card: CardInstance,
+    context: CardPlayContext = {},
+  ): boolean {
+    const targetFighterId = context.targetFighterId ?? null;
+    const requiresTarget = this.ployEffects.some((effect) => effect.kind === PloyEffectKind.GainFighterToken);
+
+    return (
+      card.zone === CardZone.PowerHand &&
+      this.ployEffects.length > 0 &&
+      (requiresTarget ? targetFighterId !== null : targetFighterId === null) &&
+      this.ployEffects.every((effect) => canResolvePloyEffect(game, player, effect, targetFighterId))
+    );
+  }
+
+  public override play(
+    game: Game,
+    player: PlayerState,
+    card: CardInstance,
+    context: CardPlayContext = {},
+  ): string[] {
+    const targetFighterId = context.targetFighterId ?? null;
+    if (!this.canPlay(game, player, card, { targetFighterId })) {
+      throw new Error(`Ploy ${this.name} cannot currently resolve.`);
+    }
+
+    const effectDescriptions = this.ployEffects.map((effect) =>
+      resolvePloyEffect(game, player, effect, targetFighterId),
+    );
+    const handIndex = player.powerHand.findIndex((candidate) => candidate.id === card.id);
+    if (handIndex === -1) {
+      throw new Error(`Could not find ploy ${card.id} in ${player.name}'s power hand.`);
+    }
+
+    player.powerHand.splice(handIndex, 1);
+    card.zone = CardZone.PowerDiscard;
+    card.attachedToFighterId = null;
+    card.revealed = true;
+    player.powerDeck.discardPile.push(card);
+    return effectDescriptions;
+  }
+}
+
+class PracticeUpgradeCardDefinition extends CardDefinition {
+  public constructor(cardNumber: string) {
+    super(
+      `card-def:setup-practice:upgrade:${cardNumber}`,
+      CardKind.Upgrade,
+      `Practice Upgrade ${cardNumber}`,
+      "",
+      1,
+    );
+  }
+
+  public override canPlay(
+    game: Game,
+    player: PlayerState,
+    card: CardInstance,
+    context: CardPlayContext = {},
+  ): boolean {
+    void game;
+    const equippedFighterId = context.equippedFighterId ?? null;
+    if (
+      card.zone !== CardZone.PowerHand ||
+      equippedFighterId === null ||
+      player.glory < this.gloryValue
+    ) {
+      return false;
+    }
+
+    const fighter = player.getFighter(equippedFighterId);
+    return fighter !== undefined && !fighter.isSlain && fighter.currentHexId !== null;
+  }
+
+  public override play(
+    game: Game,
+    player: PlayerState,
+    card: CardInstance,
+    context: CardPlayContext = {},
+  ): string[] {
+    void game;
+    const equippedFighterId = context.equippedFighterId ?? null;
+    if (!this.canPlay(game, player, card, { equippedFighterId })) {
+      throw new Error(`Upgrade ${this.name} cannot currently resolve.`);
+    }
+
+    if (equippedFighterId === null) {
+      throw new Error(`Could not find fighter for upgrade ${this.name}.`);
+    }
+
+    const fighter = player.getFighter(equippedFighterId);
+    if (fighter === undefined) {
+      throw new Error(`Could not find fighter ${equippedFighterId} for upgrade ${this.name}.`);
+    }
+
+    const handIndex = player.powerHand.findIndex((candidate) => candidate.id === card.id);
+    if (handIndex === -1) {
+      throw new Error(`Could not find upgrade ${card.id} in ${player.name}'s power hand.`);
+    }
+
+    player.powerHand.splice(handIndex, 1);
+    card.zone = CardZone.Equipped;
+    card.attachedToFighterId = fighter.id;
+    card.revealed = true;
+    player.equippedUpgrades.push(card);
+    fighter.upgradeCardIds.push(card.id);
+    player.glory -= this.gloryValue;
+    return [];
+  }
+}
+
 export const setupPracticeWarband = new WarbandDefinition(
   "warband-def:setup-practice",
   "Setup Practice Warband",
@@ -130,37 +448,18 @@ export const setupPracticeWarband = new WarbandDefinition(
 function createObjectiveCards(): CardDefinition[] {
   return Array.from({ length: 12 }, (_, index) => {
     const cardNumber = String(index + 1).padStart(2, "0");
-    const isAllSuccessesObjective = index === 0;
-    const isSlayLeaderOrEqualOrGreaterHealthObjective = index === 1;
-    const isDelveTerritoryObjective = index === 2;
-    const isDelveTreasureRoundObjective = index === 3;
-    const objectiveRule = isAllSuccessesObjective
-      ? new PracticeObjective01Rule()
-      : isSlayLeaderOrEqualOrGreaterHealthObjective
-        ? new PracticeObjective02Rule()
-        : isDelveTerritoryObjective
-          ? new PracticeObjective03Rule()
-          : isDelveTreasureRoundObjective
-            ? new PracticeObjective04Rule()
-            : null;
-
-    return new CardDefinition(
-      `card-def:setup-practice:objective:${cardNumber}`,
-      CardKind.Objective,
-      `Practice Objective ${cardNumber}`,
-      isAllSuccessesObjective
-        ? "Score this immediately after you make an Attack roll if all of the results were successes."
-        : isSlayLeaderOrEqualOrGreaterHealthObjective
-          ? "Score this immediately after an enemy fighter is slain by a friendly fighter if the target was a leader or the target's Health characteristic was equal to or greater than the attacker's."
-          : isDelveTerritoryObjective
-            ? "Score this immediately after a friendly fighter Delves in enemy territory. If you are the underdog, that Delve can be in friendly territory instead."
-            : isDelveTreasureRoundObjective
-              ? "Score this in an end phase if 3 or more different treasure tokens were Delved by your warband this battle round or if a treasure token held by an enemy fighter at the start of the battle round was Delved by your warband this battle round."
-        : "",
-      1,
-      [],
-      objectiveRule,
-    );
+    switch (index) {
+      case 0:
+        return new PracticeObjective01CardDefinition();
+      case 1:
+        return new PracticeObjective02CardDefinition();
+      case 2:
+        return new PracticeObjective03CardDefinition();
+      case 3:
+        return new PracticeObjective04CardDefinition();
+      default:
+        return new PracticeBlankObjectiveCardDefinition(cardNumber);
+    }
   });
 }
 
@@ -171,10 +470,8 @@ function createPowerCards(): CardDefinition[] {
     const isSignalPloy = index >= 5 && index < 8;
     const isGuardPloy = index === 8;
 
-    return new CardDefinition(
-      `card-def:setup-practice:ploy:${cardNumber}`,
-      CardKind.Ploy,
-      `Practice Ploy ${cardNumber}`,
+    return new PracticePloyCardDefinition(
+      cardNumber,
       isDrawPloy
         ? "Draw 1 power card."
         : isSignalPloy
@@ -182,50 +479,181 @@ function createPowerCards(): CardDefinition[] {
           : isGuardPloy
             ? "Give a friendly fighter a guard token."
             : "Give an enemy fighter a stagger token.",
-      0,
       isDrawPloy
         ? [
-          {
-            kind: PloyEffectKind.DrawPowerCards,
-            count: 1,
-          },
-        ]
-        : isSignalPloy
-          ? [
             {
-              kind: PloyEffectKind.GainWarscrollTokens,
-              tokens: { signal: 1 },
+              kind: PloyEffectKind.DrawPowerCards,
+              count: 1,
             },
           ]
-          : isGuardPloy
-            ? [
+        : isSignalPloy
+          ? [
               {
-                kind: PloyEffectKind.GainFighterToken,
-                target: PloyEffectTargetKind.FriendlyFighter,
-                token: FighterTokenKind.Guard,
+                kind: PloyEffectKind.GainWarscrollTokens,
+                tokens: { signal: 1 },
               },
             ]
+          : isGuardPloy
+            ? [
+                {
+                  kind: PloyEffectKind.GainFighterToken,
+                  target: PloyEffectTargetKind.FriendlyFighter,
+                  token: FighterTokenKind.Guard,
+                },
+              ]
             : [
-              {
-                kind: PloyEffectKind.GainFighterToken,
-                target: PloyEffectTargetKind.EnemyFighter,
-                token: FighterTokenKind.Stagger,
-              },
-            ],
+                {
+                  kind: PloyEffectKind.GainFighterToken,
+                  target: PloyEffectTargetKind.EnemyFighter,
+                  token: FighterTokenKind.Stagger,
+                },
+              ],
     );
   });
 
   const upgrades = Array.from({ length: 10 }, (_, index) => {
     const cardNumber = String(index + 1).padStart(2, "0");
 
-    return new CardDefinition(
-      `card-def:setup-practice:upgrade:${cardNumber}`,
-      CardKind.Upgrade,
-      `Practice Upgrade ${cardNumber}`,
-      "",
-      1,
-    );
+    return new PracticeUpgradeCardDefinition(cardNumber);
   });
 
   return [...ploys, ...upgrades];
+}
+
+function scoreObjectiveCard(
+  definition: CardDefinition,
+  player: PlayerState,
+  card: CardInstance,
+): string[] {
+  const handIndex = player.objectiveHand.findIndex((candidate) => candidate.id === card.id);
+  if (handIndex === -1) {
+    throw new Error(`Could not find objective ${card.id} in ${player.name}'s hand.`);
+  }
+
+  player.objectiveHand.splice(handIndex, 1);
+  card.zone = CardZone.ScoredObjectives;
+  card.revealed = true;
+  player.scoredObjectives.push(card);
+  player.glory += definition.gloryValue;
+  return [];
+}
+
+function canResolvePloyEffect(
+  game: Game,
+  player: PlayerState,
+  effect: PloyEffect,
+  targetFighterId: string | null,
+): boolean {
+  switch (effect.kind) {
+    case PloyEffectKind.DrawPowerCards:
+      return Number.isInteger(effect.count) && effect.count > 0 && player.powerDeck.drawPile.length >= effect.count;
+    case PloyEffectKind.GainWarscrollTokens:
+      return Object.values(effect.tokens).every((tokenCount) => Number.isInteger(tokenCount) && tokenCount > 0);
+    case PloyEffectKind.GainFighterToken: {
+      const target = getPloyTargetFighter(game, player, effect.target, targetFighterId);
+      return target !== undefined && !hasFighterToken(target, effect.token);
+    }
+  }
+}
+
+function resolvePloyEffect(
+  game: Game,
+  player: PlayerState,
+  effect: PloyEffect,
+  targetFighterId: string | null,
+): string {
+  switch (effect.kind) {
+    case PloyEffectKind.DrawPowerCards:
+      for (let drawIndex = 0; drawIndex < effect.count; drawIndex += 1) {
+        const nextCard = player.powerDeck.drawPile.shift();
+        if (nextCard === undefined) {
+          throw new Error(`Could not draw power card ${drawIndex + 1} for ${player.name}.`);
+        }
+
+        nextCard.zone = CardZone.PowerHand;
+        player.powerHand.push(nextCard);
+      }
+
+      return `drew ${effect.count} power card${effect.count === 1 ? "" : "s"}`;
+    case PloyEffectKind.GainWarscrollTokens:
+      for (const [tokenName, tokenCount] of Object.entries(effect.tokens)) {
+        const currentTokenCount = player.warscrollState.tokens[tokenName] ?? 0;
+        player.warscrollState.tokens[tokenName] = currentTokenCount + tokenCount;
+      }
+
+      return `gained ${formatTokenAmounts(effect.tokens)}`;
+    case PloyEffectKind.GainFighterToken: {
+      const target = getPloyTargetFighter(game, player, effect.target, targetFighterId);
+      if (target === undefined) {
+        throw new Error(`Could not find a legal fighter target for ${effect.kind}.`);
+      }
+
+      setFighterToken(target, effect.token, true);
+      return `gave ${effect.token} token to fighter ${target.id}`;
+    }
+  }
+}
+
+function getPloyTargetFighter(
+  game: Game,
+  player: PlayerState,
+  targetKind: PloyEffectTargetKind,
+  targetFighterId: string | null,
+): FighterState | undefined {
+  if (targetFighterId === null) {
+    return undefined;
+  }
+
+  const targetOwner =
+    targetKind === PloyEffectTargetKind.FriendlyFighter
+      ? player
+      : targetKind === PloyEffectTargetKind.EnemyFighter
+        ? game.getOpponent(player.id)
+        : undefined;
+  if (targetOwner === undefined) {
+    return undefined;
+  }
+
+  const target = targetOwner.getFighter(targetFighterId);
+  if (target === undefined || target.isSlain || target.currentHexId === null) {
+    return undefined;
+  }
+
+  return target;
+}
+
+function hasFighterToken(fighter: FighterState, token: FighterTokenKind): boolean {
+  switch (token) {
+    case FighterTokenKind.Move:
+      return fighter.hasMoveToken;
+    case FighterTokenKind.Charge:
+      return fighter.hasChargeToken;
+    case FighterTokenKind.Guard:
+      return fighter.hasGuardToken;
+    case FighterTokenKind.Stagger:
+      return fighter.hasStaggerToken;
+  }
+}
+
+function setFighterToken(fighter: FighterState, token: FighterTokenKind, value: boolean): void {
+  switch (token) {
+    case FighterTokenKind.Move:
+      fighter.hasMoveToken = value;
+      return;
+    case FighterTokenKind.Charge:
+      fighter.hasChargeToken = value;
+      return;
+    case FighterTokenKind.Guard:
+      fighter.hasGuardToken = value;
+      return;
+    case FighterTokenKind.Stagger:
+      fighter.hasStaggerToken = value;
+      return;
+  }
+}
+
+function formatTokenAmounts(tokens: Readonly<Record<string, number>>): string {
+  return Object.entries(tokens)
+    .map(([tokenName, tokenCount]) => `${tokenCount} ${tokenName} token${tokenCount === 1 ? "" : "s"}`)
+    .join(", ");
 }

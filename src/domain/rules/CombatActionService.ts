@@ -13,12 +13,10 @@ import { Game } from "../state/Game";
 import { HexCell } from "../state/HexCell";
 import { FighterState } from "../state/FighterState";
 import { PlayerState } from "../state/PlayerState";
-import { CardKind, CardZone, FeatureTokenSide, HexKind, TurnStep } from "../values/enums";
+import { CardKind, FeatureTokenSide, HexKind, TurnStep } from "../values/enums";
 import type { FighterId, HexId, PlayerId } from "../values/ids";
 import { DefaultWarscrollEffectResolver } from "./DefaultWarscrollEffectResolver";
-import { DefaultPloyEffectResolver } from "./DefaultPloyEffectResolver";
 import { LegalActionService } from "./LegalActionService";
-import { PloyEffectResolver } from "./PloyEffectResolver";
 import { WarscrollEffectResolver } from "./WarscrollEffectResolver";
 
 const neighborDirections = [
@@ -37,15 +35,12 @@ type MovePathSearchNode = {
 
 export class CombatActionService extends LegalActionService {
   private readonly warscrollEffectResolver: WarscrollEffectResolver;
-  private readonly ployEffectResolver: PloyEffectResolver;
 
   public constructor(
     warscrollEffectResolver: WarscrollEffectResolver = new DefaultWarscrollEffectResolver(),
-    ployEffectResolver: PloyEffectResolver = new DefaultPloyEffectResolver(),
   ) {
     super();
     this.warscrollEffectResolver = warscrollEffectResolver;
-    this.ployEffectResolver = ployEffectResolver;
   }
 
   public getLegalActions(game: Game, playerId: PlayerId): GameAction[] {
@@ -284,10 +279,12 @@ export class CombatActionService extends LegalActionService {
 
     return (
       cardWithDefinition.definition.kind === CardKind.Upgrade &&
-      cardWithDefinition.card.zone === CardZone.PowerHand &&
-      player.glory >= cardWithDefinition.definition.gloryValue &&
-      !fighter.isSlain &&
-      fighter.currentHexId !== null
+      cardWithDefinition.definition.canPlay(
+        game,
+        player,
+        cardWithDefinition.card,
+        { equippedFighterId: fighter.id },
+      )
     );
   }
 
@@ -308,12 +305,11 @@ export class CombatActionService extends LegalActionService {
 
     return (
       cardWithDefinition.definition.kind === CardKind.Ploy &&
-      cardWithDefinition.card.zone === CardZone.PowerHand &&
-      this.ployEffectResolver.canResolve(
+      cardWithDefinition.definition.canPlay(
         game,
         player,
-        cardWithDefinition.definition,
-        action.targetFighterId,
+        cardWithDefinition.card,
+        { targetFighterId: action.targetFighterId },
       )
     );
   }
@@ -581,13 +577,13 @@ export class CombatActionService extends LegalActionService {
       const definition = player.getCardDefinition(card.id);
       return (
         definition?.kind === CardKind.Upgrade &&
-        player.glory >= definition.gloryValue
+        definition.canPlay(game, player, card, {})
       );
     });
 
     return upgradeCards.flatMap((card) =>
       player.fighters.flatMap((fighter) =>
-        !fighter.isSlain && fighter.currentHexId !== null
+        player.getCardDefinition(card.id)?.canPlay(game, player, card, { equippedFighterId: fighter.id })
           ? [new PlayUpgradeAction(player.id, card.id, fighter.id)]
           : []
       ),
