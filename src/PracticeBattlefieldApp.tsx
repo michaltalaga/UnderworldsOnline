@@ -667,6 +667,9 @@ export default function PracticeBattlefieldApp() {
                 <strong>Board buttons:</strong> guard appears on the map during action step, and pass power appears on the map during power step.
               </p>
               <p>
+                <strong>Power step cue:</strong> the active player&apos;s fighters glow teal during power step response windows.
+              </p>
+              <p>
                 <strong>Attack targets:</strong>{" "}
                 {attackTargetNames.length === 0 ? "none" : attackTargetNames.join(", ")}
               </p>
@@ -875,6 +878,10 @@ function BoardMap({
             pendingChargeHexId === null &&
             game.turnStep === TurnStep.Power &&
             fighter?.id === recentCombatTargetId;
+          const isPowerResponseFighter =
+            game.turnStep === TurnStep.Power &&
+            fighter !== null &&
+            fighter.ownerPlayerId === activePlayerId;
           const isClickableMoveDestination = isMoveDestination && game.turnStep === TurnStep.Action;
           const isClickableChargeDestination = isChargeDestination && game.turnStep === TurnStep.Action;
           const isClickableChargeTarget =
@@ -938,6 +945,7 @@ function BoardMap({
                 isClickableHex: isInteractiveHex,
                 isPendingMoveHex,
                 isMoveDestination,
+                isPowerResponseHex: isPowerResponseFighter,
                 isRecentCombatTarget,
                 isSelectedHex,
                 isSelectableHex: isSelectableFighter,
@@ -1044,7 +1052,13 @@ function BoardMap({
                 {fighter === null ? (
                   <span className="battlefield-empty-hex-dot" aria-hidden="true" />
                 ) : (
-                  <div className={`battlefield-fighter-badge ${getPlayerToneClass(fighter.ownerPlayerId)}`}>
+                  <div
+                    className={[
+                      "battlefield-fighter-badge",
+                      getPlayerToneClass(fighter.ownerPlayerId),
+                      isPowerResponseFighter ? "battlefield-fighter-badge-power-response" : "",
+                    ].filter(Boolean).join(" ")}
+                  >
                     <span>{getFighterMapLabel(game, fighter)}</span>
                     <div className="battlefield-fighter-token-row">
                       {getFighterStatusTags(fighter).map((tag) => (
@@ -1257,6 +1271,7 @@ function getHexClassName(
     isClickableHex: boolean;
     isPendingMoveHex: boolean;
     isMoveDestination: boolean;
+    isPowerResponseHex: boolean;
     isRecentCombatTarget: boolean;
     isSelectedHex: boolean;
     isSelectableHex: boolean;
@@ -1327,6 +1342,10 @@ function getHexClassName(
 
   if (state.isRecentCombatTarget) {
     classes.push("battlefield-map-hex-combat-target");
+  }
+
+  if (state.isPowerResponseHex) {
+    classes.push("battlefield-map-hex-power-response");
   }
 
   if (state.isSelectedHex) {
