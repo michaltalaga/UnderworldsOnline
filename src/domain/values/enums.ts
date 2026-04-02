@@ -98,6 +98,7 @@ export type ObjectiveConditionTiming =
 export const ObjectiveConditionKind = {
   AttackRollAllSuccesses: "attackRollAllSuccesses",
   SlayLeaderOrEqualOrGreaterHealth: "slayLeaderOrEqualOrGreaterHealth",
+  DelveInEnemyTerritoryOrFriendlyIfUnderdog: "delveInEnemyTerritoryOrFriendlyIfUnderdog",
 } as const;
 
 export type ObjectiveConditionKind =

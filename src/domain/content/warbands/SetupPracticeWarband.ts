@@ -131,6 +131,7 @@ function createObjectiveCards(): CardDefinition[] {
     const cardNumber = String(index + 1).padStart(2, "0");
     const isAllSuccessesObjective = index === 0;
     const isSlayLeaderOrEqualOrGreaterHealthObjective = index === 1;
+    const isDelveTerritoryObjective = index === 2;
     const objectiveConditions: ObjectiveCondition[] = isAllSuccessesObjective
       ? [
         {
@@ -145,6 +146,13 @@ function createObjectiveCards(): CardDefinition[] {
             timing: ObjectiveConditionTiming.Immediate,
           },
         ]
+        : isDelveTerritoryObjective
+          ? [
+            {
+              kind: ObjectiveConditionKind.DelveInEnemyTerritoryOrFriendlyIfUnderdog,
+              timing: ObjectiveConditionTiming.Immediate,
+            },
+          ]
       : [];
 
     return new CardDefinition(
@@ -155,6 +163,8 @@ function createObjectiveCards(): CardDefinition[] {
         ? "Score this immediately after you make an Attack roll if all of the results were successes."
         : isSlayLeaderOrEqualOrGreaterHealthObjective
           ? "Score this immediately after an enemy fighter is slain by a friendly fighter if the target was a leader or the target's Health characteristic was equal to or greater than the attacker's."
+          : isDelveTerritoryObjective
+            ? "Score this immediately after a friendly fighter Delves in enemy territory. If you are the underdog, that Delve can be in friendly territory instead."
         : "",
       1,
       [],

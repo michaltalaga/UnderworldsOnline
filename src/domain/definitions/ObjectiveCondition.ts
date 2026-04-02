@@ -13,6 +13,12 @@ export type SlayLeaderOrEqualOrGreaterHealthObjectiveCondition = {
   timing: typeof ObjectiveConditionTiming.Immediate;
 };
 
+export type DelveInEnemyTerritoryOrFriendlyIfUnderdogObjectiveCondition = {
+  kind: typeof ObjectiveConditionKind.DelveInEnemyTerritoryOrFriendlyIfUnderdog;
+  timing: typeof ObjectiveConditionTiming.Immediate;
+};
+
 export type ObjectiveCondition =
   | AttackRollAllSuccessesObjectiveCondition
-  | SlayLeaderOrEqualOrGreaterHealthObjectiveCondition;
+  | SlayLeaderOrEqualOrGreaterHealthObjectiveCondition
+  | DelveInEnemyTerritoryOrFriendlyIfUnderdogObjectiveCondition;

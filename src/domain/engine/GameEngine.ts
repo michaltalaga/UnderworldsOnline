@@ -846,10 +846,24 @@ export class GameEngine {
       holderAfterDelve?.fighterName ?? null,
     );
     game.addRecord(GameRecordKind.Delve, resolution);
+    const immediateScoringResolution = this.scoreObjectivesForPlayer(
+      game,
+      player,
+      ObjectiveConditionTiming.Immediate,
+      false,
+      true,
+    );
     game.consecutivePasses = 0;
+    const effectText = [
+      `It is now a ${featureToken.side} token`,
+      `${fighter.id} gained a stagger token`,
+      immediateScoringResolution.scoredObjectives.length > 0
+        ? `scored ${immediateScoringResolution.scoredObjectives.map((objective) => objective.cardName).join(", ")} for ${immediateScoringResolution.gloryGained} glory`
+        : null,
+    ].filter((text): text is string => text !== null);
     game.eventLog.push(
       `${player.name} delved feature token ${featureToken.id} with fighter ${fighter.id}. `
-      + `It is now a ${featureToken.side} token and ${fighter.id} gained a stagger token.`,
+      + `${effectText.join(" and ")}.`,
     );
   }
 

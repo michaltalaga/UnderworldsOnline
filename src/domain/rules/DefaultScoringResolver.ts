@@ -47,6 +47,8 @@ export class DefaultScoringResolver extends ScoringResolver {
         return this.didPlayerMakeAnAllSuccessesAttackRoll(game, playerId);
       case ObjectiveConditionKind.SlayLeaderOrEqualOrGreaterHealth:
         return this.didPlayerSlayLeaderOrEqualOrGreaterHealthEnemy(game, playerId);
+      case ObjectiveConditionKind.DelveInEnemyTerritoryOrFriendlyIfUnderdog:
+        return this.didPlayerDelveInEnemyTerritoryOrFriendlyIfUnderdog(game, playerId);
       default:
         return false;
     }
@@ -83,5 +85,38 @@ export class DefaultScoringResolver extends ScoringResolver {
     }
 
     return targetDefinition.isLeader || targetDefinition.health >= attackerDefinition.health;
+  }
+
+  private didPlayerDelveInEnemyTerritoryOrFriendlyIfUnderdog(game: Game, playerId: PlayerId): boolean {
+    const latestDelve = game.getLatestRecord(GameRecordKind.Delve);
+    if (latestDelve === null || latestDelve.playerId !== playerId) {
+      return false;
+    }
+
+    const delveHex = game.board.getHex(latestDelve.featureTokenHexId);
+    if (delveHex?.territoryId === null || delveHex?.territoryId === undefined) {
+      return false;
+    }
+
+    const territory = game.board.getTerritory(delveHex.territoryId);
+    if (territory?.ownerPlayerId === null || territory?.ownerPlayerId === undefined) {
+      return false;
+    }
+
+    if (territory.ownerPlayerId !== playerId) {
+      return true;
+    }
+
+    return this.isUnderdog(game, playerId);
+  }
+
+  private isUnderdog(game: Game, playerId: PlayerId): boolean {
+    const player = game.getPlayer(playerId);
+    const opponent = game.getOpponent(playerId);
+    if (player === undefined || opponent === undefined) {
+      return false;
+    }
+
+    return player.glory < opponent.glory;
   }
 }
