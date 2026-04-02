@@ -11,11 +11,13 @@ import type { GameEventLogState } from "../state/GameEventLogState";
 import type { Game } from "../state/Game";
 import type { PlayerState } from "../state/PlayerState";
 
+export type CardTriggerKind = GameActionKind | EndPhaseActionKind;
+
 export type CardPlayContext = {
   timing?: ObjectiveConditionTiming;
   targetFighterId?: FighterId | null;
   equippedFighterId?: FighterId | null;
-  triggerActionKind?: GameActionKind | EndPhaseActionKind | null;
+  triggerActionKind?: CardTriggerKind | null;
 };
 
 export class CardDefinition {

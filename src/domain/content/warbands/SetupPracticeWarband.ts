@@ -148,6 +148,23 @@ abstract class PracticeObjectiveCardDefinition extends CardDefinition {
   }
 }
 
+function isImmediateCombatTrigger(context: CardPlayContext): boolean {
+  return (
+    context.timing === ObjectiveConditionTiming.Immediate &&
+    (
+      context.triggerActionKind === GameActionKind.Attack ||
+      context.triggerActionKind === GameActionKind.Charge
+    )
+  );
+}
+
+function isImmediateDelveTrigger(context: CardPlayContext): boolean {
+  return (
+    context.timing === ObjectiveConditionTiming.Immediate &&
+    context.triggerActionKind === GameActionKind.Delve
+  );
+}
+
 class PracticeBlankObjectiveCardDefinition extends PracticeObjectiveCardDefinition {
   public constructor(cardNumber: string) {
     super(cardNumber, "");
@@ -171,14 +188,7 @@ class PracticeObjective01CardDefinition extends PracticeObjectiveCardDefinition 
   ): boolean {
     void game;
     void card;
-    if (context.timing !== ObjectiveConditionTiming.Immediate) {
-      return false;
-    }
-
-    if (
-      context.triggerActionKind !== GameActionKind.Attack &&
-      context.triggerActionKind !== GameActionKind.Charge
-    ) {
+    if (!isImmediateCombatTrigger(context)) {
       return false;
     }
 
@@ -210,14 +220,7 @@ class PracticeObjective02CardDefinition extends PracticeObjectiveCardDefinition 
     context: CardPlayContext = {},
   ): boolean {
     void card;
-    if (context.timing !== ObjectiveConditionTiming.Immediate) {
-      return false;
-    }
-
-    if (
-      context.triggerActionKind !== GameActionKind.Attack &&
-      context.triggerActionKind !== GameActionKind.Charge
-    ) {
+    if (!isImmediateCombatTrigger(context)) {
       return false;
     }
 
@@ -258,11 +261,7 @@ class PracticeObjective03CardDefinition extends PracticeObjectiveCardDefinition 
     context: CardPlayContext = {},
   ): boolean {
     void card;
-    if (context.timing !== ObjectiveConditionTiming.Immediate) {
-      return false;
-    }
-
-    if (context.triggerActionKind !== GameActionKind.Delve) {
+    if (!isImmediateDelveTrigger(context)) {
       return false;
     }
 
