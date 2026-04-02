@@ -6,6 +6,7 @@ import {
   ChargeAction,
   CombatActionService,
   createCombatReadySetupPracticeGame,
+  DelveAction,
   FeatureTokenSide,
   GameAction,
   GameEngine,
@@ -53,11 +54,13 @@ type FighterActionLens = {
   attackActions: AttackAction[];
   moveActions: MoveAction[];
   chargeActions: ChargeAction[];
+  delveAction: DelveAction | null;
   guardAction: GuardAction | null;
   passAction: PassAction | null;
   attackCount: number;
   moveCount: number;
   chargeCount: number;
+  delveAvailable: boolean;
   guardAvailable: boolean;
 };
 
@@ -95,6 +98,7 @@ type BattlefieldAppAction =
   | MoveAction
   | ChargeAction
   | AttackAction
+  | DelveAction
   | GuardAction
   | PassAction
   | PlayPloyAction
@@ -132,6 +136,14 @@ export default function PracticeBattlefieldApp() {
     selectedFighterId === null || activePlayer === null
       ? null
       : activePlayer.getFighter(selectedFighterId) ?? null;
+  const selectedFighterHex =
+    selectedFighter?.currentHexId === null || selectedFighter?.currentHexId === undefined
+      ? null
+      : game.board.getHex(selectedFighter.currentHexId) ?? null;
+  const selectedFeatureToken =
+    selectedFighterHex?.featureTokenId === null || selectedFighterHex?.featureTokenId === undefined
+      ? null
+      : game.board.getFeatureToken(selectedFighterHex.featureTokenId) ?? null;
   const actionLens = getFighterActionLens(game, activePlayer, selectedFighterId, legalActions);
   const powerOverlay = getPowerOverlayModel(game, activePlayer, legalActions);
   const moveOptions = getMoveOptions(actionLens);
@@ -197,7 +209,9 @@ export default function PracticeBattlefieldApp() {
             ? `Move to ${pendingMoveHexId} selected. Click the same teal hex again to confirm, press Escape to cancel, or choose another teal hex.`
             : "Select a fighter, then click a teal hex to move or click a gold hex and then a red target to charge."
       : recentCombatTargetName === null
-        ? "The selected fighter has already acted. Pass the power step or reset the board."
+        ? actionLens.delveAction !== null && selectedFeatureToken !== null
+          ? `${selectedFighterName} can delve ${getFeatureTokenBadge(selectedFeatureToken)} from the map or pass the power step.`
+          : "The selected fighter has already acted. Pass the power step or reset the board."
         : `Recent combat: ${recentCombatTargetName} remains marked on the map. Pass the power step or reset the board.`;
 
   function selectFighter(fighterId: FighterId | null): void {
@@ -433,6 +447,7 @@ export default function PracticeBattlefieldApp() {
             game={game}
             activePlayerId={activePlayer?.id ?? null}
             selectedFighterId={selectedFighterId}
+            selectedFeatureToken={selectedFeatureToken}
             actionLens={actionLens}
             pendingMoveHexId={pendingMoveHexId}
             pendingChargeHexId={pendingChargeHexId}
@@ -444,6 +459,11 @@ export default function PracticeBattlefieldApp() {
             recentCombatTargetId={recentCombatTargetId}
             resultFlash={resultFlash}
             onApplyPowerAction={applyAction}
+            onDelveSelectedFighter={() => {
+              if (actionLens.delveAction !== null) {
+                applyAction(actionLens.delveAction);
+              }
+            }}
             onGuardSelectedFighter={() => {
               if (actionLens.guardAction !== null) {
                 applyAction(actionLens.guardAction);
@@ -503,6 +523,10 @@ export default function PracticeBattlefieldApp() {
               <div>
                 <dt>Charge Paths</dt>
                 <dd>{actionLens.chargeCount}</dd>
+              </div>
+              <div>
+                <dt>Delve</dt>
+                <dd>{actionLens.delveAvailable ? "legal" : "no"}</dd>
               </div>
               <div>
                 <dt>Guard</dt>
@@ -705,6 +729,9 @@ export default function PracticeBattlefieldApp() {
                 <strong>Power overlay:</strong> legal ploys, upgrades, and warscroll abilities appear on the map during power step.
               </p>
               <p>
+                <strong>Delve:</strong> if the selected fighter is standing on a revealed feature token during power step, the feature chip and board button both become delve controls.
+              </p>
+              <p>
                 <strong>Attack targets:</strong>{" "}
                 {attackTargetNames.length === 0 ? "none" : attackTargetNames.join(", ")}
               </p>
@@ -792,7 +819,9 @@ function BoardMap({
   powerOverlay,
   recentCombatTargetId,
   resultFlash,
+  selectedFeatureToken,
   onApplyPowerAction,
+  onDelveSelectedFighter,
   onGuardSelectedFighter,
   onPassTurn,
   onAttackTarget,
@@ -816,7 +845,9 @@ function BoardMap({
   powerOverlay: PowerOverlayModel;
   recentCombatTargetId: FighterId | null;
   resultFlash: BattlefieldResultFlash | null;
+  selectedFeatureToken: FeatureTokenState | null;
   onApplyPowerAction: (action: BattlefieldAppAction) => void;
+  onDelveSelectedFighter: () => void;
   onGuardSelectedFighter: () => void;
   onPassTurn: () => void;
   onAttackTarget: (targetId: FighterId) => void;
@@ -858,8 +889,18 @@ function BoardMap({
   return (
     <div className="battlefield-board-frame">
       {(game.turnStep === TurnStep.Power && actionLens.passAction !== null) ||
+      (game.turnStep === TurnStep.Power && actionLens.delveAction !== null && selectedFeatureToken !== null) ||
       (game.turnStep === TurnStep.Action && actionLens.guardAction !== null && selectedFighterName !== null) ? (
         <div className="battlefield-board-quick-actions">
+          {game.turnStep === TurnStep.Power && actionLens.delveAction !== null && selectedFeatureToken !== null ? (
+            <button
+              type="button"
+              className="battlefield-board-action battlefield-board-action-delve"
+              onClick={onDelveSelectedFighter}
+            >
+              Delve {getFeatureTokenBadge(selectedFeatureToken)}
+            </button>
+          ) : null}
           {game.turnStep === TurnStep.Action && actionLens.guardAction !== null && selectedFighterName !== null ? (
             <button
               type="button"
@@ -983,6 +1024,11 @@ function BoardMap({
             game.turnStep === TurnStep.Power &&
             fighter !== null &&
             fighter.ownerPlayerId === activePlayerId;
+          const isDelveReadyFeature =
+            game.turnStep === TurnStep.Power &&
+            featureToken !== null &&
+            actionLens.delveAction?.featureTokenId === featureToken.id &&
+            fighter?.id === selectedFighterId;
           const isClickableMoveDestination = isMoveDestination && game.turnStep === TurnStep.Action;
           const isClickableChargeDestination = isChargeDestination && game.turnStep === TurnStep.Action;
           const isClickableChargeTarget =
@@ -1046,6 +1092,7 @@ function BoardMap({
                 isClickableHex: isInteractiveHex,
                 isPendingMoveHex,
                 isMoveDestination,
+                isDelveReadyHex: isDelveReadyFeature,
                 isPowerResponseHex: isPowerResponseFighter,
                 isRecentCombatTarget,
                 isSelectedHex,
@@ -1134,9 +1181,22 @@ function BoardMap({
 
               <div className="battlefield-hex-center">
                 {featureToken === null ? null : (
-                  <span className={`battlefield-feature-chip battlefield-feature-${featureToken.side}`}>
-                    {getFeatureTokenBadge(featureToken)}
-                  </span>
+                  isDelveReadyFeature ? (
+                    <button
+                      type="button"
+                      className={`battlefield-feature-chip battlefield-feature-${featureToken.side} battlefield-feature-chip-button battlefield-feature-chip-delve`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onDelveSelectedFighter();
+                      }}
+                    >
+                      Delve {getFeatureTokenBadge(featureToken)}
+                    </button>
+                  ) : (
+                    <span className={`battlefield-feature-chip battlefield-feature-${featureToken.side}`}>
+                      {getFeatureTokenBadge(featureToken)}
+                    </span>
+                  )
                 )}
                 {actionBadge === null ? null : (
                   <span
@@ -1370,6 +1430,7 @@ function getHexClassName(
     isPendingChargeTarget: boolean;
     isChargeTarget: boolean;
     isClickableHex: boolean;
+    isDelveReadyHex: boolean;
     isPendingMoveHex: boolean;
     isMoveDestination: boolean;
     isPowerResponseHex: boolean;
@@ -1447,6 +1508,10 @@ function getHexClassName(
 
   if (state.isPowerResponseHex) {
     classes.push("battlefield-map-hex-power-response");
+  }
+
+  if (state.isDelveReadyHex) {
+    classes.push("battlefield-map-hex-delve-ready");
   }
 
   if (state.isSelectedHex) {
@@ -1564,6 +1629,9 @@ function getFighterActionLens(
   const chargeActions = legalActions.filter(
     (action): action is ChargeAction => action instanceof ChargeAction && action.fighterId === selectedFighterId,
   );
+  const delveAction = legalActions.find(
+    (action): action is DelveAction => action instanceof DelveAction && action.fighterId === selectedFighterId,
+  ) ?? null;
   const guardAction = legalActions.find(
     (action): action is GuardAction => action instanceof GuardAction && action.fighterId === selectedFighterId,
   ) ?? null;
@@ -1616,11 +1684,13 @@ function getFighterActionLens(
     attackActions,
     moveActions,
     chargeActions,
+    delveAction,
     guardAction,
     passAction,
     attackCount: attackTargetIds.size,
     moveCount: moveHexIds.size,
     chargeCount: uniqueChargeOptions.size,
+    delveAvailable: delveAction !== null,
     guardAvailable: guardAction !== null,
   };
 }
@@ -1668,6 +1738,18 @@ function buildBattlefieldResultFlash(
       id: Date.now(),
       tone: "charge",
       title: buildCombatFlashTitle("charge", combatResult.damageInflicted, combatResult.outcome, combatResult.targetSlain),
+      detail,
+    };
+  }
+
+  if (action instanceof DelveAction) {
+    const delveResult = game.getLatestRecord(GameRecordKind.Delve);
+    return {
+      id: Date.now(),
+      tone: "power",
+      title: delveResult === null
+        ? "Delved feature token"
+        : `Delved to ${formatFeatureTokenSide(delveResult.sideAfterDelve)}`,
       detail,
     };
   }
@@ -1824,11 +1906,13 @@ function createEmptyActionLens(passAction: PassAction | null): FighterActionLens
     attackActions: [],
     moveActions: [],
     chargeActions: [],
+    delveAction: null,
     guardAction: null,
     passAction,
     attackCount: 0,
     moveCount: 0,
     chargeCount: 0,
+    delveAvailable: false,
     guardAvailable: false,
   };
 }
