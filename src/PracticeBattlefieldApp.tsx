@@ -7,13 +7,17 @@ import {
   CombatActionService,
   createCombatReadySetupPracticeGame,
   FeatureTokenSide,
+  GameAction,
   GameEngine,
   GameRecordKind,
   GuardAction,
   HexKind,
   MoveAction,
   PassAction,
+  PlayPloyAction,
+  PlayUpgradeAction,
   TurnStep,
+  UseWarscrollAbilityAction,
   type BoardState,
   type CombatResult,
   type FeatureTokenState,
@@ -82,9 +86,33 @@ type ChargeProfileSummary = {
 
 type BattlefieldResultFlash = {
   id: number;
-  tone: "move" | "attack" | "charge";
+  tone: "move" | "attack" | "charge" | "power";
   title: string;
   detail: string;
+};
+
+type BattlefieldAppAction =
+  | MoveAction
+  | ChargeAction
+  | AttackAction
+  | GuardAction
+  | PassAction
+  | PlayPloyAction
+  | PlayUpgradeAction
+  | UseWarscrollAbilityAction;
+
+type PowerOverlayOption = {
+  key: string;
+  title: string;
+  detail: string;
+  action: PlayPloyAction | PlayUpgradeAction | UseWarscrollAbilityAction;
+};
+
+type PowerOverlayModel = {
+  ploys: PowerOverlayOption[];
+  upgrades: PowerOverlayOption[];
+  warscrollAbilities: PowerOverlayOption[];
+  hasAnyOptions: boolean;
 };
 
 export default function PracticeBattlefieldApp() {
@@ -94,6 +122,7 @@ export default function PracticeBattlefieldApp() {
   const boardProjection = projectBoard(game.board);
   const recentEvents = [...game.eventLog].slice(-10).reverse();
   const activePlayer = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
+  const legalActions = activePlayer === null ? [] : combatActionService.getLegalActions(game, activePlayer.id);
   const selectableFighters =
     activePlayer?.fighters.filter((fighter) => !fighter.isSlain && fighter.currentHexId !== null) ?? [];
   const [selectedFighterId, setSelectedFighterId] = useState<FighterId | null>(
@@ -103,7 +132,8 @@ export default function PracticeBattlefieldApp() {
     selectedFighterId === null || activePlayer === null
       ? null
       : activePlayer.getFighter(selectedFighterId) ?? null;
-  const actionLens = getFighterActionLens(game, activePlayer, selectedFighterId);
+  const actionLens = getFighterActionLens(game, activePlayer, selectedFighterId, legalActions);
+  const powerOverlay = getPowerOverlayModel(game, activePlayer, legalActions);
   const moveOptions = getMoveOptions(actionLens);
   const chargeOptions = getChargeOptions(game, actionLens);
   const [selectedMoveHexId, setSelectedMoveHexId] = useState<HexId | null>(null);
@@ -186,7 +216,7 @@ export default function PracticeBattlefieldApp() {
     setRefreshTick((value) => value + 1);
   }
 
-  function applyAction(action: MoveAction | ChargeAction | AttackAction | GuardAction | PassAction): void {
+  function applyAction(action: BattlefieldAppAction): void {
     const previousActivePlayerId = game.activePlayerId;
     const previousSelectedFighterId = selectedFighterId;
     demoEngine.applyGameAction(game, action);
@@ -410,8 +440,10 @@ export default function PracticeBattlefieldApp() {
             pendingAttackTargetId={pendingAttackTargetId}
             pendingChargeBadgeLabel={pendingChargeBadgeLabel}
             pendingAttackBadgeLabel={pendingAttackBadgeLabel}
+            powerOverlay={powerOverlay}
             recentCombatTargetId={recentCombatTargetId}
             resultFlash={resultFlash}
+            onApplyPowerAction={applyAction}
             onGuardSelectedFighter={() => {
               if (actionLens.guardAction !== null) {
                 applyAction(actionLens.guardAction);
@@ -670,6 +702,9 @@ export default function PracticeBattlefieldApp() {
                 <strong>Power step cue:</strong> the active player&apos;s fighters glow teal during power step response windows.
               </p>
               <p>
+                <strong>Power overlay:</strong> legal ploys, upgrades, and warscroll abilities appear on the map during power step.
+              </p>
+              <p>
                 <strong>Attack targets:</strong>{" "}
                 {attackTargetNames.length === 0 ? "none" : attackTargetNames.join(", ")}
               </p>
@@ -754,8 +789,10 @@ function BoardMap({
   pendingAttackTargetId,
   pendingChargeBadgeLabel,
   pendingAttackBadgeLabel,
+  powerOverlay,
   recentCombatTargetId,
   resultFlash,
+  onApplyPowerAction,
   onGuardSelectedFighter,
   onPassTurn,
   onAttackTarget,
@@ -776,8 +813,10 @@ function BoardMap({
   pendingAttackTargetId: FighterId | null;
   pendingChargeBadgeLabel: string | null;
   pendingAttackBadgeLabel: string | null;
+  powerOverlay: PowerOverlayModel;
   recentCombatTargetId: FighterId | null;
   resultFlash: BattlefieldResultFlash | null;
+  onApplyPowerAction: (action: BattlefieldAppAction) => void;
   onGuardSelectedFighter: () => void;
   onPassTurn: () => void;
   onAttackTarget: (targetId: FighterId) => void;
@@ -840,6 +879,68 @@ function BoardMap({
             </button>
           ) : null}
         </div>
+      ) : null}
+      {game.turnStep === TurnStep.Power && powerOverlay.hasAnyOptions ? (
+        <section className="battlefield-power-overlay">
+          <div className="battlefield-power-overlay-header">
+            <p className="battlefield-power-overlay-eyebrow">Power Window</p>
+            <strong>Board-side power plays</strong>
+          </div>
+          {powerOverlay.warscrollAbilities.length === 0 ? null : (
+            <div className="battlefield-power-overlay-section">
+              <p className="battlefield-power-overlay-label">Warscroll</p>
+              <div className="battlefield-power-option-list">
+                {powerOverlay.warscrollAbilities.map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    className="battlefield-power-option battlefield-power-option-warscroll"
+                    onClick={() => onApplyPowerAction(option.action)}
+                  >
+                    <strong>{option.title}</strong>
+                    <span>{option.detail}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {powerOverlay.ploys.length === 0 ? null : (
+            <div className="battlefield-power-overlay-section">
+              <p className="battlefield-power-overlay-label">Ploys</p>
+              <div className="battlefield-power-option-list">
+                {powerOverlay.ploys.map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    className="battlefield-power-option battlefield-power-option-ploy"
+                    onClick={() => onApplyPowerAction(option.action)}
+                  >
+                    <strong>{option.title}</strong>
+                    <span>{option.detail}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {powerOverlay.upgrades.length === 0 ? null : (
+            <div className="battlefield-power-overlay-section">
+              <p className="battlefield-power-overlay-label">Upgrades</p>
+              <div className="battlefield-power-option-list">
+                {powerOverlay.upgrades.map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    className="battlefield-power-option battlefield-power-option-upgrade"
+                    onClick={() => onApplyPowerAction(option.action)}
+                  >
+                    <strong>{option.title}</strong>
+                    <span>{option.detail}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
       ) : null}
       {resultFlash === null ? null : (
         <div
@@ -1439,8 +1540,8 @@ function getFighterActionLens(
   game: Game,
   activePlayer: PlayerState | null,
   selectedFighterId: FighterId | null,
+  legalActions: GameAction[],
 ): FighterActionLens {
-  const legalActions = activePlayer === null ? [] : combatActionService.getLegalActions(game, activePlayer.id);
   const passAction = legalActions.find(
     (action): action is PassAction => action instanceof PassAction,
   ) ?? null;
@@ -1526,7 +1627,7 @@ function getFighterActionLens(
 
 function buildBattlefieldResultFlash(
   game: Game,
-  action: MoveAction | ChargeAction | AttackAction | GuardAction | PassAction,
+  action: BattlefieldAppAction,
 ): BattlefieldResultFlash | null {
   const detail = game.eventLog[game.eventLog.length - 1];
   if (detail === undefined) {
@@ -1571,6 +1672,39 @@ function buildBattlefieldResultFlash(
     };
   }
 
+  if (action instanceof PlayPloyAction) {
+    const player = game.getPlayer(action.playerId);
+    const cardWithDefinition = player?.getCardWithDefinition(action.cardId);
+    return {
+      id: Date.now(),
+      tone: "power",
+      title: `Played ${cardWithDefinition?.definition.name ?? "ploy"}`,
+      detail,
+    };
+  }
+
+  if (action instanceof PlayUpgradeAction) {
+    const player = game.getPlayer(action.playerId);
+    const cardWithDefinition = player?.getCardWithDefinition(action.cardId);
+    return {
+      id: Date.now(),
+      tone: "power",
+      title: `Equipped ${cardWithDefinition?.definition.name ?? "upgrade"}`,
+      detail,
+    };
+  }
+
+  if (action instanceof UseWarscrollAbilityAction) {
+    const player = game.getPlayer(action.playerId);
+    const ability = player?.getWarscrollDefinition()?.getAbility(action.abilityIndex);
+    return {
+      id: Date.now(),
+      tone: "power",
+      title: `Used ${ability?.name ?? "warscroll ability"}`,
+      detail,
+    };
+  }
+
   return null;
 }
 
@@ -1597,6 +1731,85 @@ function buildCombatFlashTitle(
   }
 
   return `${capitalizedAction} missed`;
+}
+
+function getPowerOverlayModel(
+  game: Game,
+  activePlayer: PlayerState | null,
+  legalActions: GameAction[],
+): PowerOverlayModel {
+  if (activePlayer === null || game.turnStep !== TurnStep.Power) {
+    return {
+      ploys: [],
+      upgrades: [],
+      warscrollAbilities: [],
+      hasAnyOptions: false,
+    };
+  }
+
+  const ploys = legalActions.flatMap((action) => {
+    if (!(action instanceof PlayPloyAction)) {
+      return [];
+    }
+
+    const cardWithDefinition = activePlayer.getCardWithDefinition(action.cardId);
+    if (cardWithDefinition === undefined) {
+      return [];
+    }
+
+    return [{
+      key: `ploy:${action.cardId}:${action.targetFighterId ?? "none"}`,
+      title: cardWithDefinition.definition.name,
+      detail:
+        action.targetFighterId === null
+          ? cardWithDefinition.definition.text || "Play this ploy."
+          : `Target ${getFighterName(game, action.targetFighterId)}`,
+      action,
+    }];
+  });
+
+  const upgrades = legalActions.flatMap((action) => {
+    if (!(action instanceof PlayUpgradeAction)) {
+      return [];
+    }
+
+    const cardWithDefinition = activePlayer.getCardWithDefinition(action.cardId);
+    if (cardWithDefinition === undefined) {
+      return [];
+    }
+
+    return [{
+      key: `upgrade:${action.cardId}:${action.fighterId}`,
+      title: cardWithDefinition.definition.name,
+      detail: `Attach to ${getFighterName(game, action.fighterId)} • ${cardWithDefinition.definition.gloryValue} glory`,
+      action,
+    }];
+  });
+
+  const warscrollAbilities = legalActions.flatMap((action) => {
+    if (!(action instanceof UseWarscrollAbilityAction)) {
+      return [];
+    }
+
+    const ability = activePlayer.getWarscrollDefinition()?.getAbility(action.abilityIndex);
+    if (ability === undefined) {
+      return [];
+    }
+
+    return [{
+      key: `warscroll:${action.abilityIndex}`,
+      title: ability.name,
+      detail: ability.text,
+      action,
+    }];
+  });
+
+  return {
+    ploys,
+    upgrades,
+    warscrollAbilities,
+    hasAnyOptions: ploys.length > 0 || upgrades.length > 0 || warscrollAbilities.length > 0,
+  };
 }
 
 function createEmptyActionLens(passAction: PassAction | null): FighterActionLens {

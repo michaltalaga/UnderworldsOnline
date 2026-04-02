@@ -345,6 +345,90 @@ body {
   transform: translateY(-1px);
 }
 
+.battlefield-power-overlay {
+  position: absolute;
+  top: 72px;
+  left: 16px;
+  z-index: 11;
+  width: min(340px, calc(100% - 32px));
+  max-height: 320px;
+  overflow: auto;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 251, 245, 0.96);
+  border: 1px solid rgba(112, 91, 66, 0.14);
+  box-shadow: 0 16px 30px rgba(35, 24, 18, 0.14);
+}
+
+.battlefield-power-overlay-header {
+  display: grid;
+  gap: 4px;
+}
+
+.battlefield-power-overlay-eyebrow,
+.battlefield-power-overlay-label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #7a624d;
+}
+
+.battlefield-power-overlay-section {
+  margin-top: 12px;
+}
+
+.battlefield-power-option-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.battlefield-power-option {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid rgba(112, 91, 66, 0.14);
+  background: rgba(255, 255, 255, 0.88);
+  color: #3f3228;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.battlefield-power-option strong {
+  font-size: 0.88rem;
+}
+
+.battlefield-power-option span {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #645345;
+}
+
+.battlefield-power-option:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(35, 24, 18, 0.1);
+}
+
+.battlefield-power-option-warscroll {
+  background: rgba(243, 249, 247, 0.96);
+  border-color: rgba(72, 124, 130, 0.18);
+}
+
+.battlefield-power-option-ploy {
+  background: rgba(249, 241, 245, 0.96);
+  border-color: rgba(140, 34, 61, 0.14);
+}
+
+.battlefield-power-option-upgrade {
+  background: rgba(251, 246, 235, 0.96);
+  border-color: rgba(156, 111, 22, 0.14);
+}
+
 .battlefield-board-flash {
   position: absolute;
   top: 16px;
@@ -374,6 +458,12 @@ body {
   background: linear-gradient(180deg, rgba(255, 242, 201, 0.98), rgba(240, 199, 108, 0.98));
   border: 1px solid rgba(156, 111, 22, 0.18);
   color: #5d4311;
+}
+
+.battlefield-board-flash-power {
+  background: linear-gradient(180deg, rgba(244, 247, 239, 0.98), rgba(221, 232, 205, 0.98));
+  border: 1px solid rgba(96, 129, 72, 0.18);
+  color: #314a22;
 }
 
 .battlefield-board-flash-title,
