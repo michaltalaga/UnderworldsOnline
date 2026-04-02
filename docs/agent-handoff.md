@@ -15,6 +15,14 @@ The repo currently has:
 - end phase through cleanup
 - interactive battlefield map UI
 
+The repo also contains important game rule source files in `Rules/`:
+
+- `Rules/rules.txt`
+- `Rules/rules.html`
+- `Rules/whuh_core_rules_eng_11-1cdg56z5qs-86cxcaddgg.pdf`
+
+These should be treated as important reference material for future game-rules work.
+
 The worktree was clean when this handoff was written.
 
 ## Current Architecture

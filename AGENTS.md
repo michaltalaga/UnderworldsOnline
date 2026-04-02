@@ -36,6 +36,15 @@ Do not put volatile game-progress or handoff state here. That belongs in `docs/a
 - Frontend lives in `src/`.
 - Domain model and engine live in `src/domain/`.
 - Scripts live in `scripts/`.
+- Game rules source material lives in `Rules/`.
+
+### Rules source material
+
+- `Rules/rules.txt` exists and is important.
+- `Rules/rules.html` exists and is important.
+- `Rules/whuh_core_rules_eng_11-1cdg56z5qs-86cxcaddgg.pdf` exists and is important.
+- Do not replace these with condensed notes when implementing rules work.
+- If a task depends on game rules, consult the files in `Rules/` directly instead of relying on a short summary.
 
 ### Engine
 
