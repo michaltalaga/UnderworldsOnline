@@ -189,53 +189,65 @@ export class GameEngine {
   }
 
   public applyGameAction(game: Game, action: GameAction): Game {
+    const batchStartIndex = game.records.length;
+
     if (action instanceof AttackAction) {
       this.applyAttackAction(game, action);
+      this.finishEventBatch(game, batchStartIndex);
       return game;
     }
 
     if (action instanceof ChargeAction) {
       this.applyChargeAction(game, action);
+      this.finishEventBatch(game, batchStartIndex);
       return game;
     }
 
     if (action instanceof MoveAction) {
       this.applyMoveAction(game, action);
+      this.finishEventBatch(game, batchStartIndex);
       return game;
     }
 
     if (action instanceof GuardAction) {
       this.applyGuardAction(game, action);
+      this.finishEventBatch(game, batchStartIndex);
       return game;
     }
 
     if (action instanceof DelveAction) {
       this.applyDelveAction(game, action);
+      this.finishEventBatch(game, batchStartIndex);
       return game;
     }
 
     if (action instanceof FocusAction) {
       this.applyFocusAction(game, action);
+      this.finishEventBatch(game, batchStartIndex);
       return game;
     }
 
     if (action instanceof PlayPloyAction) {
       this.applyPlayPloyAction(game, action);
+      this.finishEventBatch(game, batchStartIndex);
       return game;
     }
 
     if (action instanceof PlayUpgradeAction) {
       this.applyPlayUpgradeAction(game, action);
+      this.finishEventBatch(game, batchStartIndex);
       return game;
     }
 
     if (action instanceof UseWarscrollAbilityAction) {
       this.applyUseWarscrollAbilityAction(game, action);
+      this.finishEventBatch(game, batchStartIndex);
       return game;
     }
 
     if (action instanceof PassAction) {
       this.applyPassAction(game, action);
+      this.finishEventBatch(game, batchStartIndex);
       return game;
     }
 
@@ -243,33 +255,41 @@ export class GameEngine {
   }
 
   public applyEndPhaseAction(game: Game, action: EndPhaseAction): Game {
+    const batchStartIndex = game.records.length;
+
     if (action instanceof ResolveScoreObjectivesAction) {
       this.applyResolveScoreObjectives(game);
+      this.finishEventBatch(game, batchStartIndex);
       return game;
     }
 
     if (action instanceof ResolveEquipUpgradesAction) {
       this.applyResolveEquipUpgrades(game);
+      this.finishEventBatch(game, batchStartIndex);
       return game;
     }
 
     if (action instanceof ResolveDiscardCardsAction) {
       this.applyResolveDiscardCards(game);
+      this.finishEventBatch(game, batchStartIndex);
       return game;
     }
 
     if (action instanceof ResolveDrawObjectivesAction) {
       this.applyResolveDrawObjectives(game);
+      this.finishEventBatch(game, batchStartIndex);
       return game;
     }
 
     if (action instanceof ResolveDrawPowerCardsAction) {
       this.applyResolveDrawPowerCards(game);
+      this.finishEventBatch(game, batchStartIndex);
       return game;
     }
 
     if (action instanceof ResolveCleanupAction) {
       this.applyResolveCleanup(game);
+      this.finishEventBatch(game, batchStartIndex);
       return game;
     }
 
@@ -317,6 +337,7 @@ export class GameEngine {
     chooserPlayerId: PlayerId,
     firstPlayerId: PlayerId,
   ): Game {
+    const batchStartIndex = game.records.length;
     this.assertStateKind(game, "combatChooseFirstPlayer");
 
     if (game.priorityPlayerId !== chooserPlayerId) {
@@ -346,6 +367,7 @@ export class GameEngine {
     game.eventLog.push(
       `${chooser.name} chose ${firstPlayer.name} to take the first turn. ${rollOffLoser.name} drew 1 power card.`,
     );
+    this.finishEventBatch(game, batchStartIndex);
 
     return game;
   }
@@ -663,13 +685,6 @@ export class GameEngine {
       action.saveRoll,
       action.kind,
     );
-    const immediateScoringResolution = this.scoreObjectivesForPlayer(
-      game,
-      attackerPlayer,
-      ObjectiveConditionTiming.Immediate,
-      false,
-      true,
-    );
 
     const firstPlayerId = game.firstPlayerId;
     if (firstPlayerId === null) {
@@ -705,9 +720,6 @@ export class GameEngine {
         : null,
       combatResult.staggerApplied ? `staggered fighter ${target.id}` : null,
       targetSlain ? `slew fighter ${target.id} for ${targetDefinition.bounty} glory` : null,
-      immediateScoringResolution.scoredObjectives.length > 0
-        ? `scored ${immediateScoringResolution.scoredObjectives.map((objective) => objective.cardName).join(", ")} for ${immediateScoringResolution.gloryGained} glory`
-        : null,
     ].filter((text): text is string => text !== null);
     const effectSuffix = effectText.length === 0 ? "" : ` and ${effectText.join(" and ")}`;
     game.eventLog.push(
@@ -797,13 +809,6 @@ export class GameEngine {
       action.saveRoll,
       action.kind,
     );
-    const immediateScoringResolution = this.scoreObjectivesForPlayer(
-      game,
-      attackerPlayer,
-      ObjectiveConditionTiming.Immediate,
-      false,
-      true,
-    );
 
     attacker.hasChargeToken = true;
 
@@ -841,9 +846,6 @@ export class GameEngine {
         : null,
       combatResult.staggerApplied ? `staggered fighter ${target.id}` : null,
       targetSlain ? `slew fighter ${target.id} for ${targetDefinition.bounty} glory` : null,
-      immediateScoringResolution.scoredObjectives.length > 0
-        ? `scored ${immediateScoringResolution.scoredObjectives.map((objective) => objective.cardName).join(", ")} for ${immediateScoringResolution.gloryGained} glory`
-        : null,
     ].filter((text): text is string => text !== null);
     const effectSuffix = effectText.length === 0 ? "" : ` and ${effectText.join(" and ")}`;
     game.eventLog.push(
@@ -962,20 +964,10 @@ export class GameEngine {
       invokedByFighterId: fighter.id,
       actionKind: action.kind,
     });
-    const immediateScoringResolution = this.scoreObjectivesForPlayer(
-      game,
-      player,
-      ObjectiveConditionTiming.Immediate,
-      false,
-      true,
-    );
     game.consecutivePasses = 0;
     const effectText = [
       `It is now a ${featureToken.side} token`,
       `${fighter.id} gained a stagger token`,
-      immediateScoringResolution.scoredObjectives.length > 0
-        ? `scored ${immediateScoringResolution.scoredObjectives.map((objective) => objective.cardName).join(", ")} for ${immediateScoringResolution.gloryGained} glory`
-        : null,
     ].filter((text): text is string => text !== null);
     game.eventLog.push(
       `${player.name} delved feature token ${featureToken.id} with fighter ${fighter.id}. `
@@ -2013,14 +2005,89 @@ export class GameEngine {
     }
   }
 
+  private finishEventBatch(game: Game, batchStartIndex: number): void {
+    const triggeredScoring = this.evaluateTriggeredCards(game, batchStartIndex);
+    this.appendTriggeredObjectiveSummaryToLatestEventLog(game, triggeredScoring);
+  }
+
+  private evaluateTriggeredCards(
+    game: Game,
+    batchStartIndex: number,
+  ): ObjectiveScoringPlayerResolution[] {
+    if (game.records.length <= batchStartIndex) {
+      return [];
+    }
+
+    const triggeredScoring: ObjectiveScoringPlayerResolution[] = [];
+    let scoredObjectives = false;
+    do {
+      scoredObjectives = false;
+      for (const player of game.players) {
+        const resolution = this.scoreObjectivesForPlayer(
+          game,
+          player,
+          ObjectiveConditionTiming.Immediate,
+          false,
+          true,
+          game.getEventLogState(batchStartIndex),
+        );
+        if (resolution.scoredObjectives.length === 0) {
+          continue;
+        }
+
+        triggeredScoring.push(resolution);
+        scoredObjectives = true;
+      }
+    } while (scoredObjectives);
+
+    return triggeredScoring;
+  }
+
+  private appendTriggeredObjectiveSummaryToLatestEventLog(
+    game: Game,
+    resolutions: readonly ObjectiveScoringPlayerResolution[],
+  ): void {
+    if (resolutions.length === 0) {
+      return;
+    }
+
+    const summary = resolutions.length === 1
+      ? this.describeObjectiveScoringResolution(resolutions[0])
+      : `Triggered scores: ${resolutions.map((resolution) =>
+        `${resolution.playerName} ${this.describeObjectiveScoringResolution(resolution)}`
+      ).join("; ")}`;
+
+    if (game.eventLog.length === 0) {
+      game.eventLog.push(summary);
+      return;
+    }
+
+    const lastIndex = game.eventLog.length - 1;
+    const lastEntry = game.eventLog[lastIndex];
+    if (lastEntry.endsWith(".")) {
+      const joiner = resolutions.length === 1 ? " and " : " ";
+      game.eventLog[lastIndex] = `${lastEntry.slice(0, -1)}${joiner}${summary}.`;
+      return;
+    }
+
+    game.eventLog[lastIndex] = `${lastEntry} ${summary}.`;
+  }
+
+  private describeObjectiveScoringResolution(
+    resolution: ObjectiveScoringPlayerResolution,
+  ): string {
+    return `scored ${resolution.scoredObjectives.map((objective) => objective.cardName).join(", ")} for ${resolution.gloryGained} glory`;
+  }
+
   private scoreObjectivesForPlayer(
     game: Game,
     player: PlayerState,
     timing: ObjectiveConditionTiming,
     logEachObjective: boolean = true,
     recordResolution: boolean = false,
+    world: ReturnType<Game["getEventLogState"]> = game.getEventLogState(),
   ): ObjectiveScoringPlayerResolution {
-    const scorableObjectives = this.scoringResolver.getScorableObjectives(game, player.id, timing);
+    const scorableObjectives = this.scoringResolver.getScorableObjectives(game, player.id, timing, world);
     const uniqueObjectiveIds = new Set(scorableObjectives.map((card) => card.id));
     const scoredObjectives: ObjectiveScoringCardResolution[] = [];
     let gloryGained = 0;

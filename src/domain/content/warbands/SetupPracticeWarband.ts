@@ -174,7 +174,7 @@ class PracticeObjective01CardDefinition extends PracticeObjectiveCardDefinition 
       return false;
     }
 
-    const latestCombat = world.getLatestEvent(GameRecordKind.Combat);
+    const latestCombat = world.getLatestBatchEvent(GameRecordKind.Combat);
     if (latestCombat === null || latestCombat.invokedByPlayerId !== player.id) {
       return false;
     }
@@ -206,7 +206,7 @@ class PracticeObjective02CardDefinition extends PracticeObjectiveCardDefinition 
       return false;
     }
 
-    const latestCombat = world.getLatestEvent(GameRecordKind.Combat);
+    const latestCombat = world.getLatestBatchEvent(GameRecordKind.Combat);
     if (
       latestCombat === null ||
       latestCombat.invokedByPlayerId !== player.id ||
@@ -247,7 +247,7 @@ class PracticeObjective03CardDefinition extends PracticeObjectiveCardDefinition 
       return false;
     }
 
-    const latestDelve = world.getLatestEvent(GameRecordKind.Delve);
+    const latestDelve = world.getLatestBatchEvent(GameRecordKind.Delve);
     if (latestDelve === null || latestDelve.invokedByPlayerId !== player.id) {
       return false;
     }
