@@ -35,6 +35,8 @@ export * from "./endPhase/ResolveEquipUpgradesAction";
 export * from "./endPhase/ResolveScoreObjectivesAction";
 export * from "./engine/GameEngine";
 export * from "./factories/GameFactory";
+export * from "./rules/ActionStepEndedResolution";
+export * from "./rules/ActionStepStartedResolution";
 export * from "./rules/CombatContext";
 export * from "./rules/CombatActionService";
 export * from "./rules/DefaultCombatResolver";

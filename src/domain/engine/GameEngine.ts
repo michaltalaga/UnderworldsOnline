@@ -60,6 +60,8 @@ import {
   type PowerDrawCardResolution,
   type PowerDrawPlayerResolution,
 } from "../endPhase/PowerDrawResolution";
+import { ActionStepEndedResolution } from "../rules/ActionStepEndedResolution";
+import { ActionStepStartedResolution } from "../rules/ActionStepStartedResolution";
 import { AttackAction } from "../actions/AttackAction";
 import { ChargeAction } from "../actions/ChargeAction";
 import { DelveAction } from "../actions/DelveAction";
@@ -1635,6 +1637,20 @@ export class GameEngine {
 
     if (
       previousState.kind === "combatTurn" &&
+      previousState.turnStep === TurnStep.Action &&
+      previousState.activePlayerId !== null &&
+      (
+        currentState.kind !== "combatTurn" ||
+        currentState.turnStep !== TurnStep.Action ||
+        currentState.activePlayerId !== previousState.activePlayerId
+      )
+    ) {
+      const previousActionPlayer = this.requirePlayer(game, previousState.activePlayerId);
+      this.recordActionStepEnded(game, previousActionPlayer, currentState, metadata);
+    }
+
+    if (
+      previousState.kind === "combatTurn" &&
       previousState.turnStep === TurnStep.Power &&
       previousState.activePlayerId !== null &&
       (
@@ -1679,6 +1695,7 @@ export class GameEngine {
         previousState.activePlayerId !== currentState.activePlayerId
       )
     ) {
+      this.recordActionStepStarted(game, currentState.activePlayerId, metadata);
       this.recordTurnStarted(game, currentState.activePlayerId, metadata);
     }
   }
@@ -1730,6 +1747,58 @@ export class GameEngine {
         player.turnsTakenThisRound + 1,
         roundTurnNumber,
         roundTurnNumber === 1,
+      ),
+      metadata,
+    );
+  }
+
+  private recordActionStepStarted(
+    game: Game,
+    playerId: PlayerId,
+    metadata: GameEventMetadata = {},
+  ): void {
+    const player = this.requirePlayer(game, playerId);
+    const roundTurnNumber =
+      game.players.reduce((total, currentPlayer) => total + currentPlayer.turnsTakenThisRound, 0) + 1;
+
+    game.addRecord(
+      GameRecordKind.ActionStepStarted,
+      new ActionStepStartedResolution(
+        game.roundNumber,
+        player.id,
+        player.name,
+        player.turnsTakenThisRound + 1,
+        roundTurnNumber,
+        roundTurnNumber === 1,
+      ),
+      metadata,
+    );
+  }
+
+  private recordActionStepEnded(
+    game: Game,
+    player: PlayerState,
+    nextState: GameState,
+    metadata: GameEventMetadata = {},
+  ): void {
+    const nextActivePlayer =
+      nextState.activePlayerId === null ? null : game.getPlayer(nextState.activePlayerId);
+    const roundTurnNumber =
+      game.players.reduce((total, currentPlayer) => total + currentPlayer.turnsTakenThisRound, 0) + 1;
+
+    game.addRecord(
+      GameRecordKind.ActionStepEnded,
+      new ActionStepEndedResolution(
+        game.roundNumber,
+        player.id,
+        player.name,
+        player.turnsTakenThisRound + 1,
+        roundTurnNumber,
+        nextState.kind,
+        nextState.phase,
+        nextState.turnStep,
+        nextState.activePlayerId,
+        nextActivePlayer?.name ?? null,
       ),
       metadata,
     );
