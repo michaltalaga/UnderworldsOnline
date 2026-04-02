@@ -277,16 +277,13 @@ export class CombatActionService extends LegalActionService {
       return false;
     }
 
-    const world = game.getEventLogState();
-    return (
-      cardWithDefinition.definition.kind === CardKind.Upgrade &&
-      cardWithDefinition.definition.canPlay(
-        game,
-        world,
-        player,
-        cardWithDefinition.card,
-        { equippedFighterId: fighter.id },
-      )
+    return this.getPlayablePowerCards(
+      game,
+      player,
+      { equippedFighterId: fighter.id },
+    ).some((playableCard) =>
+      playableCard.definition.kind === CardKind.Upgrade &&
+      playableCard.card.id === cardWithDefinition.card.id
     );
   }
 
@@ -305,16 +302,13 @@ export class CombatActionService extends LegalActionService {
       return false;
     }
 
-    const world = game.getEventLogState();
-    return (
-      cardWithDefinition.definition.kind === CardKind.Ploy &&
-      cardWithDefinition.definition.canPlay(
-        game,
-        world,
-        player,
-        cardWithDefinition.card,
-        { targetFighterId: action.targetFighterId },
-      )
+    return this.getPlayablePowerCards(
+      game,
+      player,
+      { targetFighterId: action.targetFighterId },
+    ).some((playableCard) =>
+      playableCard.definition.kind === CardKind.Ploy &&
+      playableCard.card.id === cardWithDefinition.card.id
     );
   }
 
@@ -577,24 +571,14 @@ export class CombatActionService extends LegalActionService {
       return [];
     }
 
-    const world = game.getEventLogState();
-    const upgradeCards = player.powerHand.filter((card) => {
-      const definition = player.getCardDefinition(card.id);
-      return definition?.kind === CardKind.Upgrade;
-    });
-
-    return upgradeCards.flatMap((card) =>
-      player.fighters.flatMap((fighter) =>
-        player.getCardDefinition(card.id)?.canPlay(
-          game,
-          world,
-          player,
-          card,
-          { equippedFighterId: fighter.id },
-        )
-          ? [new PlayUpgradeAction(player.id, card.id, fighter.id)]
-          : []
-      ),
+    return player.fighters.flatMap((fighter) =>
+      this.getPlayablePowerCards(
+        game,
+        player,
+        { equippedFighterId: fighter.id },
+      )
+        .filter((playableCard) => playableCard.definition.kind === CardKind.Upgrade)
+        .map((playableCard) => new PlayUpgradeAction(player.id, playableCard.card.id, fighter.id))
     );
   }
 
@@ -606,22 +590,43 @@ export class CombatActionService extends LegalActionService {
       return [];
     }
 
-    return player.powerHand.flatMap((card) => {
-      const definition = player.getCardDefinition(card.id);
-      if (definition?.kind !== CardKind.Ploy) {
-        return [];
-      }
+    const legalActions = new Map<string, PlayPloyAction>();
+    const candidateTargetIds: Array<FighterId | null> = [
+      null,
+      ...game.players.flatMap((candidatePlayer) =>
+        candidatePlayer.fighters.map((fighter) => fighter.id)
+      ),
+    ];
 
-      const untargetedAction = new PlayPloyAction(player.id, card.id);
-      if (this.isLegalPlayPloyAction(game, untargetedAction)) {
-        return [untargetedAction];
-      }
+    for (const targetFighterId of candidateTargetIds) {
+      for (const playableCard of this.getPlayablePowerCards(
+        game,
+        player,
+        { targetFighterId },
+      )) {
+        if (playableCard.definition.kind !== CardKind.Ploy) {
+          continue;
+        }
 
-      return game.players.flatMap((candidatePlayer) => candidatePlayer.fighters).flatMap((fighter) => {
-        const targetedAction = new PlayPloyAction(player.id, card.id, fighter.id);
-        return this.isLegalPlayPloyAction(game, targetedAction) ? [targetedAction] : [];
-      });
-    });
+        const action = new PlayPloyAction(player.id, playableCard.card.id, targetFighterId);
+        legalActions.set(`${action.cardId}:${action.targetFighterId ?? ""}`, action);
+      }
+    }
+
+    return [...legalActions.values()];
+  }
+
+  private getPlayablePowerCards(
+    game: Game,
+    player: PlayerState,
+    context: { equippedFighterId?: FighterId | null; targetFighterId?: FighterId | null },
+  ) {
+    return player.getPlayableCards(
+      game,
+      game.getEventLogState(),
+      context,
+      player.powerHand,
+    );
   }
 
   private getLegalUseWarscrollAbilityActions(
