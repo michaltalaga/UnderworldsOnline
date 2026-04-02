@@ -1018,6 +1018,10 @@ body {
   max-width: 62px;
 }
 
+.battlefield-hex-profile-preview-list-charge {
+  margin-top: -1px;
+}
+
 .battlefield-hex-profile-preview-chip {
   display: inline-flex;
   align-items: center;
@@ -1037,6 +1041,15 @@ body {
 
 .battlefield-hex-profile-preview-chip-more {
   background: rgba(80, 26, 45, 0.92);
+}
+
+.battlefield-hex-profile-preview-chip-charge {
+  background: rgba(146, 95, 13, 0.94);
+  color: #fff8e8;
+}
+
+.battlefield-hex-profile-preview-chip-charge.battlefield-hex-profile-preview-chip-more {
+  background: rgba(117, 78, 17, 0.92);
 }
 
 .battlefield-empty-hex-dot {
