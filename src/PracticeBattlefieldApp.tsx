@@ -3,6 +3,7 @@ import "./PracticeBattlefieldApp.css";
 import {
   AttackDieFace,
   AttackAction,
+  CardKind,
   ChargeAction,
   CombatActionService,
   createCombatReadySetupPracticeGame,
@@ -2575,44 +2576,64 @@ function getPowerOverlayModel(
     };
   }
 
-  const ploys = legalActions.flatMap((action) => {
-    if (!(action instanceof PlayPloyAction)) {
-      return [];
+  const world = game.getEventLogState();
+
+  const ployOptions = new Map<string, PowerOverlayOption>();
+  const candidateTargetFighterIds: Array<FighterId | null> = [
+    null,
+    ...game.players.flatMap((player) => player.fighters.map((fighter) => fighter.id)),
+  ];
+  for (const targetFighterId of candidateTargetFighterIds) {
+    for (const playableCard of activePlayer.getPlayableCards(
+      game,
+      world,
+      { targetFighterId },
+      activePlayer.powerHand,
+    )) {
+      if (playableCard.definition.kind !== CardKind.Ploy) {
+        continue;
+      }
+
+      const action = new PlayPloyAction(activePlayer.id, playableCard.card.id, targetFighterId);
+      const key = `ploy:${action.cardId}:${action.targetFighterId ?? "none"}`;
+      if (ployOptions.has(key)) {
+        continue;
+      }
+
+      ployOptions.set(key, {
+        key,
+        title: playableCard.definition.name,
+        detail:
+          targetFighterId === null
+            ? playableCard.definition.text || "Play this ploy."
+            : `Target ${getFighterName(game, targetFighterId)}`,
+        action,
+      });
     }
+  }
+  const ploys = [...ployOptions.values()];
 
-    const cardWithDefinition = activePlayer.getCardWithDefinition(action.cardId);
-    if (cardWithDefinition === undefined) {
-      return [];
+  const upgrades: PowerOverlayOption[] = [];
+  for (const fighter of activePlayer.fighters) {
+    for (const playableCard of activePlayer.getPlayableCards(
+      game,
+      world,
+      { equippedFighterId: fighter.id },
+      activePlayer.powerHand,
+    )) {
+      if (playableCard.definition.kind !== CardKind.Upgrade) {
+        continue;
+      }
+
+      const action = new PlayUpgradeAction(activePlayer.id, playableCard.card.id, fighter.id);
+      upgrades.push({
+        key: `upgrade:${action.cardId}:${action.fighterId}`,
+        title: playableCard.definition.name,
+        detail: `Attach to ${getFighterName(game, fighter.id)} • ${playableCard.definition.gloryValue} glory`,
+        action,
+      });
     }
-
-    return [{
-      key: `ploy:${action.cardId}:${action.targetFighterId ?? "none"}`,
-      title: cardWithDefinition.definition.name,
-      detail:
-        action.targetFighterId === null
-          ? cardWithDefinition.definition.text || "Play this ploy."
-          : `Target ${getFighterName(game, action.targetFighterId)}`,
-      action,
-    }];
-  });
-
-  const upgrades = legalActions.flatMap((action) => {
-    if (!(action instanceof PlayUpgradeAction)) {
-      return [];
-    }
-
-    const cardWithDefinition = activePlayer.getCardWithDefinition(action.cardId);
-    if (cardWithDefinition === undefined) {
-      return [];
-    }
-
-    return [{
-      key: `upgrade:${action.cardId}:${action.fighterId}`,
-      title: cardWithDefinition.definition.name,
-      detail: `Attach to ${getFighterName(game, action.fighterId)} • ${cardWithDefinition.definition.gloryValue} glory`,
-      action,
-    }];
-  });
+  }
 
   const warscrollAbilities = legalActions.flatMap((action) => {
     if (!(action instanceof UseWarscrollAbilityAction)) {
