@@ -7,6 +7,7 @@ import {
   WeaponAbilityDefinition,
   WeaponAbilityKind,
   WarscrollAbilityEffectKind,
+  zikkitsTunnelpackWarband,
   type CombatResult,
   type FighterState,
   type Game,
@@ -14,7 +15,7 @@ import {
   type WarscrollAbilityEffect,
 } from "./domain";
 
-const availableWarbands = [setupPracticeWarband];
+const availableWarbands = [setupPracticeWarband, zikkitsTunnelpackWarband];
 
 export default function App() {
   const [selectedWarbandId, setSelectedWarbandId] = useState<WarbandDefinitionId | null>(null);
@@ -28,7 +29,10 @@ export default function App() {
     );
   }
 
-  return <PracticeBattlefieldApp />;
+  const selectedWarband =
+    availableWarbands.find((warband) => warband.id === selectedWarbandId) ?? availableWarbands[0];
+
+  return <PracticeBattlefieldApp warband={selectedWarband} />;
 }
 import {
   combatDebugScenarios,

@@ -12,6 +12,7 @@ export * from "./actions/UseWarscrollAbilityAction";
 export * from "./content/boards/CenteredBattlefield";
 export * from "./content/games/SetupPracticeGame";
 export * from "./content/warbands/SetupPracticeWarband";
+export * from "./content/warbands/ZikkitsTunnelpackWarband";
 export * from "./definitions/CardDefinition";
 export * from "./definitions/FighterDefinition";
 export * from "./definitions/PloyEffect";

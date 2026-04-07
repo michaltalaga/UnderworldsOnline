@@ -31,6 +31,7 @@ import {
   type HexCell,
   type HexId,
   type PlayerState,
+  type WarbandDefinition,
 } from "./domain";
 
 const combatActionService = new CombatActionService();
@@ -151,8 +152,12 @@ type ArmedPathModel = {
 
 type ProfilePreviewModel = Map<FighterId, string[]>;
 
-export default function PracticeBattlefieldApp() {
-  const [game, setGame] = useState<Game>(() => createActionStepPracticeGame());
+type PracticeBattlefieldAppProps = {
+  warband?: WarbandDefinition;
+};
+
+export default function PracticeBattlefieldApp({ warband }: PracticeBattlefieldAppProps = {}) {
+  const [game, setGame] = useState<Game>(() => createActionStepPracticeGame(warband));
   const [, setRefreshTick] = useState(0);
   const [resultFlash, setResultFlash] = useState<BattlefieldResultFlash | null>(null);
   const [lastResolvedAction, setLastResolvedAction] = useState<BattlefieldResultFlash | null>(null);
@@ -558,7 +563,7 @@ export default function PracticeBattlefieldApp() {
   }, [resultFlash]);
 
   function resetBattlefield(): void {
-    const nextGame = createActionStepPracticeGame();
+    const nextGame = createActionStepPracticeGame(warband);
     setGame(nextGame);
     setResultFlash(null);
     setLastResolvedAction(null);
@@ -3400,8 +3405,11 @@ function getFighterStatusTags(fighter: FighterState): string[] {
   return tags;
 }
 
-function createActionStepPracticeGame(): Game {
-  const game = createCombatReadySetupPracticeGame("game:setup-practice:map-action-step");
+function createActionStepPracticeGame(warband?: WarbandDefinition): Game {
+  const game = createCombatReadySetupPracticeGame(
+    "game:setup-practice:map-action-step",
+    warband,
+  );
   const engine = new GameEngine();
 
   engine.startCombatRound(

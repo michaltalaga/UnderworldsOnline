@@ -10,6 +10,7 @@ import { PlaceFeatureTokenAction } from "../../setup/PlaceFeatureTokenAction";
 import { DeployFighterAction } from "../../setup/DeployFighterAction";
 import { Game } from "../../state/Game";
 import type { SetupAction } from "../../setup/SetupAction";
+import type { WarbandDefinition } from "../../definitions/WarbandDefinition";
 import { AttackDieFace, BoardSide } from "../../values/enums";
 import type { GameId } from "../../values/ids";
 import { centeredBattlefield } from "../boards/CenteredBattlefield";
@@ -20,6 +21,7 @@ const southTerritoryId = "territory:south";
 
 export function createSetupPracticeGame(
   gameId: GameId = "game:setup-practice",
+  warband: WarbandDefinition = setupPracticeWarband,
 ): Game {
   return new GameFactory().createGame({
     gameId,
@@ -28,12 +30,12 @@ export function createSetupPracticeGame(
       {
         id: "player:one",
         name: "Player One",
-        warband: setupPracticeWarband,
+        warband,
       },
       {
         id: "player:two",
         name: "Player Two",
-        warband: setupPracticeWarband,
+        warband,
       },
     ],
     shuffleCards: copyCards,
@@ -42,8 +44,9 @@ export function createSetupPracticeGame(
 
 export function createCombatReadySetupPracticeGame(
   gameId: GameId = "game:setup-practice:combat-ready",
+  warband: WarbandDefinition = setupPracticeWarband,
 ): Game {
-  const game = createSetupPracticeGame(gameId);
+  const game = createSetupPracticeGame(gameId, warband);
   const engine = new GameEngine(copyCards);
   const setupActionService = new SetupActionService();
 
