@@ -1,15 +1,35 @@
 import { useState } from "react";
-export { default } from "./PracticeBattlefieldApp";
+import PracticeBattlefieldApp from "./PracticeBattlefieldApp";
+import WarbandSelectScreen from "./WarbandSelectScreen";
 import {
   GameRecordKind,
+  setupPracticeWarband,
   WeaponAbilityDefinition,
   WeaponAbilityKind,
   WarscrollAbilityEffectKind,
   type CombatResult,
   type FighterState,
   type Game,
+  type WarbandDefinitionId,
   type WarscrollAbilityEffect,
 } from "./domain";
+
+const availableWarbands = [setupPracticeWarband];
+
+export default function App() {
+  const [selectedWarbandId, setSelectedWarbandId] = useState<WarbandDefinitionId | null>(null);
+
+  if (selectedWarbandId === null) {
+    return (
+      <WarbandSelectScreen
+        warbands={availableWarbands}
+        onSelect={setSelectedWarbandId}
+      />
+    );
+  }
+
+  return <PracticeBattlefieldApp />;
+}
 import {
   combatDebugScenarios,
   createCombatDebugSnapshot,
