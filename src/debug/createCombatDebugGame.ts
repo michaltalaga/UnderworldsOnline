@@ -130,34 +130,34 @@ export const combatDebugScenarios: readonly CombatDebugScenario[] = [
     label: "Hit Lands",
     description: "Critical plus hammer beats the defender cleanly and deals damage.",
     attackRoll: [AttackDieFace.Critical, AttackDieFace.Hammer],
-    saveRoll: [SaveDieFace.Blank],
+    saveRoll: [SaveDieFace.Support],
   },
   {
     id: "draw",
     label: "Stalemate",
     description: "One hit meets one shield, so Cleave can visibly change the outcome.",
-    attackRoll: [AttackDieFace.Hammer, AttackDieFace.Blank],
+    attackRoll: [AttackDieFace.Hammer, AttackDieFace.Support],
     saveRoll: [SaveDieFace.Shield],
   },
   {
     id: "failure",
     label: "Defended",
     description: "The defender spikes a critical save and shuts the attack down.",
-    attackRoll: [AttackDieFace.Hammer, AttackDieFace.Blank],
+    attackRoll: [AttackDieFace.Hammer, AttackDieFace.Support],
     saveRoll: [SaveDieFace.Critical],
   },
   {
     id: "dodge",
     label: "Dodge Check",
     description: "One hit meets one dodge, so Ensnare can visibly change the outcome.",
-    attackRoll: [AttackDieFace.Hammer, AttackDieFace.Blank],
+    attackRoll: [AttackDieFace.Hammer, AttackDieFace.Support],
     saveRoll: [SaveDieFace.Dodge],
   },
   {
     id: "support",
     label: "Support Check",
     description: "Support icons stay neutral until a rule like stagger or cover turns them into successes.",
-    attackRoll: [AttackDieFace.Support, AttackDieFace.Blank],
+    attackRoll: [AttackDieFace.Support, AttackDieFace.Support],
     saveRoll: [SaveDieFace.Support],
   },
 ] as const;
@@ -207,7 +207,7 @@ export function createCombatDebugSnapshot(
 
   engine.startCombatRound(
     game,
-    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Blank }],
+    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Support }],
     "player:one",
   );
 
@@ -356,7 +356,7 @@ export function createEndPhaseDebugSnapshot(
 
   engine.startCombatRound(
     game,
-    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Blank }],
+    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Support }],
     "player:one",
   );
 
@@ -394,7 +394,7 @@ export function createDelveDebugSnapshot(): DelveDebugSnapshot {
 
   engine.startCombatRound(
     game,
-    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Blank }],
+    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Support }],
     "player:one",
   );
   engine.applyGameAction(
@@ -418,7 +418,7 @@ export function createPloyDebugSnapshot(
 
   engine.startCombatRound(
     game,
-    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Blank }],
+    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Support }],
     "player:one",
   );
   engine.applyGameAction(game, new PassAction("player:one"));
@@ -496,7 +496,7 @@ export function createUpgradeDebugSnapshot(
 
   engine.startCombatRound(
     game,
-    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Blank }],
+    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Support }],
     "player:one",
   );
   engine.applyGameAction(game, new PassAction("player:one"));

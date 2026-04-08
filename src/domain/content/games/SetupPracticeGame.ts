@@ -67,7 +67,7 @@ export function createCombatReadySetupPracticeGame(
     new ResolveTerritoryRollOffAction([
       {
         firstFace: AttackDieFace.Hammer,
-        secondFace: AttackDieFace.Blank,
+        secondFace: AttackDieFace.Support,
       },
     ]),
   );

@@ -48,6 +48,7 @@ export * from "./rules/CombatContext";
 export * from "./rules/CombatActionService";
 export * from "./rules/CombatEndedResolution";
 export * from "./rules/DefaultCombatResolver";
+export * from "./rules/Dice";
 export * from "./rules/DelveResolution";
 export * from "./rules/DefaultWarscrollEffectResolver";
 export * from "./rules/CombatResolver";

@@ -22,6 +22,14 @@ import PlayerHandDock from "./PlayerHandDock";
 
 const setupEngine = new GameEngine();
 const setupActionService = new SetupActionService();
+const LOCAL_PLAYER_ID = "player:one";
+
+const opponentAutoResolveStates = new Set([
+  "setupMulligan",
+  "setupDetermineTerritoriesChoice",
+  "setupPlaceFeatureTokens",
+  "setupDeployFighters",
+]);
 
 type SetupAppProps = {
   warband: WarbandDefinition;
@@ -52,7 +60,7 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
         setupEngine.applySetupAction(
           game,
           new ResolveTerritoryRollOffAction([
-            { firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Blank },
+            { firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Support },
           ]),
         );
         continue;
@@ -62,7 +70,9 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
     setRefreshTick((value) => value + 1);
   }
 
-  // Auto-advance trivial states (muster + draw starting hands).
+  // Auto-advance trivial states (muster + draw starting hands) and auto-resolve
+  // any setup actions owned by the opponent so the user only interacts as
+  // player:one.
   useEffect(() => {
     if (game.state.kind === "setupMusterWarbands") {
       setupEngine.applySetupAction(game, new CompleteMusterAction());
@@ -74,7 +84,19 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
       setRefreshTick((value) => value + 1);
       return;
     }
-  }, [game, game.state.kind]);
+    if (
+      game.activePlayerId !== null &&
+      game.activePlayerId !== LOCAL_PLAYER_ID &&
+      opponentAutoResolveStates.has(game.state.kind)
+    ) {
+      const legalActions = setupActionService.getLegalActions(game);
+      if (legalActions.length > 0) {
+        setupEngine.applySetupAction(game, legalActions[0]);
+        setRefreshTick((value) => value + 1);
+        return;
+      }
+    }
+  }, [game, game.state.kind, game.activePlayerId]);
 
   // Hand off to combat once setup is complete.
   useEffect(() => {
@@ -84,7 +106,7 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
     handoffCompletedRef.current = true;
     setupEngine.startCombatRound(
       game,
-      [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Blank }],
+      [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Support }],
       "player:one",
     );
     onSetupComplete(game);

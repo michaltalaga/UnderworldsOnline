@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import {
   AttackDieFace,
   ResolveTerritoryRollOffAction,
+  rollAttackDie,
   type Game,
 } from "../domain";
 
@@ -66,18 +67,6 @@ export default function TerritoryRollOffScreen({ game, onResolve }: TerritoryRol
   );
 }
 
-const decisiveFaces: AttackDieFace[] = [
-  AttackDieFace.Critical,
-  AttackDieFace.Hammer,
-  AttackDieFace.Sword,
-  AttackDieFace.Support,
-  AttackDieFace.Blank,
-];
-
-function rollDie(): AttackDieFace {
-  return decisiveFaces[Math.floor(Math.random() * decisiveFaces.length)];
-}
-
 function getFaceRank(face: AttackDieFace): number {
   switch (face) {
     case AttackDieFace.Critical:
@@ -99,8 +88,8 @@ function generateRollOff(): GeneratedRoll {
   const rounds: { firstFace: AttackDieFace; secondFace: AttackDieFace }[] = [];
 
   for (let attempt = 0; attempt < 25; attempt += 1) {
-    const firstFace = rollDie();
-    const secondFace = rollDie();
+    const firstFace = rollAttackDie();
+    const secondFace = rollAttackDie();
     rounds.push({ firstFace, secondFace });
 
     const comparison = getFaceRank(firstFace) - getFaceRank(secondFace);
@@ -113,7 +102,7 @@ function generateRollOff(): GeneratedRoll {
   }
 
   // Fallback: force a decisive round to satisfy the resolver.
-  rounds.push({ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Blank });
+  rounds.push({ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Support });
   return { rounds, winnerIndex: 0 };
 }
 

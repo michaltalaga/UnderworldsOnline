@@ -3405,7 +3405,7 @@ function createActionStepPracticeGame(
 
   engine.startCombatRound(
     game,
-    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Blank }],
+    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Support }],
     "player:one",
   );
 

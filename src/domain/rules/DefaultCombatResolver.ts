@@ -11,6 +11,7 @@ import {
 import { CombatContext } from "./CombatContext";
 import { CombatResolver } from "./CombatResolver";
 import { CombatResult } from "./CombatResult";
+import { rollAttackDie as rollAttackDieFace, rollSaveDie as rollSaveDieFace } from "./Dice";
 
 export type DefaultCombatResolverRollAttackDie = () => AttackDieFace;
 export type DefaultCombatResolverRollSaveDie = () => SaveDieFace;
@@ -20,31 +21,13 @@ type CombatRollStats = {
   criticals: number;
 };
 
-const defaultAttackDieFaces: readonly AttackDieFace[] = [
-  AttackDieFace.Critical,
-  AttackDieFace.Hammer,
-  AttackDieFace.Sword,
-  AttackDieFace.Support,
-  AttackDieFace.DoubleSupport,
-  AttackDieFace.Blank,
-];
-
-const defaultSaveDieFaces: readonly SaveDieFace[] = [
-  SaveDieFace.Critical,
-  SaveDieFace.Shield,
-  SaveDieFace.Dodge,
-  SaveDieFace.Support,
-  SaveDieFace.DoubleSupport,
-  SaveDieFace.Blank,
-];
-
 export class DefaultCombatResolver extends CombatResolver {
   private readonly rollAttackDie: DefaultCombatResolverRollAttackDie;
   private readonly rollSaveDie: DefaultCombatResolverRollSaveDie;
 
   public constructor(
-    rollAttackDie: DefaultCombatResolverRollAttackDie = DefaultCombatResolver.rollAttackDie,
-    rollSaveDie: DefaultCombatResolverRollSaveDie = DefaultCombatResolver.rollSaveDie,
+    rollAttackDie: DefaultCombatResolverRollAttackDie = rollAttackDieFace,
+    rollSaveDie: DefaultCombatResolverRollSaveDie = rollSaveDieFace,
   ) {
     super();
     this.rollAttackDie = rollAttackDie;
@@ -289,23 +272,6 @@ export class DefaultCombatResolver extends CombatResolver {
     return face === SaveDieFace.Support || face === SaveDieFace.DoubleSupport;
   }
 
-  private static rollAttackDie(): AttackDieFace {
-    return DefaultCombatResolver.pickRandom(defaultAttackDieFaces);
-  }
-
-  private static rollSaveDie(): SaveDieFace {
-    return DefaultCombatResolver.pickRandom(defaultSaveDieFaces);
-  }
-
-  private static pickRandom<T>(faces: readonly T[]): T {
-    const randomIndex = Math.floor(Math.random() * faces.length);
-    const face = faces[randomIndex];
-    if (face === undefined) {
-      throw new Error("Expected a combat die face.");
-    }
-
-    return face;
-  }
 
   private isFighterOnCoverToken(game: Game, fighterHexId: string): boolean {
     const fighterHex = game.board.getHex(fighterHexId);
