@@ -98,5 +98,6 @@ export * from "./setup/ResolveMulliganAction";
 export * from "./setup/ResolveTerritoryRollOffAction";
 export * from "./setup/SetupAction";
 export * from "./setup/SetupActionService";
+export * from "./setup/SetupAutoResolver";
 export * from "./values/enums";
 export * from "./values/ids";

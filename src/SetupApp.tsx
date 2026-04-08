@@ -1,13 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import "./setup/SetupApp.css";
 import {
-  CompleteMusterAction,
   createSetupPracticeGame,
-  deterministicFirstPlayerRollOff,
-  DrawStartingHandsAction,
-  GameEngine,
-  ResolveTerritoryRollOffAction,
   SetupActionService,
+  SetupAutoResolver,
   type DeckDefinition,
   type Game,
   type SetupAction,
@@ -21,15 +17,8 @@ import DeploymentScreen from "./setup/DeploymentScreen";
 import PlayerHandDock from "./PlayerHandDock";
 import { getLocalPlayer, LOCAL_PLAYER_ID } from "./localPlayer";
 
-const setupEngine = new GameEngine();
+// `SetupActionService` is stateless; reuse a single instance across renders.
 const setupActionService = new SetupActionService();
-
-const opponentAutoResolveStates = new Set([
-  "setupMulligan",
-  "setupDetermineTerritoriesChoice",
-  "setupPlaceFeatureTokens",
-  "setupDeployFighters",
-]);
 
 type SetupAppProps = {
   warband: WarbandDefinition;
@@ -42,59 +31,34 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
   const [, setRefreshTick] = useState(0);
   const handoffCompletedRef = useRef(false);
 
-  function applySetupAction(action: SetupAction): void {
-    setupEngine.applySetupAction(game, action);
+  // Single owner of the setup auto-resolution policies. One instance per
+  // SetupApp mount so the underlying engine closes over a stable game.
+  const autoResolver = useMemo(
+    () => new SetupAutoResolver(LOCAL_PLAYER_ID),
+    [],
+  );
+
+  function refresh(): void {
     setRefreshTick((value) => value + 1);
+  }
+
+  function applySetupAction(action: SetupAction): void {
+    autoResolver.applyAction(game, action);
+    refresh();
   }
 
   function autoSetupToBattle(): void {
-    let safety = 500;
-    while (game.state.kind !== "combatReady" && safety > 0) {
-      safety -= 1;
-      const legalActions = setupActionService.getLegalActions(game);
-      if (legalActions.length > 0) {
-        setupEngine.applySetupAction(game, legalActions[0]);
-        continue;
-      }
-      if (game.state.kind === "setupDetermineTerritoriesRollOff") {
-        setupEngine.applySetupAction(
-          game,
-          new ResolveTerritoryRollOffAction([deterministicFirstPlayerRollOff]),
-        );
-        continue;
-      }
-      break;
-    }
-    setRefreshTick((value) => value + 1);
+    autoResolver.drainToBattle(game);
+    refresh();
   }
 
-  // Auto-advance trivial states (muster + draw starting hands) and auto-resolve
-  // any setup actions owned by the opponent so the user only interacts as
-  // player:one.
+  // Auto-advance trivial states and auto-resolve opponent actions so the
+  // user only interacts as the local player.
   useEffect(() => {
-    if (game.state.kind === "setupMusterWarbands") {
-      setupEngine.applySetupAction(game, new CompleteMusterAction());
-      setRefreshTick((value) => value + 1);
-      return;
+    if (autoResolver.resolveAutomaticStep(game)) {
+      refresh();
     }
-    if (game.state.kind === "setupDrawStartingHands") {
-      setupEngine.applySetupAction(game, new DrawStartingHandsAction());
-      setRefreshTick((value) => value + 1);
-      return;
-    }
-    if (
-      game.activePlayerId !== null &&
-      game.activePlayerId !== LOCAL_PLAYER_ID &&
-      opponentAutoResolveStates.has(game.state.kind)
-    ) {
-      const legalActions = setupActionService.getLegalActions(game);
-      if (legalActions.length > 0) {
-        setupEngine.applySetupAction(game, legalActions[0]);
-        setRefreshTick((value) => value + 1);
-        return;
-      }
-    }
-  }, [game, game.state.kind, game.activePlayerId]);
+  }, [game, game.state.kind, game.activePlayerId, autoResolver]);
 
   // Hand off to combat once setup is complete.
   useEffect(() => {
@@ -102,9 +66,9 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
       return;
     }
     handoffCompletedRef.current = true;
-    setupEngine.startCombatRound(game, [deterministicFirstPlayerRollOff], LOCAL_PLAYER_ID);
+    autoResolver.startCombat(game);
     onSetupComplete(game);
-  }, [game, game.state.kind, onSetupComplete]);
+  }, [game, game.state.kind, autoResolver, onSetupComplete]);
 
   const screen = renderSetupScreen();
   const localPlayer = getLocalPlayer(game);
