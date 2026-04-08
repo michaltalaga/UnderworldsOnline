@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import "./setup/SetupApp.css";
 import {
   AttackDieFace,
@@ -17,6 +17,7 @@ import TerritoryRollOffScreen from "./setup/TerritoryRollOffScreen";
 import TerritoryChoiceScreen from "./setup/TerritoryChoiceScreen";
 import FeaturePlacementScreen from "./setup/FeaturePlacementScreen";
 import DeploymentScreen from "./setup/DeploymentScreen";
+import PlayerHandDock from "./PlayerHandDock";
 
 const setupEngine = new GameEngine();
 const setupActionService = new SetupActionService();
@@ -65,65 +66,81 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
     onSetupComplete(game);
   }, [game, game.state.kind, onSetupComplete]);
 
-  if (
-    game.state.kind === "setupMusterWarbands" ||
-    game.state.kind === "setupDrawStartingHands" ||
-    game.state.kind === "combatReady"
-  ) {
+  const screen = renderSetupScreen();
+  const localPlayer =
+    game.players.find((player) => player.id === "player:one") ?? game.players[0] ?? null;
+  const showDock =
+    localPlayer !== null &&
+    localPlayer.objectiveHand.length + localPlayer.powerHand.length > 0;
+
+  return (
+    <>
+      {screen}
+      {showDock && localPlayer !== null ? <PlayerHandDock player={localPlayer} /> : null}
+    </>
+  );
+
+  function renderSetupScreen(): ReactNode {
+    if (
+      game.state.kind === "setupMusterWarbands" ||
+      game.state.kind === "setupDrawStartingHands" ||
+      game.state.kind === "combatReady"
+    ) {
+      return <SetupTransition />;
+    }
+
+    if (game.state.kind === "setupMulligan") {
+      const player = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
+      if (player === null) {
+        return <SetupTransition />;
+      }
+      return <MulliganScreen player={player} onResolve={applySetupAction} />;
+    }
+
+    if (game.state.kind === "setupDetermineTerritoriesRollOff") {
+      return <TerritoryRollOffScreen game={game} onResolve={applySetupAction} />;
+    }
+
+    if (game.state.kind === "setupDetermineTerritoriesChoice") {
+      const player = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
+      if (player === null) {
+        return <SetupTransition />;
+      }
+      return <TerritoryChoiceScreen game={game} player={player} onChoose={applySetupAction} />;
+    }
+
+    if (game.state.kind === "setupPlaceFeatureTokens") {
+      const player = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
+      if (player === null) {
+        return <SetupTransition />;
+      }
+      return (
+        <FeaturePlacementScreen
+          game={game}
+          player={player}
+          setupActionService={setupActionService}
+          onPlace={applySetupAction}
+        />
+      );
+    }
+
+    if (game.state.kind === "setupDeployFighters") {
+      const player = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
+      if (player === null) {
+        return <SetupTransition />;
+      }
+      return (
+        <DeploymentScreen
+          game={game}
+          player={player}
+          setupActionService={setupActionService}
+          onDeploy={applySetupAction}
+        />
+      );
+    }
+
     return <SetupTransition />;
   }
-
-  if (game.state.kind === "setupMulligan") {
-    const player = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
-    if (player === null) {
-      return <SetupTransition />;
-    }
-    return <MulliganScreen player={player} onResolve={applySetupAction} />;
-  }
-
-  if (game.state.kind === "setupDetermineTerritoriesRollOff") {
-    return <TerritoryRollOffScreen game={game} onResolve={applySetupAction} />;
-  }
-
-  if (game.state.kind === "setupDetermineTerritoriesChoice") {
-    const player = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
-    if (player === null) {
-      return <SetupTransition />;
-    }
-    return <TerritoryChoiceScreen game={game} player={player} onChoose={applySetupAction} />;
-  }
-
-  if (game.state.kind === "setupPlaceFeatureTokens") {
-    const player = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
-    if (player === null) {
-      return <SetupTransition />;
-    }
-    return (
-      <FeaturePlacementScreen
-        game={game}
-        player={player}
-        setupActionService={setupActionService}
-        onPlace={applySetupAction}
-      />
-    );
-  }
-
-  if (game.state.kind === "setupDeployFighters") {
-    const player = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
-    if (player === null) {
-      return <SetupTransition />;
-    }
-    return (
-      <DeploymentScreen
-        game={game}
-        player={player}
-        setupActionService={setupActionService}
-        onDeploy={applySetupAction}
-      />
-    );
-  }
-
-  return <SetupTransition />;
 }
 
 function SetupTransition() {

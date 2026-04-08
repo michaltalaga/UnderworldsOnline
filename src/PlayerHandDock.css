@@ -1,0 +1,198 @@
+.player-hand-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: grid;
+  gap: 12px;
+  padding: 14px 20px 18px;
+  background: rgba(253, 249, 242, 0.96);
+  border-top: 1px solid rgba(85, 66, 40, 0.18);
+  box-shadow: 0 -14px 32px rgba(63, 46, 29, 0.18);
+  backdrop-filter: blur(12px);
+  max-height: 60vh;
+  overflow-y: auto;
+  font-family: "Trebuchet MS", "Gill Sans", sans-serif;
+  color: #1e1d21;
+}
+
+.player-hand-dock-collapsed {
+  max-height: none;
+  overflow-y: visible;
+  padding-bottom: 14px;
+}
+
+.player-hand-dock-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.player-hand-dock-title {
+  display: grid;
+  gap: 2px;
+}
+
+.player-hand-dock-eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.74rem;
+  color: #8a5630;
+}
+
+.player-hand-dock-title strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1rem;
+  color: #3f3228;
+}
+
+.player-hand-dock-toggle {
+  border: 1px solid rgba(85, 66, 40, 0.22);
+  background: rgba(239, 231, 219, 0.86);
+  color: #3f3228;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.player-hand-dock-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(35, 24, 18, 0.12);
+  background: rgba(244, 236, 220, 0.96);
+}
+
+.player-hand-dock-empty {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #8e7a66;
+}
+
+.player-hand-dock-sections {
+  display: grid;
+  gap: 12px;
+}
+
+.player-hand-dock-section {
+  display: grid;
+  gap: 8px;
+}
+
+.player-hand-dock-section-label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7a624d;
+}
+
+.player-hand-dock-section-objective .player-hand-dock-section-label {
+  color: #5b6d3c;
+}
+
+.player-hand-dock-section-power .player-hand-dock-section-label {
+  color: #7f5a95;
+}
+
+.player-hand-dock-card-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.player-hand-dock-card {
+  border: 1px solid rgba(117, 92, 64, 0.2);
+  background: rgba(250, 244, 232, 0.94);
+  border-radius: 14px;
+  padding: 8px 12px;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.player-hand-dock-section-objective .player-hand-dock-card {
+  background: rgba(238, 244, 222, 0.94);
+  border-color: rgba(105, 130, 70, 0.28);
+}
+
+.player-hand-dock-section-power .player-hand-dock-card {
+  background: rgba(244, 232, 250, 0.94);
+  border-color: rgba(123, 83, 156, 0.24);
+}
+
+.player-hand-dock-collapsed .player-hand-dock-card {
+  padding: 6px 12px;
+}
+
+.player-hand-dock-expanded .player-hand-dock-card {
+  flex: 1 1 240px;
+  max-width: 320px;
+}
+
+.player-hand-dock-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.player-hand-dock-card-name {
+  font-weight: 700;
+  color: #3f3228;
+  font-size: 0.88rem;
+}
+
+.player-hand-dock-card-glory {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(168, 122, 42, 0.16);
+  border: 1px solid rgba(168, 122, 42, 0.28);
+  color: #7a5a18;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.player-hand-dock-card-text {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #5e4b3a;
+}
+
+/* Reserve bottom space so fixed dock never covers page content. */
+.battlefield-app-shell,
+.setup-shell {
+  padding-bottom: 320px;
+}
+
+.battlefield-app-shell:has(.player-hand-dock-collapsed),
+.setup-shell:has(.player-hand-dock-collapsed) {
+  padding-bottom: 140px;
+}
+
+@media (max-width: 640px) {
+  .battlefield-app-shell,
+  .setup-shell {
+    padding-bottom: 280px;
+  }
+
+  .battlefield-app-shell:has(.player-hand-dock-collapsed),
+  .setup-shell:has(.player-hand-dock-collapsed) {
+    padding-bottom: 120px;
+  }
+}

@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import "./PracticeBattlefieldApp.css";
+import PlayerHandDock from "./PlayerHandDock";
 import {
   AttackDieFace,
   AttackAction,
@@ -1011,6 +1012,11 @@ export default function PracticeBattlefieldApp({
           </section>
         </div>
       </section>
+
+      {(() => {
+        const localPlayer = game.players.find((player) => player.id === "player:one") ?? game.players[0] ?? null;
+        return localPlayer === null ? null : <PlayerHandDock player={localPlayer} />;
+      })()}
     </main>
   );
 }
