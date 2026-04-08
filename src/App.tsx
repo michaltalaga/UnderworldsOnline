@@ -1,30 +1,58 @@
 import { useState } from "react";
+import DeckSelectScreen from "./DeckSelectScreen";
 import PracticeBattlefieldApp from "./PracticeBattlefieldApp";
+import SetupApp from "./SetupApp";
 import WarbandSelectScreen from "./WarbandSelectScreen";
 import {
+  blazingAssaultDeck,
+  emberwatchWarband,
   GameRecordKind,
-  setupPracticeWarband,
+  pillageAndPlunderDeck,
   WeaponAbilityDefinition,
   WeaponAbilityKind,
   WarscrollAbilityEffectKind,
   zikkitsTunnelpackWarband,
   type CombatResult,
+  type DeckDefinition,
   type FighterState,
   type Game,
   type WarbandDefinitionId,
   type WarscrollAbilityEffect,
 } from "./domain";
 
-const availableWarbands = [setupPracticeWarband, zikkitsTunnelpackWarband];
+const availableWarbands = [zikkitsTunnelpackWarband, emberwatchWarband];
+
+const deckChoices = [
+  {
+    id: blazingAssaultDeck.id,
+    name: blazingAssaultDeck.name,
+    summary: "Aggressive Rivals deck focused on attacks, kills, and combat objectives.",
+    deck: blazingAssaultDeck,
+  },
+  {
+    id: pillageAndPlunderDeck.id,
+    name: pillageAndPlunderDeck.name,
+    summary: "Treasure-hunting Rivals deck focused on Delving and feature tokens.",
+    deck: pillageAndPlunderDeck,
+  },
+];
+
+type DeckSelection = { kind: "none" } | { kind: "selected"; deck: DeckDefinition | null };
 
 export default function App() {
   const [selectedWarbandId, setSelectedWarbandId] = useState<WarbandDefinitionId | null>(null);
+  const [deckSelection, setDeckSelection] = useState<DeckSelection>({ kind: "none" });
+  const [setupGame, setSetupGame] = useState<Game | null>(null);
 
   if (selectedWarbandId === null) {
     return (
       <WarbandSelectScreen
         warbands={availableWarbands}
-        onSelect={setSelectedWarbandId}
+        onSelect={(warbandId) => {
+          setSelectedWarbandId(warbandId);
+          setDeckSelection({ kind: "none" });
+          setSetupGame(null);
+        }}
       />
     );
   }
@@ -32,7 +60,36 @@ export default function App() {
   const selectedWarband =
     availableWarbands.find((warband) => warband.id === selectedWarbandId) ?? availableWarbands[0];
 
-  return <PracticeBattlefieldApp warband={selectedWarband} />;
+  if (deckSelection.kind === "none") {
+    return (
+      <DeckSelectScreen
+        warbandName={selectedWarband.name}
+        choices={deckChoices}
+        onSelect={(deck) => {
+          setDeckSelection({ kind: "selected", deck });
+          setSetupGame(null);
+        }}
+      />
+    );
+  }
+
+  if (setupGame === null) {
+    return (
+      <SetupApp
+        warband={selectedWarband}
+        deck={deckSelection.deck}
+        onSetupComplete={(game) => setSetupGame(game)}
+      />
+    );
+  }
+
+  return (
+    <PracticeBattlefieldApp
+      warband={selectedWarband}
+      deck={deckSelection.deck}
+      game={setupGame}
+    />
+  );
 }
 import {
   combatDebugScenarios,

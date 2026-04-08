@@ -9,6 +9,7 @@ import type {
 import { DeckKind } from "../values/enums";
 import type { CardPlayContext } from "../definitions/CardDefinition";
 import { CardDefinition } from "../definitions/CardDefinition";
+import { DeckDefinition } from "../definitions/DeckDefinition";
 import { FighterDefinition } from "../definitions/FighterDefinition";
 import { WarscrollDefinition } from "../definitions/WarscrollDefinition";
 import { WeaponDefinition } from "../definitions/WeaponDefinition";
@@ -47,6 +48,7 @@ export class PlayerState {
   public scoredObjectives: CardInstance[];
   public equippedUpgrades: CardInstance[];
   public warscrollState: WarscrollState;
+  public readonly deck: DeckDefinition | null;
 
   public constructor(
     id: PlayerId,
@@ -65,6 +67,7 @@ export class PlayerState {
     scoredObjectives: CardInstance[] = [],
     equippedUpgrades: CardInstance[] = [],
     warscrollState: WarscrollState = new WarscrollState(id, warband.warscroll.id),
+    deck: DeckDefinition | null = null,
   ) {
     this.id = id;
     this.name = name;
@@ -82,6 +85,7 @@ export class PlayerState {
     this.scoredObjectives = scoredObjectives;
     this.equippedUpgrades = equippedUpgrades;
     this.warscrollState = warscrollState;
+    this.deck = deck;
   }
 
   public getFighter(fighterId: FighterId): FighterState | undefined {
@@ -189,6 +193,15 @@ export class PlayerState {
   }
 
   private findCardDefinition(cardDefinitionId: CardDefinitionId): CardDefinition | undefined {
+    if (this.deck !== null) {
+      const fromDeck = [...this.deck.objectiveCards, ...this.deck.powerCards].find(
+        (definition) => definition.id === cardDefinitionId,
+      );
+      if (fromDeck !== undefined) {
+        return fromDeck;
+      }
+    }
+
     return [...this.warband.objectiveCards, ...this.warband.powerCards].find(
       (definition) => definition.id === cardDefinitionId,
     );

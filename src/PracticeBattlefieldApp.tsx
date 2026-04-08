@@ -21,31 +21,28 @@ import {
   PlayUpgradeAction,
   TurnStep,
   UseWarscrollAbilityAction,
-  type BoardState,
   type CardId,
   type CombatResult,
   type FeatureTokenState,
   type FighterState,
   type FighterId,
   type Game,
+  type DeckDefinition,
   type HexCell,
   type HexId,
   type PlayerState,
   type WarbandDefinition,
 } from "./domain";
+import {
+  boardPadding,
+  hexHeight,
+  hexWidth,
+  projectBoard,
+  type PositionedHex,
+} from "./board/projectBoard";
 
 const combatActionService = new CombatActionService();
 const demoEngine = new GameEngine();
-const hexRadius = 46;
-const hexWidth = Math.sqrt(3) * hexRadius;
-const hexHeight = hexRadius * 2;
-const boardPadding = 28;
-
-type PositionedHex = {
-  hex: HexCell;
-  left: number;
-  top: number;
-};
 
 type FighterActionLens = {
   fighter: FighterState | null;
@@ -154,10 +151,18 @@ type ProfilePreviewModel = Map<FighterId, string[]>;
 
 type PracticeBattlefieldAppProps = {
   warband?: WarbandDefinition;
+  deck?: DeckDefinition | null;
+  game?: Game;
 };
 
-export default function PracticeBattlefieldApp({ warband }: PracticeBattlefieldAppProps = {}) {
-  const [game, setGame] = useState<Game>(() => createActionStepPracticeGame(warband));
+export default function PracticeBattlefieldApp({
+  warband,
+  deck = null,
+  game: providedGame,
+}: PracticeBattlefieldAppProps = {}) {
+  const [game, setGame] = useState<Game>(
+    () => providedGame ?? createActionStepPracticeGame(warband, deck),
+  );
   const [, setRefreshTick] = useState(0);
   const [resultFlash, setResultFlash] = useState<BattlefieldResultFlash | null>(null);
   const [lastResolvedAction, setLastResolvedAction] = useState<BattlefieldResultFlash | null>(null);
@@ -563,7 +568,7 @@ export default function PracticeBattlefieldApp({ warband }: PracticeBattlefieldA
   }, [resultFlash]);
 
   function resetBattlefield(): void {
-    const nextGame = createActionStepPracticeGame(warband);
+    const nextGame = createActionStepPracticeGame(warband, deck);
     setGame(nextGame);
     setResultFlash(null);
     setLastResolvedAction(null);
@@ -1929,30 +1934,6 @@ function PowerOverlayOptionButton({
       ) : null}
     </button>
   );
-}
-
-function projectBoard(board: BoardState): { positionedHexes: PositionedHex[] } {
-  const rawHexes = board.hexes.map((hex) => {
-    const centerX = hexRadius * Math.sqrt(3) * (hex.q + hex.r / 2);
-    const centerY = hexRadius * 1.5 * hex.r;
-
-    return {
-      hex,
-      left: centerX - hexWidth / 2,
-      top: centerY - hexHeight / 2,
-    };
-  });
-
-  const minLeft = Math.min(...rawHexes.map((hex) => hex.left));
-  const minTop = Math.min(...rawHexes.map((hex) => hex.top));
-
-  return {
-    positionedHexes: rawHexes.map((hex) => ({
-      ...hex,
-      left: hex.left - minLeft + boardPadding,
-      top: hex.top - minTop + boardPadding,
-    })),
-  };
 }
 
 function getHexClassName(
@@ -3405,10 +3386,14 @@ function getFighterStatusTags(fighter: FighterState): string[] {
   return tags;
 }
 
-function createActionStepPracticeGame(warband?: WarbandDefinition): Game {
+function createActionStepPracticeGame(
+  warband?: WarbandDefinition,
+  deck: DeckDefinition | null = null,
+): Game {
   const game = createCombatReadySetupPracticeGame(
     "game:setup-practice:map-action-step",
     warband,
+    deck,
   );
   const engine = new GameEngine();
 

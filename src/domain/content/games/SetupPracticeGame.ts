@@ -10,6 +10,7 @@ import { PlaceFeatureTokenAction } from "../../setup/PlaceFeatureTokenAction";
 import { DeployFighterAction } from "../../setup/DeployFighterAction";
 import { Game } from "../../state/Game";
 import type { SetupAction } from "../../setup/SetupAction";
+import type { DeckDefinition } from "../../definitions/DeckDefinition";
 import type { WarbandDefinition } from "../../definitions/WarbandDefinition";
 import { AttackDieFace, BoardSide } from "../../values/enums";
 import type { GameId } from "../../values/ids";
@@ -22,6 +23,7 @@ const southTerritoryId = "territory:south";
 export function createSetupPracticeGame(
   gameId: GameId = "game:setup-practice",
   warband: WarbandDefinition = setupPracticeWarband,
+  deck: DeckDefinition | null = null,
 ): Game {
   return new GameFactory().createGame({
     gameId,
@@ -31,11 +33,13 @@ export function createSetupPracticeGame(
         id: "player:one",
         name: "Player One",
         warband,
+        ...(deck === null ? {} : { deck }),
       },
       {
         id: "player:two",
         name: "Player Two",
         warband,
+        ...(deck === null ? {} : { deck }),
       },
     ],
     shuffleCards: copyCards,
@@ -45,8 +49,9 @@ export function createSetupPracticeGame(
 export function createCombatReadySetupPracticeGame(
   gameId: GameId = "game:setup-practice:combat-ready",
   warband: WarbandDefinition = setupPracticeWarband,
+  deck: DeckDefinition | null = null,
 ): Game {
-  const game = createSetupPracticeGame(gameId, warband);
+  const game = createSetupPracticeGame(gameId, warband, deck);
   const engine = new GameEngine(copyCards);
   const setupActionService = new SetupActionService();
 

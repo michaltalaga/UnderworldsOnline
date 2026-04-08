@@ -1,4 +1,5 @@
 import { CardDefinition } from "../definitions/CardDefinition";
+import { DeckDefinition } from "../definitions/DeckDefinition";
 import { WarbandDefinition } from "../definitions/WarbandDefinition";
 import { CardInstance } from "../state/CardInstance";
 import { BoardState } from "../state/BoardState";
@@ -25,6 +26,9 @@ export type GameFactoryPlayerConfig = {
   id: PlayerId;
   name: string;
   warband: WarbandDefinition;
+  // When provided, the deck's cards replace the warband's built-in cards.
+  // When omitted, the warband's own objectiveCards/powerCards are used.
+  deck?: DeckDefinition;
 };
 
 export type GameFactoryCreateParams = {
@@ -70,7 +74,15 @@ export class GameFactory {
     config: GameFactoryPlayerConfig,
     shuffleCards: ShuffleCards,
   ): PlayerState {
+    const objectiveCardDefinitions = config.deck?.objectiveCards ?? config.warband.objectiveCards;
+    const powerCardDefinitions = config.deck?.powerCards ?? config.warband.powerCards;
     this.validateWarband(config.warband, config.name);
+    this.validateCardSelection(
+      objectiveCardDefinitions,
+      powerCardDefinitions,
+      config.name,
+      config.deck?.name ?? null,
+    );
 
     const fighters = config.warband.fighters.map(
       (fighter, index) =>
@@ -83,13 +95,13 @@ export class GameFactory {
 
     const objectiveCards = this.createCardInstances(
       config.id,
-      config.warband.objectiveCards,
+      objectiveCardDefinitions,
       CardZone.ObjectiveDeck,
       "objective",
     );
     const powerCards = this.createCardInstances(
       config.id,
-      config.warband.powerCards,
+      powerCardDefinitions,
       CardZone.PowerDeck,
       "power",
     );
@@ -115,6 +127,7 @@ export class GameFactory {
         config.warband.warscroll.id,
         { ...config.warband.warscroll.startingTokens },
       ),
+      config.deck ?? null,
     );
   }
 
@@ -180,41 +193,9 @@ export class GameFactory {
       throw new Error(`${playerName}'s warband must provide at least one fighter.`);
     }
 
-    if (warband.objectiveCards.length !== 12) {
-      throw new Error(
-        `${playerName}'s warband must provide exactly 12 objective cards.`,
-      );
-    }
-
-    if (warband.powerCards.length !== 20) {
-      throw new Error(
-        `${playerName}'s warband must provide exactly 20 power cards.`,
-      );
-    }
-
-    if (warband.objectiveCards.some((card) => card.kind !== CardKind.Objective)) {
-      throw new Error(`${playerName}'s objective deck contains a non-objective card.`);
-    }
-
-    if (
-      warband.powerCards.some(
-        (card) => card.kind !== CardKind.Ploy && card.kind !== CardKind.Upgrade,
-      )
-    ) {
-      throw new Error(`${playerName}'s power deck contains an invalid card kind.`);
-    }
-
     this.validateUniqueValues(
       warband.fighters.map((fighter) => fighter.id),
       `${playerName}'s fighter definition ids`,
-    );
-
-    this.validateUniqueValues(
-      [
-        ...warband.objectiveCards.map((card) => card.id),
-        ...warband.powerCards.map((card) => card.id),
-      ],
-      `${playerName}'s card definition ids`,
     );
 
     for (const [tokenName, tokenCount] of Object.entries(warband.warscroll.startingTokens)) {
@@ -224,6 +205,47 @@ export class GameFactory {
         );
       }
     }
+  }
+
+  private validateCardSelection(
+    objectiveCards: readonly CardDefinition[],
+    powerCards: readonly CardDefinition[],
+    playerName: string,
+    deckName: string | null,
+  ): void {
+    const sourceLabel = deckName === null ? "warband" : `deck '${deckName}'`;
+
+    if (objectiveCards.length !== 12) {
+      throw new Error(
+        `${playerName}'s ${sourceLabel} must provide exactly 12 objective cards.`,
+      );
+    }
+
+    if (powerCards.length !== 20) {
+      throw new Error(
+        `${playerName}'s ${sourceLabel} must provide exactly 20 power cards.`,
+      );
+    }
+
+    if (objectiveCards.some((card) => card.kind !== CardKind.Objective)) {
+      throw new Error(`${playerName}'s objective deck contains a non-objective card.`);
+    }
+
+    if (
+      powerCards.some(
+        (card) => card.kind !== CardKind.Ploy && card.kind !== CardKind.Upgrade,
+      )
+    ) {
+      throw new Error(`${playerName}'s power deck contains an invalid card kind.`);
+    }
+
+    this.validateUniqueValues(
+      [
+        ...objectiveCards.map((card) => card.id),
+        ...powerCards.map((card) => card.id),
+      ],
+      `${playerName}'s card definition ids`,
+    );
   }
 
   private validateUniqueValues(values: readonly string[], label: string): void {

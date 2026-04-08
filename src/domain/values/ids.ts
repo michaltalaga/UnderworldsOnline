@@ -6,6 +6,7 @@ export type FighterDefinitionId = string;
 export type FighterId = string;
 export type WeaponDefinitionId = string;
 export type CardDefinitionId = string;
+export type DeckDefinitionId = string;
 export type CardId = string;
 export type HexId = string;
 export type TerritoryId = string;
