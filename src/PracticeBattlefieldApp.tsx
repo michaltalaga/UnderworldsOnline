@@ -1,14 +1,15 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import "./PracticeBattlefieldApp.css";
 import PlayerHandDock from "./PlayerHandDock";
+import { getLocalPlayer, LOCAL_PLAYER_ID } from "./localPlayer";
 import {
-  AttackDieFace,
   AttackAction,
   CardKind,
   ChargeAction,
   CombatActionService,
   createCombatReadySetupPracticeGame,
   DelveAction,
+  deterministicFirstPlayerRollOff,
   FeatureTokenSide,
   FocusAction,
   GameAction,
@@ -169,6 +170,7 @@ export default function PracticeBattlefieldApp({
   const [lastResolvedAction, setLastResolvedAction] = useState<BattlefieldResultFlash | null>(null);
   const boardProjection = projectBoard(game.board);
   const recentEvents = [...game.eventLog].slice(-10).reverse();
+  const localPlayer = getLocalPlayer(game);
   const activePlayer = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
   const legalActions = activePlayer === null ? [] : combatActionService.getLegalActions(game, activePlayer.id);
   const selectableFighters =
@@ -1013,10 +1015,7 @@ export default function PracticeBattlefieldApp({
         </div>
       </section>
 
-      {(() => {
-        const localPlayer = game.players.find((player) => player.id === "player:one") ?? game.players[0] ?? null;
-        return localPlayer === null ? null : <PlayerHandDock player={localPlayer} />;
-      })()}
+      {localPlayer === null ? null : <PlayerHandDock player={localPlayer} />}
     </main>
   );
 }
@@ -3403,11 +3402,7 @@ function createActionStepPracticeGame(
   );
   const engine = new GameEngine();
 
-  engine.startCombatRound(
-    game,
-    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Support }],
-    "player:one",
-  );
+  engine.startCombatRound(game, [deterministicFirstPlayerRollOff], LOCAL_PLAYER_ID);
 
   return game;
 }

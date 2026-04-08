@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import "./setup/SetupApp.css";
 import {
-  AttackDieFace,
   CompleteMusterAction,
   createSetupPracticeGame,
+  deterministicFirstPlayerRollOff,
   DrawStartingHandsAction,
   GameEngine,
   ResolveTerritoryRollOffAction,
@@ -19,10 +19,10 @@ import TerritoryChoiceScreen from "./setup/TerritoryChoiceScreen";
 import FeaturePlacementScreen from "./setup/FeaturePlacementScreen";
 import DeploymentScreen from "./setup/DeploymentScreen";
 import PlayerHandDock from "./PlayerHandDock";
+import { getLocalPlayer, LOCAL_PLAYER_ID } from "./localPlayer";
 
 const setupEngine = new GameEngine();
 const setupActionService = new SetupActionService();
-const LOCAL_PLAYER_ID = "player:one";
 
 const opponentAutoResolveStates = new Set([
   "setupMulligan",
@@ -59,9 +59,7 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
       if (game.state.kind === "setupDetermineTerritoriesRollOff") {
         setupEngine.applySetupAction(
           game,
-          new ResolveTerritoryRollOffAction([
-            { firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Support },
-          ]),
+          new ResolveTerritoryRollOffAction([deterministicFirstPlayerRollOff]),
         );
         continue;
       }
@@ -104,17 +102,12 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
       return;
     }
     handoffCompletedRef.current = true;
-    setupEngine.startCombatRound(
-      game,
-      [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Support }],
-      "player:one",
-    );
+    setupEngine.startCombatRound(game, [deterministicFirstPlayerRollOff], LOCAL_PLAYER_ID);
     onSetupComplete(game);
   }, [game, game.state.kind, onSetupComplete]);
 
   const screen = renderSetupScreen();
-  const localPlayer =
-    game.players.find((player) => player.id === "player:one") ?? game.players[0] ?? null;
+  const localPlayer = getLocalPlayer(game);
   const showDock =
     localPlayer !== null &&
     localPlayer.objectiveHand.length + localPlayer.powerHand.length > 0;

@@ -5,6 +5,7 @@ import {
   CombatActionService,
   DelveAction,
   DelveResolution,
+  deterministicFirstPlayerRollOff,
   EndPhaseStep,
   FeatureTokenSide,
   GameActionKind,
@@ -207,7 +208,7 @@ export function createCombatDebugSnapshot(
 
   engine.startCombatRound(
     game,
-    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Support }],
+    [deterministicFirstPlayerRollOff],
     "player:one",
   );
 
@@ -356,7 +357,7 @@ export function createEndPhaseDebugSnapshot(
 
   engine.startCombatRound(
     game,
-    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Support }],
+    [deterministicFirstPlayerRollOff],
     "player:one",
   );
 
@@ -394,7 +395,7 @@ export function createDelveDebugSnapshot(): DelveDebugSnapshot {
 
   engine.startCombatRound(
     game,
-    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Support }],
+    [deterministicFirstPlayerRollOff],
     "player:one",
   );
   engine.applyGameAction(
@@ -418,7 +419,7 @@ export function createPloyDebugSnapshot(
 
   engine.startCombatRound(
     game,
-    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Support }],
+    [deterministicFirstPlayerRollOff],
     "player:one",
   );
   engine.applyGameAction(game, new PassAction("player:one"));
@@ -496,7 +497,7 @@ export function createUpgradeDebugSnapshot(
 
   engine.startCombatRound(
     game,
-    [{ firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Support }],
+    [deterministicFirstPlayerRollOff],
     "player:one",
   );
   engine.applyGameAction(game, new PassAction("player:one"));

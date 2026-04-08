@@ -1,5 +1,6 @@
 import { AttackDieFace } from "../values/enums";
 import type { PlayerId } from "../values/ids";
+import { getAttackDieFaceRank } from "./Dice";
 import { RollOffContext } from "./RollOffContext";
 import { RollOffResult } from "./RollOffResult";
 import { RollOffRound, type RollOffRoundInput } from "./RollOffRound";
@@ -71,26 +72,7 @@ export class RollOffResolver {
   }
 
   private compareFaces(left: AttackDieFace, right: AttackDieFace): number {
-    return this.getFaceRank(left) - this.getFaceRank(right);
-  }
-
-  private getFaceRank(face: AttackDieFace): number {
-    switch (face) {
-      case AttackDieFace.Critical:
-        return 3;
-      case AttackDieFace.Hammer:
-      case AttackDieFace.Sword:
-        return 2;
-      case AttackDieFace.Support:
-      case AttackDieFace.DoubleSupport:
-        return 1;
-      case AttackDieFace.Blank:
-        return 0;
-      default: {
-        const exhaustiveFace: never = face;
-        throw new Error(`Unsupported attack die face ${exhaustiveFace}.`);
-      }
-    }
+    return getAttackDieFaceRank(left) - getAttackDieFaceRank(right);
   }
 
   private getOtherPlayerId(context: RollOffContext, playerId: PlayerId): PlayerId {

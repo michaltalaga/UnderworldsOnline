@@ -12,7 +12,8 @@ import { Game } from "../../state/Game";
 import type { SetupAction } from "../../setup/SetupAction";
 import type { DeckDefinition } from "../../definitions/DeckDefinition";
 import type { WarbandDefinition } from "../../definitions/WarbandDefinition";
-import { AttackDieFace, BoardSide } from "../../values/enums";
+import { BoardSide } from "../../values/enums";
+import { deterministicFirstPlayerRollOff } from "../../rules/Dice";
 import type { GameId } from "../../values/ids";
 import { centeredBattlefield } from "../boards/CenteredBattlefield";
 import { setupPracticeWarband } from "../warbands/SetupPracticeWarband";
@@ -64,12 +65,7 @@ export function createCombatReadySetupPracticeGame(
 
   engine.applySetupAction(
     game,
-    new ResolveTerritoryRollOffAction([
-      {
-        firstFace: AttackDieFace.Hammer,
-        secondFace: AttackDieFace.Support,
-      },
-    ]),
+    new ResolveTerritoryRollOffAction([deterministicFirstPlayerRollOff]),
   );
 
   const territoryChooserId = requirePlayerId(game.activePlayerId, "territory chooser");
