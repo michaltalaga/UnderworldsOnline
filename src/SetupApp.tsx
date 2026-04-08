@@ -6,6 +6,7 @@ import {
   createSetupPracticeGame,
   DrawStartingHandsAction,
   GameEngine,
+  ResolveTerritoryRollOffAction,
   SetupActionService,
   type DeckDefinition,
   type Game,
@@ -35,6 +36,29 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
 
   function applySetupAction(action: SetupAction): void {
     setupEngine.applySetupAction(game, action);
+    setRefreshTick((value) => value + 1);
+  }
+
+  function autoSetupToBattle(): void {
+    let safety = 500;
+    while (game.state.kind !== "combatReady" && safety > 0) {
+      safety -= 1;
+      const legalActions = setupActionService.getLegalActions(game);
+      if (legalActions.length > 0) {
+        setupEngine.applySetupAction(game, legalActions[0]);
+        continue;
+      }
+      if (game.state.kind === "setupDetermineTerritoriesRollOff") {
+        setupEngine.applySetupAction(
+          game,
+          new ResolveTerritoryRollOffAction([
+            { firstFace: AttackDieFace.Hammer, secondFace: AttackDieFace.Blank },
+          ]),
+        );
+        continue;
+      }
+      break;
+    }
     setRefreshTick((value) => value + 1);
   }
 
@@ -76,6 +100,14 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
   return (
     <>
       {screen}
+      <button
+        type="button"
+        className="setup-skip-button"
+        onClick={autoSetupToBattle}
+        title="Auto-resolve all remaining setup actions and jump straight into combat."
+      >
+        Skip to battle
+      </button>
       {showDock && localPlayer !== null ? <PlayerHandDock player={localPlayer} /> : null}
     </>
   );

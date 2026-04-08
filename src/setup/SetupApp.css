@@ -7,6 +7,32 @@
   color: #1e1d21;
 }
 
+.setup-skip-button {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 40;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(85, 66, 40, 0.3);
+  background: rgba(253, 249, 242, 0.96);
+  color: #4a3a25;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(63, 46, 29, 0.18);
+  backdrop-filter: blur(10px);
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.setup-skip-button:hover {
+  transform: translateY(-1px);
+  background: rgba(244, 236, 220, 0.98);
+  box-shadow: 0 14px 26px rgba(63, 46, 29, 0.22);
+}
+
 .setup-hero {
   text-align: center;
   display: grid;
