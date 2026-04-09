@@ -19,6 +19,10 @@ import {
 import TerritoryRollOffScreen from "./setup/TerritoryRollOffScreen";
 import TerritoryChoiceScreen from "./setup/TerritoryChoiceScreen";
 import BoardMap from "./board/BoardMap";
+import {
+  projectBoardScene,
+  type BoardSceneHexClickIntent,
+} from "./board/boardScene";
 import DiceTray, { getDiceTrayModel } from "./board/DiceTray";
 import { projectBoard } from "./board/projectBoard";
 import { createEmptyActionLens } from "./board/fighterActionLens";
@@ -106,57 +110,68 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
   const emptyLens = createEmptyActionLens(null, null);
   const diceTrayModel = getDiceTrayModel(game);
 
+  const boardScene = projectBoardScene({
+    game,
+    positionedHexes: boardProjection.positionedHexes,
+    actionLens: emptyLens,
+    activePlayerId: activePlayer?.id ?? null,
+    selectedFighterId: null,
+    selectedFeatureToken: null,
+    pendingMoveHexId: null,
+    pendingDelveFeatureTokenId: null,
+    pendingFocus: false,
+    pendingGuardFighterId: null,
+    pendingPassPower: false,
+    pendingChargeHexId: null,
+    pendingChargeTargetId: null,
+    pendingAttackTargetId: null,
+    pendingChargeBadgeLabel: null,
+    pendingAttackBadgeLabel: null,
+    pendingPowerOptionKey: null,
+    recentCombatTargetId: null,
+    attackPreviewByTarget: new Map(),
+    chargePreviewByTarget: new Map(),
+    armedPath: null,
+    boardTurnHeader: {
+      activePlayerName: activePlayer?.name ?? "Setup",
+      interactionLabel: getSetupBannerText(game),
+      isArmed: false,
+      tone: "neutral",
+      stepLabel: "Setup",
+    },
+    lastResolvedAction: null,
+    resultFlash: null,
+    powerOverlay: {
+      ploys: [],
+      upgrades: [],
+      warscrollAbilities: [],
+      hasAnyOptions: false,
+    },
+    setupLegalHexIds: legalHexIds,
+    isSetupClickEnabled: onHexClick !== undefined,
+    hoveredChargeTargetId: null,
+  });
+
+  function handleSetupHexClickIntent(intent: BoardSceneHexClickIntent): void {
+    if (intent.kind === "setup-hex" && onHexClick !== undefined) {
+      onHexClick(intent.hexId);
+    }
+    // Other click intents are unreachable in setup mode (actionLens is
+    // empty), but the exhaustive switch keeps TypeScript happy.
+  }
+
   return (
     <>
       <main className="battlefield-app-shell">
         <section className="battlefield-layout">
           <section className="battlefield-panel battlefield-board-panel">
             <BoardMap
-              game={game}
-              activePlayerId={activePlayer?.id ?? null}
-              selectedFighterId={null}
-              selectedFeatureToken={null}
-              actionLens={emptyLens}
-              pendingMoveHexId={null}
-              pendingDelveFeatureTokenId={null}
-              pendingFocus={false}
-              pendingGuardFighterId={null}
-              pendingPassPower={false}
-              pendingPowerOptionKey={null}
-              pendingChargeHexId={null}
-              pendingChargeTargetId={null}
-              pendingAttackTargetId={null}
-              pendingChargeBadgeLabel={null}
-              pendingAttackBadgeLabel={null}
-              powerOverlay={{ ploys: [], upgrades: [], warscrollAbilities: [], hasAnyOptions: false }}
-              boardTurnHeader={{
-                activePlayerName: activePlayer?.name ?? "Setup",
-                interactionLabel: getSetupBannerText(game),
-                isArmed: false,
-                tone: "neutral",
-                stepLabel: "Setup",
-              }}
-              recentCombatTargetId={null}
-              attackPreviewByTarget={new Map()}
-              chargePreviewByTarget={new Map()}
-              armedPath={null}
-              lastResolvedAction={null}
-              resultFlash={null}
-              onApplyPowerAction={noop}
-              onDelveSelectedFighter={noop}
-              onFocusHand={noop}
-              onGuardSelectedFighter={noop}
-              onPassTurn={noop}
-              onAttackTarget={noop}
-              onCancelPendingCharge={noop}
-              onCompleteChargeAgainstTarget={noop}
-              onMoveToHex={noop}
-              onStartChargeAgainstTarget={noop}
-              onStartChargeToHex={noop}
-              onSelectFighter={noop}
-              positionedHexes={boardProjection.positionedHexes}
-              setupLegalHexIds={legalHexIds}
-              onSetupHexClick={onHexClick}
+              scene={boardScene}
+              onHoverChargeTarget={noop}
+              onHexClickIntent={handleSetupHexClickIntent}
+              onQuickAction={noop}
+              onApplyPowerOption={noop}
+              onDelveInlineFeature={noop}
             />
             <DiceTray model={diceTrayModel} />
           </section>

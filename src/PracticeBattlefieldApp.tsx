@@ -31,6 +31,7 @@ import {
   getFighterName,
 } from "./board/battlefieldFormatters";
 import BoardMap, { LegendItem } from "./board/BoardMap";
+import { projectBoardScene, type BoardSceneHexClickIntent, type BoardSceneQuickAction } from "./board/boardScene";
 import DiceTray, { getDiceTrayModel } from "./board/DiceTray";
 import DebugPanel from "./DebugPanel";
 import PlayerPanel from "./board/PlayerPanel";
@@ -234,6 +235,103 @@ export default function PracticeBattlefieldApp({
     pendingChargeTargetId,
     selectedChargeKeysByPair,
   );
+
+  // Hover state is kept in the parent so that `projectBoardScene` can bake
+  // the hover-derived highlight flags into the scene. Keeping it here (and
+  // not inside BoardMap) means any alternate renderer can consume the
+  // same scene without reimplementing hover tracking.
+  const [hoveredChargeTargetId, setHoveredChargeTargetId] = useState<FighterId | null>(null);
+  useEffect(() => {
+    if (pendingChargeHexId !== null) {
+      setHoveredChargeTargetId(null);
+      return;
+    }
+    if (hoveredChargeTargetId !== null && !actionLens.chargeTargetIds.has(hoveredChargeTargetId)) {
+      setHoveredChargeTargetId(null);
+    }
+  }, [actionLens.chargeTargetIds, hoveredChargeTargetId, pendingChargeHexId]);
+
+  const boardScene = projectBoardScene({
+    game,
+    positionedHexes: boardProjection.positionedHexes,
+    actionLens,
+    activePlayerId: activePlayer?.id ?? null,
+    selectedFighterId,
+    selectedFeatureToken,
+    pendingMoveHexId,
+    pendingDelveFeatureTokenId,
+    pendingFocus,
+    pendingGuardFighterId,
+    pendingPassPower,
+    pendingChargeHexId,
+    pendingChargeTargetId,
+    pendingAttackTargetId,
+    pendingChargeBadgeLabel,
+    pendingAttackBadgeLabel,
+    pendingPowerOptionKey,
+    recentCombatTargetId,
+    attackPreviewByTarget,
+    chargePreviewByTarget,
+    armedPath,
+    boardTurnHeader,
+    lastResolvedAction,
+    resultFlash,
+    powerOverlay,
+    setupLegalHexIds: undefined,
+    isSetupClickEnabled: false,
+    hoveredChargeTargetId,
+  });
+
+  // Map hex click intents (returned by the scene) into the existing
+  // combat action handlers. The renderer doesn't know about these
+  // functions — it just forwards the intent.
+  function handleHexClickIntent(intent: BoardSceneHexClickIntent): void {
+    switch (intent.kind) {
+      case "none":
+        return;
+      case "select-fighter":
+        selectFighter(intent.fighterId);
+        return;
+      case "cancel-charge":
+        cancelPendingCharge();
+        return;
+      case "attack-target":
+        attackTarget(intent.fighterId);
+        return;
+      case "start-charge-against-target":
+        startChargeAgainstTarget(intent.fighterId);
+        return;
+      case "complete-charge-against-target":
+        completeChargeAgainstTarget(intent.fighterId);
+        return;
+      case "start-charge-to-hex":
+        startChargeToHex(intent.hexId);
+        return;
+      case "move-to-hex":
+        moveToHex(intent.hexId);
+        return;
+      case "setup-hex":
+        // Not reachable in combat mode — setupLegalHexIds is undefined.
+        return;
+    }
+  }
+
+  function handleQuickAction(action: BoardSceneQuickAction): void {
+    switch (action.key) {
+      case "focus":
+        focusHand();
+        return;
+      case "delve":
+        delveSelectedFighter();
+        return;
+      case "guard":
+        guardSelectedFighter();
+        return;
+      case "pass-power":
+        passTurn();
+        return;
+    }
+  }
 
   function selectFighter(fighterId: FighterId | null): void {
     setSelectedFighterId(fighterId);
@@ -581,43 +679,14 @@ export default function PracticeBattlefieldApp({
       <section className="battlefield-layout">
         <section className="battlefield-panel battlefield-board-panel">
           <BoardMap
-            game={game}
-            activePlayerId={activePlayer?.id ?? null}
-            selectedFighterId={selectedFighterId}
-            selectedFeatureToken={selectedFeatureToken}
-            actionLens={actionLens}
-            pendingMoveHexId={pendingMoveHexId}
-            pendingDelveFeatureTokenId={pendingDelveFeatureTokenId}
-            pendingFocus={pendingFocus}
-            pendingGuardFighterId={pendingGuardFighterId}
-            pendingPassPower={pendingPassPower}
-            pendingPowerOptionKey={pendingPowerOptionKey}
-            pendingChargeHexId={pendingChargeHexId}
-            pendingChargeTargetId={pendingChargeTargetId}
-            pendingAttackTargetId={pendingAttackTargetId}
-            pendingChargeBadgeLabel={pendingChargeBadgeLabel}
-            pendingAttackBadgeLabel={pendingAttackBadgeLabel}
-            powerOverlay={powerOverlay}
-            boardTurnHeader={boardTurnHeader}
-            recentCombatTargetId={recentCombatTargetId}
-            attackPreviewByTarget={attackPreviewByTarget}
-            chargePreviewByTarget={chargePreviewByTarget}
-            armedPath={armedPath}
-            lastResolvedAction={lastResolvedAction}
-            resultFlash={resultFlash}
-            onApplyPowerAction={selectPowerOption}
-            onDelveSelectedFighter={delveSelectedFighter}
-            onFocusHand={focusHand}
-            onGuardSelectedFighter={guardSelectedFighter}
-            onPassTurn={passTurn}
-            onAttackTarget={attackTarget}
-            onCancelPendingCharge={cancelPendingCharge}
-            onCompleteChargeAgainstTarget={completeChargeAgainstTarget}
-            onMoveToHex={moveToHex}
-            onStartChargeAgainstTarget={startChargeAgainstTarget}
-            onStartChargeToHex={startChargeToHex}
-            onSelectFighter={selectFighter}
-            positionedHexes={boardProjection.positionedHexes}
+            scene={boardScene}
+            onHoverChargeTarget={(fighterId) =>
+              setHoveredChargeTargetId(fighterId as FighterId | null)
+            }
+            onHexClickIntent={handleHexClickIntent}
+            onQuickAction={handleQuickAction}
+            onApplyPowerOption={selectPowerOption}
+            onDelveInlineFeature={delveSelectedFighter}
           />
 
           <div className="battlefield-legend-grid">
