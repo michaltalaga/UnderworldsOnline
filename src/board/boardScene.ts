@@ -221,6 +221,10 @@ export type ProjectBoardSceneParams = {
   setupLegalHexIds?: ReadonlySet<HexId>;
   isSetupClickEnabled: boolean;
   hoveredChargeTargetId: FighterId | null;
+  // When false, every hex click intent is `"none"` and the quick-action
+  // row is empty. Used to lock the UI during AI turns so the user
+  // doesn't accidentally play for the opponent.
+  isInteractionEnabled: boolean;
 };
 
 export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneModel {
@@ -253,6 +257,7 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
     setupLegalHexIds,
     isSetupClickEnabled,
     hoveredChargeTargetId,
+    isInteractionEnabled,
   } = params;
 
   const isActionStep = game.turnStep === TurnStep.Action;
@@ -445,25 +450,25 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
       kind: hex.kind,
       isStarting: hex.isStartingHex,
       isEdge: hex.isEdgeHex,
-      isAttackTarget,
-      isChargeDestination,
+      isAttackTarget: isAttackTarget && isInteractionEnabled,
+      isChargeDestination: isChargeDestination && isInteractionEnabled,
       isHoveredChargeDestination,
       isPendingDelveHex: isPendingDelveFeature,
       isPendingGuardHex,
       isPendingAttackTarget,
       isPendingChargeHex,
       isPendingChargeTarget,
-      isChargeTarget,
+      isChargeTarget: isChargeTarget && isInteractionEnabled,
       isHoveredChargeTarget,
-      isClickableHex: isInteractiveHex,
+      isClickableHex: isInteractiveHex && isInteractionEnabled,
       isDelveReadyHex: isDelveReadyFeature,
       isPendingMoveHex,
-      isMoveDestination,
+      isMoveDestination: isMoveDestination && isInteractionEnabled,
       isPowerResponseHex: isPowerResponseFighter,
       isRecentCombatTarget,
       isSelectedHex,
-      isSelectableHex: isSelectableFighter,
-      isGuardReadyHex: isSelectedHex && actionLens.guardAvailable,
+      isSelectableHex: isSelectableFighter && isInteractionEnabled,
+      isGuardReadyHex: isSelectedHex && actionLens.guardAvailable && isInteractionEnabled,
       isSetupLegalHex,
     };
 
@@ -484,7 +489,11 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
     });
 
     // Click intent priority matches BoardMap's old onClick ladder exactly.
+    // When `isInteractionEnabled` is false (AI turn), every hex reports
+    // `"none"` and renders as non-interactive, regardless of the
+    // underlying flags.
     const clickIntent: BoardSceneHexClickIntent = (() => {
+      if (!isInteractionEnabled) return { kind: "none" };
       if (isClickableSetupHex) return { kind: "setup-hex", hexId: hex.id };
       if (isSelectableFighter && occupant !== null) {
         return { kind: "select-fighter", fighterId: occupant.id };
@@ -555,40 +564,45 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
   });
 
   // --- Quick actions ---
+  // Quick actions disappear entirely when interaction is locked (AI
+  // turn) so the user can't click "Pass Power" or similar on the
+  // opponent's behalf.
   const quickActions: BoardSceneQuickAction[] = [];
-  if (isActionStep && actionLens.focusAction !== null) {
-    quickActions.push({
-      key: "focus",
-      armed: pendingFocus,
-      label: pendingFocus ? "Confirm Focus" : "Focus",
-    });
-  }
-  if (isPowerStep && actionLens.delveAction !== null && selectedFeatureToken !== null) {
-    const armed = pendingDelveFeatureTokenId === selectedFeatureToken.id;
-    quickActions.push({
-      key: "delve",
-      armed,
-      label: armed ? "Confirm" : "Delve",
-      featureTokenBadge: getFeatureTokenBadge(selectedFeatureToken),
-      featureTokenId: selectedFeatureToken.id,
-    });
-  }
-  if (isActionStep && actionLens.guardAction !== null && selectedFighterName !== null) {
-    const armed =
-      pendingGuardFighterId === selectedFighterId && selectedFighterId !== null;
-    quickActions.push({
-      key: "guard",
-      armed,
-      label: armed ? "Confirm Guard" : "Guard",
-      selectedFighterName,
-    });
-  }
-  if (isPowerStep && actionLens.passAction !== null) {
-    quickActions.push({
-      key: "pass-power",
-      armed: pendingPassPower,
-      label: pendingPassPower ? "Confirm Pass Power" : "Pass Power",
-    });
+  if (isInteractionEnabled) {
+    if (isActionStep && actionLens.focusAction !== null) {
+      quickActions.push({
+        key: "focus",
+        armed: pendingFocus,
+        label: pendingFocus ? "Confirm Focus" : "Focus",
+      });
+    }
+    if (isPowerStep && actionLens.delveAction !== null && selectedFeatureToken !== null) {
+      const armed = pendingDelveFeatureTokenId === selectedFeatureToken.id;
+      quickActions.push({
+        key: "delve",
+        armed,
+        label: armed ? "Confirm" : "Delve",
+        featureTokenBadge: getFeatureTokenBadge(selectedFeatureToken),
+        featureTokenId: selectedFeatureToken.id,
+      });
+    }
+    if (isActionStep && actionLens.guardAction !== null && selectedFighterName !== null) {
+      const armed =
+        pendingGuardFighterId === selectedFighterId && selectedFighterId !== null;
+      quickActions.push({
+        key: "guard",
+        armed,
+        label: armed ? "Confirm Guard" : "Guard",
+        selectedFighterName,
+      });
+    }
+    if (isPowerStep && actionLens.passAction !== null) {
+      quickActions.push({
+        key: "pass-power",
+        armed: pendingPassPower,
+        label: pendingPassPower ? "Confirm Pass Power" : "Pass Power",
+      });
+    }
   }
 
   return {

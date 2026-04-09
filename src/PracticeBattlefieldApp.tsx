@@ -1,22 +1,27 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./PracticeBattlefieldApp.css";
 import PlayerHandDockShell from "./PlayerHandDockShell";
 import { DockActionOverlay, type DockInteraction } from "./PlayerHandDock";
 import { getLocalPlayer, LOCAL_PLAYER_ID } from "./localPlayer";
 import {
   CombatActionService,
+  CombatAutoResolver,
   createCombatReadySetupPracticeGame,
   deterministicFirstPlayerRollOff,
+  DumbAiController,
   FocusAction,
   GameEngine,
   GameRecordKind,
+  LocalPlayerController,
   TurnStep,
   type CardId,
+  type CombatController,
   type FeatureTokenState,
   type FighterId,
   type Game,
   type DeckDefinition,
   type HexId,
+  type PlayerId,
   type WarbandDefinition,
 } from "./domain";
 import { projectBoard } from "./board/projectBoard";
@@ -84,7 +89,7 @@ export default function PracticeBattlefieldApp({
   const [game, setGame] = useState<Game>(
     () => providedGame ?? createActionStepPracticeGame(warband, deck),
   );
-  const [, setRefreshTick] = useState(0);
+  const [refreshTick, setRefreshTick] = useState(0);
   const [resultFlash, setResultFlash] = useState<BattlefieldResultFlash | null>(null);
   const [lastResolvedAction, setLastResolvedAction] = useState<BattlefieldResultFlash | null>(null);
   const boardProjection = projectBoard(game.board);
@@ -251,6 +256,30 @@ export default function PracticeBattlefieldApp({
     }
   }, [actionLens.chargeTargetIds, hoveredChargeTargetId, pendingChargeHexId]);
 
+  // Controller map: every player seat is driven by one `CombatController`.
+  // Local player is human (the UI); every other player is currently a
+  // `DumbAiController`. Swapping a seat's controller is all it takes to
+  // plug in a smarter AI, a remote player, or restore hot-seat play —
+  // the rest of the app (scene projection, UI gating, action handlers)
+  // reads from this single source of truth via `combatAutoResolver`.
+  const combatControllers = useMemo<ReadonlyMap<PlayerId, CombatController>>(() => {
+    const map = new Map<PlayerId, CombatController>();
+    map.set(LOCAL_PLAYER_ID, new LocalPlayerController());
+    for (const player of game.players) {
+      if (player.id !== LOCAL_PLAYER_ID) {
+        map.set(player.id, new DumbAiController());
+      }
+    }
+    return map;
+  }, [game]);
+
+  const combatAutoResolver = useMemo(
+    () => new CombatAutoResolver(combatControllers, demoEngine),
+    [combatControllers],
+  );
+
+  const isHumanTurn = combatAutoResolver.isHumanTurn(game);
+
   const boardScene = projectBoardScene({
     game,
     positionedHexes: boardProjection.positionedHexes,
@@ -280,6 +309,7 @@ export default function PracticeBattlefieldApp({
     setupLegalHexIds: undefined,
     isSetupClickEnabled: false,
     hoveredChargeTargetId,
+    isInteractionEnabled: isHumanTurn,
   });
 
   // Map hex click intents (returned by the scene) into the existing
@@ -345,6 +375,21 @@ export default function PracticeBattlefieldApp({
   function refreshGame(): void {
     setRefreshTick((value) => value + 1);
   }
+
+  // After every state change, ask the auto-resolver for one more step.
+  // A small delay lets the user see each AI move instead of flashing
+  // through the whole opponent turn in a single frame. The effect
+  // cancels its pending timer on unmount / re-schedule, so rapid state
+  // changes don't queue stale steps.
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      if (combatAutoResolver.resolveAutomaticStep(game)) {
+        refreshGame();
+      }
+    }, 450);
+    return () => window.clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTick, combatAutoResolver]);
 
   function clearPendingInteractions(): void {
     setPendingMoveHexId(null);
@@ -637,16 +682,23 @@ export default function PracticeBattlefieldApp({
     setSelectedChargeKeysByPair({});
   }
 
-  // In practice mode both players are hotseat (no AI yet), so the dock
-  // shows the hand of whoever is currently active. When there is no
-  // active player (between turns), fall back to the local player so the
-  // dock still has something to render.
-  const dockPlayer = activePlayer ?? localPlayer;
+  // Dock always shows the local player's hand. In the previous
+  // hot-seat mode this was `activePlayer`, but now that the opponent
+  // can be an AI (see `combatControllers`) we don't ever want to
+  // display the AI's private hand — the user is Player One and should
+  // see their own cards regardless of whose turn it is.
+  const dockPlayer = localPlayer;
 
   // Project all the interactive state down to a single union the dock can
   // consume. The dock never reads `game` directly — everything it needs
   // flows through `interaction`.
   const dockInteraction: DockInteraction = (() => {
+    // During AI turns the dock is strictly read-only; we neither show
+    // focus toggles nor power-card play targets because both would let
+    // the user hijack the opponent's decisions.
+    if (!isHumanTurn) {
+      return { kind: "readonly" };
+    }
     if (game.turnStep === TurnStep.Action && pendingFocus) {
       return {
         kind: "focus",

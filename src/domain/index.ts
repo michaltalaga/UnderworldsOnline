@@ -99,5 +99,7 @@ export * from "./setup/ResolveTerritoryRollOffAction";
 export * from "./setup/SetupAction";
 export * from "./setup/SetupActionService";
 export * from "./setup/SetupAutoResolver";
+export * from "./controllers/CombatController";
+export * from "./controllers/CombatAutoResolver";
 export * from "./values/enums";
 export * from "./values/ids";

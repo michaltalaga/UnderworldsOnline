@@ -150,6 +150,9 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
     setupLegalHexIds: legalHexIds,
     isSetupClickEnabled: onHexClick !== undefined,
     hoveredChargeTargetId: null,
+    // Setup has no AI loop; interactions are controlled by the phase
+    // panel and setup-hex legality, not a per-player controller.
+    isInteractionEnabled: true,
   });
 
   function handleSetupHexClickIntent(intent: BoardSceneHexClickIntent): void {
