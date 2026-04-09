@@ -536,6 +536,12 @@ export default function PracticeBattlefieldApp({
     setSelectedChargeKeysByPair({});
   }
 
+  // In practice mode both players are hotseat (no AI yet), so the dock
+  // shows the hand of whoever is currently active. When there is no
+  // active player (between turns), fall back to the local player so the
+  // dock still has something to render.
+  const dockPlayer = activePlayer ?? localPlayer;
+
   // Project all the interactive state down to a single union the dock can
   // consume. The dock never reads `game` directly — everything it needs
   // flows through `interaction`.
@@ -992,8 +998,8 @@ export default function PracticeBattlefieldApp({
         </div>
       </section>
 
-      {localPlayer === null ? null : (
-        <PlayerHandDockShell player={localPlayer} interaction={dockInteraction} />
+      {dockPlayer === null ? null : (
+        <PlayerHandDockShell player={dockPlayer} interaction={dockInteraction} />
       )}
     </main>
   );
