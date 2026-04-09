@@ -173,12 +173,14 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
               onApplyPowerOption={noop}
               onDelveInlineFeature={noop}
             />
-            <DiceTray model={diceTrayModel} />
           </section>
 
-          <section className="battlefield-panel setup-phase-panel">
-            {renderPhaseContent(game, activePlayer, applySetupAction)}
-          </section>
+          <aside className="battlefield-side-rail">
+            <DiceTray model={diceTrayModel} />
+            <section className="battlefield-panel setup-phase-panel">
+              {renderPhaseContent(game, activePlayer, applySetupAction)}
+            </section>
+          </aside>
         </section>
 
         {dockPlayer === null ? null : (

@@ -30,7 +30,7 @@ import {
   getFeatureTokenBadge,
   getFighterName,
 } from "./board/battlefieldFormatters";
-import BoardMap, { LegendItem } from "./board/BoardMap";
+import BoardMap from "./board/BoardMap";
 import { projectBoardScene, type BoardSceneHexClickIntent, type BoardSceneQuickAction } from "./board/boardScene";
 import DiceTray, { getDiceTrayModel } from "./board/DiceTray";
 import DebugPanel from "./DebugPanel";
@@ -688,22 +688,16 @@ export default function PracticeBattlefieldApp({
             onApplyPowerOption={selectPowerOption}
             onDelveInlineFeature={delveSelectedFighter}
           />
-
-          <div className="battlefield-legend-grid">
-            <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-player-one" label="Player One territory" />
-            <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-player-two" label="Player Two territory" />
-            <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-neutral" label="Neutral hex" />
-            <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-start" label="Starting hex" />
-            <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-edge" label="Edge hex" />
-            <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-feature" label="Feature token" />
-            <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-move" label="Move destination" />
-            <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-charge" label="Charge destination" />
-            <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-target" label="Charge target" />
-            <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-attack" label="Attack target" />
-            <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-combat" label="Recent combat target" />
-          </div>
-          <DiceTray model={diceTrayModel} />
         </section>
+
+        <aside className="battlefield-side-rail">
+          <DiceTray model={diceTrayModel} />
+          {diceTrayModel === null ? (
+            <div className="battlefield-side-rail-empty">
+              Dice results will appear here
+            </div>
+          ) : null}
+        </aside>
       </section>
 
       {dockPlayer === null ? null : (
