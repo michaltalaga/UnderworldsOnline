@@ -3,7 +3,7 @@
 
 .player-hand-dock-shell {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 14px;
   padding: 14px 20px 18px;
   background: rgba(253, 249, 242, 0.96);
@@ -14,6 +14,8 @@
   color: #1e1d21;
   min-height: 0;
   overflow: hidden;
+  align-items: stretch;
+  box-sizing: border-box;
 }
 
 /* --- Deck pile widget (left/right flanking) --- */
@@ -84,13 +86,18 @@
 }
 
 /* --- Hand dock (center of shell) --- */
+/* Fills the shell's middle cell as a grid column: header row auto,
+   sections row 1fr. Scroll bars are never shown — the sections fill
+   whatever space remains and their contents clip if oversized. */
 
 .player-hand-dock {
   display: grid;
-  gap: 12px;
+  grid-template-rows: auto 1fr;
+  gap: 10px;
   min-width: 0;
-  max-height: 100%;
-  overflow-y: auto;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .player-hand-dock-header {
@@ -125,14 +132,23 @@
   color: #8e7a66;
 }
 
+/* Sections sit side-by-side (objectives | power) so cards have room
+   to flow horizontally inside the fixed-height dock. Both sections
+   share the available vertical space and clip their own overflow. */
 .player-hand-dock-sections {
   display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .player-hand-dock-section {
   display: grid;
-  gap: 8px;
+  grid-template-rows: auto 1fr;
+  gap: 6px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .player-hand-dock-section-label {
@@ -156,9 +172,12 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  align-content: start;
+  gap: 6px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* --- Cards: shared base styles for both <li> (readonly) and <button> --- */
@@ -166,11 +185,13 @@
 .player-hand-dock-card {
   border: 1px solid rgba(117, 92, 64, 0.2);
   background: rgba(250, 244, 232, 0.94);
-  border-radius: 14px;
-  padding: 8px 12px;
+  border-radius: 12px;
+  padding: 6px 10px;
   display: grid;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   text-align: left;
   font: inherit;
   color: inherit;
@@ -197,8 +218,7 @@ button.player-hand-dock-card:hover {
 }
 
 .player-hand-dock .player-hand-dock-card {
-  flex: 1 1 220px;
-  max-width: 300px;
+  /* Grid auto-fit handles sizing; no flex basis needed. */
 }
 
 /* Card state variants */
@@ -274,9 +294,15 @@ button.player-hand-dock-card:hover {
 
 .player-hand-dock-card-text {
   margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.45;
+  font-size: 0.72rem;
+  line-height: 1.35;
   color: #5e4b3a;
+  /* Clip long descriptions so cards stay tight inside the fixed dock. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  line-clamp: 3;
+  overflow: hidden;
 }
 
 /* --- Mulligan controls --- */

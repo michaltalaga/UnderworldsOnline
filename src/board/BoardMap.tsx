@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   HexKind,
   TurnStep,
@@ -137,6 +137,41 @@ export default function BoardMap({
 }: BoardMapProps) {
   const width = Math.max(...positionedHexes.map((hex) => hex.left + hexWidth)) + boardPadding;
   const height = Math.max(...positionedHexes.map((hex) => hex.top + hexHeight)) + boardPadding;
+
+  // The map has a fixed intrinsic pixel size driven by the hex grid
+  // (width × height above). We scale it to fit the surrounding frame
+  // so the whole battlefield is always visible without scroll bars.
+  const frameRef = useRef<HTMLDivElement>(null);
+  const mapWrapperRef = useRef<HTMLDivElement>(null);
+  const [mapScale, setMapScale] = useState(1);
+
+  useEffect(() => {
+    const frame = frameRef.current;
+    const mapWrapper = mapWrapperRef.current;
+    if (frame === null || mapWrapper === null) {
+      return;
+    }
+    const update = () => {
+      const frameRect = frame.getBoundingClientRect();
+      // Space above the map inside the frame (status/action buttons).
+      const wrapperOffsetTop = mapWrapper.offsetTop;
+      const available = {
+        w: Math.max(0, frameRect.width),
+        h: Math.max(0, frameRect.height - wrapperOffsetTop),
+      };
+      if (available.w === 0 || available.h === 0) {
+        return;
+      }
+      const nextScale = Math.min(1, available.w / width, available.h / height);
+      if (Math.abs(nextScale - mapScale) > 0.005) {
+        setMapScale(nextScale);
+      }
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(frame);
+    return () => observer.disconnect();
+  }, [width, height, mapScale]);
   const visibleChargeTargetHexIds = getChargeTargetHexIdsForHex(game, actionLens, pendingChargeHexId);
   const selectedFighterName =
     selectedFighterId === null ? null : getFighterName(game, selectedFighterId);
@@ -179,7 +214,7 @@ export default function BoardMap({
   }, [actionLens.chargeTargetIds, hoveredChargeTargetId, pendingChargeHexId]);
 
   return (
-    <div className="battlefield-board-frame">
+    <div ref={frameRef} className="battlefield-board-frame">
       <section className={`battlefield-board-status battlefield-board-status-${boardTurnHeader.tone}`}>
         <div className="battlefield-board-status-header">
           <span className={`battlefield-board-status-step battlefield-board-status-step-${boardTurnHeader.tone}`}>
@@ -295,10 +330,20 @@ export default function BoardMap({
         </div>
       )}
       <div
+        ref={mapWrapperRef}
+        className="battlefield-board-map-scaler"
+        style={{
+          width: `${width * mapScale}px`,
+          height: `${height * mapScale}px`,
+        }}
+      >
+      <div
         className="battlefield-board-map"
         style={{
           width: `${width}px`,
           height: `${height}px`,
+          transform: `scale(${mapScale})`,
+          transformOrigin: "top left",
         }}
       >
         {positionedHexes.map(({ hex, left, top }) => {
@@ -700,6 +745,7 @@ export default function BoardMap({
             {actionTooltip.label}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

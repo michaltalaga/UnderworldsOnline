@@ -23,7 +23,7 @@ import DiceTray, { getDiceTrayModel } from "./board/DiceTray";
 import { projectBoard } from "./board/projectBoard";
 import { createEmptyActionLens } from "./board/fighterActionLens";
 import PlayerHandDockShell from "./PlayerHandDockShell";
-import type { DockInteraction } from "./PlayerHandDock";
+import { DockActionOverlay, type DockInteraction } from "./PlayerHandDock";
 import { getLocalPlayer, LOCAL_PLAYER_ID } from "./localPlayer";
 
 // `SetupActionService` is stateless; reuse a single instance across renders.
@@ -158,6 +158,7 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
               setupLegalHexIds={legalHexIds}
               onSetupHexClick={onHexClick}
             />
+            <DiceTray model={diceTrayModel} />
           </section>
 
           <section className="battlefield-panel setup-phase-panel">
@@ -179,7 +180,7 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
         Skip to battle
       </button>
 
-      <DiceTray model={diceTrayModel} />
+      <DockActionOverlay interaction={dockInteraction} />
     </>
   );
 }

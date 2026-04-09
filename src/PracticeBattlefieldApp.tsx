@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./PracticeBattlefieldApp.css";
 import PlayerHandDockShell from "./PlayerHandDockShell";
-import type { DockInteraction } from "./PlayerHandDock";
+import { DockActionOverlay, type DockInteraction } from "./PlayerHandDock";
 import { getLocalPlayer, LOCAL_PLAYER_ID } from "./localPlayer";
 import {
   CombatActionService,
@@ -633,6 +633,7 @@ export default function PracticeBattlefieldApp({
             <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-attack" label="Attack target" />
             <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-combat" label="Recent combat target" />
           </div>
+          <DiceTray model={diceTrayModel} />
         </section>
       </section>
 
@@ -998,7 +999,7 @@ export default function PracticeBattlefieldApp({
           </dl>
         </section>
     </DebugPanel>
-    <DiceTray model={diceTrayModel} />
+    <DockActionOverlay interaction={dockInteraction} />
     </>
   );
 }

@@ -101,19 +101,33 @@ export default function PlayerHandDock({ player, interaction }: PlayerHandDockPr
           />
         </div>
       )}
+    </aside>
+  );
+}
 
-      {interaction.kind === "mulligan" ? (
+// Floating action bar that renders above the dock for mulligan/focus
+// modes. Positioned so the dock's own height never depends on which
+// mode is active — the buttons are decoupled from the card area.
+export function DockActionOverlay({ interaction }: { interaction: DockInteraction }) {
+  if (interaction.kind === "mulligan") {
+    return (
+      <div className="dock-action-overlay dock-action-overlay-mulligan">
         <MulliganControls onResolve={interaction.onResolve} />
-      ) : null}
-      {interaction.kind === "focus" ? (
+      </div>
+    );
+  }
+  if (interaction.kind === "focus") {
+    return (
+      <div className="dock-action-overlay dock-action-overlay-focus">
         <FocusConfirmBar
           summary={interaction.summary}
           onConfirm={interaction.onConfirm}
           onCancel={interaction.onCancel}
         />
-      ) : null}
-    </aside>
-  );
+      </div>
+    );
+  }
+  return null;
 }
 
 function PlayerHandDockSection({
