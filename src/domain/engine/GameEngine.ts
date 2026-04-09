@@ -438,6 +438,10 @@ export class GameEngine {
       action.rounds,
     );
 
+    game.addRecord(GameRecordKind.RollOff, result, {
+      invokedByPlayerId: null,
+      actionKind: action.kind,
+    });
     game.transitionTo(createSetupDetermineTerritoriesChoiceGameState(result.winnerPlayerId));
     game.eventLog.push(this.describeRollOff(game, result));
   }

@@ -17,6 +17,7 @@ import { MoveResolution } from "../rules/MoveResolution";
 import { PassResolution } from "../rules/PassResolution";
 import { PowerStepEndedResolution } from "../rules/PowerStepEndedResolution";
 import { PloyResolution } from "../rules/PloyResolution";
+import { RollOffResult } from "../rules/RollOffResult";
 import { RoundStartResolution } from "../rules/RoundStartResolution";
 import { TurnStepChangeResolution } from "../rules/TurnStepChangeResolution";
 import { TurnEndedResolution } from "../rules/TurnEndedResolution";
@@ -48,6 +49,7 @@ export const GameEventKind = {
   Ploy: "ploy",
   Upgrade: "upgrade",
   WarscrollAbility: "warscrollAbility",
+  RollOff: "rollOff",
   ObjectiveScoring: "objectiveScoring",
   ObjectiveDraw: "objectiveDraw",
   PowerDraw: "powerDraw",
@@ -78,6 +80,7 @@ export type GameEventDataByKind = {
   [GameEventKind.Ploy]: PloyResolution;
   [GameEventKind.Upgrade]: UpgradeResolution;
   [GameEventKind.WarscrollAbility]: WarscrollAbilityResolution;
+  [GameEventKind.RollOff]: RollOffResult;
   [GameEventKind.ObjectiveScoring]: ObjectiveScoringResolution;
   [GameEventKind.ObjectiveDraw]: ObjectiveDrawResolution;
   [GameEventKind.PowerDraw]: PowerDrawResolution;

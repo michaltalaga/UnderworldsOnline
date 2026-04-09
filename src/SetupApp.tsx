@@ -19,6 +19,7 @@ import {
 import TerritoryRollOffScreen from "./setup/TerritoryRollOffScreen";
 import TerritoryChoiceScreen from "./setup/TerritoryChoiceScreen";
 import BoardMap from "./board/BoardMap";
+import DiceTray, { getDiceTrayModel } from "./board/DiceTray";
 import { projectBoard } from "./board/projectBoard";
 import { createEmptyActionLens } from "./board/fighterActionLens";
 import PlayerHandDockShell from "./PlayerHandDockShell";
@@ -103,6 +104,7 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
 
   const boardProjection = projectBoard(game.board);
   const emptyLens = createEmptyActionLens(null, null);
+  const diceTrayModel = getDiceTrayModel(game);
 
   return (
     <>
@@ -180,6 +182,8 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
       {dockPlayer === null ? null : (
         <PlayerHandDockShell player={dockPlayer} interaction={dockInteraction} />
       )}
+
+      <DiceTray model={diceTrayModel} />
     </>
   );
 }

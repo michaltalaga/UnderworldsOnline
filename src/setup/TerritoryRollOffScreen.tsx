@@ -8,6 +8,10 @@ import {
   type Game,
 } from "../domain";
 
+// Shows the continue button for the territory roll-off phase. The dice
+// themselves are rendered by the DiceTray (docked inside the map panel)
+// once the engine applies the action — here we just generate random
+// rounds, pass them to the engine, and let the tray surface the result.
 type TerritoryRollOffScreenProps = {
   game: Game;
   onResolve: (action: ResolveTerritoryRollOffAction) => void;
@@ -15,57 +19,32 @@ type TerritoryRollOffScreenProps = {
 
 type GeneratedRoll = {
   rounds: { firstFace: AttackDieFace; secondFace: AttackDieFace }[];
-  winnerIndex: 0 | 1;
 };
 
 export default function TerritoryRollOffScreen({ game, onResolve }: TerritoryRollOffScreenProps) {
-  const playerOne = game.players[0];
-  const playerTwo = game.players[1];
-
   const generated = useMemo<GeneratedRoll>(() => generateRollOff(), [game.id]);
-  const finalRound = generated.rounds[generated.rounds.length - 1];
-  const winnerName =
-    generated.winnerIndex === 0 ? playerOne?.name ?? "Player One" : playerTwo?.name ?? "Player Two";
-  const loserName =
-    generated.winnerIndex === 0 ? playerTwo?.name ?? "Player Two" : playerOne?.name ?? "Player One";
 
   return (
-    <main className="setup-shell">
+    <>
       <header className="setup-hero">
         <span className="setup-active-player">Territory roll-off</span>
         <h1>Roll for first pick</h1>
-        <p>Both players roll an attack die. The winner picks the board side and territory; the loser places the first feature token.</p>
+        <p>
+          Both players roll an attack die. The winner picks the board side and territory;
+          the loser places the first feature token. The rolled dice appear in the dice
+          tray above.
+        </p>
       </header>
       <section className="setup-rolloff">
-        <div className="setup-rolloff-dice">
-          <div className="setup-die">
-            <span className="setup-die-player">{playerOne?.name ?? "Player One"}</span>
-            <span className="setup-die-face">{formatDieFace(finalRound.firstFace)}</span>
-            {generated.winnerIndex === 0 && <span className="setup-die-winner">Winner</span>}
-          </div>
-          <div className="setup-die">
-            <span className="setup-die-player">{playerTwo?.name ?? "Player Two"}</span>
-            <span className="setup-die-face">{formatDieFace(finalRound.secondFace)}</span>
-            {generated.winnerIndex === 1 && <span className="setup-die-winner">Winner</span>}
-          </div>
-        </div>
-        {generated.rounds.length > 1 && (
-          <p className="setup-rolloff-summary">
-            Re-rolled {generated.rounds.length - 1} tied round{generated.rounds.length - 1 === 1 ? "" : "s"}.
-          </p>
-        )}
-        <p className="setup-rolloff-summary">
-          {winnerName} wins the roll-off and will choose a territory. {loserName} will place the first feature token.
-        </p>
         <button
           type="button"
           className="setup-button setup-button-primary"
           onClick={() => onResolve(new ResolveTerritoryRollOffAction(generated.rounds))}
         >
-          Continue
+          Roll &amp; continue
         </button>
       </section>
-    </main>
+    </>
   );
 }
 
@@ -78,33 +57,11 @@ function generateRollOff(): GeneratedRoll {
     rounds.push({ firstFace, secondFace });
 
     const comparison = getAttackDieFaceRank(firstFace) - getAttackDieFaceRank(secondFace);
-    if (comparison > 0) {
-      return { rounds, winnerIndex: 0 };
-    }
-    if (comparison < 0) {
-      return { rounds, winnerIndex: 1 };
+    if (comparison !== 0) {
+      return { rounds };
     }
   }
 
   rounds.push(deterministicFirstPlayerRollOff);
-  return { rounds, winnerIndex: 0 };
-}
-
-function formatDieFace(face: AttackDieFace): string {
-  switch (face) {
-    case AttackDieFace.Critical:
-      return "Critical";
-    case AttackDieFace.Hammer:
-      return "Hammer";
-    case AttackDieFace.Sword:
-      return "Sword";
-    case AttackDieFace.Support:
-      return "Support";
-    case AttackDieFace.DoubleSupport:
-      return "Double Support";
-    case AttackDieFace.Blank:
-      return "Blank";
-    default:
-      return face;
-  }
+  return { rounds };
 }

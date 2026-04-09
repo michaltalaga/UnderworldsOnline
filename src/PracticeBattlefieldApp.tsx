@@ -31,7 +31,7 @@ import {
   getFighterName,
 } from "./board/battlefieldFormatters";
 import BoardMap, { LegendItem } from "./board/BoardMap";
-import CombatDiceTray from "./board/CombatDiceTray";
+import DiceTray, { getDiceTrayModel } from "./board/DiceTray";
 import PlayerPanel from "./board/PlayerPanel";
 import { buildBattlefieldResultFlash } from "./board/battlefieldResultFlash";
 import {
@@ -171,6 +171,7 @@ export default function PracticeBattlefieldApp({
       ? "Discard nothing and draw 1 additional power card."
       : `Discard ${selectedFocusObjectiveIds.length} objective card${selectedFocusObjectiveIds.length === 1 ? "" : "s"} and ${selectedFocusPowerIds.length} power card${selectedFocusPowerIds.length === 1 ? "" : "s"}, then draw ${selectedFocusObjectiveIds.length} objective card${selectedFocusObjectiveIds.length === 1 ? "" : "s"} and ${selectedFocusPowerIds.length + 1} power card${selectedFocusPowerIds.length + 1 === 1 ? "" : "s"}.`;
   const latestCombat = game.getLatestRecord(GameRecordKind.Combat);
+  const diceTrayModel = getDiceTrayModel(game);
   const recentCombat =
     latestCombat !== null &&
     selectedFighterId !== null &&
@@ -574,6 +575,7 @@ export default function PracticeBattlefieldApp({
   })();
 
   return (
+    <>
     <main className="battlefield-app-shell">
       <section className="battlefield-layout">
         <section className="battlefield-panel battlefield-board-panel">
@@ -642,8 +644,6 @@ export default function PracticeBattlefieldApp({
         </section>
 
         <div className="battlefield-side-stack">
-          <CombatDiceTray game={game} combatResult={latestCombat} />
-
           <section className="battlefield-panel">
             <div className="battlefield-heading">
               <p className="battlefield-eyebrow">Action Lens</p>
@@ -1005,6 +1005,8 @@ export default function PracticeBattlefieldApp({
         <PlayerHandDockShell player={dockPlayer} interaction={dockInteraction} />
       )}
     </main>
+    <DiceTray model={diceTrayModel} />
+    </>
   );
 }
 
