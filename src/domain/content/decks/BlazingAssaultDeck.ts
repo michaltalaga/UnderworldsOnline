@@ -1,15 +1,19 @@
 import { CardDefinition } from "../../definitions/CardDefinition";
 import { DeckDefinition } from "../../definitions/DeckDefinition";
-import { CardKind } from "../../values/enums";
+import {
+  GenericPracticeObjectiveCardDefinition,
+  GenericPracticePloyCardDefinition,
+  GenericPracticeUpgradeCardDefinition,
+} from "./genericPracticeCardDefinitions";
 
 // Source: Warhammer Underworlds — Blazing Assault Rivals deck.
 // https://www.underworldsdb.com/shared.php?deck=0,BL1..BL32&format=rivals
 //
-// NOTE ON SCOPE: Card metadata only. Each card carries the official name, full
-// rules text, and glory value, but inherits the base `CardDefinition.canPlay`
-// which always returns false. The cards therefore live in the deck for setup,
-// muster, and shuffling, but cannot yet be played until each effect is
-// implemented in the engine.
+// NOTE ON SCOPE: Card metadata only — the rules text on each card is
+// NOT enforced by the engine. The cards use the generic practice
+// subclasses so they're playable end-to-end (objectives score at end
+// phase for their glory value, ploys discard on play, upgrades attach
+// to a fighter and pay glory) without the literal rules text firing.
 
 const objectives: readonly CardDefinition[] = [
   buildObjective(
@@ -173,9 +177,8 @@ function buildObjective(
   glory: number,
   text: string,
 ): CardDefinition {
-  return new CardDefinition(
+  return new GenericPracticeObjectiveCardDefinition(
     `card-def:rivals:blazing-assault:${code}`,
-    CardKind.Objective,
     name,
     text,
     glory,
@@ -183,12 +186,10 @@ function buildObjective(
 }
 
 function buildPloy(code: string, name: string, text: string): CardDefinition {
-  return new CardDefinition(
+  return new GenericPracticePloyCardDefinition(
     `card-def:rivals:blazing-assault:${code}`,
-    CardKind.Ploy,
     name,
     text,
-    0,
   );
 }
 
@@ -198,9 +199,8 @@ function buildUpgrade(
   glory: number,
   text: string,
 ): CardDefinition {
-  return new CardDefinition(
+  return new GenericPracticeUpgradeCardDefinition(
     `card-def:rivals:blazing-assault:${code}`,
-    CardKind.Upgrade,
     name,
     text,
     glory,
