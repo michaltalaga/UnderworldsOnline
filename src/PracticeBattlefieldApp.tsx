@@ -31,6 +31,7 @@ import {
   getFighterName,
 } from "./board/battlefieldFormatters";
 import BoardMap, { LegendItem } from "./board/BoardMap";
+import CombatDiceTray from "./board/CombatDiceTray";
 import PlayerPanel from "./board/PlayerPanel";
 import { buildBattlefieldResultFlash } from "./board/battlefieldResultFlash";
 import {
@@ -641,6 +642,8 @@ export default function PracticeBattlefieldApp({
         </section>
 
         <div className="battlefield-side-stack">
+          <CombatDiceTray game={game} combatResult={latestCombat} />
+
           <section className="battlefield-panel">
             <div className="battlefield-heading">
               <p className="battlefield-eyebrow">Action Lens</p>
