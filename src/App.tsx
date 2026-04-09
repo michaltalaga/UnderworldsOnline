@@ -1,5 +1,6 @@
 import { useState } from "react";
 import DeckSelectScreen from "./DeckSelectScreen";
+import { LOCAL_PLAYER_ID } from "./localPlayer";
 import PracticeBattlefieldApp from "./PracticeBattlefieldApp";
 import SetupApp from "./SetupApp";
 import WarbandSelectScreen from "./WarbandSelectScreen";
@@ -595,7 +596,7 @@ function DebugApp() {
             </div>
             <div>
               <dt>Equipped</dt>
-              <dd>{upgradeDebugGame.getPlayer("player:one")?.equippedUpgrades.length ?? 0}</dd>
+              <dd>{upgradeDebugGame.getPlayer(LOCAL_PLAYER_ID)?.equippedUpgrades.length ?? 0}</dd>
             </div>
             <div>
               <dt>Attached To</dt>

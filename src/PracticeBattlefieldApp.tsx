@@ -42,14 +42,12 @@ import {
   getArmedPathModel,
   getAttackActionForTarget,
   getAttackPreviewByTarget,
-  getAttackProfileForTarget,
   getAttackProfiles,
   getChargeActionForTarget,
   getChargeActionsForHex,
   getChargeOptions,
   getChargePairKey,
   getChargePreviewByTarget,
-  getChargeProfileForTarget,
   getChargeProfiles,
   getChargeTargetIdsForHex,
   getDefaultSelectableFighterId,
@@ -58,6 +56,7 @@ import {
   getMoveOptions,
   getNextSelectedFighterId,
   getPreferredChargeDestinationForTarget,
+  getProfileForTarget,
   getSelectedAttackKeyForTarget,
   getSelectedChargeKeyForPair,
   toggleFocusCardId,
@@ -150,13 +149,13 @@ export default function PracticeBattlefieldApp({
   const pendingChargeProfile =
     pendingChargeHexId === null || pendingChargeTargetId === null
       ? null
-      : getChargeProfileForTarget(chargeProfiles, pendingChargeTargetId);
+      : getProfileForTarget(chargeProfiles, pendingChargeTargetId);
   const pendingChargeOption = pendingChargeProfile?.options.find((option) => option.key === pendingChargeProfile.selectedKey) ?? null;
   const pendingChargeBadgeLabel = pendingChargeOption?.label ?? null;
   const pendingAttackProfile =
     pendingAttackTargetId === null
       ? null
-      : getAttackProfileForTarget(attackProfiles, pendingAttackTargetId);
+      : getProfileForTarget(attackProfiles, pendingAttackTargetId);
   const pendingAttackTargetName = pendingAttackProfile?.targetName ?? (
     pendingAttackTargetId === null ? null : getFighterName(game, pendingAttackTargetId)
   );

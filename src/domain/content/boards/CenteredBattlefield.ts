@@ -27,15 +27,6 @@ const southStartingHexIds = new Set([
   "hex:r10:c4",
 ]);
 
-const neighborDirections = [
-  [1, 0],
-  [1, -1],
-  [0, -1],
-  [-1, 0],
-  [-1, 1],
-  [0, 1],
-] as const;
-
 export const centeredBattlefield = createCenteredBattlefield();
 
 function createCenteredBattlefield(): BoardState {
@@ -47,7 +38,7 @@ function createCenteredBattlefield(): BoardState {
     .filter((hex) => hex.territoryId === southTerritoryId)
     .map((hex) => hex.id);
 
-  return new BoardState(
+  const board = new BoardState(
     "board:centered-battlefield",
     BoardSide.Front,
     hexes,
@@ -56,19 +47,12 @@ function createCenteredBattlefield(): BoardState {
       new Territory(southTerritoryId, "South Territory", null, southHexIds),
     ],
   );
+  board.recomputeEdgeFlags();
+  return board;
 }
 
 function createHexes(): HexCell[] {
-  const hexes = rowSizes.flatMap((rowSize, rowIndex) => createRowHexes(rowIndex, rowSize));
-  const coordinateMap = new Set(hexes.map((hex) => getCoordinateKey(hex.q, hex.r)));
-
-  for (const hex of hexes) {
-    hex.isEdgeHex = neighborDirections.some(([qOffset, rOffset]) => {
-      return !coordinateMap.has(getCoordinateKey(hex.q + qOffset, hex.r + rOffset));
-    });
-  }
-
-  return hexes;
+  return rowSizes.flatMap((rowSize, rowIndex) => createRowHexes(rowIndex, rowSize));
 }
 
 function createRowHexes(rowIndex: number, rowSize: number): HexCell[] {
@@ -93,8 +77,4 @@ function createRowHexes(rowIndex: number, rowSize: number): HexCell[] {
       territoryId,
     );
   });
-}
-
-function getCoordinateKey(q: number, r: number): string {
-  return `${q},${r}`;
 }

@@ -22,6 +22,75 @@ import type {
   ProfilePreviewModel,
 } from "./battlefieldModels";
 
+// --- Small shared helpers -------------------------------------------------
+//
+// These collapse patterns that used to be repeated across the lens builder,
+// the per-hex/per-target queries, and the profile builders below.
+
+// Returns the final hex a move or charge action ends on, or undefined if
+// the path is empty. Every helper that filters or groups by destination
+// flows through this rather than repeating `action.path[action.path.length - 1]`.
+function getDestinationHexId(action: MoveAction | ChargeAction): HexId | undefined {
+  return action.path[action.path.length - 1];
+}
+
+// Flattens an iterable of fighter ids to the hex ids they currently occupy,
+// dropping off-board or missing fighters. Used by the lens builder and the
+// per-hex charge queries.
+function collectCurrentHexIds(game: Game, fighterIds: Iterable<FighterId>): Set<HexId> {
+  return new Set(
+    [...fighterIds].flatMap((fighterId) => {
+      const target = game.getFighter(fighterId);
+      return target === undefined || target.currentHexId === null
+        ? []
+        : [target.currentHexId];
+    }),
+  );
+}
+
+// Buckets actions by their target fighter so profile builders can walk the
+// groups without re-implementing the grouping inline.
+function groupByTargetId<T extends { readonly targetId: FighterId }>(
+  actions: readonly T[],
+): Map<FighterId, T[]> {
+  const byTarget = new Map<FighterId, T[]>();
+  for (const action of actions) {
+    const existing = byTarget.get(action.targetId);
+    if (existing === undefined) {
+      byTarget.set(action.targetId, [action]);
+    } else {
+      existing.push(action);
+    }
+  }
+  return byTarget;
+}
+
+// Picks the best item from a list using a "is candidate better than current
+// best" comparator. Returns null for an empty list. Used everywhere we used
+// to write `let bestAction = null; for (...) { if (bestAction === null || ...) }`.
+function pickBestBy<T>(
+  items: readonly T[],
+  isBetter: (candidate: T, current: T) => boolean,
+): T | null {
+  let best: T | null = null;
+  for (const item of items) {
+    if (best === null || isBetter(item, best)) {
+      best = item;
+    }
+  }
+  return best;
+}
+
+// Comparator: candidate is better than current if it drops an ability the
+// current one has. Used by "find the plain (unmodified) version of this
+// attack/charge" policies.
+function prefersBaseAbility(
+  candidate: { readonly selectedAbility: unknown },
+  current: { readonly selectedAbility: unknown },
+): boolean {
+  return current.selectedAbility !== null && candidate.selectedAbility === null;
+}
+
 // Derives a per-fighter view of the legal actions coming out of
 // `CombatActionService`. The main battlefield component builds one lens per
 // render and passes it to the map, the action panel, and the interaction
@@ -65,38 +134,24 @@ export function getFighterActionLens(
   ) ?? null;
 
   const attackTargetIds = new Set<FighterId>(attackActions.map((action) => action.targetId));
-  const attackTargetHexIds = new Set<HexId>(
-    [...attackTargetIds].flatMap((fighterId) => {
-      const target = game.getFighter(fighterId);
-      return target?.currentHexId === null || target?.currentHexId === undefined
-        ? []
-        : [target.currentHexId];
-    }),
-  );
+  const attackTargetHexIds = collectCurrentHexIds(game, attackTargetIds);
   const moveHexIds = new Set<HexId>(
     moveActions.flatMap((action) => {
-      const destinationHexId = action.path[action.path.length - 1];
+      const destinationHexId = getDestinationHexId(action);
       return destinationHexId === undefined ? [] : [destinationHexId];
     }),
   );
   const chargeHexIds = new Set<HexId>(
     chargeActions.flatMap((action) => {
-      const destinationHexId = action.path[action.path.length - 1];
+      const destinationHexId = getDestinationHexId(action);
       return destinationHexId === undefined ? [] : [destinationHexId];
     }),
   );
   const chargeTargetIds = new Set<FighterId>(chargeActions.map((action) => action.targetId));
-  const chargeTargetHexIds = new Set<HexId>(
-    [...chargeTargetIds].flatMap((fighterId) => {
-      const target = game.getFighter(fighterId);
-      return target?.currentHexId === null || target?.currentHexId === undefined
-        ? []
-        : [target.currentHexId];
-    }),
-  );
+  const chargeTargetHexIds = collectCurrentHexIds(game, chargeTargetIds);
   const uniqueChargeOptions = new Set(
     chargeActions.flatMap((action) => {
-      const destinationHexId = action.path[action.path.length - 1];
+      const destinationHexId = getDestinationHexId(action);
       return destinationHexId === undefined ? [] : [`${destinationHexId}:${action.targetId}`];
     }),
   );
@@ -166,7 +221,7 @@ export function getMoveOptions(actionLens: FighterActionLens): Array<{
 }> {
   return actionLens.moveActions
     .flatMap((action) => {
-      const destinationHexId = action.path[action.path.length - 1];
+      const destinationHexId = getDestinationHexId(action);
       return destinationHexId === undefined
         ? []
         : [{
@@ -179,45 +234,26 @@ export function getMoveOptions(actionLens: FighterActionLens): Array<{
 }
 
 export function getMoveActionForHex(actionLens: FighterActionLens, hexId: HexId): MoveAction | null {
-  let bestAction: MoveAction | null = null;
-
-  for (const action of actionLens.moveActions) {
-    const destinationHexId = action.path[action.path.length - 1];
-    if (destinationHexId !== hexId) {
-      continue;
-    }
-
-    if (bestAction === null || action.path.length < bestAction.path.length) {
-      bestAction = action;
-    }
-  }
-
-  return bestAction;
+  const candidates = actionLens.moveActions.filter(
+    (action) => getDestinationHexId(action) === hexId,
+  );
+  return pickBestBy(candidates, (candidate, current) => candidate.path.length < current.path.length);
 }
 
 export function getChargePreviewActionForHex(
   actionLens: FighterActionLens,
   hexId: HexId,
 ): ChargeAction | null {
-  let bestAction: ChargeAction | null = null;
-
-  for (const action of getChargeActionsForHex(actionLens, hexId)) {
-    if (
-      bestAction === null ||
-      action.path.length < bestAction.path.length ||
-      (action.path.length === bestAction.path.length &&
-        bestAction.selectedAbility !== null &&
-        action.selectedAbility === null)
-    ) {
-      bestAction = action;
-    }
-  }
-
-  return bestAction;
+  return pickBestBy(
+    getChargeActionsForHex(actionLens, hexId),
+    (candidate, current) =>
+      candidate.path.length < current.path.length ||
+      (candidate.path.length === current.path.length && prefersBaseAbility(candidate, current)),
+  );
 }
 
 export function getChargeActionsForHex(actionLens: FighterActionLens, hexId: HexId): ChargeAction[] {
-  return actionLens.chargeActions.filter((action) => action.path[action.path.length - 1] === hexId);
+  return actionLens.chargeActions.filter((action) => getDestinationHexId(action) === hexId);
 }
 
 export function getChargeTargetIdsForHex(
@@ -236,16 +272,7 @@ export function getChargeTargetHexIdsForHex(
   actionLens: FighterActionLens,
   hexId: HexId | null,
 ): Set<HexId> {
-  const targetIds = getChargeTargetIdsForHex(actionLens, hexId);
-
-  return new Set(
-    [...targetIds].flatMap((fighterId) => {
-      const target = game.getFighter(fighterId);
-      return target?.currentHexId === null || target?.currentHexId === undefined
-        ? []
-        : [target.currentHexId];
-    }),
-  );
+  return collectCurrentHexIds(game, getChargeTargetIdsForHex(actionLens, hexId));
 }
 
 export function getChargeDestinationHexIdsForTarget(
@@ -262,7 +289,7 @@ export function getChargeDestinationHexIdsForTarget(
         return [];
       }
 
-      const destinationHexId = action.path[action.path.length - 1];
+      const destinationHexId = getDestinationHexId(action);
       return destinationHexId === undefined ? [] : [destinationHexId];
     }),
   );
@@ -272,35 +299,28 @@ export function getPreferredChargeDestinationForTarget(
   actionLens: FighterActionLens,
   targetId: FighterId,
 ): HexId | null {
-  let bestAction: ChargeAction | null = null;
+  const candidates = actionLens.chargeActions.filter(
+    (action) => action.targetId === targetId && getDestinationHexId(action) !== undefined,
+  );
 
-  for (const action of actionLens.chargeActions) {
-    if (action.targetId !== targetId) {
-      continue;
+  const bestAction = pickBestBy(candidates, (candidate, current) => {
+    if (candidate.path.length !== current.path.length) {
+      return candidate.path.length < current.path.length;
     }
-
-    const destinationHexId = action.path[action.path.length - 1];
-    if (destinationHexId === undefined) {
-      continue;
+    if (prefersBaseAbility(candidate, current)) {
+      return true;
     }
-
-    const bestDestinationHexId = bestAction?.path[bestAction.path.length - 1];
-    if (
-      bestAction === null ||
-      action.path.length < bestAction.path.length ||
-      (action.path.length === bestAction.path.length &&
-        bestAction.selectedAbility !== null &&
-        action.selectedAbility === null) ||
-      (action.path.length === bestAction.path.length &&
-        bestAction.selectedAbility === action.selectedAbility &&
-        bestDestinationHexId !== undefined &&
-        destinationHexId.localeCompare(bestDestinationHexId) < 0)
-    ) {
-      bestAction = action;
+    if (candidate.selectedAbility !== current.selectedAbility) {
+      return false;
     }
-  }
+    const candidateHexId = getDestinationHexId(candidate);
+    const currentHexId = getDestinationHexId(current);
+    return candidateHexId !== undefined &&
+      currentHexId !== undefined &&
+      candidateHexId.localeCompare(currentHexId) < 0;
+  });
 
-  return bestAction?.path[bestAction.path.length - 1] ?? null;
+  return bestAction === null ? null : getDestinationHexId(bestAction) ?? null;
 }
 
 export function getChargeActionForTarget(
@@ -313,32 +333,24 @@ export function getChargeActionForTarget(
     return null;
   }
 
+  const candidates = getChargeActionsForHex(actionLens, hexId).filter(
+    (action) => action.targetId === targetId,
+  );
+
   if (preferredChargeKey !== null) {
-    const preferredAction = getChargeActionsForHex(actionLens, hexId).find(
-      (action) => action.targetId === targetId && getChargeActionKey(action) === preferredChargeKey,
+    const preferredAction = candidates.find(
+      (action) => getChargeActionKey(action) === preferredChargeKey,
     );
     if (preferredAction !== undefined) {
       return preferredAction;
     }
   }
 
-  let bestAction: ChargeAction | null = null;
-
-  for (const action of getChargeActionsForHex(actionLens, hexId)) {
-    if (action.targetId !== targetId) {
-      continue;
-    }
-
-    if (bestAction === null || (bestAction.selectedAbility !== null && action.selectedAbility === null)) {
-      bestAction = action;
-    }
-  }
-
-  return bestAction;
+  return pickBestBy(candidates, prefersBaseAbility);
 }
 
 export function getChargeActionKey(action: ChargeAction): string {
-  const destinationHexId = action.path[action.path.length - 1] ?? "unknown";
+  const destinationHexId = getDestinationHexId(action) ?? "unknown";
   return `${action.fighterId}:${destinationHexId}:${action.targetId}:${action.weaponId}:${action.selectedAbility ?? "base"}`;
 }
 
@@ -362,28 +374,20 @@ export function getAttackActionForTarget(
   targetId: FighterId,
   preferredAttackKey: string | null = null,
 ): AttackAction | null {
+  const candidates = actionLens.attackActions.filter(
+    (action) => action.targetId === targetId,
+  );
+
   if (preferredAttackKey !== null) {
-    const preferredAction = actionLens.attackActions.find(
-      (action) => action.targetId === targetId && getAttackActionKey(action) === preferredAttackKey,
+    const preferredAction = candidates.find(
+      (action) => getAttackActionKey(action) === preferredAttackKey,
     );
     if (preferredAction !== undefined) {
       return preferredAction;
     }
   }
 
-  let bestAction: AttackAction | null = null;
-
-  for (const action of actionLens.attackActions) {
-    if (action.targetId !== targetId) {
-      continue;
-    }
-
-    if (bestAction === null || (bestAction.selectedAbility !== null && action.selectedAbility === null)) {
-      bestAction = action;
-    }
-  }
-
-  return bestAction;
+  return pickBestBy(candidates, prefersBaseAbility);
 }
 
 export function getAttackActionKey(action: AttackAction): string {
@@ -496,17 +500,7 @@ export function getAttackProfiles(
     return [];
   }
 
-  const actionsByTarget = new Map<FighterId, AttackAction[]>();
-  for (const action of actionLens.attackActions) {
-    const existingActions = actionsByTarget.get(action.targetId);
-    if (existingActions === undefined) {
-      actionsByTarget.set(action.targetId, [action]);
-    } else {
-      existingActions.push(action);
-    }
-  }
-
-  return [...actionsByTarget.entries()].map(([targetId, actions]) => {
+  return [...groupByTargetId(actionLens.attackActions).entries()].map(([targetId, actions]) => {
     const defaultAction = getAttackActionForTarget(actionLens, targetId) ?? actions[0];
     const selectedAction = getAttackActionForTarget(
       actionLens,
@@ -532,11 +526,14 @@ export function getAttackProfiles(
   });
 }
 
-export function getAttackProfileForTarget(
-  attackProfiles: AttackProfileSummary[],
+// Generic target-id lookup used by both attack and charge profile consumers.
+// Both profile summary types carry `targetId`, so the generic works for
+// either without needing two near-identical named exports.
+export function getProfileForTarget<T extends { readonly targetId: FighterId }>(
+  profiles: readonly T[],
   targetId: FighterId,
-): AttackProfileSummary | null {
-  return attackProfiles.find((profile) => profile.targetId === targetId) ?? null;
+): T | null {
+  return profiles.find((profile) => profile.targetId === targetId) ?? null;
 }
 
 export function getChargeProfiles(
@@ -559,17 +556,7 @@ export function getChargeProfiles(
     return [];
   }
 
-  const actionsByTarget = new Map<FighterId, ChargeAction[]>();
-  for (const action of chargeActions) {
-    const existingActions = actionsByTarget.get(action.targetId);
-    if (existingActions === undefined) {
-      actionsByTarget.set(action.targetId, [action]);
-    } else {
-      existingActions.push(action);
-    }
-  }
-
-  return [...actionsByTarget.entries()].map(([targetId, actions]) => {
+  return [...groupByTargetId(chargeActions).entries()].map(([targetId, actions]) => {
     const defaultAction = getChargeActionForTarget(actionLens, destinationHexId, targetId) ?? actions[0];
     const selectedAction = getChargeActionForTarget(
       actionLens,
@@ -594,13 +581,6 @@ export function getChargeProfiles(
       }),
     };
   });
-}
-
-export function getChargeProfileForTarget(
-  chargeProfiles: ChargeProfileSummary[],
-  targetId: FighterId,
-): ChargeProfileSummary | null {
-  return chargeProfiles.find((profile) => profile.targetId === targetId) ?? null;
 }
 
 function describeAttackAction(
@@ -648,21 +628,21 @@ export function getChargeOptions(
   const byKey = new Map<string, ChargeAction>();
 
   for (const action of actionLens.chargeActions) {
-    const destinationHexId = action.path[action.path.length - 1];
+    const destinationHexId = getDestinationHexId(action);
     if (destinationHexId === undefined) {
       continue;
     }
 
     const key = `${destinationHexId}:${action.targetId}`;
     const existingAction = byKey.get(key);
-    if (existingAction === undefined || (existingAction.selectedAbility !== null && action.selectedAbility === null)) {
+    if (existingAction === undefined || prefersBaseAbility(action, existingAction)) {
       byKey.set(key, action);
     }
   }
 
   return [...byKey.entries()]
     .map(([key, action]) => {
-      const destinationHexId = action.path[action.path.length - 1];
+      const destinationHexId = getDestinationHexId(action);
       const targetName = getFighterName(game, action.targetId);
       return destinationHexId === undefined
         ? null

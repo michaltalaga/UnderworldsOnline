@@ -19,15 +19,6 @@ import { DefaultWarscrollEffectResolver } from "./DefaultWarscrollEffectResolver
 import { LegalActionService } from "./LegalActionService";
 import { WarscrollEffectResolver } from "./WarscrollEffectResolver";
 
-const neighborDirections = [
-  [1, 0],
-  [1, -1],
-  [0, -1],
-  [-1, 0],
-  [-1, 1],
-  [0, 1],
-] as const;
-
 type MovePathSearchNode = {
   hex: HexCell;
   path: HexId[];
@@ -131,7 +122,7 @@ export class CombatActionService extends LegalActionService {
       return false;
     }
 
-    return this.getHexDistance(destinationHex, targetHex) <= weapon.range;
+    return game.board.getDistance(destinationHex, targetHex) <= weapon.range;
   }
 
   public isLegalAttackAction(game: Game, action: AttackAction): boolean {
@@ -182,7 +173,7 @@ export class CombatActionService extends LegalActionService {
       return false;
     }
 
-    return this.getHexDistance(attackerHex, targetHex) <= weapon.range;
+    return game.board.getDistance(attackerHex, targetHex) <= weapon.range;
   }
 
   public isLegalGuardAction(game: Game, action: GuardAction): boolean {
@@ -352,12 +343,7 @@ export class CombatActionService extends LegalActionService {
       return false;
     }
 
-    if (
-      fighter.isSlain ||
-      fighter.currentHexId === null ||
-      fighter.hasMoveToken ||
-      fighter.hasChargeToken
-    ) {
+    if (!this.canFighterMove(fighter)) {
       return false;
     }
 
@@ -377,7 +363,7 @@ export class CombatActionService extends LegalActionService {
       }
 
       const nextHex = game.board.getHex(nextHexId);
-      if (nextHex === undefined || !this.isAdjacent(currentHex, nextHex)) {
+      if (nextHex === undefined || !game.board.areAdjacent(currentHex, nextHex)) {
         return false;
       }
 
@@ -430,7 +416,7 @@ export class CombatActionService extends LegalActionService {
         }
 
         const targetHex = game.board.getHex(target.currentHexId);
-        if (targetHex === undefined || this.getHexDistance(attackerHex, targetHex) > weapon.range) {
+        if (targetHex === undefined || game.board.getDistance(attackerHex, targetHex) > weapon.range) {
           return [];
         }
 
@@ -484,7 +470,7 @@ export class CombatActionService extends LegalActionService {
           }
 
           const targetHex = game.board.getHex(target.currentHexId);
-          if (targetHex === undefined || this.getHexDistance(destinationHex, targetHex) > weapon.range) {
+          if (targetHex === undefined || game.board.getDistance(destinationHex, targetHex) > weapon.range) {
             return [];
           }
 
@@ -658,12 +644,7 @@ export class CombatActionService extends LegalActionService {
       return [];
     }
 
-    if (
-      fighter.isSlain ||
-      fighter.currentHexId === null ||
-      fighter.hasMoveToken ||
-      fighter.hasChargeToken
-    ) {
+    if (!this.canFighterMove(fighter)) {
       return [];
     }
 
@@ -682,7 +663,7 @@ export class CombatActionService extends LegalActionService {
         continue;
       }
 
-      for (const neighborHex of this.getAdjacentHexes(game, currentNode.hex)) {
+      for (const neighborHex of game.board.getNeighbors(currentNode.hex)) {
         if (!this.isTraversableMoveHex(neighborHex)) {
           continue;
         }
@@ -706,22 +687,29 @@ export class CombatActionService extends LegalActionService {
     return legalActions;
   }
 
-  private canFighterGuard(fighter: FighterState): boolean {
-    return !(
-      fighter.isSlain ||
-      fighter.currentHexId === null ||
-      fighter.hasMoveToken ||
-      fighter.hasChargeToken ||
-      fighter.hasGuardToken
+  // Base predicate: fighter exists on the board and can still take an
+  // action this turn. All action-specific predicates compose on top of
+  // this. The type predicate narrows `currentHexId` to non-null so
+  // callers can skip a redundant null-check before indexing the board.
+  private canFighterAct(fighter: FighterState): fighter is FighterState & { currentHexId: HexId } {
+    return !fighter.isSlain && fighter.currentHexId !== null;
+  }
+
+  // Move and charge share the same "haven't acted yet this turn" rule.
+  private canFighterMove(fighter: FighterState): fighter is FighterState & { currentHexId: HexId } {
+    return (
+      this.canFighterAct(fighter) &&
+      !fighter.hasMoveToken &&
+      !fighter.hasChargeToken
     );
   }
 
-  private canFighterAttack(fighter: FighterState): boolean {
-    return !(
-      fighter.isSlain ||
-      fighter.currentHexId === null ||
-      fighter.hasChargeToken
-    );
+  private canFighterGuard(fighter: FighterState): boolean {
+    return this.canFighterMove(fighter) && !fighter.hasGuardToken;
+  }
+
+  private canFighterAttack(fighter: FighterState): fighter is FighterState & { currentHexId: HexId } {
+    return this.canFighterAct(fighter) && !fighter.hasChargeToken;
   }
 
   private isCombatActionStep(game: Game, playerId: PlayerId): boolean {
@@ -734,29 +722,6 @@ export class CombatActionService extends LegalActionService {
       game.turnStep === turnStep &&
       game.activePlayerId === playerId
     );
-  }
-
-  private getAdjacentHexes(game: Game, hex: HexCell): HexCell[] {
-    return neighborDirections.flatMap(([qOffset, rOffset]) => {
-      const adjacentHex = game.board.hexes.find(
-        (candidate) => candidate.q === hex.q + qOffset && candidate.r === hex.r + rOffset,
-      );
-
-      return adjacentHex === undefined ? [] : [adjacentHex];
-    });
-  }
-
-  private isAdjacent(a: HexCell, b: HexCell): boolean {
-    return neighborDirections.some(
-      ([qOffset, rOffset]) => a.q + qOffset === b.q && a.r + rOffset === b.r,
-    );
-  }
-
-  private getHexDistance(a: HexCell, b: HexCell): number {
-    const qDistance = a.q - b.q;
-    const rDistance = a.r - b.r;
-    const sDistance = (a.q + a.r) - (b.q + b.r);
-    return (Math.abs(qDistance) + Math.abs(rDistance) + Math.abs(sDistance)) / 2;
   }
 
   private isTraversableMoveHex(hex: HexCell): boolean {

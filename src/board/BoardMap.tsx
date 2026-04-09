@@ -883,7 +883,7 @@ function getHexClassName(game: Game, hex: HexCell, state: HexRenderState): strin
     classes.push("battlefield-map-hex-neutral");
   } else if (territoryOwnerId === LOCAL_PLAYER_ID) {
     classes.push("battlefield-map-hex-player-one");
-  } else if (territoryOwnerId === "player:two") {
+  } else if (territoryOwnerId !== null) {
     classes.push("battlefield-map-hex-player-two");
   } else {
     classes.push("battlefield-map-hex-unclaimed");
