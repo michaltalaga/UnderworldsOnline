@@ -105,6 +105,9 @@ export type BoardTurnHeaderModel = {
   isArmed: boolean;
   tone: "action" | "power" | "neutral";
   stepLabel: string;
+  // Round + activation label like "Round 1 · Turn 2/4". Null when the
+  // game isn't in a combat turn (setup, end phase, finished).
+  roundLabel: string | null;
 };
 
 export type ArmedPathModel = {

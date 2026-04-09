@@ -138,6 +138,7 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
       isArmed: false,
       tone: "neutral",
       stepLabel: "Setup",
+      roundLabel: null,
     },
     lastResolvedAction: null,
     resultFlash: null,

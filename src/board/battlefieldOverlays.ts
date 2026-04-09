@@ -213,6 +213,7 @@ export function getBoardTurnHeaderModel({
   selectedFighterName: string;
   selectedFeatureToken: FeatureTokenState | null;
 }): BoardTurnHeaderModel {
+  const roundLabel = getRoundLabel(game);
   if (game.turnStep === TurnStep.Action) {
     if (pendingFocus) {
       return {
@@ -221,6 +222,7 @@ export function getBoardTurnHeaderModel({
         isArmed: true,
         stepLabel: "Action Step",
         tone: "action",
+        roundLabel,
       };
     }
 
@@ -231,6 +233,7 @@ export function getBoardTurnHeaderModel({
         isArmed: true,
         stepLabel: "Action Step",
         tone: "action",
+        roundLabel,
       };
     }
 
@@ -244,6 +247,7 @@ export function getBoardTurnHeaderModel({
         isArmed: true,
         stepLabel: "Action Step",
         tone: "action",
+        roundLabel,
       };
     }
 
@@ -257,6 +261,7 @@ export function getBoardTurnHeaderModel({
         isArmed: true,
         stepLabel: "Action Step",
         tone: "action",
+        roundLabel,
       };
     }
 
@@ -267,6 +272,7 @@ export function getBoardTurnHeaderModel({
         isArmed: true,
         stepLabel: "Action Step",
         tone: "action",
+        roundLabel,
       };
     }
 
@@ -277,6 +283,7 @@ export function getBoardTurnHeaderModel({
         isArmed: true,
         stepLabel: "Action Step",
         tone: "action",
+        roundLabel,
       };
     }
 
@@ -286,6 +293,7 @@ export function getBoardTurnHeaderModel({
       isArmed: false,
       stepLabel: "Action Step",
       tone: "action",
+      roundLabel,
     };
   }
 
@@ -297,6 +305,7 @@ export function getBoardTurnHeaderModel({
         isArmed: true,
         stepLabel: "Power Step",
         tone: "power",
+        roundLabel,
       };
     }
 
@@ -307,6 +316,7 @@ export function getBoardTurnHeaderModel({
         isArmed: true,
         stepLabel: "Power Step",
         tone: "power",
+        roundLabel,
       };
     }
 
@@ -317,6 +327,7 @@ export function getBoardTurnHeaderModel({
         isArmed: true,
         stepLabel: "Power Step",
         tone: "power",
+        roundLabel,
       };
     }
 
@@ -326,6 +337,7 @@ export function getBoardTurnHeaderModel({
       isArmed: false,
       stepLabel: "Power Step",
       tone: "power",
+      roundLabel,
     };
   }
 
@@ -335,5 +347,21 @@ export function getBoardTurnHeaderModel({
     isArmed: false,
     stepLabel: "Board State",
     tone: "neutral",
+    roundLabel,
   };
+}
+
+// Computes a short label like "Round 1 · Turn 2/4" for the active player's
+// current activation within the round. Returns null when the game isn't in
+// an interactive combat turn (setup, end phase, finished, combat-ready).
+function getRoundLabel(game: Game): string | null {
+  if (game.state.kind !== "combatTurn" || game.activePlayerId === null) {
+    return null;
+  }
+  const activePlayer = game.getPlayer(game.activePlayerId);
+  if (activePlayer === undefined) {
+    return null;
+  }
+  const activationNumber = activePlayer.turnsTakenThisRound + 1;
+  return `Round ${game.roundNumber} · Turn ${activationNumber}/4`;
 }

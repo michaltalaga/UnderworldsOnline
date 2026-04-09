@@ -108,6 +108,11 @@ export default function BoardMap({
           >
             {statusBadge.stepLabel}
           </span>
+          {statusBadge.roundLabel === null ? null : (
+            <span className="battlefield-board-status-round">
+              {statusBadge.roundLabel}
+            </span>
+          )}
           <span className="battlefield-board-status-mode">
             {statusBadge.isArmed ? "armed" : "ready"}
           </span>

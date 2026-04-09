@@ -274,7 +274,7 @@ export default function PracticeBattlefieldApp({
   }, [game]);
 
   const combatAutoResolver = useMemo(
-    () => new CombatAutoResolver(combatControllers, demoEngine),
+    () => new CombatAutoResolver(combatControllers, LOCAL_PLAYER_ID, demoEngine),
     [combatControllers],
   );
 

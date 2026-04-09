@@ -798,6 +798,7 @@ body {
 }
 
 .battlefield-board-status-step,
+.battlefield-board-status-round,
 .battlefield-board-status-mode {
   display: inline-flex;
   align-items: center;
@@ -808,6 +809,12 @@ body {
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.battlefield-board-status-round {
+  margin-right: auto;
+  background: rgba(53, 41, 31, 0.08);
+  color: #35291f;
 }
 
 .battlefield-board-status-step-action {

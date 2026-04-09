@@ -1,5 +1,6 @@
 import { EndPhaseActionService } from "../endPhase/EndPhaseActionService";
 import { GameEngine } from "../engine/GameEngine";
+import { deterministicFirstPlayerRollOff } from "../rules/Dice";
 import { CombatActionService } from "../rules/CombatActionService";
 import type { Game } from "../state/Game";
 import { Phase } from "../values/enums";
@@ -28,17 +29,20 @@ const MAX_DRAIN_ITERATIONS = 500;
 
 export class CombatAutoResolver {
   private readonly controllers: ReadonlyMap<PlayerId, CombatController>;
+  private readonly localPlayerId: PlayerId;
   private readonly engine: GameEngine;
   private readonly combatService: CombatActionService;
   private readonly endPhaseService: EndPhaseActionService;
 
   public constructor(
     controllers: ReadonlyMap<PlayerId, CombatController>,
+    localPlayerId: PlayerId,
     engine: GameEngine = new GameEngine(),
     combatService: CombatActionService = new CombatActionService(),
     endPhaseService: EndPhaseActionService = new EndPhaseActionService(),
   ) {
     this.controllers = controllers;
+    this.localPlayerId = localPlayerId;
     this.engine = engine;
     this.combatService = combatService;
     this.endPhaseService = endPhaseService;
@@ -62,9 +66,12 @@ export class CombatAutoResolver {
   //
   //   1. If the game is in the end phase, apply the next deterministic
   //      end-phase action (there's exactly one per step).
-  //   2. Otherwise, if the active seat is an AI controller, ask it for
+  //   2. If the game is in `combatReady` (between rounds), start the
+  //      next combat round with a deterministic roll-off so play
+  //      resumes without user input.
+  //   3. Otherwise, if the active seat is an AI controller, ask it for
   //      an action and apply it.
-  //   3. Otherwise, return false — the human UI drives.
+  //   4. Otherwise, return false — the human UI drives.
   public resolveAutomaticStep(game: Game): boolean {
     if (game.phase === Phase.Finished) {
       return false;
@@ -72,6 +79,15 @@ export class CombatAutoResolver {
 
     if (game.phase === Phase.End) {
       return this.tryApplyEndPhaseStep(game);
+    }
+
+    if (game.state.kind === "combatReady") {
+      this.engine.startCombatRound(
+        game,
+        [deterministicFirstPlayerRollOff],
+        this.localPlayerId,
+      );
+      return true;
     }
 
     if (game.state.kind !== "combatTurn" || game.activePlayerId === null) {
