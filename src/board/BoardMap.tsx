@@ -2,7 +2,6 @@ import { useEffect, useState, type CSSProperties } from "react";
 import {
   HexKind,
   TurnStep,
-  type CardId,
   type FeatureTokenState,
   type FighterId,
   type FighterState,
@@ -34,7 +33,6 @@ import type {
   BattlefieldResultFlash,
   BoardTurnHeaderModel,
   FighterActionLens,
-  FocusOverlayModel,
   PowerOverlayModel,
   PowerOverlayOption,
   ProfilePreviewModel,
@@ -43,10 +41,13 @@ import type {
 // ---------------------------------------------------------------------------
 // BoardMap
 // The hex grid component that owns all in-board UI: status header, last-
-// action banner, quick-action bar, focus & power overlays, and the hex tiles
+// action banner, quick-action bar, warscroll overlay, and the hex tiles
 // themselves. All game logic arrives pre-digested via `actionLens`, the view
 // models in `./battlefieldOverlays`, and the formatters in
 // `./battlefieldFormatters` — this component does no domain work itself.
+//
+// Card interactions (mulligan, focus discards, ploy/upgrade plays) live in
+// `PlayerHandDock`; this component does not render card UI.
 // ---------------------------------------------------------------------------
 
 export type BoardMapProps = {
@@ -64,10 +65,6 @@ export type BoardMapProps = {
   pendingAttackTargetId: FighterId | null;
   pendingChargeBadgeLabel: string | null;
   pendingAttackBadgeLabel: string | null;
-  focusOverlay: FocusOverlayModel;
-  focusSelectionSummary: string;
-  selectedFocusObjectiveIds: CardId[];
-  selectedFocusPowerIds: CardId[];
   powerOverlay: PowerOverlayModel;
   boardTurnHeader: BoardTurnHeaderModel;
   recentCombatTargetId: FighterId | null;
@@ -88,8 +85,6 @@ export type BoardMapProps = {
   onMoveToHex: (hexId: HexId) => void;
   onStartChargeAgainstTarget: (targetId: FighterId) => void;
   onStartChargeToHex: (hexId: HexId) => void;
-  onToggleFocusObjectiveCard: (cardId: CardId) => void;
-  onToggleFocusPowerCard: (cardId: CardId) => void;
   onSelectFighter: (fighterId: FighterId | null) => void;
   positionedHexes: PositionedHex[];
   selectedFighterId: FighterId | null;
@@ -110,10 +105,6 @@ export default function BoardMap({
   pendingAttackTargetId,
   pendingChargeBadgeLabel,
   pendingAttackBadgeLabel,
-  focusOverlay,
-  focusSelectionSummary,
-  selectedFocusObjectiveIds,
-  selectedFocusPowerIds,
   powerOverlay,
   boardTurnHeader,
   recentCombatTargetId,
@@ -134,8 +125,6 @@ export default function BoardMap({
   onMoveToHex,
   onStartChargeAgainstTarget,
   onStartChargeToHex,
-  onToggleFocusObjectiveCard,
-  onToggleFocusPowerCard,
   onSelectFighter,
   positionedHexes,
   selectedFighterId,
@@ -147,8 +136,6 @@ export default function BoardMap({
     selectedFighterId === null ? null : getFighterName(game, selectedFighterId);
   const [actionTooltip, setActionTooltip] = useState<{ label: string; left: number; top: number } | null>(null);
   const [hoveredChargeTargetId, setHoveredChargeTargetId] = useState<FighterId | null>(null);
-  const selectedFocusObjectiveIdSet = new Set(selectedFocusObjectiveIds);
-  const selectedFocusPowerIdSet = new Set(selectedFocusPowerIds);
   const hoveredChargeDestinationHexIds =
     pendingChargeHexId === null
       ? getChargeDestinationHexIdsForTarget(actionLens, hoveredChargeTargetId)
@@ -270,119 +257,25 @@ export default function BoardMap({
           ) : null}
         </div>
       ) : null}
-      {game.turnStep === TurnStep.Action && actionLens.focusAction !== null && pendingFocus ? (
-        <section className="battlefield-focus-overlay">
-          <div className="battlefield-focus-overlay-header">
-            <p className="battlefield-focus-overlay-eyebrow">Focus</p>
-            <strong>Choose cards to discard before you confirm</strong>
-            <p className="battlefield-focus-overlay-copy">{focusSelectionSummary}</p>
-          </div>
-          <div className="battlefield-focus-overlay-section">
-            <p className="battlefield-focus-overlay-label">Objectives</p>
-            <div className="battlefield-focus-card-list">
-              {focusOverlay.objectiveCards.length === 0 ? (
-                <p className="battlefield-focus-empty">No objective cards in hand.</p>
-              ) : (
-                focusOverlay.objectiveCards.map((card) => (
-                  <button
-                    key={card.cardId}
-                    type="button"
-                    className={[
-                      "battlefield-focus-card-option",
-                      selectedFocusObjectiveIdSet.has(card.cardId) ? "battlefield-focus-card-option-selected" : "",
-                    ].filter(Boolean).join(" ")}
-                    onClick={() => onToggleFocusObjectiveCard(card.cardId)}
-                  >
-                    <span>{card.name}</span>
-                    <span className="battlefield-focus-card-option-tag">
-                      {selectedFocusObjectiveIdSet.has(card.cardId) ? "discard" : "keep"}
-                    </span>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-          <div className="battlefield-focus-overlay-section">
-            <p className="battlefield-focus-overlay-label">Power</p>
-            <div className="battlefield-focus-card-list">
-              {focusOverlay.powerCards.length === 0 ? (
-                <p className="battlefield-focus-empty">No power cards in hand.</p>
-              ) : (
-                focusOverlay.powerCards.map((card) => (
-                  <button
-                    key={card.cardId}
-                    type="button"
-                    className={[
-                      "battlefield-focus-card-option",
-                      selectedFocusPowerIdSet.has(card.cardId) ? "battlefield-focus-card-option-selected" : "",
-                    ].filter(Boolean).join(" ")}
-                    onClick={() => onToggleFocusPowerCard(card.cardId)}
-                  >
-                    <span>{card.name}</span>
-                    <span className="battlefield-focus-card-option-tag">
-                      {selectedFocusPowerIdSet.has(card.cardId) ? "discard" : "keep"}
-                    </span>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        </section>
-      ) : null}
-      {game.turnStep === TurnStep.Power && powerOverlay.hasAnyOptions ? (
+      {game.turnStep === TurnStep.Power && powerOverlay.warscrollAbilities.length > 0 ? (
         <section className="battlefield-power-overlay">
           <div className="battlefield-power-overlay-header">
-            <p className="battlefield-power-overlay-eyebrow">Power Window</p>
-            <strong>Board-side power plays</strong>
+            <p className="battlefield-power-overlay-eyebrow">Warscroll</p>
+            <strong>Warscroll abilities</strong>
           </div>
-          {powerOverlay.warscrollAbilities.length === 0 ? null : (
-            <div className="battlefield-power-overlay-section">
-              <p className="battlefield-power-overlay-label">Warscroll</p>
-              <div className="battlefield-power-option-list">
-                {powerOverlay.warscrollAbilities.map((option) => (
-                  <PowerOverlayOptionButton
-                    key={option.key}
-                    option={option}
-                    isPending={pendingPowerOptionKey === option.key}
-                    onSelect={onApplyPowerAction}
-                    toneClassName="battlefield-power-option-warscroll"
-                  />
-                ))}
-              </div>
+          <div className="battlefield-power-overlay-section">
+            <div className="battlefield-power-option-list">
+              {powerOverlay.warscrollAbilities.map((option) => (
+                <PowerOverlayOptionButton
+                  key={option.key}
+                  option={option}
+                  isPending={pendingPowerOptionKey === option.key}
+                  onSelect={onApplyPowerAction}
+                  toneClassName="battlefield-power-option-warscroll"
+                />
+              ))}
             </div>
-          )}
-          {powerOverlay.ploys.length === 0 ? null : (
-            <div className="battlefield-power-overlay-section">
-              <p className="battlefield-power-overlay-label">Ploys</p>
-              <div className="battlefield-power-option-list">
-                {powerOverlay.ploys.map((option) => (
-                  <PowerOverlayOptionButton
-                    key={option.key}
-                    option={option}
-                    isPending={pendingPowerOptionKey === option.key}
-                    onSelect={onApplyPowerAction}
-                    toneClassName="battlefield-power-option-ploy"
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-          {powerOverlay.upgrades.length === 0 ? null : (
-            <div className="battlefield-power-overlay-section">
-              <p className="battlefield-power-overlay-label">Upgrades</p>
-              <div className="battlefield-power-option-list">
-                {powerOverlay.upgrades.map((option) => (
-                  <PowerOverlayOptionButton
-                    key={option.key}
-                    option={option}
-                    isPending={pendingPowerOptionKey === option.key}
-                    onSelect={onApplyPowerAction}
-                    toneClassName="battlefield-power-option-upgrade"
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+          </div>
         </section>
       ) : null}
       {resultFlash === null ? null : (

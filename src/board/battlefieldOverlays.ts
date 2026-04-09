@@ -4,6 +4,7 @@ import {
   PlayUpgradeAction,
   TurnStep,
   UseWarscrollAbilityAction,
+  type CardId,
   type FeatureTokenState,
   type FighterId,
   type Game,
@@ -14,46 +15,19 @@ import {
 import { compactHexId, getFeatureTokenBadge, getFighterName } from "./battlefieldFormatters";
 import type {
   BoardTurnHeaderModel,
-  FocusOverlayModel,
   PowerOverlayModel,
   PowerOverlayOption,
 } from "./battlefieldModels";
 
-// Builders for the three overlay view models the board renders:
-// * `focus`  — cards shown when Focus is armed
-// * `power`  — ploys/upgrades/warscroll abilities during the power step
+// Builders for the view models the board + dock render:
+// * `power`  — ploys/upgrades for the dock + warscroll abilities for the board
 // * `boardTurnHeader` — top-of-map banner describing the current armed intent
 //
-// All three are pure projections of game state + UI intent, kept together
-// here so they can evolve without touching the main battlefield component.
-
-export function getFocusOverlayModel(
-  game: Game,
-  activePlayer: PlayerState | null,
-): FocusOverlayModel {
-  if (activePlayer === null || game.turnStep !== TurnStep.Action) {
-    return {
-      objectiveCards: [],
-      powerCards: [],
-      hasAnyCards: false,
-    };
-  }
-
-  const objectiveCards = activePlayer.objectiveHand.map((card) => ({
-    cardId: card.id,
-    name: activePlayer.getCardDefinition(card.id)?.name ?? card.definitionId,
-  }));
-  const powerCards = activePlayer.powerHand.map((card) => ({
-    cardId: card.id,
-    name: activePlayer.getCardDefinition(card.id)?.name ?? card.definitionId,
-  }));
-
-  return {
-    objectiveCards,
-    powerCards,
-    hasAnyCards: objectiveCards.length > 0 || powerCards.length > 0,
-  };
-}
+// Both are pure projections of game state + UI intent, kept together here
+// so they can evolve without touching the main battlefield component.
+// Focus card rendering lives in PlayerHandDock — it reads
+// `player.objectiveHand` / `player.powerHand` directly, so there is no
+// focus overlay model.
 
 export function getPowerOverlayModel(
   game: Game,
@@ -163,6 +137,47 @@ export function getPowerOverlayOptionByKey(
     ...powerOverlay.ploys,
     ...powerOverlay.upgrades,
   ].find((option) => option.key === key) ?? null;
+}
+
+// Groups all hand-playable options (ploys + upgrades) by their source card id.
+// Warscroll abilities are intentionally excluded — they stay in the board's
+// power overlay because they are not cards.
+//
+// A single card can produce multiple options when it has multiple valid
+// targets (e.g., a ploy that can target any of three fighters). The dock
+// uses this map to render playable cards and, when more than one option is
+// grouped under a card, to drive an inline target picker.
+export function buildHandPowerPlayableMap(
+  model: PowerOverlayModel,
+): Map<CardId, PowerOverlayOption[]> {
+  const byCardId = new Map<CardId, PowerOverlayOption[]>();
+  for (const option of [...model.ploys, ...model.upgrades]) {
+    const cardId = getCardIdFromPowerOption(option);
+    if (cardId === null) {
+      continue;
+    }
+    const existing = byCardId.get(cardId);
+    if (existing === undefined) {
+      byCardId.set(cardId, [option]);
+    } else {
+      existing.push(option);
+    }
+  }
+  return byCardId;
+}
+
+// Unwraps a PowerOverlayOption to its source card id, when the underlying
+// action is a card play. Returns null for warscroll abilities (which have
+// no card id). Used by the battlefield parent to sync the dock's armed
+// card with the engine's armed power option.
+export function getCardIdFromPowerOption(option: PowerOverlayOption): CardId | null {
+  if (option.action instanceof PlayPloyAction) {
+    return option.action.cardId;
+  }
+  if (option.action instanceof PlayUpgradeAction) {
+    return option.action.cardId;
+  }
+  return null;
 }
 
 export function getBoardTurnHeaderModel({

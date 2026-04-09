@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./PracticeBattlefieldApp.css";
-import PlayerHandDock from "./PlayerHandDock";
+import PlayerHandDockShell from "./PlayerHandDockShell";
+import type { DockInteraction } from "./PlayerHandDock";
 import { getLocalPlayer, LOCAL_PLAYER_ID } from "./localPlayer";
 import {
   CombatActionService,
@@ -33,8 +34,9 @@ import BoardMap, { LegendItem } from "./board/BoardMap";
 import PlayerPanel from "./board/PlayerPanel";
 import { buildBattlefieldResultFlash } from "./board/battlefieldResultFlash";
 import {
+  buildHandPowerPlayableMap,
   getBoardTurnHeaderModel,
-  getFocusOverlayModel,
+  getCardIdFromPowerOption,
   getPowerOverlayModel,
   getPowerOverlayOptionByKey,
 } from "./board/battlefieldOverlays";
@@ -106,7 +108,7 @@ export default function PracticeBattlefieldApp({
       : game.board.getFeatureToken(selectedFighterHex.featureTokenId) ?? null;
   const actionLens = getFighterActionLens(game, activePlayer, selectedFighterId, legalActions);
   const powerOverlay = getPowerOverlayModel(game, activePlayer, legalActions);
-  const focusOverlay = getFocusOverlayModel(game, activePlayer);
+  const handPowerPlayable = buildHandPowerPlayableMap(powerOverlay);
   const moveOptions = getMoveOptions(actionLens);
   const chargeOptions = getChargeOptions(game, actionLens);
   const [selectedMoveHexId, setSelectedMoveHexId] = useState<HexId | null>(null);
@@ -117,6 +119,7 @@ export default function PracticeBattlefieldApp({
   const [pendingGuardFighterId, setPendingGuardFighterId] = useState<FighterId | null>(null);
   const [pendingPassPower, setPendingPassPower] = useState(false);
   const [pendingPowerOptionKey, setPendingPowerOptionKey] = useState<string | null>(null);
+  const [pendingPlayCardId, setPendingPlayCardId] = useState<CardId | null>(null);
   const [pendingChargeHexId, setPendingChargeHexId] = useState<HexId | null>(null);
   const [pendingChargeTargetId, setPendingChargeTargetId] = useState<FighterId | null>(null);
   const [pendingAttackTargetId, setPendingAttackTargetId] = useState<FighterId | null>(null);
@@ -249,6 +252,7 @@ export default function PracticeBattlefieldApp({
     setPendingGuardFighterId(null);
     setPendingPassPower(false);
     setPendingPowerOptionKey(null);
+    setPendingPlayCardId(null);
     setPendingChargeHexId(null);
     setPendingChargeTargetId(null);
     setPendingAttackTargetId(null);
@@ -441,11 +445,45 @@ export default function PracticeBattlefieldApp({
     if (pendingPowerOptionKey !== option.key) {
       clearPendingInteractions();
       setPendingPowerOptionKey(option.key);
+      const sourceCardId = getCardIdFromPowerOption(option);
+      if (sourceCardId !== null) {
+        setPendingPlayCardId(sourceCardId);
+      }
       return;
     }
 
     applyAction(option.action);
   }
+
+  // The dock hands back a card id; we either arm the single legal option
+  // directly (reusing selectPowerOption for the arm→confirm flow) or stash
+  // the card id so the dock can show its inline target picker for the
+  // multi-target case.
+  function handleDockSelectCard(cardId: CardId): void {
+    const options = handPowerPlayable.get(cardId) ?? [];
+    if (options.length === 0) {
+      return;
+    }
+    if (options.length === 1) {
+      selectPowerOption(options[0]);
+      return;
+    }
+    clearPendingInteractions();
+    setPendingPlayCardId(cardId);
+  }
+
+  // Defensive: if the armed card's options disappear (e.g., target died
+  // mid-turn, or the power overlay regenerated without it), drop the
+  // armed card id so the UI doesn't latch on a stale value.
+  useEffect(() => {
+    if (pendingPlayCardId === null) {
+      return;
+    }
+    const options = handPowerPlayable.get(pendingPlayCardId);
+    if (options === undefined || options.length === 0) {
+      setPendingPlayCardId(null);
+    }
+  }, [pendingPlayCardId, handPowerPlayable]);
 
   useEffect(() => {
     if (
@@ -455,6 +493,7 @@ export default function PracticeBattlefieldApp({
       pendingGuardFighterId === null &&
       !pendingPassPower &&
       pendingPowerOptionKey === null &&
+      pendingPlayCardId === null &&
       pendingChargeHexId === null &&
       pendingChargeTargetId === null &&
       pendingAttackTargetId === null
@@ -470,7 +509,7 @@ export default function PracticeBattlefieldApp({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [pendingMoveHexId, pendingDelveFeatureTokenId, pendingFocus, pendingGuardFighterId, pendingPassPower, pendingPowerOptionKey, pendingChargeHexId, pendingChargeTargetId, pendingAttackTargetId]);
+  }, [pendingMoveHexId, pendingDelveFeatureTokenId, pendingFocus, pendingGuardFighterId, pendingPassPower, pendingPowerOptionKey, pendingPlayCardId, pendingChargeHexId, pendingChargeTargetId, pendingAttackTargetId]);
 
   useEffect(() => {
     if (resultFlash === null) {
@@ -496,6 +535,36 @@ export default function PracticeBattlefieldApp({
     setSelectedAttackKeysByTarget({});
     setSelectedChargeKeysByPair({});
   }
+
+  // Project all the interactive state down to a single union the dock can
+  // consume. The dock never reads `game` directly — everything it needs
+  // flows through `interaction`.
+  const dockInteraction: DockInteraction = (() => {
+    if (game.turnStep === TurnStep.Action && pendingFocus) {
+      return {
+        kind: "focus",
+        selectedObjectiveIds: selectedFocusObjectiveIds,
+        selectedPowerIds: selectedFocusPowerIds,
+        onToggleObjective: toggleFocusObjectiveCard,
+        onTogglePower: toggleFocusPowerCard,
+        onConfirm: focusHand,
+        onCancel: clearPendingInteractions,
+        summary: focusSelectionSummary,
+      };
+    }
+    if (game.turnStep === TurnStep.Power && handPowerPlayable.size > 0) {
+      return {
+        kind: "play",
+        playableByCardId: handPowerPlayable,
+        pendingCardId: pendingPlayCardId,
+        pendingOptionKey: pendingPowerOptionKey,
+        onSelectCard: handleDockSelectCard,
+        onSelectOption: selectPowerOption,
+        onCancel: clearPendingInteractions,
+      };
+    }
+    return { kind: "readonly" };
+  })();
 
   return (
     <main className="battlefield-app-shell">
@@ -572,10 +641,6 @@ export default function PracticeBattlefieldApp({
             pendingAttackTargetId={pendingAttackTargetId}
             pendingChargeBadgeLabel={pendingChargeBadgeLabel}
             pendingAttackBadgeLabel={pendingAttackBadgeLabel}
-            focusOverlay={focusOverlay}
-            focusSelectionSummary={focusSelectionSummary}
-            selectedFocusObjectiveIds={selectedFocusObjectiveIds}
-            selectedFocusPowerIds={selectedFocusPowerIds}
             powerOverlay={powerOverlay}
             boardTurnHeader={boardTurnHeader}
             recentCombatTargetId={recentCombatTargetId}
@@ -595,8 +660,6 @@ export default function PracticeBattlefieldApp({
             onMoveToHex={moveToHex}
             onStartChargeAgainstTarget={startChargeAgainstTarget}
             onStartChargeToHex={startChargeToHex}
-            onToggleFocusObjectiveCard={toggleFocusObjectiveCard}
-            onToggleFocusPowerCard={toggleFocusPowerCard}
             onSelectFighter={selectFighter}
             positionedHexes={boardProjection.positionedHexes}
           />
@@ -929,7 +992,9 @@ export default function PracticeBattlefieldApp({
         </div>
       </section>
 
-      {localPlayer === null ? null : <PlayerHandDock player={localPlayer} />}
+      {localPlayer === null ? null : (
+        <PlayerHandDockShell player={localPlayer} interaction={dockInteraction} />
+      )}
     </main>
   );
 }

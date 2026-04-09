@@ -1,6 +1,5 @@
 import type {
   AttackAction,
-  CardId,
   ChargeAction,
   DelveAction,
   FighterId,
@@ -85,17 +84,6 @@ export type BattlefieldAppAction =
   | PlayPloyAction
   | PlayUpgradeAction
   | UseWarscrollAbilityAction;
-
-export type FocusOverlayCard = {
-  cardId: CardId;
-  name: string;
-};
-
-export type FocusOverlayModel = {
-  objectiveCards: FocusOverlayCard[];
-  powerCards: FocusOverlayCard[];
-  hasAnyCards: boolean;
-};
 
 export type PowerOverlayOption = {
   key: string;

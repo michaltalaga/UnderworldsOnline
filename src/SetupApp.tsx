@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import "./setup/SetupApp.css";
 import {
   createSetupPracticeGame,
+  ResolveMulliganAction,
   SetupActionService,
   SetupAutoResolver,
   type DeckDefinition,
@@ -9,12 +10,12 @@ import {
   type SetupAction,
   type WarbandDefinition,
 } from "./domain";
-import MulliganScreen from "./setup/MulliganScreen";
 import TerritoryRollOffScreen from "./setup/TerritoryRollOffScreen";
 import TerritoryChoiceScreen from "./setup/TerritoryChoiceScreen";
 import FeaturePlacementScreen from "./setup/FeaturePlacementScreen";
 import DeploymentScreen from "./setup/DeploymentScreen";
-import PlayerHandDock from "./PlayerHandDock";
+import PlayerHandDockShell from "./PlayerHandDockShell";
+import type { DockInteraction } from "./PlayerHandDock";
 import { getLocalPlayer, LOCAL_PLAYER_ID } from "./localPlayer";
 
 // `SetupActionService` is stateless; reuse a single instance across renders.
@@ -72,9 +73,21 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
 
   const screen = renderSetupScreen();
   const localPlayer = getLocalPlayer(game);
-  const showDock =
+
+  // During the local player's mulligan step, the dock hosts the 4
+  // mulligan buttons. Otherwise the dock is read-only.
+  const dockInteraction: DockInteraction =
     localPlayer !== null &&
-    localPlayer.objectiveHand.length + localPlayer.powerHand.length > 0;
+    game.state.kind === "setupMulligan" &&
+    game.activePlayerId === LOCAL_PLAYER_ID
+      ? {
+          kind: "mulligan",
+          onResolve: (redrawObjectives, redrawPower) =>
+            applySetupAction(
+              new ResolveMulliganAction(localPlayer.id, redrawObjectives, redrawPower),
+            ),
+        }
+      : { kind: "readonly" };
 
   return (
     <>
@@ -87,7 +100,9 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
       >
         Skip to battle
       </button>
-      {showDock && localPlayer !== null ? <PlayerHandDock player={localPlayer} /> : null}
+      {localPlayer === null ? null : (
+        <PlayerHandDockShell player={localPlayer} interaction={dockInteraction} />
+      )}
     </>
   );
 
@@ -100,12 +115,11 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
       return <SetupTransition />;
     }
 
+    // Mulligan has no full-screen UI any more — the dock hosts all
+    // controls. The setup shell just shows a hero banner so the player
+    // knows which phase they're in.
     if (game.state.kind === "setupMulligan") {
-      const player = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
-      if (player === null) {
-        return <SetupTransition />;
-      }
-      return <MulliganScreen player={player} onResolve={applySetupAction} />;
+      return <MulliganBanner />;
     }
 
     if (game.state.kind === "setupDetermineTerritoriesRollOff") {
@@ -160,6 +174,21 @@ function SetupTransition() {
       <header className="setup-hero">
         <h1>Preparing the battlefield...</h1>
         <p>Resolving setup actions.</p>
+      </header>
+    </main>
+  );
+}
+
+function MulliganBanner() {
+  return (
+    <main className="setup-shell">
+      <header className="setup-hero">
+        <span className="setup-active-player">Mulligan</span>
+        <h1>Keep or redraw?</h1>
+        <p>
+          Set any of your starting hands aside and draw replacements. You only get one
+          mulligan. Use the buttons in the hand dock below.
+        </p>
       </header>
     </main>
   );

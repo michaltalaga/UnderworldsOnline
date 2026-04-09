@@ -1,26 +1,105 @@
-.player-hand-dock {
+/* --- Shell: fixed 3-column bar hosting dock + flanking deck widgets --- */
+
+.player-hand-dock-shell {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 30;
   display: grid;
-  gap: 12px;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
   padding: 14px 20px 18px;
   background: rgba(253, 249, 242, 0.96);
   border-top: 1px solid rgba(85, 66, 40, 0.18);
   box-shadow: 0 -14px 32px rgba(63, 46, 29, 0.18);
   backdrop-filter: blur(12px);
-  max-height: 60vh;
-  overflow-y: auto;
   font-family: "Trebuchet MS", "Gill Sans", sans-serif;
   color: #1e1d21;
+  max-height: 62vh;
+  overflow: hidden;
+}
+
+/* --- Deck pile widget (left/right flanking) --- */
+
+.deck-pile-widget {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(85, 66, 40, 0.18);
+  border-radius: 14px;
+  background: rgba(244, 236, 220, 0.66);
+  min-width: 130px;
+  align-content: start;
+}
+
+.deck-pile-widget-objective {
+  background: rgba(238, 244, 222, 0.72);
+  border-color: rgba(105, 130, 70, 0.24);
+}
+
+.deck-pile-widget-power {
+  background: rgba(244, 232, 250, 0.72);
+  border-color: rgba(123, 83, 156, 0.24);
+}
+
+.deck-pile-widget-label {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #7a624d;
+}
+
+.deck-pile-widget-stacks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.deck-pile-stack {
+  display: grid;
+  gap: 2px;
+  padding: 6px 4px;
+  border-radius: 10px;
+  background: rgba(255, 253, 246, 0.9);
+  border: 1px dashed rgba(85, 66, 40, 0.2);
+  text-align: center;
+}
+
+.deck-pile-stack-discard {
+  background: rgba(235, 225, 210, 0.9);
+  border-style: solid;
+}
+
+.deck-pile-stack-count {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #3f3228;
+}
+
+.deck-pile-stack-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8a7560;
+}
+
+/* --- Hand dock (center of shell) --- */
+
+.player-hand-dock {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  max-height: 100%;
+  overflow-y: auto;
 }
 
 .player-hand-dock-collapsed {
   max-height: none;
   overflow-y: visible;
-  padding-bottom: 14px;
 }
 
 .player-hand-dock-header {
@@ -110,6 +189,8 @@
   gap: 8px;
 }
 
+/* --- Cards: shared base styles for both <li> (readonly) and <button> --- */
+
 .player-hand-dock-card {
   border: 1px solid rgba(117, 92, 64, 0.2);
   background: rgba(250, 244, 232, 0.94);
@@ -118,6 +199,19 @@
   display: grid;
   gap: 6px;
   min-width: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+button.player-hand-dock-card {
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+button.player-hand-dock-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(35, 24, 18, 0.12);
 }
 
 .player-hand-dock-section-objective .player-hand-dock-card {
@@ -135,8 +229,30 @@
 }
 
 .player-hand-dock-expanded .player-hand-dock-card {
-  flex: 1 1 240px;
-  max-width: 320px;
+  flex: 1 1 220px;
+  max-width: 300px;
+}
+
+/* Card state variants */
+.player-hand-dock-card-marked-discard {
+  outline: 2px solid #c24a2f;
+  outline-offset: -2px;
+  background: rgba(255, 224, 215, 0.96) !important;
+}
+
+.player-hand-dock-card-playable {
+  outline: 2px solid #aa7ac9;
+  outline-offset: -2px;
+}
+
+.player-hand-dock-card-armed {
+  outline: 3px solid #d3a135;
+  outline-offset: -2px;
+  background: rgba(255, 244, 212, 0.98) !important;
+}
+
+.player-hand-dock-card-dim {
+  opacity: 0.48;
 }
 
 .player-hand-dock-card-title-row {
@@ -144,6 +260,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .player-hand-dock-card-name {
@@ -167,6 +284,26 @@
   letter-spacing: 0.04em;
 }
 
+.player-hand-dock-card-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(195, 78, 47, 0.16);
+  border: 1px solid rgba(195, 78, 47, 0.36);
+  color: #903418;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.player-hand-dock-card-armed .player-hand-dock-card-tag {
+  background: rgba(211, 161, 53, 0.18);
+  border-color: rgba(181, 130, 22, 0.46);
+  color: #6e4f0e;
+}
+
 .player-hand-dock-card-text {
   margin: 0;
   font-size: 0.78rem;
@@ -174,25 +311,188 @@
   color: #5e4b3a;
 }
 
-/* Reserve bottom space so fixed dock never covers page content. */
+/* --- Mulligan controls --- */
+
+.player-hand-dock-mulligan-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(85, 66, 40, 0.18);
+}
+
+.player-hand-dock-mulligan-button {
+  border: 1px solid rgba(85, 66, 40, 0.28);
+  background: rgba(239, 231, 219, 0.92);
+  color: #3f3228;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.player-hand-dock-mulligan-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(35, 24, 18, 0.12);
+  background: rgba(244, 236, 220, 1);
+}
+
+.player-hand-dock-mulligan-button-primary {
+  background: #7a5a18;
+  color: #fff8e7;
+  border-color: #5a4010;
+}
+
+.player-hand-dock-mulligan-button-primary:hover {
+  background: #8a6a28;
+}
+
+/* --- Focus confirm bar --- */
+
+.player-hand-dock-focus-confirm-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(85, 66, 40, 0.18);
+}
+
+.player-hand-dock-focus-confirm-summary {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: 0.78rem;
+  color: #5e4b3a;
+}
+
+.player-hand-dock-focus-confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.player-hand-dock-focus-confirm-button {
+  border: 1px solid rgba(85, 66, 40, 0.28);
+  background: rgba(239, 231, 219, 0.92);
+  color: #3f3228;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.player-hand-dock-focus-confirm-button-primary {
+  background: #5b6d3c;
+  color: #fdf7ea;
+  border-color: #3e4a28;
+}
+
+.player-hand-dock-focus-confirm-button-primary:hover {
+  background: #6d7f4a;
+}
+
+/* --- Inline target picker (multi-target card plays) --- */
+
+.player-hand-dock-play-target-picker {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  margin-top: 4px;
+  background: rgba(255, 253, 246, 0.96);
+  border: 1px dashed rgba(123, 83, 156, 0.4);
+  border-radius: 10px;
+}
+
+.player-hand-dock-play-target-picker-label {
+  margin: 0;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #7f5a95;
+}
+
+.player-hand-dock-play-target-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+
+.player-hand-dock-play-target-option {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1px solid rgba(123, 83, 156, 0.24);
+  border-radius: 8px;
+  background: rgba(249, 241, 254, 0.96);
+  color: #3f3228;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.player-hand-dock-play-target-option:hover {
+  background: rgba(239, 226, 250, 1);
+}
+
+.player-hand-dock-play-target-option-armed {
+  outline: 2px solid #d3a135;
+  outline-offset: -2px;
+  background: rgba(255, 244, 212, 0.98);
+}
+
+.player-hand-dock-play-target-option-title {
+  font-weight: 700;
+  color: #3f3228;
+}
+
+.player-hand-dock-play-target-option-detail {
+  color: #5e4b3a;
+}
+
+/* --- Reserve bottom space so fixed shell never covers page content --- */
+
 .battlefield-app-shell,
 .setup-shell {
   padding-bottom: 320px;
 }
 
+.battlefield-app-shell .player-hand-dock-shell:has(.player-hand-dock-collapsed),
+.setup-shell .player-hand-dock-shell:has(.player-hand-dock-collapsed) {
+  /* nothing — collapsed sibling; page padding handled below */
+}
+
 .battlefield-app-shell:has(.player-hand-dock-collapsed),
 .setup-shell:has(.player-hand-dock-collapsed) {
-  padding-bottom: 140px;
+  padding-bottom: 180px;
 }
 
 @media (max-width: 640px) {
   .battlefield-app-shell,
   .setup-shell {
-    padding-bottom: 280px;
+    padding-bottom: 300px;
   }
 
   .battlefield-app-shell:has(.player-hand-dock-collapsed),
   .setup-shell:has(.player-hand-dock-collapsed) {
-    padding-bottom: 120px;
+    padding-bottom: 150px;
+  }
+
+  .player-hand-dock-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .deck-pile-widget {
+    min-width: 0;
   }
 }
