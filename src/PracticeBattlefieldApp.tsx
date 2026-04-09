@@ -574,51 +574,6 @@ export default function PracticeBattlefieldApp({
 
   return (
     <main className="battlefield-app-shell">
-      <section className="battlefield-hero">
-        <div>
-          <p className="battlefield-eyebrow">Practice Battlefield</p>
-          <h1>Combat-ready map from the real board state.</h1>
-          <p className="battlefield-copy">
-            The browser now renders the actual centered battlefield, including deployed
-            fighters, territory ownership, starting hexes, edge hexes, and feature tokens.
-          </p>
-        </div>
-        <dl className="battlefield-hero-stats">
-          <div>
-            <dt>State</dt>
-            <dd>{game.state.kind}</dd>
-          </div>
-          <div>
-            <dt>Active Player</dt>
-            <dd>{activePlayer?.name ?? "none"}</dd>
-          </div>
-          <div>
-            <dt>Turn Step</dt>
-            <dd>{game.turnStep ?? "n/a"}</dd>
-          </div>
-          <div>
-            <dt>Phase</dt>
-            <dd>{game.phase}</dd>
-          </div>
-          <div>
-            <dt>Board Side</dt>
-            <dd>{game.board.side}</dd>
-          </div>
-          <div>
-            <dt>Hexes</dt>
-            <dd>{game.board.hexes.length}</dd>
-          </div>
-          <div>
-            <dt>Feature Tokens</dt>
-            <dd>{game.board.featureTokens.length}</dd>
-          </div>
-          <div>
-            <dt>Round</dt>
-            <dd>{game.roundNumber}</dd>
-          </div>
-        </dl>
-      </section>
-
       <section className="battlefield-layout">
         <section className="battlefield-panel battlefield-board-panel">
           <div className="battlefield-heading">
@@ -996,6 +951,51 @@ export default function PracticeBattlefieldApp({
             </ol>
           </section>
         </div>
+      </section>
+
+      <section className="battlefield-hero">
+        <div>
+          <p className="battlefield-eyebrow">Practice Battlefield</p>
+          <h1>Combat-ready map from the real board state.</h1>
+          <p className="battlefield-copy">
+            The browser now renders the actual centered battlefield, including deployed
+            fighters, territory ownership, starting hexes, edge hexes, and feature tokens.
+          </p>
+        </div>
+        <dl className="battlefield-hero-stats">
+          <div>
+            <dt>State</dt>
+            <dd>{game.state.kind}</dd>
+          </div>
+          <div>
+            <dt>Active Player</dt>
+            <dd>{activePlayer?.name ?? "none"}</dd>
+          </div>
+          <div>
+            <dt>Turn Step</dt>
+            <dd>{game.turnStep ?? "n/a"}</dd>
+          </div>
+          <div>
+            <dt>Phase</dt>
+            <dd>{game.phase}</dd>
+          </div>
+          <div>
+            <dt>Board Side</dt>
+            <dd>{game.board.side}</dd>
+          </div>
+          <div>
+            <dt>Hexes</dt>
+            <dd>{game.board.hexes.length}</dd>
+          </div>
+          <div>
+            <dt>Feature Tokens</dt>
+            <dd>{game.board.featureTokens.length}</dd>
+          </div>
+          <div>
+            <dt>Round</dt>
+            <dd>{game.roundNumber}</dd>
+          </div>
+        </dl>
       </section>
 
       {dockPlayer === null ? null : (

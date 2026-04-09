@@ -1,19 +1,26 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import "./setup/SetupApp.css";
+import "./PracticeBattlefieldApp.css";
 import {
   createSetupPracticeGame,
+  DeployFighterAction,
+  PlaceFeatureTokenAction,
   ResolveMulliganAction,
   SetupActionService,
   SetupAutoResolver,
   type DeckDefinition,
+  type FighterState,
   type Game,
+  type HexId,
+  type PlayerState,
   type SetupAction,
   type WarbandDefinition,
 } from "./domain";
 import TerritoryRollOffScreen from "./setup/TerritoryRollOffScreen";
 import TerritoryChoiceScreen from "./setup/TerritoryChoiceScreen";
-import FeaturePlacementScreen from "./setup/FeaturePlacementScreen";
-import DeploymentScreen from "./setup/DeploymentScreen";
+import BoardMap from "./board/BoardMap";
+import { projectBoard } from "./board/projectBoard";
+import { createEmptyActionLens } from "./board/fighterActionLens";
 import PlayerHandDockShell from "./PlayerHandDockShell";
 import type { DockInteraction } from "./PlayerHandDock";
 import { getLocalPlayer, LOCAL_PLAYER_ID } from "./localPlayer";
@@ -71,8 +78,9 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
     onSetupComplete(game);
   }, [game, game.state.kind, autoResolver, onSetupComplete]);
 
-  const screen = renderSetupScreen();
   const localPlayer = getLocalPlayer(game);
+  const activePlayer = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
+  const dockPlayer = activePlayer ?? localPlayer;
 
   // During the local player's mulligan step, the dock hosts the 4
   // mulligan buttons. Otherwise the dock is read-only.
@@ -89,9 +97,77 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
         }
       : { kind: "readonly" };
 
+  // Compute setup-phase map wiring: which hexes are legal for the
+  // current setup action, and what to do when the user clicks one.
+  const { legalHexIds, onHexClick } = getSetupMapWiring(game, activePlayer, applySetupAction);
+
+  const boardProjection = projectBoard(game.board);
+  const emptyLens = createEmptyActionLens(null, null);
+
   return (
     <>
-      {screen}
+      <main className="battlefield-app-shell">
+        <section className="battlefield-layout">
+          <section className="battlefield-panel battlefield-board-panel">
+            <div className="battlefield-heading">
+              <p className="battlefield-eyebrow">Setup</p>
+              <h2>Centered Battlefield</h2>
+            </div>
+            <BoardMap
+              game={game}
+              activePlayerId={activePlayer?.id ?? null}
+              selectedFighterId={null}
+              selectedFeatureToken={null}
+              actionLens={emptyLens}
+              pendingMoveHexId={null}
+              pendingDelveFeatureTokenId={null}
+              pendingFocus={false}
+              pendingGuardFighterId={null}
+              pendingPassPower={false}
+              pendingPowerOptionKey={null}
+              pendingChargeHexId={null}
+              pendingChargeTargetId={null}
+              pendingAttackTargetId={null}
+              pendingChargeBadgeLabel={null}
+              pendingAttackBadgeLabel={null}
+              powerOverlay={{ ploys: [], upgrades: [], warscrollAbilities: [], hasAnyOptions: false }}
+              boardTurnHeader={{
+                activePlayerName: activePlayer?.name ?? "Setup",
+                interactionLabel: getSetupBannerText(game),
+                isArmed: false,
+                tone: "neutral",
+                stepLabel: "Setup",
+              }}
+              recentCombatTargetId={null}
+              attackPreviewByTarget={new Map()}
+              chargePreviewByTarget={new Map()}
+              armedPath={null}
+              lastResolvedAction={null}
+              resultFlash={null}
+              onApplyPowerAction={noop}
+              onDelveSelectedFighter={noop}
+              onFocusHand={noop}
+              onGuardSelectedFighter={noop}
+              onPassTurn={noop}
+              onAttackTarget={noop}
+              onCancelPendingCharge={noop}
+              onCompleteChargeAgainstTarget={noop}
+              onMoveToHex={noop}
+              onStartChargeAgainstTarget={noop}
+              onStartChargeToHex={noop}
+              onSelectFighter={noop}
+              positionedHexes={boardProjection.positionedHexes}
+              setupLegalHexIds={legalHexIds}
+              onSetupHexClick={onHexClick}
+            />
+          </section>
+
+          <section className="battlefield-panel setup-phase-panel">
+            {renderPhaseContent(game, activePlayer, applySetupAction)}
+          </section>
+        </section>
+      </main>
+
       <button
         type="button"
         className="setup-skip-button"
@@ -100,88 +176,108 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
       >
         Skip to battle
       </button>
-      {localPlayer === null ? null : (
-        <PlayerHandDockShell player={localPlayer} interaction={dockInteraction} />
+
+      {dockPlayer === null ? null : (
+        <PlayerHandDockShell player={dockPlayer} interaction={dockInteraction} />
       )}
     </>
   );
+}
 
-  function renderSetupScreen(): ReactNode {
-    if (
-      game.state.kind === "setupMusterWarbands" ||
-      game.state.kind === "setupDrawStartingHands" ||
-      game.state.kind === "combatReady"
-    ) {
-      return <SetupTransition />;
+// --- Setup-phase helpers -------------------------------------------------
+
+function noop(): void {}
+
+// Returns the legal hex ids for the current setup phase and the click
+// handler that dispatches the corresponding setup action. Other phases
+// (mulligan, roll-off, territory choice, etc.) have no hex interaction,
+// so this returns an empty set + undefined click handler.
+function getSetupMapWiring(
+  game: Game,
+  activePlayer: PlayerState | null,
+  applySetupAction: (action: SetupAction) => void,
+): { legalHexIds: ReadonlySet<HexId>; onHexClick: ((hexId: HexId) => void) | undefined } {
+  if (activePlayer === null) {
+    return { legalHexIds: new Set(), onHexClick: undefined };
+  }
+
+  if (game.state.kind === "setupPlaceFeatureTokens") {
+    const legalActions = setupActionService.getLegalActions(game);
+    const legalHexIds = new Set<HexId>(
+      legalActions
+        .filter((action): action is PlaceFeatureTokenAction => action instanceof PlaceFeatureTokenAction)
+        .map((action) => action.hexId),
+    );
+    return {
+      legalHexIds,
+      onHexClick: (hexId) => applySetupAction(new PlaceFeatureTokenAction(activePlayer.id, hexId)),
+    };
+  }
+
+  if (game.state.kind === "setupDeployFighters") {
+    const nextFighter = activePlayer.getUndeployedFighters()[0] ?? null;
+    if (nextFighter === null) {
+      return { legalHexIds: new Set(), onHexClick: undefined };
     }
+    const legalActions = setupActionService.getLegalActions(game);
+    const legalHexIds = new Set<HexId>(
+      legalActions
+        .filter((action): action is DeployFighterAction => action instanceof DeployFighterAction)
+        .filter((action) => action.fighterId === nextFighter.id)
+        .map((action) => action.hexId),
+    );
+    return {
+      legalHexIds,
+      onHexClick: (hexId) =>
+        applySetupAction(new DeployFighterAction(activePlayer.id, nextFighter.id, hexId)),
+    };
+  }
 
-    // Mulligan has no full-screen UI any more — the dock hosts all
-    // controls. The setup shell just shows a hero banner so the player
-    // knows which phase they're in.
-    if (game.state.kind === "setupMulligan") {
-      return <MulliganBanner />;
-    }
+  return { legalHexIds: new Set(), onHexClick: undefined };
+}
 
-    if (game.state.kind === "setupDetermineTerritoriesRollOff") {
-      return <TerritoryRollOffScreen game={game} onResolve={applySetupAction} />;
-    }
-
-    if (game.state.kind === "setupDetermineTerritoriesChoice") {
-      const player = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
-      if (player === null) {
-        return <SetupTransition />;
-      }
-      return <TerritoryChoiceScreen game={game} player={player} onChoose={applySetupAction} />;
-    }
-
-    if (game.state.kind === "setupPlaceFeatureTokens") {
-      const player = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
-      if (player === null) {
-        return <SetupTransition />;
-      }
-      return (
-        <FeaturePlacementScreen
-          game={game}
-          player={player}
-          setupActionService={setupActionService}
-          onPlace={applySetupAction}
-        />
-      );
-    }
-
-    if (game.state.kind === "setupDeployFighters") {
-      const player = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
-      if (player === null) {
-        return <SetupTransition />;
-      }
-      return (
-        <DeploymentScreen
-          game={game}
-          player={player}
-          setupActionService={setupActionService}
-          onDeploy={applySetupAction}
-        />
-      );
-    }
-
-    return <SetupTransition />;
+function getSetupBannerText(game: Game): string {
+  switch (game.state.kind) {
+    case "setupMusterWarbands":
+    case "setupDrawStartingHands":
+      return "Preparing the battlefield...";
+    case "setupMulligan":
+      return "Mulligan — use the hand dock below.";
+    case "setupDetermineTerritoriesRollOff":
+      return "Roll for first pick.";
+    case "setupDetermineTerritoriesChoice":
+      return "Pick a territory.";
+    case "setupPlaceFeatureTokens":
+      return `Place feature token ${game.board.featureTokens.length + 1} of 5.`;
+    case "setupDeployFighters":
+      return "Deploy fighters to starting hexes.";
+    case "combatReady":
+      return "Combat ready.";
+    default:
+      return "Setup";
   }
 }
 
-function SetupTransition() {
-  return (
-    <main className="setup-shell">
+function renderPhaseContent(
+  game: Game,
+  activePlayer: PlayerState | null,
+  applySetupAction: (action: SetupAction) => void,
+): ReactNode {
+  if (
+    game.state.kind === "setupMusterWarbands" ||
+    game.state.kind === "setupDrawStartingHands" ||
+    game.state.kind === "combatReady"
+  ) {
+    return (
       <header className="setup-hero">
         <h1>Preparing the battlefield...</h1>
         <p>Resolving setup actions.</p>
       </header>
-    </main>
-  );
-}
+    );
+  }
 
-function MulliganBanner() {
-  return (
-    <main className="setup-shell">
+  if (game.state.kind === "setupMulligan") {
+    return (
       <header className="setup-hero">
         <span className="setup-active-player">Mulligan</span>
         <h1>Keep or redraw?</h1>
@@ -190,6 +286,94 @@ function MulliganBanner() {
           mulligan. Use the buttons in the hand dock below.
         </p>
       </header>
-    </main>
+    );
+  }
+
+  if (game.state.kind === "setupDetermineTerritoriesRollOff") {
+    return <TerritoryRollOffScreen game={game} onResolve={applySetupAction} />;
+  }
+
+  if (game.state.kind === "setupDetermineTerritoriesChoice") {
+    if (activePlayer === null) {
+      return null;
+    }
+    return <TerritoryChoiceScreen game={game} player={activePlayer} onChoose={applySetupAction} />;
+  }
+
+  if (game.state.kind === "setupPlaceFeatureTokens") {
+    const placementNumber = game.board.featureTokens.length + 1;
+    return (
+      <header className="setup-hero">
+        <span className="setup-active-player">{activePlayer?.name ?? "Setup"} placing</span>
+        <h1>Place feature token {placementNumber} of 5</h1>
+        <p>
+          Pick an empty neutral hex on the map. Tokens cannot sit on starting, blocked,
+          stagger, or edge hexes, and must be at least 2 hexes from another token.
+        </p>
+      </header>
+    );
+  }
+
+  if (game.state.kind === "setupDeployFighters") {
+    return <DeploymentPanel game={game} player={activePlayer} />;
+  }
+
+  return null;
+}
+
+// Deployment phase panel: hero banner + warband roster showing the
+// current player's fighters and which one is queued to deploy next.
+function DeploymentPanel({
+  game,
+  player,
+}: {
+  game: Game;
+  player: PlayerState | null;
+}) {
+  if (player === null) {
+    return null;
+  }
+  const undeployedFighters = player.getUndeployedFighters();
+  const nextFighter: FighterState | null = undeployedFighters[0] ?? null;
+  const nextFighterName =
+    nextFighter === null
+      ? null
+      : player.getFighterDefinition(nextFighter.id)?.name ?? nextFighter.id;
+
+  return (
+    <>
+      <header className="setup-hero">
+        <span className="setup-active-player">{player.name} deploying</span>
+        <h1>
+          {nextFighterName === null ? "Deployment complete" : `Deploy ${nextFighterName}`}
+        </h1>
+        <p>
+          Place each fighter on a green starting hex inside your territory. Players
+          alternate until every fighter is on the board.
+        </p>
+      </header>
+      <aside className="setup-deploy-sidebar">
+        <h3>{player.name}&apos;s warband</h3>
+        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 6 }}>
+          {player.fighters.map((fighter) => {
+            const isDeployed = fighter.currentHexId !== null;
+            const isActive = !isDeployed && fighter.id === nextFighter?.id;
+            const className = `setup-deploy-fighter${isActive ? " setup-deploy-fighter-active" : ""}`;
+            const definition = player.getFighterDefinition(fighter.id);
+            return (
+              <li key={fighter.id} className={className}>
+                <span>{definition?.name ?? fighter.id}</span>
+                <span className="setup-card-meta">
+                  {isDeployed ? "Deployed" : isActive ? "Next" : "Waiting"}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </aside>
+      {/* `game` is accepted for parity with the other phase panels and for
+          future roster context (current round, fighters remaining). */}
+      {void game}
+    </>
   );
 }

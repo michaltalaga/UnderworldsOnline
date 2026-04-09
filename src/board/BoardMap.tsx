@@ -18,9 +18,6 @@ import {
 } from "./projectBoard";
 import {
   buildHexTitle,
-  compactHexId,
-  formatHexKind,
-  formatTerritoryLabel,
   getFeatureTokenBadge,
   getFighterMapLabel,
   getFighterName,
@@ -88,6 +85,13 @@ export type BoardMapProps = {
   onSelectFighter: (fighterId: FighterId | null) => void;
   positionedHexes: PositionedHex[];
   selectedFighterId: FighterId | null;
+  // Setup-mode overlay: when provided, these hexes are highlighted as
+  // legal placement/deployment targets and clicking one calls
+  // `onSetupHexClick` instead of any combat handler. This lets the same
+  // map render during setup phases without teaching it about specific
+  // setup actions.
+  setupLegalHexIds?: ReadonlySet<HexId>;
+  onSetupHexClick?: (hexId: HexId) => void;
 };
 
 export default function BoardMap({
@@ -128,6 +132,8 @@ export default function BoardMap({
   onSelectFighter,
   positionedHexes,
   selectedFighterId,
+  setupLegalHexIds,
+  onSetupHexClick,
 }: BoardMapProps) {
   const width = Math.max(...positionedHexes.map((hex) => hex.left + hexWidth)) + boardPadding;
   const height = Math.max(...positionedHexes.map((hex) => hex.top + hexHeight)) + boardPadding;
@@ -375,13 +381,16 @@ export default function BoardMap({
             isAttackTarget &&
             fighter !== null &&
             fighter.ownerPlayerId !== activePlayerId;
+          const isSetupLegalHex = setupLegalHexIds?.has(hex.id) ?? false;
+          const isClickableSetupHex = isSetupLegalHex && onSetupHexClick !== undefined;
           const isInteractiveHex =
             isSelectableFighter ||
             isClickableAttackTarget ||
             isClickableChargeTarget ||
             isClickableTargetFirstChargeTarget ||
             isClickableChargeDestination ||
-            isClickableMoveDestination;
+            isClickableMoveDestination ||
+            isClickableSetupHex;
           const actionBadge = getHexActionBadge({
             isAttackTarget,
             isChargeDestination,
@@ -445,6 +454,7 @@ export default function BoardMap({
                   isPendingChargeTarget,
                   isChargeTarget,
                   isHoveredChargeTarget,
+                  isSetupLegalHex,
                   isClickableHex: isInteractiveHex,
                   isPendingMoveHex,
                   isMoveDestination,
@@ -459,6 +469,11 @@ export default function BoardMap({
                 isArmedPathHex && armedPath !== null ? `battlefield-map-hex-path-${armedPath.tone}` : "",
               ].filter(Boolean).join(" ")}
               onClick={() => {
+                if (isClickableSetupHex && onSetupHexClick !== undefined) {
+                  onSetupHexClick(hex.id);
+                  return;
+                }
+
                 if (isSelectableFighter) {
                   onSelectFighter(fighter.id);
                   return;
@@ -508,6 +523,11 @@ export default function BoardMap({
 
                 event.preventDefault();
 
+                if (isClickableSetupHex && onSetupHexClick !== undefined) {
+                  onSetupHexClick(hex.id);
+                  return;
+                }
+
                 if (isSelectableFighter) {
                   onSelectFighter(fighter.id);
                   return;
@@ -555,17 +575,15 @@ export default function BoardMap({
               tabIndex={isInteractiveHex ? 0 : undefined}
               title={buildHexTitle(game, hex, fighter, featureToken)}
             >
-              <div className="battlefield-hex-meta-row">
-                <span className="battlefield-hex-id">{compactHexId(hex.id)}</span>
-                <div className="battlefield-hex-meta-tags">
-                  {armedPathStep === null || armedPath === null ? null : (
+              {armedPathStep === null || armedPath === null ? null : (
+                <div className="battlefield-hex-meta-row">
+                  <div className="battlefield-hex-meta-tags">
                     <span className={`battlefield-hex-path-step battlefield-hex-path-step-${armedPath.tone}`}>
                       {armedPathStep}
                     </span>
-                  )}
-                  {hex.isStartingHex ? <span className="battlefield-hex-tag">start</span> : null}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="battlefield-hex-center">
                 {featureToken === null ? null : (
@@ -668,10 +686,6 @@ export default function BoardMap({
                 )}
               </div>
 
-              <div className="battlefield-hex-footer">
-                <span>{formatTerritoryLabel(game, hex)}</span>
-                <span>{formatHexKind(hex.kind)}</span>
-              </div>
             </article>
           );
         })}
@@ -765,6 +779,7 @@ type HexRenderState = {
   isSelectedHex: boolean;
   isSelectableHex: boolean;
   isGuardReadyHex: boolean;
+  isSetupLegalHex: boolean;
 };
 
 function getHexClassName(game: Game, hex: HexCell, state: HexRenderState): string {
@@ -872,6 +887,10 @@ function getHexClassName(game: Game, hex: HexCell, state: HexRenderState): strin
 
   if (state.isGuardReadyHex) {
     classes.push("battlefield-map-hex-guard-ready");
+  }
+
+  if (state.isSetupLegalHex) {
+    classes.push("battlefield-map-hex-setup-legal");
   }
 
   return classes.join(" ");
