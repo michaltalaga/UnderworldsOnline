@@ -32,6 +32,7 @@ import {
 } from "./board/battlefieldFormatters";
 import BoardMap, { LegendItem } from "./board/BoardMap";
 import DiceTray, { getDiceTrayModel } from "./board/DiceTray";
+import DebugPanel from "./DebugPanel";
 import PlayerPanel from "./board/PlayerPanel";
 import { buildBattlefieldResultFlash } from "./board/battlefieldResultFlash";
 import {
@@ -579,15 +580,6 @@ export default function PracticeBattlefieldApp({
     <main className="battlefield-app-shell">
       <section className="battlefield-layout">
         <section className="battlefield-panel battlefield-board-panel">
-          <div className="battlefield-heading">
-            <p className="battlefield-eyebrow">Board Map</p>
-            <h2>Centered Battlefield</h2>
-            <p className="battlefield-copy">
-              Blue territory belongs to Player One, ember territory belongs to Player Two,
-              and the middle band stays neutral.
-            </p>
-          </div>
-
           <BoardMap
             game={game}
             activePlayerId={activePlayer?.id ?? null}
@@ -642,7 +634,13 @@ export default function PracticeBattlefieldApp({
             <LegendItem swatchClassName="battlefield-swatch battlefield-swatch-combat" label="Recent combat target" />
           </div>
         </section>
+      </section>
 
+      {dockPlayer === null ? null : (
+        <PlayerHandDockShell player={dockPlayer} interaction={dockInteraction} />
+      )}
+    </main>
+    <DebugPanel>
         <div className="battlefield-side-stack">
           <section className="battlefield-panel">
             <div className="battlefield-heading">
@@ -954,57 +952,52 @@ export default function PracticeBattlefieldApp({
             </ol>
           </section>
         </div>
-      </section>
 
-      <section className="battlefield-hero">
-        <div>
-          <p className="battlefield-eyebrow">Practice Battlefield</p>
-          <h1>Combat-ready map from the real board state.</h1>
-          <p className="battlefield-copy">
-            The browser now renders the actual centered battlefield, including deployed
-            fighters, territory ownership, starting hexes, edge hexes, and feature tokens.
-          </p>
-        </div>
-        <dl className="battlefield-hero-stats">
+        <section className="battlefield-hero">
           <div>
-            <dt>State</dt>
-            <dd>{game.state.kind}</dd>
+            <p className="battlefield-eyebrow">Practice Battlefield</p>
+            <h1>Combat-ready map from the real board state.</h1>
+            <p className="battlefield-copy">
+              The browser now renders the actual centered battlefield, including deployed
+              fighters, territory ownership, starting hexes, edge hexes, and feature tokens.
+            </p>
           </div>
-          <div>
-            <dt>Active Player</dt>
-            <dd>{activePlayer?.name ?? "none"}</dd>
-          </div>
-          <div>
-            <dt>Turn Step</dt>
-            <dd>{game.turnStep ?? "n/a"}</dd>
-          </div>
-          <div>
-            <dt>Phase</dt>
-            <dd>{game.phase}</dd>
-          </div>
-          <div>
-            <dt>Board Side</dt>
-            <dd>{game.board.side}</dd>
-          </div>
-          <div>
-            <dt>Hexes</dt>
-            <dd>{game.board.hexes.length}</dd>
-          </div>
-          <div>
-            <dt>Feature Tokens</dt>
-            <dd>{game.board.featureTokens.length}</dd>
-          </div>
-          <div>
-            <dt>Round</dt>
-            <dd>{game.roundNumber}</dd>
-          </div>
-        </dl>
-      </section>
-
-      {dockPlayer === null ? null : (
-        <PlayerHandDockShell player={dockPlayer} interaction={dockInteraction} />
-      )}
-    </main>
+          <dl className="battlefield-hero-stats">
+            <div>
+              <dt>State</dt>
+              <dd>{game.state.kind}</dd>
+            </div>
+            <div>
+              <dt>Active Player</dt>
+              <dd>{activePlayer?.name ?? "none"}</dd>
+            </div>
+            <div>
+              <dt>Turn Step</dt>
+              <dd>{game.turnStep ?? "n/a"}</dd>
+            </div>
+            <div>
+              <dt>Phase</dt>
+              <dd>{game.phase}</dd>
+            </div>
+            <div>
+              <dt>Board Side</dt>
+              <dd>{game.board.side}</dd>
+            </div>
+            <div>
+              <dt>Hexes</dt>
+              <dd>{game.board.hexes.length}</dd>
+            </div>
+            <div>
+              <dt>Feature Tokens</dt>
+              <dd>{game.board.featureTokens.length}</dd>
+            </div>
+            <div>
+              <dt>Round</dt>
+              <dd>{game.roundNumber}</dd>
+            </div>
+          </dl>
+        </section>
+    </DebugPanel>
     <DiceTray model={diceTrayModel} />
     </>
   );

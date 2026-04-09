@@ -111,10 +111,6 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
       <main className="battlefield-app-shell">
         <section className="battlefield-layout">
           <section className="battlefield-panel battlefield-board-panel">
-            <div className="battlefield-heading">
-              <p className="battlefield-eyebrow">Setup</p>
-              <h2>Centered Battlefield</h2>
-            </div>
             <BoardMap
               game={game}
               activePlayerId={activePlayer?.id ?? null}
@@ -168,6 +164,10 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
             {renderPhaseContent(game, activePlayer, applySetupAction)}
           </section>
         </section>
+
+        {dockPlayer === null ? null : (
+          <PlayerHandDockShell player={dockPlayer} interaction={dockInteraction} />
+        )}
       </main>
 
       <button
@@ -178,10 +178,6 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
       >
         Skip to battle
       </button>
-
-      {dockPlayer === null ? null : (
-        <PlayerHandDockShell player={dockPlayer} interaction={dockInteraction} />
-      )}
 
       <DiceTray model={diceTrayModel} />
     </>

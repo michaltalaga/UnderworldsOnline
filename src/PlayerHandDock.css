@@ -1,11 +1,7 @@
-/* --- Shell: fixed 3-column bar hosting dock + flanking deck widgets --- */
+/* --- Shell: 3-column bar hosting dock + flanking deck widgets --- */
+/* Rendered in normal flow as the bottom half of a viewport-split layout. */
 
 .player-hand-dock-shell {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 30;
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 14px;
@@ -16,7 +12,7 @@
   backdrop-filter: blur(12px);
   font-family: "Trebuchet MS", "Gill Sans", sans-serif;
   color: #1e1d21;
-  max-height: 62vh;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -97,11 +93,6 @@
   overflow-y: auto;
 }
 
-.player-hand-dock-collapsed {
-  max-height: none;
-  overflow-y: visible;
-}
-
 .player-hand-dock-header {
   display: flex;
   align-items: center;
@@ -126,25 +117,6 @@
   font-family: Georgia, "Times New Roman", serif;
   font-size: 1rem;
   color: #3f3228;
-}
-
-.player-hand-dock-toggle {
-  border: 1px solid rgba(85, 66, 40, 0.22);
-  background: rgba(239, 231, 219, 0.86);
-  color: #3f3228;
-  border-radius: 999px;
-  padding: 6px 14px;
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
-}
-
-.player-hand-dock-toggle:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(35, 24, 18, 0.12);
-  background: rgba(244, 236, 220, 0.96);
 }
 
 .player-hand-dock-empty {
@@ -224,11 +196,7 @@ button.player-hand-dock-card:hover {
   border-color: rgba(123, 83, 156, 0.24);
 }
 
-.player-hand-dock-collapsed .player-hand-dock-card {
-  padding: 6px 12px;
-}
-
-.player-hand-dock-expanded .player-hand-dock-card {
+.player-hand-dock .player-hand-dock-card {
   flex: 1 1 220px;
   max-width: 300px;
 }
@@ -460,34 +428,7 @@ button.player-hand-dock-card:hover {
   color: #5e4b3a;
 }
 
-/* --- Reserve bottom space so fixed shell never covers page content --- */
-
-.battlefield-app-shell,
-.setup-shell {
-  padding-bottom: 320px;
-}
-
-.battlefield-app-shell .player-hand-dock-shell:has(.player-hand-dock-collapsed),
-.setup-shell .player-hand-dock-shell:has(.player-hand-dock-collapsed) {
-  /* nothing — collapsed sibling; page padding handled below */
-}
-
-.battlefield-app-shell:has(.player-hand-dock-collapsed),
-.setup-shell:has(.player-hand-dock-collapsed) {
-  padding-bottom: 180px;
-}
-
 @media (max-width: 640px) {
-  .battlefield-app-shell,
-  .setup-shell {
-    padding-bottom: 300px;
-  }
-
-  .battlefield-app-shell:has(.player-hand-dock-collapsed),
-  .setup-shell:has(.player-hand-dock-collapsed) {
-    padding-bottom: 150px;
-  }
-
   .player-hand-dock-shell {
     grid-template-columns: 1fr;
   }

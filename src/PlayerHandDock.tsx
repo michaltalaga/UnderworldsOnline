@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import "./PlayerHandDock.css";
 import type { CardDefinition, CardId, PlayerState } from "./domain";
 import type { PowerOverlayOption } from "./board/battlefieldModels";
@@ -55,16 +54,6 @@ type DockCard = {
 };
 
 export default function PlayerHandDock({ player, interaction }: PlayerHandDockProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
-
-  // Mulligan and focus modes benefit from the expanded view — auto-expand
-  // when entering them so the buttons and card toggles are readable.
-  useEffect(() => {
-    if (interaction.kind === "mulligan" || interaction.kind === "focus") {
-      setIsExpanded(true);
-    }
-  }, [interaction.kind]);
-
   const objectiveCards: DockCard[] = player.objectiveHand.map((card) => ({
     cardId: card.id,
     definition: player.getCardDefinition(card.id) ?? null,
@@ -81,7 +70,6 @@ export default function PlayerHandDock({ player, interaction }: PlayerHandDockPr
     <aside
       className={[
         "player-hand-dock",
-        isExpanded ? "player-hand-dock-expanded" : "player-hand-dock-collapsed",
         `player-hand-dock-mode-${interaction.kind}`,
       ].join(" ")}
     >
@@ -93,14 +81,6 @@ export default function PlayerHandDock({ player, interaction }: PlayerHandDockPr
             {powerCards.length} power
           </strong>
         </div>
-        <button
-          type="button"
-          className="player-hand-dock-toggle"
-          onClick={() => setIsExpanded((value) => !value)}
-          aria-expanded={isExpanded}
-        >
-          {isExpanded ? "Collapse" : "Expand"}
-        </button>
       </header>
 
       {totalCards === 0 ? (
@@ -110,14 +90,12 @@ export default function PlayerHandDock({ player, interaction }: PlayerHandDockPr
           <PlayerHandDockSection
             label="Objectives"
             cards={objectiveCards}
-            isExpanded={isExpanded}
             tone="objective"
             interaction={interaction}
           />
           <PlayerHandDockSection
             label="Power"
             cards={powerCards}
-            isExpanded={isExpanded}
             tone="power"
             interaction={interaction}
           />
@@ -141,13 +119,11 @@ export default function PlayerHandDock({ player, interaction }: PlayerHandDockPr
 function PlayerHandDockSection({
   label,
   cards,
-  isExpanded,
   tone,
   interaction,
 }: {
   label: string;
   cards: DockCard[];
-  isExpanded: boolean;
   tone: "objective" | "power";
   interaction: DockInteraction;
 }) {
@@ -163,7 +139,6 @@ function PlayerHandDockSection({
           <DockCardListItem
             key={card.cardId}
             card={card}
-            isExpanded={isExpanded}
             tone={tone}
             interaction={interaction}
           />
@@ -175,12 +150,10 @@ function PlayerHandDockSection({
 
 function DockCardListItem({
   card,
-  isExpanded,
   tone,
   interaction,
 }: {
   card: DockCard;
-  isExpanded: boolean;
   tone: "objective" | "power";
   interaction: DockInteraction;
 }) {
@@ -202,7 +175,6 @@ function DockCardListItem({
     playState.isDim ? "player-hand-dock-card-dim" : "",
   ].filter(Boolean).join(" ");
 
-  const title = !isExpanded ? text : undefined;
   const cardBody = (
     <>
       <div className="player-hand-dock-card-title-row">
@@ -217,7 +189,7 @@ function DockCardListItem({
           <span className="player-hand-dock-card-tag">armed</span>
         ) : null}
       </div>
-      {isExpanded && text !== "" ? (
+      {text !== "" ? (
         <p className="player-hand-dock-card-text">{text}</p>
       ) : null}
       {playState.mode === "play-playable" &&
@@ -238,7 +210,6 @@ function DockCardListItem({
         <button
           type="button"
           className={classes}
-          title={title}
           onClick={() => {
             if (focusState.mode === "focus") {
               focusState.onToggle();
@@ -254,7 +225,7 @@ function DockCardListItem({
   }
 
   return (
-    <li className={classes} title={title}>
+    <li className={classes}>
       {cardBody}
     </li>
   );
