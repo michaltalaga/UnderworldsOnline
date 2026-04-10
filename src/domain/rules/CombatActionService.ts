@@ -7,26 +7,34 @@ import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
 import { EndActionStepAction } from "../actions/EndActionStepAction";
 import { PassAction } from "../actions/PassAction";
+import { GameRecordKind } from "../state/GameRecord";
 import { PlayPloyAction } from "../actions/PlayPloyAction";
 import { PlayUpgradeAction } from "../actions/PlayUpgradeAction";
 import { UseWarscrollAbilityAction } from "../actions/UseWarscrollAbilityAction";
 import { Game } from "../state/Game";
-import { HexCell } from "../state/HexCell";
 import { FighterState } from "../state/FighterState";
 import { PlayerState } from "../state/PlayerState";
-import { CardKind, FeatureTokenSide, HexKind, TurnStep } from "../values/enums";
-import type { FighterId, HexId, PlayerId } from "../values/ids";
+import { CardKind, FeatureTokenSide, TurnStep } from "../values/enums";
+import type { PlayerId } from "../values/ids";
 import { DefaultWarscrollEffectResolver } from "./DefaultWarscrollEffectResolver";
 import { LegalActionService } from "./LegalActionService";
 import { WarscrollEffectResolver } from "./WarscrollEffectResolver";
-
-type MovePathSearchNode = {
-  hex: HexCell;
-  path: HexId[];
-};
+import type { Ability } from "../abilities/Ability";
+import { MoveAbility } from "../abilities/MoveAbility";
+import { AttackAbility } from "../abilities/AttackAbility";
+import { ChargeAbility } from "../abilities/ChargeAbility";
+import { GuardAbility } from "../abilities/GuardAbility";
+import { FocusAbility } from "../abilities/FocusAbility";
 
 export class CombatActionService extends LegalActionService {
   private readonly warscrollEffectResolver: WarscrollEffectResolver;
+  private readonly coreAbilities: readonly Ability[] = [
+    new MoveAbility(),
+    new AttackAbility(),
+    new ChargeAbility(),
+    new GuardAbility(),
+    new FocusAbility(),
+  ];
 
   public constructor(
     warscrollEffectResolver: WarscrollEffectResolver = new DefaultWarscrollEffectResolver(),
@@ -59,168 +67,39 @@ export class CombatActionService extends LegalActionService {
       return [];
     }
 
+    if (this.hasUsedCoreAbilityThisActionStep(game, playerId)) {
+      return [new EndActionStepAction(playerId)];
+    }
+
     return [
-      ...player.fighters.flatMap((fighter) => this.getLegalMoveActionsForFighter(game, player, fighter.id)),
-      ...player.fighters.flatMap((fighter) => this.getLegalChargeActionsForFighter(game, player, fighter.id)),
-      ...player.fighters.flatMap((fighter) => this.getLegalAttackActionsForFighter(game, player, fighter.id)),
-      ...player.fighters.flatMap((fighter) => this.getLegalGuardActionsForFighter(game, player, fighter.id)),
-      ...this.getLegalFocusActions(game, player),
-      new EndActionStepAction(playerId),
+      ...this.coreAbilities.flatMap((ability) => ability.getLegalActions(game, player)),
       new PassAction(playerId),
     ];
   }
 
-  public isLegalChargeAction(game: Game, action: ChargeAction): boolean {
-    if (!this.isCombatActionStep(game, action.playerId)) {
-      return false;
-    }
+  // --- Action step validation (delegates to ability classes) ---
 
-    const player = game.getPlayer(action.playerId);
-    const opponent = game.getOpponent(action.playerId);
-    if (player === undefined || opponent === undefined) {
-      return false;
-    }
-
-    const fighter = player.getFighter(action.fighterId);
-    const fighterDefinition = player.getFighterDefinition(action.fighterId);
-    const target = opponent.getFighter(action.targetId);
-    if (
-      fighter === undefined ||
-      fighterDefinition === undefined ||
-      target === undefined ||
-      target.isSlain ||
-      target.currentHexId === null
-    ) {
-      return false;
-    }
-
-    if (
-      !this.isLegalMoveAction(game, new MoveAction(action.playerId, action.fighterId, action.path))
-      || action.path.length === 0
-    ) {
-      return false;
-    }
-
-    const weapon = player.getFighterWeaponDefinition(action.fighterId, action.weaponId);
-    if (weapon === undefined) {
-      return false;
-    }
-
-    if (
-      action.selectedAbility !== null &&
-      !weapon.hasAbility(action.selectedAbility)
-    ) {
-      return false;
-    }
-
-    const destinationHexId = action.path[action.path.length - 1];
-    if (destinationHexId === undefined) {
-      return false;
-    }
-
-    const destinationHex = game.board.getHex(destinationHexId);
-    const targetHex = game.board.getHex(target.currentHexId);
-    if (destinationHex === undefined || targetHex === undefined) {
-      return false;
-    }
-
-    return game.board.getDistance(destinationHex, targetHex) <= weapon.range;
+  public isLegalMoveAction(game: Game, action: MoveAction): boolean {
+    return this.coreAbilities.some((a) => a.isLegalAction(game, action));
   }
 
   public isLegalAttackAction(game: Game, action: AttackAction): boolean {
-    if (!this.isCombatActionStep(game, action.playerId)) {
-      return false;
-    }
+    return this.coreAbilities.some((a) => a.isLegalAction(game, action));
+  }
 
-    const player = game.getPlayer(action.playerId);
-    const opponent = game.getOpponent(action.playerId);
-    if (player === undefined || opponent === undefined) {
-      return false;
-    }
-
-    const attacker = player.getFighter(action.attackerId);
-    const attackerDefinition = player.getFighterDefinition(action.attackerId);
-    const target = opponent.getFighter(action.targetId);
-    if (
-      attacker === undefined ||
-      attackerDefinition === undefined ||
-      target === undefined ||
-      !this.canFighterAttack(attacker) ||
-      target.isSlain ||
-      target.currentHexId === null
-    ) {
-      return false;
-    }
-
-    const weapon = player.getFighterWeaponDefinition(action.attackerId, action.weaponId);
-    if (weapon === undefined) {
-      return false;
-    }
-
-    if (
-      action.selectedAbility !== null &&
-      !weapon.hasAbility(action.selectedAbility)
-    ) {
-      return false;
-    }
-
-    const attackerHexId = attacker.currentHexId;
-    if (attackerHexId === null) {
-      return false;
-    }
-
-    const attackerHex = game.board.getHex(attackerHexId);
-    const targetHex = game.board.getHex(target.currentHexId);
-    if (attackerHex === undefined || targetHex === undefined) {
-      return false;
-    }
-
-    return game.board.getDistance(attackerHex, targetHex) <= weapon.range;
+  public isLegalChargeAction(game: Game, action: ChargeAction): boolean {
+    return this.coreAbilities.some((a) => a.isLegalAction(game, action));
   }
 
   public isLegalGuardAction(game: Game, action: GuardAction): boolean {
-    if (!this.isCombatActionStep(game, action.playerId)) {
-      return false;
-    }
-
-    const player = game.getPlayer(action.playerId);
-    if (player === undefined) {
-      return false;
-    }
-
-    const fighter = player.getFighter(action.fighterId);
-    if (fighter === undefined) {
-      return false;
-    }
-
-    return this.canFighterGuard(fighter);
+    return this.coreAbilities.some((a) => a.isLegalAction(game, action));
   }
 
   public isLegalFocusAction(game: Game, action: FocusAction): boolean {
-    if (!this.isCombatActionStep(game, action.playerId)) {
-      return false;
-    }
-
-    const player = game.getPlayer(action.playerId);
-    if (player === undefined) {
-      return false;
-    }
-
-    const uniqueObjectiveIds = new Set(action.objectiveCardIds);
-    if (uniqueObjectiveIds.size !== action.objectiveCardIds.length) {
-      return false;
-    }
-
-    const uniquePowerIds = new Set(action.powerCardIds);
-    if (uniquePowerIds.size !== action.powerCardIds.length) {
-      return false;
-    }
-
-    return (
-      action.objectiveCardIds.every((cardId) => player.objectiveHand.some((card) => card.id === cardId))
-      && action.powerCardIds.every((cardId) => player.powerHand.some((card) => card.id === cardId))
-    );
+    return this.coreAbilities.some((a) => a.isLegalAction(game, action));
   }
+
+  // --- Power step validation (stays here — not core abilities) ---
 
   public isLegalDelveAction(game: Game, action: DelveAction): boolean {
     if (!this.isCombatTurnStep(game, action.playerId, TurnStep.Power)) {
@@ -233,11 +112,7 @@ export class CombatActionService extends LegalActionService {
     }
 
     const fighter = player.getFighter(action.fighterId);
-    if (
-      fighter === undefined ||
-      fighter.isSlain ||
-      fighter.currentHexId === null
-    ) {
+    if (fighter === undefined || fighter.isSlain || fighter.currentHexId === null) {
       return false;
     }
 
@@ -260,9 +135,7 @@ export class CombatActionService extends LegalActionService {
     }
 
     const player = game.getPlayer(action.playerId);
-    if (player === undefined) {
-      return false;
-    }
+    if (player === undefined) return false;
 
     const card = player.getCard(action.cardId);
     const fighter = player.getFighter(action.fighterId);
@@ -272,7 +145,7 @@ export class CombatActionService extends LegalActionService {
 
     const targets = card.getLegalTargets(game);
     return targets.some((target) =>
-      target instanceof FighterState && target.id === fighter.id
+      target instanceof FighterState && target.id === fighter.id,
     );
   }
 
@@ -282,23 +155,18 @@ export class CombatActionService extends LegalActionService {
     }
 
     const player = game.getPlayer(action.playerId);
-    if (player === undefined) {
-      return false;
-    }
+    if (player === undefined) return false;
 
     const card = player.getCard(action.cardId);
-    if (card === undefined || card.kind !== CardKind.Ploy) {
-      return false;
-    }
+    if (card === undefined || card.kind !== CardKind.Ploy) return false;
 
     const targets = card.getLegalTargets(game);
     if (action.targetFighterId === null) {
-      // Untargeted ploy: at least one target must be a PlayerState (not FighterState).
       return targets.some((target) => !(target instanceof FighterState));
     }
 
     return targets.some((target) =>
-      target instanceof FighterState && target.id === action.targetFighterId
+      target instanceof FighterState && target.id === action.targetFighterId,
     );
   }
 
@@ -314,9 +182,7 @@ export class CombatActionService extends LegalActionService {
       return false;
     }
 
-    if (ability.timing !== TurnStep.Power) {
-      return false;
-    }
+    if (ability.timing !== TurnStep.Power) return false;
 
     return (
       Object.entries(ability.tokenCosts).every(
@@ -326,265 +192,62 @@ export class CombatActionService extends LegalActionService {
     );
   }
 
-  public isLegalMoveAction(game: Game, action: MoveAction): boolean {
-    if (!this.isCombatActionStep(game, action.playerId)) {
-      return false;
-    }
+  // --- Private helpers ---
 
-    const player = game.getPlayer(action.playerId);
-    if (player === undefined) {
-      return false;
-    }
-
-    const fighter = player.getFighter(action.fighterId);
-    const fighterDefinition = player.getFighterDefinition(action.fighterId);
-    if (fighter === undefined || fighterDefinition === undefined) {
-      return false;
-    }
-
-    if (!this.canFighterMove(fighter)) {
-      return false;
-    }
-
-    if (action.path.length === 0 || action.path.length > fighterDefinition.move) {
-      return false;
-    }
-
-    const visitedHexIds = new Set<HexId>([fighter.currentHexId]);
-    let currentHex = game.board.getHex(fighter.currentHexId);
-    if (currentHex === undefined) {
-      return false;
-    }
-
-    for (const nextHexId of action.path) {
-      if (visitedHexIds.has(nextHexId)) {
-        return false;
+  private hasUsedCoreAbilityThisActionStep(game: Game, playerId: PlayerId): boolean {
+    const coreEventKinds: ReadonlySet<string> = new Set([
+      GameRecordKind.Move,
+      GameRecordKind.Combat,
+      GameRecordKind.Guard,
+      GameRecordKind.Focus,
+    ]);
+    for (let i = game.records.length - 1; i >= 0; i--) {
+      const record = game.records[i];
+      if (record.kind === GameRecordKind.ActionStepStarted) break;
+      if (coreEventKinds.has(record.kind) && record.invokedByPlayerId === playerId) {
+        return true;
       }
-
-      const nextHex = game.board.getHex(nextHexId);
-      if (nextHex === undefined || !game.board.areAdjacent(currentHex, nextHex)) {
-        return false;
-      }
-
-      if (!this.isTraversableMoveHex(nextHex)) {
-        return false;
-      }
-
-      visitedHexIds.add(nextHex.id);
-      currentHex = nextHex;
     }
-
-    return true;
+    return false;
   }
 
-  private getLegalAttackActionsForFighter(
-    game: Game,
-    player: PlayerState,
-    fighterId: FighterId,
-  ): AttackAction[] {
-    const fighter = player.getFighter(fighterId);
-    const fighterDefinition = player.getFighterDefinition(fighterId);
-    if (
-      fighter === undefined ||
-      fighterDefinition === undefined ||
-      !this.canFighterAttack(fighter) ||
-      !this.isCombatActionStep(game, player.id)
-    ) {
-      return [];
-    }
-
-    const opponent = game.getOpponent(player.id);
-    if (opponent === undefined) {
-      return [];
-    }
-
-    const attackerHexId = fighter.currentHexId;
-    if (attackerHexId === null) {
-      return [];
-    }
-
-    const attackerHex = game.board.getHex(attackerHexId);
-    if (attackerHex === undefined) {
-      return [];
-    }
-
-    return fighterDefinition.weapons.flatMap((weapon) =>
-      opponent.fighters.flatMap((target) => {
-        if (target.isSlain || target.currentHexId === null) {
-          return [];
-        }
-
-        const targetHex = game.board.getHex(target.currentHexId);
-        if (targetHex === undefined || game.board.getDistance(attackerHex, targetHex) > weapon.range) {
-          return [];
-        }
-
-        const abilityActions = weapon.abilities.map(
-          (ability) => new AttackAction(player.id, fighter.id, target.id, weapon.id, ability.kind),
-        );
-
-        return [
-          new AttackAction(player.id, fighter.id, target.id, weapon.id),
-          ...abilityActions,
-        ];
-      }),
-    );
-  }
-
-  private getLegalChargeActionsForFighter(
-    game: Game,
-    player: PlayerState,
-    fighterId: FighterId,
-  ): ChargeAction[] {
-    const fighter = player.getFighter(fighterId);
-    const fighterDefinition = player.getFighterDefinition(fighterId);
-    if (
-      fighter === undefined ||
-      fighterDefinition === undefined ||
-      !this.isCombatActionStep(game, player.id)
-    ) {
-      return [];
-    }
-
-    const opponent = game.getOpponent(player.id);
-    if (opponent === undefined) {
-      return [];
-    }
-
-    return this.getLegalMoveActionsForFighter(game, player, fighterId).flatMap((moveAction) => {
-      const destinationHexId = moveAction.path[moveAction.path.length - 1];
-      if (destinationHexId === undefined) {
-        return [];
-      }
-
-      const destinationHex = game.board.getHex(destinationHexId);
-      if (destinationHex === undefined) {
-        return [];
-      }
-
-      return fighterDefinition.weapons.flatMap((weapon) =>
-        opponent.fighters.flatMap((target) => {
-          if (target.isSlain || target.currentHexId === null) {
-            return [];
-          }
-
-          const targetHex = game.board.getHex(target.currentHexId);
-          if (targetHex === undefined || game.board.getDistance(destinationHex, targetHex) > weapon.range) {
-            return [];
-          }
-
-          const abilityActions = weapon.abilities.map(
-            (ability) => new ChargeAction(player.id, fighter.id, moveAction.path, target.id, weapon.id, ability.kind),
-          );
-
-          return [
-            new ChargeAction(player.id, fighter.id, moveAction.path, target.id, weapon.id),
-            ...abilityActions,
-          ];
-        }),
-      );
-    });
-  }
-
-  private getLegalGuardActionsForFighter(
-    game: Game,
-    player: PlayerState,
-    fighterId: FighterId,
-  ): GuardAction[] {
-    const fighter = player.getFighter(fighterId);
-    if (fighter === undefined || !this.canFighterGuard(fighter)) {
-      return [];
-    }
-
-    if (!this.isCombatActionStep(game, player.id)) {
-      return [];
-    }
-
-    return [new GuardAction(player.id, fighter.id)];
-  }
-
-  private getLegalFocusActions(
-    game: Game,
-    player: PlayerState,
-  ): FocusAction[] {
-    if (!this.isCombatActionStep(game, player.id)) {
-      return [];
-    }
-
-    return [new FocusAction(player.id)];
-  }
-
-  private getLegalDelveActions(
-    game: Game,
-    player: PlayerState,
-  ): DelveAction[] {
-    if (
-      player.hasDelvedThisPowerStep ||
-      !this.isCombatTurnStep(game, player.id, TurnStep.Power)
-    ) {
+  private getLegalDelveActions(game: Game, player: PlayerState): DelveAction[] {
+    if (player.hasDelvedThisPowerStep || !this.isCombatTurnStep(game, player.id, TurnStep.Power)) {
       return [];
     }
 
     return player.fighters.flatMap((fighter) => {
-      if (fighter.isSlain || fighter.currentHexId === null) {
-        return [];
-      }
-
+      if (fighter.isSlain || fighter.currentHexId === null) return [];
       const fighterHex = game.board.getHex(fighter.currentHexId);
-      if (fighterHex?.featureTokenId === null || fighterHex?.featureTokenId === undefined) {
-        return [];
-      }
-
+      if (fighterHex?.featureTokenId === null || fighterHex?.featureTokenId === undefined) return [];
       const featureToken = game.board.getFeatureToken(fighterHex.featureTokenId);
-      if (
-        featureToken === undefined ||
-        featureToken.hexId !== fighterHex.id ||
-        featureToken.side === FeatureTokenSide.Hidden
-      ) {
+      if (featureToken === undefined || featureToken.hexId !== fighterHex.id || featureToken.side === FeatureTokenSide.Hidden) {
         return [];
       }
-
       return [new DelveAction(player.id, fighter.id, featureToken.id)];
     });
   }
 
-  private getLegalPlayUpgradeActions(
-    game: Game,
-    player: PlayerState,
-  ): PlayUpgradeAction[] {
-    if (!this.isCombatTurnStep(game, player.id, TurnStep.Power)) {
-      return [];
-    }
+  private getLegalPlayUpgradeActions(game: Game, player: PlayerState): PlayUpgradeAction[] {
+    if (!this.isCombatTurnStep(game, player.id, TurnStep.Power)) return [];
 
     return player.powerHand.flatMap((card) => {
-      if (card.kind !== CardKind.Upgrade) {
-        return [];
-      }
-
+      if (card.kind !== CardKind.Upgrade) return [];
       const targets = card.getLegalTargets(game);
       return targets.flatMap((target) =>
         target instanceof FighterState
           ? [new PlayUpgradeAction(player.id, card.id, target.id)]
-          : []
+          : [],
       );
     });
   }
 
-  private getLegalPlayPloyActions(
-    game: Game,
-    player: PlayerState,
-  ): PlayPloyAction[] {
-    if (!this.isCombatTurnStep(game, player.id, TurnStep.Power)) {
-      return [];
-    }
+  private getLegalPlayPloyActions(game: Game, player: PlayerState): PlayPloyAction[] {
+    if (!this.isCombatTurnStep(game, player.id, TurnStep.Power)) return [];
 
     const legalActions = new Map<string, PlayPloyAction>();
-
     for (const card of player.powerHand) {
-      if (card.kind !== CardKind.Ploy) {
-        continue;
-      }
-
+      if (card.kind !== CardKind.Ploy) continue;
       const targets = card.getLegalTargets(game);
       for (const target of targets) {
         const targetFighterId = target instanceof FighterState ? target.id : null;
@@ -592,19 +255,12 @@ export class CombatActionService extends LegalActionService {
         legalActions.set(`${action.cardId}:${action.targetFighterId ?? ""}`, action);
       }
     }
-
     return [...legalActions.values()];
   }
 
-  private getLegalUseWarscrollAbilityActions(
-    game: Game,
-    player: PlayerState,
-  ): UseWarscrollAbilityAction[] {
+  private getLegalUseWarscrollAbilityActions(game: Game, player: PlayerState): UseWarscrollAbilityAction[] {
     const warscrollDefinition = player.getWarscrollDefinition();
-    if (
-      warscrollDefinition === undefined ||
-      !this.isCombatTurnStep(game, player.id, TurnStep.Power)
-    ) {
+    if (warscrollDefinition === undefined || !this.isCombatTurnStep(game, player.id, TurnStep.Power)) {
       return [];
     }
 
@@ -614,98 +270,7 @@ export class CombatActionService extends LegalActionService {
     });
   }
 
-  private getLegalMoveActionsForFighter(
-    game: Game,
-    player: PlayerState,
-    fighterId: FighterId,
-  ): MoveAction[] {
-    const fighter = player.getFighter(fighterId);
-    const fighterDefinition = player.getFighterDefinition(fighterId);
-    if (fighter === undefined || fighterDefinition === undefined) {
-      return [];
-    }
-
-    if (!this.canFighterMove(fighter)) {
-      return [];
-    }
-
-    const startHex = game.board.getHex(fighter.currentHexId);
-    if (startHex === undefined) {
-      return [];
-    }
-
-    const legalActions: MoveAction[] = [];
-    const frontier: MovePathSearchNode[] = [{ hex: startHex, path: [] }];
-    const shortestPathLengths = new Map<HexId, number>([[startHex.id, 0]]);
-
-    while (frontier.length > 0) {
-      const currentNode = frontier.shift();
-      if (currentNode === undefined || currentNode.path.length >= fighterDefinition.move) {
-        continue;
-      }
-
-      for (const neighborHex of game.board.getNeighbors(currentNode.hex)) {
-        if (!this.isTraversableMoveHex(neighborHex)) {
-          continue;
-        }
-
-        const nextPathLength = currentNode.path.length + 1;
-        const bestKnownPathLength = shortestPathLengths.get(neighborHex.id);
-        if (
-          bestKnownPathLength !== undefined &&
-          bestKnownPathLength <= nextPathLength
-        ) {
-          continue;
-        }
-
-        const nextPath = [...currentNode.path, neighborHex.id];
-        shortestPathLengths.set(neighborHex.id, nextPathLength);
-        legalActions.push(new MoveAction(player.id, fighter.id, nextPath));
-        frontier.push({ hex: neighborHex, path: nextPath });
-      }
-    }
-
-    return legalActions;
-  }
-
-  // Base predicate: fighter exists on the board and can still take an
-  // action this turn. All action-specific predicates compose on top of
-  // this. The type predicate narrows `currentHexId` to non-null so
-  // callers can skip a redundant null-check before indexing the board.
-  private canFighterAct(fighter: FighterState): fighter is FighterState & { currentHexId: HexId } {
-    return !fighter.isSlain && fighter.currentHexId !== null;
-  }
-
-  // Move and charge share the same "haven't acted yet this turn" rule.
-  private canFighterMove(fighter: FighterState): fighter is FighterState & { currentHexId: HexId } {
-    return (
-      this.canFighterAct(fighter) &&
-      !fighter.hasMoveToken &&
-      !fighter.hasChargeToken
-    );
-  }
-
-  private canFighterGuard(fighter: FighterState): boolean {
-    return this.canFighterMove(fighter) && !fighter.hasGuardToken;
-  }
-
-  private canFighterAttack(fighter: FighterState): fighter is FighterState & { currentHexId: HexId } {
-    return this.canFighterAct(fighter) && !fighter.hasChargeToken;
-  }
-
-  private isCombatActionStep(game: Game, playerId: PlayerId): boolean {
-    return this.isCombatTurnStep(game, playerId, TurnStep.Action);
-  }
-
   private isCombatTurnStep(game: Game, playerId: PlayerId, turnStep: TurnStep): boolean {
-    return (
-      game.state.kind === "combatTurn" &&
-      game.turnStep === turnStep &&
-      game.activePlayerId === playerId
-    );
-  }
-
-  private isTraversableMoveHex(hex: HexCell): boolean {
-    return hex.kind !== HexKind.Blocked && hex.occupantFighterId === null;
+    return game.state.kind === "combatTurn" && game.turnStep === turnStep && game.activePlayerId === playerId;
   }
 }
