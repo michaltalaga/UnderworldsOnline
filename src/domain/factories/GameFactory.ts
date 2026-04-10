@@ -41,7 +41,7 @@ export class GameFactory {
     this.validatePlayers(params.players);
     this.validateBoard(params.board);
 
-    const shuffleCards = params.shuffleCards ?? this.copyCards;
+    const shuffleCards = params.shuffleCards ?? this.shuffleCards;
     const board = this.createBoardState(params.board);
     const players = params.players.map((player) => this.createPlayerState(player, shuffleCards));
 
@@ -249,7 +249,12 @@ export class GameFactory {
     }
   }
 
-  private copyCards(cards: readonly Card[]): Card[] {
-    return [...cards];
+  private shuffleCards(cards: readonly Card[]): Card[] {
+    const shuffled = [...cards];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
   }
 }

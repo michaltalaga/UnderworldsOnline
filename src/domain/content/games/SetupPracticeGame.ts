@@ -43,7 +43,7 @@ export function createSetupPracticeGame(
         ...(deck === null ? {} : { deck }),
       },
     ],
-    shuffleCards: copyCards,
+    shuffleCards: shuffleCards,
   });
 }
 
@@ -53,7 +53,7 @@ export function createCombatReadySetupPracticeGame(
   deck: DeckDefinition | null = null,
 ): Game {
   const game = createSetupPracticeGame(gameId, warband, deck);
-  const engine = new GameEngine(copyCards);
+  const engine = new GameEngine(shuffleCards);
   const setupActionService = new SetupActionService();
 
   engine.applySetupAction(game, new CompleteMusterAction());
@@ -91,8 +91,13 @@ export function createCombatReadySetupPracticeGame(
   return game;
 }
 
-function copyCards<T>(cards: readonly T[]): T[] {
-  return [...cards];
+function shuffleCards<T>(cards: readonly T[]): T[] {
+  const shuffled = [...cards];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
 }
 
 function chooseFeaturePlacementAction(
