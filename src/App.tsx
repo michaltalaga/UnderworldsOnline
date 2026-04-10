@@ -81,6 +81,7 @@ export default function App() {
         warband={selectedWarband}
         deck={deckSelection.deck}
         onSetupComplete={(game) => setSetupGame(game)}
+        boardTheme={embergard1BoardTheme}
       />
     );
   }

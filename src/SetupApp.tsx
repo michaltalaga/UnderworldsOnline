@@ -26,6 +26,7 @@ import {
 import DiceTray, { getDiceTrayModel } from "./board/DiceTray";
 import { projectBoard } from "./board/projectBoard";
 import { createEmptyActionLens } from "./board/fighterActionLens";
+import type { BoardTheme } from "./board/boardTheme";
 import PlayerHandDockShell from "./PlayerHandDockShell";
 import { DockActionOverlay, type DockInteraction } from "./PlayerHandDock";
 import { getLocalPlayer, LOCAL_PLAYER_ID } from "./localPlayer";
@@ -37,9 +38,10 @@ type SetupAppProps = {
   warband: WarbandDefinition;
   deck: DeckDefinition | null;
   onSetupComplete: (game: Game) => void;
+  boardTheme?: BoardTheme | null;
 };
 
-export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppProps) {
+export default function SetupApp({ warband, deck, onSetupComplete, boardTheme = null }: SetupAppProps) {
   const [game] = useState<Game>(() => createSetupPracticeGame(undefined, warband, deck));
   const [, setRefreshTick] = useState(0);
   const handoffCompletedRef = useRef(false);
@@ -155,6 +157,7 @@ export default function SetupApp({ warband, deck, onSetupComplete }: SetupAppPro
     // Setup has no AI loop; interactions are controlled by the phase
     // panel and setup-hex legality, not a per-player controller.
     isInteractionEnabled: true,
+    boardTheme: boardTheme,
   });
 
   function handleSetupHexClickIntent(intent: BoardSceneHexClickIntent): void {

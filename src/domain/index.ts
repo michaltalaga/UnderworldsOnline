@@ -10,7 +10,7 @@ export * from "./actions/PassAction";
 export * from "./actions/PlayPloyAction";
 export * from "./actions/PlayUpgradeAction";
 export * from "./actions/UseWarscrollAbilityAction";
-export * from "./content/boards/CenteredBattlefield";
+export * from "./content/boards/Embergard1Board";
 export * from "./content/decks/BlazingAssaultDeck";
 export * from "./content/decks/PillageAndPlunderDeck";
 export * from "./content/games/SetupPracticeGame";
