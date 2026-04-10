@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Board Overlay Debug</title>
+<style>
+  body { margin: 0; background: #222; }
+  .container { position: relative; display: inline-block; }
+  .container img { display: block; }
+  .hex-dot {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid lime;
+    background: rgba(0, 255, 0, 0.3);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .hex-dot.stagger { border-color: red; background: rgba(255,0,0,0.3); }
+  .hex-dot.starting { border-color: cyan; background: rgba(0,255,255,0.3); }
+  .hex-label {
+    position: absolute;
+    color: lime;
+    font: bold 10px monospace;
+    transform: translate(-50%, 14px);
+    pointer-events: none;
+    text-shadow: 0 0 3px black, 0 0 3px black;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <img src="/embergard-board-1.jpg" id="boardImg" />
+</div>
+<script>
+const hexCenters = [{"id":"hex:r0:c0","cx":316,"cy":116.5},{"id":"hex:r0:c1","cx":462.2,"cy":116.5},{"id":"hex:r0:c2","cx":608.4,"cy":116.5},{"id":"hex:r0:c3","cx":754.7,"cy":116.5},{"id":"hex:r0:c4","cx":900.9,"cy":116.5},{"id":"hex:r0:c5","cx":1047.1,"cy":116.5},{"id":"hex:r1:c0","cx":242.9,"cy":243.4},{"id":"hex:r1:c1","cx":389.1,"cy":243.4},{"id":"hex:r1:c2","cx":535.3,"cy":243.4},{"id":"hex:r1:c3","cx":681.6,"cy":243.4},{"id":"hex:r1:c4","cx":827.8,"cy":243.4},{"id":"hex:r1:c5","cx":974,"cy":243.4},{"id":"hex:r1:c6","cx":1120.2,"cy":243.4},{"id":"hex:r2:c0","cx":169.8,"cy":370.4},{"id":"hex:r2:c1","cx":316,"cy":370.4},{"id":"hex:r2:c2","cx":462.2,"cy":370.4},{"id":"hex:r2:c3","cx":608.4,"cy":370.4},{"id":"hex:r2:c4","cx":754.7,"cy":370.4},{"id":"hex:r2:c5","cx":900.9,"cy":370.4},{"id":"hex:r2:c6","cx":1047.1,"cy":370.4},{"id":"hex:r2:c7","cx":1193.3,"cy":370.4},{"id":"hex:r3:c0","cx":96.7,"cy":497.3},{"id":"hex:r3:c1","cx":242.9,"cy":497.3},{"id":"hex:r3:c2","cx":389.1,"cy":497.3},{"id":"hex:r3:c3","cx":535.3,"cy":497.3},{"id":"hex:r3:c4","cx":681.6,"cy":497.3},{"id":"hex:r3:c5","cx":827.8,"cy":497.3},{"id":"hex:r3:c6","cx":974,"cy":497.3},{"id":"hex:r3:c7","cx":1120.2,"cy":497.3},{"id":"hex:r3:c8","cx":1266.4,"cy":497.3},{"id":"hex:r4:c0","cx":169.8,"cy":624.3},{"id":"hex:r4:c1","cx":316,"cy":624.3},{"id":"hex:r4:c2","cx":462.2,"cy":624.3},{"id":"hex:r4:c3","cx":608.4,"cy":624.3},{"id":"hex:r4:c4","cx":754.7,"cy":624.3},{"id":"hex:r4:c5","cx":900.9,"cy":624.3},{"id":"hex:r4:c6","cx":1047.1,"cy":624.3},{"id":"hex:r4:c7","cx":1193.3,"cy":624.3},{"id":"hex:r5:c0","cx":96.7,"cy":751.2},{"id":"hex:r5:c1","cx":242.9,"cy":751.2},{"id":"hex:r5:c2","cx":389.1,"cy":751.2},{"id":"hex:r5:c3","cx":535.3,"cy":751.2},{"id":"hex:r5:c4","cx":681.6,"cy":751.2},{"id":"hex:r5:c5","cx":827.8,"cy":751.2},{"id":"hex:r5:c6","cx":974,"cy":751.2},{"id":"hex:r5:c7","cx":1120.2,"cy":751.2},{"id":"hex:r5:c8","cx":1266.4,"cy":751.2},{"id":"hex:r6:c0","cx":169.8,"cy":878.2},{"id":"hex:r6:c1","cx":316,"cy":878.2},{"id":"hex:r6:c2","cx":462.2,"cy":878.2},{"id":"hex:r6:c3","cx":608.4,"cy":878.2},{"id":"hex:r6:c4","cx":754.7,"cy":878.2},{"id":"hex:r6:c5","cx":900.9,"cy":878.2},{"id":"hex:r6:c6","cx":1047.1,"cy":878.2},{"id":"hex:r6:c7","cx":1193.3,"cy":878.2},{"id":"hex:r7:c0","cx":96.7,"cy":1005.1},{"id":"hex:r7:c1","cx":242.9,"cy":1005.1},{"id":"hex:r7:c2","cx":389.1,"cy":1005.1},{"id":"hex:r7:c3","cx":535.3,"cy":1005.1},{"id":"hex:r7:c4","cx":681.6,"cy":1005.1},{"id":"hex:r7:c5","cx":827.8,"cy":1005.1},{"id":"hex:r7:c6","cx":974,"cy":1005.1},{"id":"hex:r7:c7","cx":1120.2,"cy":1005.1},{"id":"hex:r7:c8","cx":1266.4,"cy":1005.1},{"id":"hex:r8:c0","cx":169.8,"cy":1132.1},{"id":"hex:r8:c1","cx":316,"cy":1132.1},{"id":"hex:r8:c2","cx":462.2,"cy":1132.1},{"id":"hex:r8:c3","cx":608.4,"cy":1132.1},{"id":"hex:r8:c4","cx":754.7,"cy":1132.1},{"id":"hex:r8:c5","cx":900.9,"cy":1132.1},{"id":"hex:r8:c6","cx":1047.1,"cy":1132.1},{"id":"hex:r8:c7","cx":1193.3,"cy":1132.1},{"id":"hex:r9:c0","cx":242.9,"cy":1259},{"id":"hex:r9:c1","cx":389.1,"cy":1259},{"id":"hex:r9:c2","cx":535.3,"cy":1259},{"id":"hex:r9:c3","cx":681.6,"cy":1259},{"id":"hex:r9:c4","cx":827.8,"cy":1259},{"id":"hex:r9:c5","cx":974,"cy":1259},{"id":"hex:r9:c6","cx":1120.2,"cy":1259},{"id":"hex:r10:c0","cx":316,"cy":1385.9},{"id":"hex:r10:c1","cx":462.2,"cy":1385.9},{"id":"hex:r10:c2","cx":608.4,"cy":1385.9},{"id":"hex:r10:c3","cx":754.7,"cy":1385.9},{"id":"hex:r10:c4","cx":900.9,"cy":1385.9},{"id":"hex:r10:c5","cx":1047.1,"cy":1385.9}];
+
+const stagger = new Set(["hex:r4:c6", "hex:r6:c1"]);
+const starting = new Set(["hex:r0:c0","hex:r1:c1","hex:r2:c4","hex:r2:c6","hex:r3:c2","hex:r3:c7","hex:r4:c5","hex:r6:c2","hex:r7:c1","hex:r7:c5","hex:r8:c1","hex:r8:c6","hex:r9:c2","hex:r9:c5"]);
+
+const container = document.querySelector('.container');
+
+hexCenters.forEach(h => {
+  const dot = document.createElement('div');
+  dot.className = 'hex-dot' + (stagger.has(h.id) ? ' stagger' : '') + (starting.has(h.id) ? ' starting' : '');
+  dot.style.left = h.cx + 'px';
+  dot.style.top = h.cy + 'px';
+  container.appendChild(dot);
+
+  const label = document.createElement('div');
+  label.className = 'hex-label';
+  label.style.left = h.cx + 'px';
+  label.style.top = h.cy + 'px';
+  label.textContent = h.id.replace('hex:', '');
+  container.appendChild(label);
+});
+</script>
+</body>
+</html>

@@ -1,3 +1,4 @@
+import type { BoardTheme } from "../../../board/boardTheme";
 import { Board } from "../../state/Board";
 import { HexCell } from "../../state/HexCell";
 import { Territory } from "../../state/Territory";
@@ -8,26 +9,39 @@ const northTerritoryId = "territory:north";
 const southTerritoryId = "territory:south";
 
 const northStartingHexIds = new Set([
-  "hex:r0:c1",
-  "hex:r0:c4",
+  "hex:r0:c0",
   "hex:r1:c1",
-  "hex:r1:c3",
-  "hex:r1:c5",
-  "hex:r2:c2",
-  "hex:r2:c5",
+  "hex:r2:c4",
+  "hex:r2:c6",
+  "hex:r3:c2",
+  "hex:r3:c7",
+  "hex:r4:c5",
 ]);
 
 const southStartingHexIds = new Set([
-  "hex:r8:c2",
-  "hex:r8:c5",
-  "hex:r9:c1",
-  "hex:r9:c3",
+  "hex:r6:c2",
+  "hex:r7:c1",
+  "hex:r7:c5",
+  "hex:r8:c1",
+  "hex:r8:c6",
+  "hex:r9:c2",
   "hex:r9:c5",
-  "hex:r10:c1",
-  "hex:r10:c4",
+]);
+
+const staggerHexIds = new Set([
+  "hex:r4:c6",
+  "hex:r6:c1",
 ]);
 
 export const centeredBattlefield = createCenteredBattlefield();
+
+export const centeredBattlefieldTheme: BoardTheme = {
+  name: "Embergard Board 1",
+  backgroundImage: "/embergard-board-1.jpg",
+  imageWidth: 1368,
+  imageHeight: 1500,
+  imagePadding: { top: 32, right: 29, bottom: 30, left: 24 },
+};
 
 function createCenteredBattlefield(): Board {
   const hexes = createHexes();
@@ -67,11 +81,13 @@ function createRowHexes(rowIndex: number, rowSize: number): HexCell[] {
     const isStartingHex =
       northStartingHexIds.has(hexId) || southStartingHexIds.has(hexId);
 
+    const kind = staggerHexIds.has(hexId) ? HexKind.Stagger : HexKind.Empty;
+
     return new HexCell(
       hexId,
       q,
       axialRow,
-      HexKind.Empty,
+      kind,
       isStartingHex,
       false,
       territoryId,

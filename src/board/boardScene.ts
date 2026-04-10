@@ -8,6 +8,7 @@ import {
   type HexId,
 } from "../domain";
 import { LOCAL_PLAYER_ID } from "../localPlayer";
+import type { BoardTheme } from "./boardTheme";
 import {
   hexHeight as hexPixelHeight,
   hexWidth as hexPixelWidth,
@@ -180,6 +181,8 @@ export type BoardSceneModel = {
   viewport: BoardSceneViewport;
   hexes: readonly BoardSceneHex[];
   selectedFighterName: string | null;
+  backgroundImage: string | null;
+  backgroundImageStyle: { left: string; top: string; width: string; height: string } | null;
   statusBadge: BoardTurnHeaderModel;
   lastResolvedAction: BattlefieldResultFlash | null;
   resultFlash: BattlefieldResultFlash | null;
@@ -227,6 +230,7 @@ export type ProjectBoardSceneParams = {
   // row is empty. Used to lock the UI during AI turns so the user
   // doesn't accidentally play for the opponent.
   isInteractionEnabled: boolean;
+  boardTheme?: BoardTheme | null;
 };
 
 export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneModel {
@@ -620,6 +624,7 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
     viewport,
     hexes,
     selectedFighterName,
+    ...computeBackgroundImage(params.boardTheme ?? null, positionedHexes),
     statusBadge: boardTurnHeader,
     lastResolvedAction,
     resultFlash,
@@ -629,6 +634,55 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
       isPowerStep && powerOverlay.warscrollAbilities.length > 0,
     pendingPowerOptionKey,
     armedPathTone: armedPath?.tone ?? null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Background image alignment. Computes the exact CSS to overlay a board
+// image so its hexes align with the grid hexes. The theme provides the
+// image's natural dimensions and the padding from image edges to the hex
+// grid edges (in image pixels). This function derives scale + offset from
+// the grid's own hex bounds.
+// ---------------------------------------------------------------------------
+
+function computeBackgroundImage(
+  theme: BoardTheme | null,
+  positionedHexes: readonly PositionedHex[],
+): Pick<BoardSceneModel, "backgroundImage" | "backgroundImageStyle"> {
+  if (theme === null || positionedHexes.length === 0) {
+    return { backgroundImage: null, backgroundImageStyle: null };
+  }
+
+  // Grid hex bounding box (in grid pixels).
+  const gridLeft = Math.min(...positionedHexes.map((h) => h.left));
+  const gridTop = Math.min(...positionedHexes.map((h) => h.top));
+  const gridRight = Math.max(...positionedHexes.map((h) => h.left + hexPixelWidth));
+  const gridBottom = Math.max(...positionedHexes.map((h) => h.top + hexPixelHeight));
+  const gridContentW = gridRight - gridLeft;
+  const gridContentH = gridBottom - gridTop;
+
+  // Image hex content area (in image pixels).
+  const pad = theme.imagePadding;
+  const imgContentW = theme.imageWidth - pad.left - pad.right;
+  const imgContentH = theme.imageHeight - pad.top - pad.bottom;
+
+  // Scale so image hex area matches grid hex area. Average both axes
+  // to handle tiny aspect-ratio differences from measurement imprecision.
+  const scale = (gridContentW / imgContentW + gridContentH / imgContentH) / 2;
+
+  const renderedW = theme.imageWidth * scale;
+  const renderedH = theme.imageHeight * scale;
+  const left = gridLeft - pad.left * scale;
+  const top = gridTop - pad.top * scale;
+
+  return {
+    backgroundImage: theme.backgroundImage,
+    backgroundImageStyle: {
+      left: `${left.toFixed(1)}px`,
+      top: `${top.toFixed(1)}px`,
+      width: `${renderedW.toFixed(1)}px`,
+      height: `${renderedH.toFixed(1)}px`,
+    },
   };
 }
 

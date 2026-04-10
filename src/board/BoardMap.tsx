@@ -207,6 +207,15 @@ export default function BoardMap({
             transformOrigin: "top left",
           }}
         >
+          {scene.backgroundImage !== null && (
+            <img
+              src={scene.backgroundImage}
+              alt=""
+              aria-hidden="true"
+              className="battlefield-board-map-bg"
+              style={scene.backgroundImageStyle ?? undefined}
+            />
+          )}
           {hexes.map((hex) => (
             <HexCell
               key={hex.id}

@@ -38,6 +38,7 @@ import {
   getFighterName,
 } from "./board/battlefieldFormatters";
 import BoardMap from "./board/BoardMap";
+import type { BoardTheme } from "./board/boardTheme";
 import { projectBoardScene, type BoardSceneHexClickIntent, type BoardSceneQuickAction } from "./board/boardScene";
 import DiceTray, { getDiceTrayModel } from "./board/DiceTray";
 import DebugPanel from "./DebugPanel";
@@ -83,12 +84,14 @@ type PracticeBattlefieldAppProps = {
   warband?: WarbandDefinition;
   deck?: DeckDefinition | null;
   game?: Game;
+  boardTheme?: BoardTheme | null;
 };
 
 export default function PracticeBattlefieldApp({
   warband,
   deck = null,
   game: providedGame,
+  boardTheme = null,
 }: PracticeBattlefieldAppProps = {}) {
   const [game, setGame] = useState<Game>(
     () => providedGame ?? createActionStepPracticeGame(warband, deck),
@@ -313,6 +316,7 @@ export default function PracticeBattlefieldApp({
     isSetupClickEnabled: false,
     hoveredChargeTargetId,
     isInteractionEnabled: isHumanTurn,
+    boardTheme: boardTheme,
   });
 
   // Map hex click intents (returned by the scene) into the existing
