@@ -33,9 +33,9 @@ const staggerHexIds = new Set([
   "hex:r6:c1",
 ]);
 
-export const centeredBattlefield = createCenteredBattlefield();
+export const embergard1Board = createEmbergard1Board();
 
-export const centeredBattlefieldTheme: BoardTheme = {
+export const embergard1BoardTheme: BoardTheme = {
   name: "Embergard Board 1",
   backgroundImage: "/embergard-board-1.jpg",
   imageWidth: 1368,
@@ -43,7 +43,7 @@ export const centeredBattlefieldTheme: BoardTheme = {
   imagePadding: { top: 32, right: 29, bottom: 30, left: 24 },
 };
 
-function createCenteredBattlefield(): Board {
+function createEmbergard1Board(): Board {
   const hexes = createHexes();
   const northHexIds = hexes
     .filter((hex) => hex.territoryId === northTerritoryId)

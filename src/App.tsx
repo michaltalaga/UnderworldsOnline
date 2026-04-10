@@ -2,7 +2,7 @@ import { useState } from "react";
 import DeckSelectScreen from "./DeckSelectScreen";
 import { LOCAL_PLAYER_ID } from "./localPlayer";
 import PracticeBattlefieldApp from "./PracticeBattlefieldApp";
-import { centeredBattlefieldTheme } from "./domain/content/boards/CenteredBattlefield";
+import { embergard1BoardTheme } from "./domain/content/boards/Embergard1Board";
 import SetupApp from "./SetupApp";
 import WarbandSelectScreen from "./WarbandSelectScreen";
 import {
@@ -90,7 +90,7 @@ export default function App() {
       warband={selectedWarband}
       deck={deckSelection.deck}
       game={setupGame}
-      boardTheme={centeredBattlefieldTheme}
+      boardTheme={embergard1BoardTheme}
     />
   );
 }

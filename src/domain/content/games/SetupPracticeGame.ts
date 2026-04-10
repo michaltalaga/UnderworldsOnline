@@ -15,7 +15,7 @@ import type { WarbandDefinition } from "../../definitions/WarbandDefinition";
 import { BoardSide } from "../../values/enums";
 import { deterministicFirstPlayerRollOff } from "../../rules/Dice";
 import type { GameId } from "../../values/ids";
-import { centeredBattlefield } from "../boards/CenteredBattlefield";
+import { embergard1Board } from "../boards/Embergard1Board";
 import { setupPracticeWarband } from "../warbands/SetupPracticeWarband";
 
 const northTerritoryId = "territory:north";
@@ -28,7 +28,7 @@ export function createSetupPracticeGame(
 ): Game {
   return new GameFactory().createGame({
     gameId,
-    board: centeredBattlefield,
+    board: embergard1Board,
     players: [
       {
         id: "player:one",
