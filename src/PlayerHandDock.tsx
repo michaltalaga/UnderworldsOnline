@@ -332,10 +332,9 @@ function getPlayCardState(
   if (interaction.kind !== "play") {
     return { mode: "not-play", isPlayable: false, isArmed: false, isDim: false };
   }
-  // Objectives are never playable in power step — dim them so users see
-  // them but cannot click.
+  // Objectives are scored via the Score button, not via the power play flow.
   if (tone === "objective") {
-    return { mode: "play-dim", isPlayable: false, isArmed: false, isDim: true };
+    return { mode: "not-play", isPlayable: false, isArmed: false, isDim: false };
   }
   const options = interaction.playableByCardId.get(cardId);
   if (options === undefined || options.length === 0) {

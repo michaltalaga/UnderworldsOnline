@@ -190,6 +190,7 @@ export const GameActionKind = {
   UseWarscrollAbility: "useWarscrollAbility",
   Delve: "delve",
   Pass: "pass",
+  EndActionStep: "endActionStep",
 } as const;
 
 export type GameActionKind = (typeof GameActionKind)[keyof typeof GameActionKind];

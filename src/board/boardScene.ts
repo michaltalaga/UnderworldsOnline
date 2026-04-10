@@ -167,7 +167,8 @@ export type BoardSceneQuickAction =
       label: string;
       selectedFighterName: string;
     }
-  | { key: "pass-power"; armed: boolean; label: string };
+  | { key: "pass-power"; armed: boolean; label: string }
+  | { key: "end-action-step"; armed: boolean; label: string };
 
 export type BoardSceneViewport = {
   width: number;
@@ -594,6 +595,13 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
         armed,
         label: armed ? "Confirm Guard" : "Guard",
         selectedFighterName,
+      });
+    }
+    if (isActionStep) {
+      quickActions.push({
+        key: "end-action-step",
+        armed: false,
+        label: "End Action Step",
       });
     }
     if (isPowerStep && actionLens.passAction !== null) {

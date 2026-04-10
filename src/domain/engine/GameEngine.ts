@@ -68,6 +68,7 @@ import { CardPlayedResolution } from "../rules/CardPlayedResolution";
 import { CardResolvedResolution } from "../rules/CardResolvedResolution";
 import { ChargeAction } from "../actions/ChargeAction";
 import { DelveAction } from "../actions/DelveAction";
+import { EndActionStepAction } from "../actions/EndActionStepAction";
 import { FocusAction } from "../actions/FocusAction";
 import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
@@ -238,6 +239,11 @@ export class GameEngine {
     if (action instanceof UseWarscrollAbilityAction) {
       this.applyUseWarscrollAbilityAction(game, action);
       this.resolveAutoPlayableCards(game, this.createImmediateTriggerContext(action.kind));
+      return game;
+    }
+
+    if (action instanceof EndActionStepAction) {
+      this.applyEndActionStep(game, action);
       return game;
     }
 
@@ -620,21 +626,7 @@ export class GameEngine {
       },
     );
 
-    const firstPlayerId = game.firstPlayerId;
-    if (firstPlayerId === null) {
-      throw new Error("Combat turn state requires a first player id.");
-    }
-
     game.consecutivePasses = 0;
-    this.transitionToState(
-      game,
-      createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power),
-      {
-        invokedByPlayerId: player.id,
-        invokedByFighterId: fighter.id,
-        actionKind: action.kind,
-      },
-    );
     game.eventLog.push(`${player.name} moved fighter ${fighter.id} to ${destinationHex.id}.`);
   }
 
@@ -683,21 +675,7 @@ export class GameEngine {
       action.kind,
     );
 
-    const firstPlayerId = game.firstPlayerId;
-    if (firstPlayerId === null) {
-      throw new Error("Combat turn state requires a first player id.");
-    }
-
     game.consecutivePasses = 0;
-    this.transitionToState(
-      game,
-      createCombatTurnGameState(firstPlayerId, attackerPlayer.id, TurnStep.Power),
-      {
-        invokedByPlayerId: attackerPlayer.id,
-        invokedByFighterId: attacker.id,
-        actionKind: action.kind,
-      },
-    );
 
     const damageText = combatResult.damageInflicted === 0
       ? "dealt no damage"
@@ -809,21 +787,7 @@ export class GameEngine {
 
     attacker.hasChargeToken = true;
 
-    const firstPlayerId = game.firstPlayerId;
-    if (firstPlayerId === null) {
-      throw new Error("Combat turn state requires a first player id.");
-    }
-
     game.consecutivePasses = 0;
-    this.transitionToState(
-      game,
-      createCombatTurnGameState(firstPlayerId, attackerPlayer.id, TurnStep.Power),
-      {
-        invokedByPlayerId: attackerPlayer.id,
-        invokedByFighterId: attacker.id,
-        actionKind: action.kind,
-      },
-    );
 
     const damageText = combatResult.damageInflicted === 0
       ? "dealt no damage"
@@ -876,21 +840,7 @@ export class GameEngine {
       },
     );
 
-    const firstPlayerId = game.firstPlayerId;
-    if (firstPlayerId === null) {
-      throw new Error("Combat turn state requires a first player id.");
-    }
-
     game.consecutivePasses = 0;
-    this.transitionToState(
-      game,
-      createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power),
-      {
-        invokedByPlayerId: player.id,
-        invokedByFighterId: fighter.id,
-        actionKind: action.kind,
-      },
-    );
     game.eventLog.push(`${player.name} put fighter ${fighter.id} on guard.`);
   }
 
@@ -1033,9 +983,22 @@ export class GameEngine {
       actionKind: action.kind,
     });
     game.consecutivePasses = 0;
+    game.eventLog.push(
+      `${player.name} focused, discarded ${discardedObjectives.length} objective card${discardedObjectives.length === 1 ? "" : "s"} `
+      + `and ${discardedPowerCards.length} power card${discardedPowerCards.length === 1 ? "" : "s"}, `
+      + `then drew ${drawnObjectives.length} objective card${drawnObjectives.length === 1 ? "" : "s"} `
+      + `and ${drawnPowerCards.length} power card${drawnPowerCards.length === 1 ? "" : "s"}.`,
+    );
+  }
+
+  private applyEndActionStep(game: Game, action: EndActionStepAction): void {
+    this.assertCombatTurnStep(game, TurnStep.Action);
+    const player = this.requirePlayer(game, action.playerId);
+    this.assertActivePlayer(game, player.id);
+
     const firstPlayerId = game.firstPlayerId;
     if (firstPlayerId === null) {
-      throw new Error("Focus requires a combat turn with a first player.");
+      throw new Error("Combat turn state requires a first player id.");
     }
 
     this.transitionToState(
@@ -1046,12 +1009,7 @@ export class GameEngine {
         actionKind: action.kind,
       },
     );
-    game.eventLog.push(
-      `${player.name} focused, discarded ${discardedObjectives.length} objective card${discardedObjectives.length === 1 ? "" : "s"} `
-      + `and ${discardedPowerCards.length} power card${discardedPowerCards.length === 1 ? "" : "s"}, `
-      + `then drew ${drawnObjectives.length} objective card${drawnObjectives.length === 1 ? "" : "s"} `
-      + `and ${drawnPowerCards.length} power card${drawnPowerCards.length === 1 ? "" : "s"}.`,
-    );
+    game.eventLog.push(`${player.name} ended the action step.`);
   }
 
   private applyPlayPloyAction(game: Game, action: PlayPloyAction): void {

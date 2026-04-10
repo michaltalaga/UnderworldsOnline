@@ -1,5 +1,6 @@
 import { AttackAction } from "../actions/AttackAction";
 import { ChargeAction } from "../actions/ChargeAction";
+import { EndActionStepAction } from "../actions/EndActionStepAction";
 import { GameAction } from "../actions/GameAction";
 import { MoveAction } from "../actions/MoveAction";
 import { PassAction } from "../actions/PassAction";
@@ -87,13 +88,20 @@ export class DumbAiController implements CombatController {
       return pickRandom(moves);
     }
 
-    const nonPass = legalActions.filter((action) => !(action instanceof PassAction));
-    if (nonPass.length > 0) {
-      return pickRandom(nonPass);
+    // Prefer real actions over EndActionStep and Pass
+    const nonTerminal = legalActions.filter(
+      (action) => !(action instanceof PassAction) && !(action instanceof EndActionStepAction),
+    );
+    if (nonTerminal.length > 0) {
+      return pickRandom(nonTerminal);
     }
 
-    // Everything else is the pass action (or similarly terminal). Take
-    // whatever is first; there's only ever one pass.
+    // No real actions left — end the action step if possible, otherwise pass
+    const endStep = legalActions.find((action) => action instanceof EndActionStepAction);
+    if (endStep !== undefined) {
+      return endStep;
+    }
+
     return legalActions[0] ?? null;
   }
 }

@@ -2,6 +2,7 @@ import type {
   AttackAction,
   ChargeAction,
   DelveAction,
+  EndActionStepAction,
   FighterId,
   FighterState,
   FocusAction,
@@ -78,6 +79,7 @@ export type BattlefieldAppAction =
   | ChargeAction
   | AttackAction
   | DelveAction
+  | EndActionStepAction
   | FocusAction
   | GuardAction
   | PassAction

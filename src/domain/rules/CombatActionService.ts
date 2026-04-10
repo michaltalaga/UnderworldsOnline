@@ -5,6 +5,7 @@ import { FocusAction } from "../actions/FocusAction";
 import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
+import { EndActionStepAction } from "../actions/EndActionStepAction";
 import { PassAction } from "../actions/PassAction";
 import { PlayPloyAction } from "../actions/PlayPloyAction";
 import { PlayUpgradeAction } from "../actions/PlayUpgradeAction";
@@ -64,6 +65,7 @@ export class CombatActionService extends LegalActionService {
       ...player.fighters.flatMap((fighter) => this.getLegalAttackActionsForFighter(game, player, fighter.id)),
       ...player.fighters.flatMap((fighter) => this.getLegalGuardActionsForFighter(game, player, fighter.id)),
       ...this.getLegalFocusActions(game, player),
+      new EndActionStepAction(playerId),
       new PassAction(playerId),
     ];
   }

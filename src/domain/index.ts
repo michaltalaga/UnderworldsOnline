@@ -1,4 +1,5 @@
 export * from "./actions/AttackAction";
+export * from "./actions/EndActionStepAction";
 export * from "./actions/ChargeAction";
 export * from "./actions/DelveAction";
 export * from "./actions/FocusAction";

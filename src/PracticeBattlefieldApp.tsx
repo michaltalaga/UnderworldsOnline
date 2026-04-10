@@ -14,6 +14,7 @@ import {
   GameRecordKind,
   LocalPlayerController,
   CardZone,
+  EndActionStepAction,
   TurnStep,
   type CardId,
   type CombatController,
@@ -367,6 +368,9 @@ export default function PracticeBattlefieldApp({
       case "pass-power":
         passTurn();
         return;
+      case "end-action-step":
+        endActionStep();
+        return;
     }
   }
 
@@ -427,6 +431,11 @@ export default function PracticeBattlefieldApp({
     setSelectedChargeKeysByPair({});
     setSelectedFighterId(getNextSelectedFighterId(game, previousActivePlayerId, previousSelectedFighterId));
     refreshGame();
+  }
+
+  function endActionStep(): void {
+    if (activePlayer === null) return;
+    applyAction(new EndActionStepAction(activePlayer.id));
   }
 
   function scoreObjective(cardId: CardId): void {

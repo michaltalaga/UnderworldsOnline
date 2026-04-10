@@ -865,6 +865,95 @@ body {
   font-size: 0.88rem;
 }
 
+/* --- Reaction Window --- */
+
+.battlefield-reaction-window {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  padding: 12px 16px 16px;
+  background: rgba(40, 32, 24, 0.85);
+  backdrop-filter: blur(6px);
+}
+
+.battlefield-reaction-window-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 900px;
+  width: 100%;
+}
+
+.battlefield-reaction-window-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.battlefield-reaction-window-header strong {
+  color: #f0e6d8;
+  font-size: 0.9rem;
+}
+
+.battlefield-reaction-window-hint {
+  color: #b0a090;
+  font-size: 0.72rem;
+}
+
+.battlefield-reaction-window-objectives {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.battlefield-reaction-window-label {
+  margin: 0;
+  color: #b0a090;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.battlefield-reaction-window-score-button {
+  padding: 6px 14px;
+  border: 1px solid rgba(46, 160, 67, 0.5);
+  border-radius: 6px;
+  background: rgba(46, 160, 67, 0.18);
+  color: #6fdc8c;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.battlefield-reaction-window-score-button:hover {
+  background: rgba(46, 160, 67, 0.35);
+}
+
+.battlefield-reaction-window-continue {
+  margin-left: auto;
+  padding: 8px 20px;
+  border: 1px solid rgba(200, 180, 140, 0.4);
+  border-radius: 8px;
+  background: rgba(200, 180, 140, 0.15);
+  color: #f0e6d8;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.battlefield-reaction-window-continue:hover {
+  background: rgba(200, 180, 140, 0.3);
+}
+
 .battlefield-board-last-action {
   position: absolute;
   top: 126px;
