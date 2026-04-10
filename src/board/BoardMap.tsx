@@ -200,6 +200,7 @@ export default function BoardMap({
       >
         <div
           className="battlefield-board-map"
+          data-territory-indicator={scene.territoryIndicator}
           style={{
             width: `${scene.viewport.width}px`,
             height: `${scene.viewport.height}px`,
@@ -215,6 +216,27 @@ export default function BoardMap({
               className="battlefield-board-map-bg"
               style={scene.backgroundImageStyle ?? undefined}
             />
+          )}
+          {scene.territoryIndicator === "labels" && scene.territoryLabels !== null && (
+            <>
+              <div className="battlefield-territory-glow battlefield-territory-glow-top" />
+              <div className="battlefield-territory-glow battlefield-territory-glow-bottom" />
+              <div className="battlefield-territory-label battlefield-territory-label-top">
+                Friendly Territory
+              </div>
+              <div className="battlefield-territory-label battlefield-territory-label-bottom">
+                Enemy Territory
+              </div>
+            </>
+          )}
+          {scene.territoryIndicator === "border" && (
+            <div className="battlefield-territory-border" style={{ top: `${scene.viewport.height / 2}px` }} />
+          )}
+          {scene.territoryIndicator === "stripe" && (
+            <>
+              <div className="battlefield-territory-stripe battlefield-territory-stripe-top" />
+              <div className="battlefield-territory-stripe battlefield-territory-stripe-bottom" />
+            </>
           )}
           {hexes.map((hex) => (
             <HexCell
@@ -597,6 +619,34 @@ function HexCell({
           ) : (
             <span className="battlefield-empty-hex-dot" aria-hidden="true" />
           )
+        ) : hex.visual.isStarting ? (
+          <div className="battlefield-hex-starting-occupied">
+            <img
+              src="/assets/core-ability.png"
+              alt=""
+              aria-hidden="true"
+              className="battlefield-hex-starting-icon battlefield-hex-starting-icon-small"
+            />
+            <div
+              className={[
+                "battlefield-fighter-badge",
+                hex.occupant.toneClass,
+                hex.visual.isSelectedHex ? "battlefield-fighter-badge-selected" : "",
+                hex.isPowerResponseFighter ? "battlefield-fighter-badge-power-response" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <span>{hex.occupant.label}</span>
+              <div className="battlefield-fighter-token-row">
+                {hex.occupant.statusTags.map((tag) => (
+                  <span key={tag} className="battlefield-fighter-token">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
         ) : (
           <div
             className={[

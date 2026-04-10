@@ -55,6 +55,18 @@ export type BoardSceneTerritoryOwner =
   | "player-two"
   | "unclaimed";
 
+export type TerritoryIndicatorMode =
+  | "none"
+  | "tint"
+  | "border"
+  | "labels"
+  | "markers"
+  | "stripe";
+
+export const territoryIndicatorModes: readonly TerritoryIndicatorMode[] = [
+  "none", "tint", "border", "labels", "markers", "stripe",
+];
+
 export type BoardSceneFighter = {
   id: FighterId;
   ownerPlayerId: string;
@@ -183,6 +195,8 @@ export type BoardSceneModel = {
   selectedFighterName: string | null;
   backgroundImage: string | null;
   backgroundImageStyle: { left: string; top: string; width: string; height: string } | null;
+  territoryIndicator: TerritoryIndicatorMode;
+  territoryLabels: { playerOne: string; playerTwo: string } | null;
   statusBadge: BoardTurnHeaderModel;
   lastResolvedAction: BattlefieldResultFlash | null;
   resultFlash: BattlefieldResultFlash | null;
@@ -231,6 +245,7 @@ export type ProjectBoardSceneParams = {
   // doesn't accidentally play for the opponent.
   isInteractionEnabled: boolean;
   boardTheme?: BoardTheme | null;
+  territoryIndicator?: TerritoryIndicatorMode;
 };
 
 export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneModel {
@@ -625,6 +640,14 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
     hexes,
     selectedFighterName,
     ...computeBackgroundImage(params.boardTheme ?? null, positionedHexes),
+    territoryIndicator: params.territoryIndicator ?? "none",
+    territoryLabels: (() => {
+      const territories = game.board.territories;
+      const p1 = territories.find((t) => t.ownerPlayerId === LOCAL_PLAYER_ID);
+      const p2 = territories.find((t) => t.ownerPlayerId !== null && t.ownerPlayerId !== LOCAL_PLAYER_ID);
+      if (p1 === undefined || p2 === undefined) return null;
+      return { playerOne: p1.name, playerTwo: p2.name };
+    })(),
     statusBadge: boardTurnHeader,
     lastResolvedAction,
     resultFlash,

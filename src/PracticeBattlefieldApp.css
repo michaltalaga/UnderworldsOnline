@@ -1403,6 +1403,17 @@ body {
   display: none;
 }
 
+.battlefield-hex-starting-occupied {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.battlefield-hex-starting-icon-small {
+  width: 14px;
+  height: 14px;
+}
+
 .battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex:hover {
   background: rgba(255, 255, 255, 0.12);
 }
@@ -1410,6 +1421,127 @@ body {
 .battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex-selectable:hover,
 .battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex-clickable:hover {
   background: rgba(255, 255, 255, 0.18);
+}
+
+/* --- Territory indicator: cycle button --- */
+
+.battlefield-board-territory-select {
+  border: 1px solid rgba(84, 63, 45, 0.18);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #4a3d30;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(35, 24, 18, 0.12);
+}
+
+/* --- Territory indicator: tint mode --- */
+
+.battlefield-board-map[data-territory-indicator="tint"] .battlefield-map-hex-player-one {
+  background: rgba(80, 140, 200, 0.18);
+}
+
+.battlefield-board-map[data-territory-indicator="tint"] .battlefield-map-hex-player-two {
+  background: rgba(200, 120, 60, 0.18);
+}
+
+/* --- Territory indicator: glow effect --- */
+
+.battlefield-territory-glow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.battlefield-territory-glow-top {
+  top: 0;
+  background: radial-gradient(ellipse 120% 60% at 50% 0%, rgba(80, 160, 220, 0.18) 0%, transparent 70%);
+}
+
+.battlefield-territory-glow-bottom {
+  bottom: 0;
+  background: radial-gradient(ellipse 120% 60% at 50% 100%, rgba(220, 130, 50, 0.18) 0%, transparent 70%);
+}
+
+/* --- Territory indicator: border mode --- */
+
+.battlefield-territory-border {
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  height: 0;
+  border-top: 3px dashed rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* --- Territory indicator: labels mode --- */
+
+.battlefield-territory-label {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 14px;
+  border-radius: 999px;
+  font: 700 0.65rem/1 sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.battlefield-territory-label-top {
+  top: 6px;
+  background: rgba(80, 140, 200, 0.55);
+  color: #fff;
+}
+
+.battlefield-territory-label-bottom {
+  bottom: 6px;
+  background: rgba(200, 120, 60, 0.55);
+  color: #fff;
+}
+
+/* --- Territory indicator: markers mode --- */
+
+.battlefield-board-map[data-territory-indicator="markers"] .battlefield-map-hex-player-one .battlefield-hex-starting-icon {
+  display: block;
+  opacity: 0.7;
+  filter: sepia(1) saturate(3) hue-rotate(180deg) brightness(1.4);
+}
+
+.battlefield-board-map[data-territory-indicator="markers"] .battlefield-map-hex-player-two .battlefield-hex-starting-icon {
+  display: block;
+  opacity: 0.7;
+  filter: sepia(1) saturate(3) hue-rotate(0deg) brightness(1.2);
+}
+
+/* --- Territory indicator: stripe mode --- */
+
+.battlefield-territory-stripe {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.battlefield-territory-stripe-top {
+  top: 0;
+  background: rgba(80, 140, 200, 0.6);
+}
+
+.battlefield-territory-stripe-bottom {
+  bottom: 0;
+  background: rgba(200, 120, 60, 0.6);
 }
 
 @keyframes battlefield-board-flash-enter {

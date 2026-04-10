@@ -158,6 +158,7 @@ export default function SetupApp({ warband, deck, onSetupComplete, boardTheme = 
     // panel and setup-hex legality, not a per-player controller.
     isInteractionEnabled: true,
     boardTheme: boardTheme,
+    territoryIndicator: "labels",
   });
 
   function handleSetupHexClickIntent(intent: BoardSceneHexClickIntent): void {

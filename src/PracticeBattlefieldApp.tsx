@@ -317,6 +317,7 @@ export default function PracticeBattlefieldApp({
     hoveredChargeTargetId,
     isInteractionEnabled: isHumanTurn,
     boardTheme: boardTheme,
+    territoryIndicator: "labels",
   });
 
   // Map hex click intents (returned by the scene) into the existing
