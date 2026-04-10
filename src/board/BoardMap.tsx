@@ -578,7 +578,16 @@ function HexCell({
         )}
 
         {hex.occupant === null ? (
-          <span className="battlefield-empty-hex-dot" aria-hidden="true" />
+          hex.visual.isStarting ? (
+            <img
+              src="/assets/core-ability.png"
+              alt=""
+              aria-hidden="true"
+              className="battlefield-hex-starting-icon"
+            />
+          ) : (
+            <span className="battlefield-empty-hex-dot" aria-hidden="true" />
+          )
         ) : (
           <div
             className={[
