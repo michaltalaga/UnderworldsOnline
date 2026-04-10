@@ -1,5 +1,10 @@
-import { CardDefinition } from "../../definitions/CardDefinition";
+import { CardDefinition, type CardPlayContext } from "../../definitions/CardDefinition";
 import { DeckDefinition } from "../../definitions/DeckDefinition";
+import type { CardInstance } from "../../state/CardInstance";
+import type { Game } from "../../state/Game";
+import type { GameEventLogState } from "../../state/GameEventLogState";
+import type { PlayerState } from "../../state/PlayerState";
+import { CardKind, CardZone, HexKind } from "../../values/enums";
 import {
   GenericPracticeObjectiveCardDefinition,
   GenericPracticePloyCardDefinition,
@@ -91,7 +96,124 @@ const objectives: readonly CardDefinition[] = [
   ),
 ];
 
+// A ploy that targets a single friendly fighter. The user picks the
+// fighter via the power overlay's per-fighter option list. When played,
+// it calls an `apply` callback that carries out the actual game effect
+// (give guard token, heal, push, etc.) then discards the card.
+type TargetedFriendlyEffect = (game: Game, player: PlayerState, fighterId: string) => string;
+
+class TargetedFriendlyPloy extends CardDefinition {
+  private readonly apply: TargetedFriendlyEffect;
+
+  public constructor(code: string, name: string, text: string, apply: TargetedFriendlyEffect) {
+    super(`card-def:rivals:blazing-assault:${code}`, CardKind.Ploy, name, text, 0);
+    this.apply = apply;
+  }
+
+  public override canPlay(
+    _game: Game,
+    _world: GameEventLogState,
+    player: PlayerState,
+    card: CardInstance,
+    context: CardPlayContext = {},
+  ): boolean {
+    const targetFighterId = context.targetFighterId ?? null;
+    if (card.zone !== CardZone.PowerHand || targetFighterId === null) {
+      return false;
+    }
+    const fighter = player.getFighter(targetFighterId);
+    return fighter !== undefined && !fighter.isSlain && fighter.currentHexId !== null;
+  }
+
+  public override play(
+    game: Game,
+    _world: GameEventLogState,
+    player: PlayerState,
+    card: CardInstance,
+    context: CardPlayContext = {},
+  ): string[] {
+    const targetFighterId = context.targetFighterId ?? null;
+    if (targetFighterId === null) {
+      throw new Error(`${this.name} requires a target fighter.`);
+    }
+    const description = this.apply(game, player, targetFighterId);
+    discardPloyCard(player, card);
+    return [description];
+  }
+}
+
+function discardPloyCard(player: PlayerState, card: CardInstance): void {
+  const handIndex = player.powerHand.findIndex((c) => c.id === card.id);
+  if (handIndex === -1) {
+    throw new Error(`Could not find ploy ${card.id} in ${player.name}'s power hand.`);
+  }
+  player.powerHand.splice(handIndex, 1);
+  card.zone = CardZone.PowerDiscard;
+  card.attachedToFighterId = null;
+  card.revealed = true;
+  player.powerDeck.discardPile.push(card);
+}
+
+function giveGuardToken(_game: Game, player: PlayerState, fighterId: string): string {
+  const fighter = player.getFighter(fighterId);
+  if (fighter === undefined) {
+    throw new Error(`Fighter ${fighterId} not found.`);
+  }
+  fighter.hasGuardToken = true;
+  return `gave Guard token to ${fighterId}`;
+}
+
+function healFighter(_game: Game, player: PlayerState, fighterId: string): string {
+  const fighter = player.getFighter(fighterId);
+  if (fighter === undefined) {
+    throw new Error(`Fighter ${fighterId} not found.`);
+  }
+  if (fighter.damage > 0) {
+    fighter.damage -= 1;
+  }
+  return `healed ${fighterId} for 1 damage`;
+}
+
+function screamOfAnger(_game: Game, player: PlayerState, fighterId: string): string {
+  const fighter = player.getFighter(fighterId);
+  if (fighter === undefined) {
+    throw new Error(`Fighter ${fighterId} not found.`);
+  }
+  fighter.damage += 2;
+  if (fighter.hasMoveToken) {
+    fighter.hasMoveToken = false;
+  } else if (fighter.hasChargeToken) {
+    fighter.hasChargeToken = false;
+  }
+  return `inflicted 2 damage on ${fighterId} and removed a token`;
+}
+
+function pushFighterOneHex(game: Game, player: PlayerState, fighterId: string): string {
+  const fighter = player.getFighter(fighterId);
+  if (fighter === undefined || fighter.currentHexId === null) {
+    throw new Error(`Fighter ${fighterId} not found or not on board.`);
+  }
+  const originHex = game.board.getHex(fighter.currentHexId);
+  if (originHex === undefined) {
+    throw new Error(`Hex ${fighter.currentHexId} not found.`);
+  }
+  const neighbors = game.board.getNeighbors(originHex);
+  const emptyNeighbors = neighbors.filter(
+    (hex) => hex.occupantFighterId === null && hex.kind !== HexKind.Blocked,
+  );
+  if (emptyNeighbors.length === 0) {
+    return `${fighterId} could not be pushed (no empty adjacent hex)`;
+  }
+  const destination = emptyNeighbors[Math.floor(Math.random() * emptyNeighbors.length)];
+  originHex.occupantFighterId = null;
+  destination.occupantFighterId = fighter.id;
+  fighter.currentHexId = destination.id;
+  return `pushed ${fighterId} to ${destination.id}`;
+}
+
 const ploys: readonly CardDefinition[] = [
+  // Reaction-timing ploys — fire mid-action, not yet implementable.
+  // Kept as generic no-op (discard only).
   buildPloy(
     "BL13",
     "Determined Effort",
@@ -103,36 +225,52 @@ const ploys: readonly CardDefinition[] = [
     "Play after picking a melee weapon for an Attack. That weapon gains Grievous for that Attack.",
   ),
   buildPloy(
-    "BL15",
-    "Lure of Battle",
-    "Pick a friendly fighter within 2 hexes of another fighter. Push the other fighter 1 hex closer.",
-  ),
-  buildPloy("BL16", "Sidestep", "Pick a friendly fighter. Push that fighter 1 hex."),
-  buildPloy(
-    "BL17",
-    "Commanding Stride",
-    "Push your leader up to 3 hexes. Push must end in a starting hex.",
-  ),
-  buildPloy(
-    "BL18",
-    "Illusory Fighter (Restricted)",
-    "Pick a friendly fighter. Remove from battlefield, then place in an empty starting hex in friendly territory.",
-  ),
-  buildPloy(
     "BL19",
     "Wings of War",
     "Play after picking a fighter to Move. That fighter gains +2 Move for that Move.",
   ),
-  buildPloy("BL20", "Shields Up!", "Pick a friendly fighter. Give that fighter a Guard token."),
-  buildPloy(
+  // Targeted ploys with real effects:
+  new TargetedFriendlyPloy(
+    "BL16",
+    "Sidestep",
+    "Pick a friendly fighter. Push that fighter 1 hex.",
+    pushFighterOneHex,
+  ),
+  new TargetedFriendlyPloy(
+    "BL20",
+    "Shields Up!",
+    "Pick a friendly fighter. Give that fighter a Guard token.",
+    giveGuardToken,
+  ),
+  new TargetedFriendlyPloy(
+    "BL22",
+    "Healing Potion",
+    "Pick a friendly fighter. Heal that fighter.",
+    healFighter,
+  ),
+  new TargetedFriendlyPloy(
     "BL21",
     "Scream of Anger",
     "Pick a friendly fighter. Inflict 2 damage and remove 1 Move or Charge token.",
+    screamOfAnger,
   ),
-  buildPloy(
-    "BL22",
-    "Healing Potion",
-    "Pick a friendly fighter. Heal that fighter (if underdog, roll Save for possible second heal).",
+  new TargetedFriendlyPloy(
+    "BL15",
+    "Lure of Battle",
+    "Pick a friendly fighter within 2 hexes of another fighter. Push the other fighter 1 hex closer.",
+    pushFighterOneHex,
+  ),
+  new TargetedFriendlyPloy(
+    "BL17",
+    "Commanding Stride",
+    "Push your leader up to 3 hexes. Push must end in a starting hex.",
+    pushFighterOneHex,
+  ),
+  new TargetedFriendlyPloy(
+    "BL18",
+    "Illusory Fighter (Restricted)",
+    "Pick a friendly fighter. Remove from battlefield, then place in an empty starting hex in friendly territory.",
+    pushFighterOneHex,
   ),
 ];
 
