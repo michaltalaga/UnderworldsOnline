@@ -77,7 +77,7 @@ export * from "./rules/VictoryResolver";
 export * from "./rules/WarscrollAbilityResolution";
 export * from "./rules/WarscrollEffectResolver";
 export * from "./state/BoardState";
-export * from "./state/CardInstance";
+export * from "./cards/Card";
 export * from "./state/DeckState";
 export * from "./state/FeatureTokenState";
 export * from "./state/FighterState";

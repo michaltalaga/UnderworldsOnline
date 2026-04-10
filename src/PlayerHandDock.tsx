@@ -1,5 +1,6 @@
 import "./PlayerHandDock.css";
-import type { CardDefinition, CardId, PlayerState } from "./domain";
+import type { CardId, PlayerState } from "./domain";
+import type { Card } from "./domain/cards/Card";
 import type { PowerOverlayOption } from "./board/battlefieldModels";
 
 // The hand dock is the single visual surface for card interactions. It
@@ -49,20 +50,17 @@ type PlayerHandDockProps = {
 
 type DockCard = {
   cardId: CardId;
-  definition: CardDefinition | null;
-  fallbackName: string;
+  card: Card;
 };
 
 export default function PlayerHandDock({ player, interaction }: PlayerHandDockProps) {
   const objectiveCards: DockCard[] = player.objectiveHand.map((card) => ({
     cardId: card.id,
-    definition: player.getCardDefinition(card.id) ?? null,
-    fallbackName: card.definitionId,
+    card,
   }));
   const powerCards: DockCard[] = player.powerHand.map((card) => ({
     cardId: card.id,
-    definition: player.getCardDefinition(card.id) ?? null,
-    fallbackName: card.definitionId,
+    card,
   }));
   const totalCards = objectiveCards.length + powerCards.length;
 
@@ -171,9 +169,9 @@ function DockCardListItem({
   tone: "objective" | "power";
   interaction: DockInteraction;
 }) {
-  const name = card.definition?.name ?? card.fallbackName;
-  const text = card.definition?.text ?? "";
-  const glory = card.definition?.gloryValue ?? 0;
+  const name = card.card.name;
+  const text = card.card.text;
+  const glory = card.card.gloryValue;
 
   // Per-mode flags drive the card's interactivity and visual state.
   const focusState = getFocusCardState(tone, card.cardId, interaction);

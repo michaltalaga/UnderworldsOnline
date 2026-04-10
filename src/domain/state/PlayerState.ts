@@ -1,30 +1,19 @@
 import type {
-  CardDefinitionId,
-  CardId,
   FighterId,
   PlayerId,
   TerritoryId,
   WeaponDefinitionId,
 } from "../values/ids";
 import { DeckKind } from "../values/enums";
-import type { CardPlayContext } from "../definitions/CardDefinition";
-import { CardDefinition } from "../definitions/CardDefinition";
-import { DeckDefinition } from "../definitions/DeckDefinition";
+import type { Card, Target } from "../cards/Card";
 import { FighterDefinition } from "../definitions/FighterDefinition";
 import { WarscrollDefinition } from "../definitions/WarscrollDefinition";
 import { WeaponDefinition } from "../definitions/WeaponDefinition";
 import { WarbandDefinition } from "../definitions/WarbandDefinition";
 import type { Game } from "./Game";
-import type { GameEventLogState } from "./GameEventLogState";
-import { CardInstance } from "./CardInstance";
 import { DeckState } from "./DeckState";
 import { FighterState } from "./FighterState";
 import { WarscrollState } from "./WarscrollState";
-
-export type PlayerCardWithDefinition = {
-  card: CardInstance;
-  definition: CardDefinition;
-};
 
 export type PlayerWarscrollWithDefinition = {
   state: WarscrollState;
@@ -43,12 +32,11 @@ export class PlayerState {
   public fighters: FighterState[];
   public objectiveDeck: DeckState;
   public powerDeck: DeckState;
-  public objectiveHand: CardInstance[];
-  public powerHand: CardInstance[];
-  public scoredObjectives: CardInstance[];
-  public equippedUpgrades: CardInstance[];
+  public objectiveHand: Card[];
+  public powerHand: Card[];
+  public scoredObjectives: Card[];
+  public equippedUpgrades: Card[];
   public warscrollState: WarscrollState;
-  public readonly deck: DeckDefinition | null;
 
   public constructor(
     id: PlayerId,
@@ -62,12 +50,11 @@ export class PlayerState {
     fighters: FighterState[] = [],
     objectiveDeck: DeckState = new DeckState(DeckKind.Objective),
     powerDeck: DeckState = new DeckState(DeckKind.Power),
-    objectiveHand: CardInstance[] = [],
-    powerHand: CardInstance[] = [],
-    scoredObjectives: CardInstance[] = [],
-    equippedUpgrades: CardInstance[] = [],
+    objectiveHand: Card[] = [],
+    powerHand: Card[] = [],
+    scoredObjectives: Card[] = [],
+    equippedUpgrades: Card[] = [],
     warscrollState: WarscrollState = new WarscrollState(id, warband.warscroll.id),
-    deck: DeckDefinition | null = null,
   ) {
     this.id = id;
     this.name = name;
@@ -85,7 +72,6 @@ export class PlayerState {
     this.scoredObjectives = scoredObjectives;
     this.equippedUpgrades = equippedUpgrades;
     this.warscrollState = warscrollState;
-    this.deck = deck;
   }
 
   public getFighter(fighterId: FighterId): FighterState | undefined {
@@ -128,34 +114,13 @@ export class PlayerState {
     };
   }
 
-  public getCard(cardId: CardId): CardInstance | undefined {
+  // Find a card by ID — for debugging/engine compatibility only.
+  // Prefer holding object references instead of looking up by ID.
+  public getCard(cardId: string): Card | undefined {
     return this.getAllCards().find((card) => card.id === cardId);
   }
 
-  public getCardDefinition(cardId: CardId): CardDefinition | undefined {
-    const card = this.getCard(cardId);
-    if (card === undefined) {
-      return undefined;
-    }
-
-    return this.findCardDefinition(card.definitionId);
-  }
-
-  public getCardWithDefinition(cardId: CardId): PlayerCardWithDefinition | undefined {
-    const card = this.getCard(cardId);
-    if (card === undefined) {
-      return undefined;
-    }
-
-    const definition = this.findCardDefinition(card.definitionId);
-    if (definition === undefined) {
-      return undefined;
-    }
-
-    return { card, definition };
-  }
-
-  public getAllCards(): CardInstance[] {
+  public getAllCards(): Card[] {
     return [
       ...this.objectiveDeck.drawPile,
       ...this.objectiveDeck.discardPile,
@@ -168,42 +133,22 @@ export class PlayerState {
     ];
   }
 
-  public getPlayableCards(
+  // Ask each card in the given list what it can target right now.
+  // Returns one entry per (card, target) pair. Cards that return no
+  // targets are omitted (not playable).
+  public getPlayableCardOptions(
     game: Game,
-    world: GameEventLogState,
-    context: CardPlayContext = {},
-    cards: readonly CardInstance[] = [...this.objectiveHand, ...this.powerHand],
-  ): PlayerCardWithDefinition[] {
+    cards: readonly Card[] = [...this.objectiveHand, ...this.powerHand],
+  ): { card: Card; targets: Target[] }[] {
     return cards.flatMap((card) => {
-      const definition = this.findCardDefinition(card.definitionId);
-      if (definition === undefined) {
-        return [];
-      }
-
-      return definition.canPlay(game, world, this, card, context)
-        ? [{ card, definition }]
-        : [];
+      const targets = card.getLegalTargets(game);
+      return targets.length > 0 ? [{ card, targets }] : [];
     });
   }
 
   public getUndeployedFighters(): FighterState[] {
     return this.fighters.filter(
       (fighter) => fighter.currentHexId === null && !fighter.isSlain,
-    );
-  }
-
-  private findCardDefinition(cardDefinitionId: CardDefinitionId): CardDefinition | undefined {
-    if (this.deck !== null) {
-      const fromDeck = [...this.deck.objectiveCards, ...this.deck.powerCards].find(
-        (definition) => definition.id === cardDefinitionId,
-      );
-      if (fromDeck !== undefined) {
-        return fromDeck;
-      }
-    }
-
-    return [...this.warband.objectiveCards, ...this.warband.powerCards].find(
-      (definition) => definition.id === cardDefinitionId,
     );
   }
 }

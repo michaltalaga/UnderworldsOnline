@@ -90,22 +90,22 @@ export function buildBattlefieldResultFlash(
 
   if (action instanceof PlayPloyAction) {
     const player = game.getPlayer(action.playerId);
-    const cardWithDefinition = player?.getCardWithDefinition(action.cardId);
+    const card = player?.getCard(action.cardId);
     return {
       id: Date.now(),
       tone: "power",
-      title: `Played ${cardWithDefinition?.definition.name ?? "ploy"}`,
+      title: `Played ${card?.name ?? "ploy"}`,
       detail,
     };
   }
 
   if (action instanceof PlayUpgradeAction) {
     const player = game.getPlayer(action.playerId);
-    const cardWithDefinition = player?.getCardWithDefinition(action.cardId);
+    const card = player?.getCard(action.cardId);
     return {
       id: Date.now(),
       tone: "power",
-      title: `Equipped ${cardWithDefinition?.definition.name ?? "upgrade"}`,
+      title: `Equipped ${card?.name ?? "upgrade"}`,
       detail,
     };
   }

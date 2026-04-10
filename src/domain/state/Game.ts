@@ -1,7 +1,7 @@
-import type { CardId, FighterId, GameId, PlayerId } from "../values/ids";
+import type { Card } from "../cards/Card";
+import type { FighterId, GameId, PlayerId } from "../values/ids";
 import { EndPhaseStep, Phase, SetupStep, TurnStep } from "../values/enums";
 import { BoardState } from "./BoardState";
-import { CardInstance } from "./CardInstance";
 import { FighterState } from "./FighterState";
 import { GameEventLogState } from "./GameEventLogState";
 import {
@@ -117,7 +117,7 @@ export class Game {
       .find((fighter) => fighter.id === fighterId);
   }
 
-  public getCard(cardId: CardId): CardInstance | undefined {
+  public getCard(cardId: string): Card | undefined {
     return this.players
       .flatMap((player) => player.getAllCards())
       .find((card) => card.id === cardId);

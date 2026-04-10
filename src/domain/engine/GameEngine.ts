@@ -1,5 +1,5 @@
-import { CardInstance } from "../state/CardInstance";
-import { CardDefinition, type CardPlayContext } from "../definitions/CardDefinition";
+import { Card } from "../cards/Card";
+import { type CardPlayContext } from "../definitions/CardDefinition";
 import { WeaponAbilityDefinition } from "../definitions/WeaponAbilityDefinition";
 import {
   CleanupResolution,
@@ -115,7 +115,7 @@ import { WarscrollAbilityResolution } from "../rules/WarscrollAbilityResolution"
 import { VictoryResolver } from "../rules/VictoryResolver";
 import { WarscrollEffectResolver } from "../rules/WarscrollEffectResolver";
 
-export type GameEngineShuffleCards = (cards: readonly CardInstance[]) => CardInstance[];
+export type GameEngineShuffleCards = (cards: readonly Card[]) => Card[];
 
 export class GameEngine {
   private static readonly objectiveHandSize = 3;
@@ -997,7 +997,6 @@ export class GameEngine {
       ),
     );
     const drawnObjectives = this.drawFocusCards(
-      player,
       player.objectiveDeck.drawPile,
       player.objectiveHand,
       discardedObjectives.length,
@@ -1005,14 +1004,12 @@ export class GameEngine {
     );
     const drawnPowerCards = [
       ...this.drawFocusCards(
-        player,
         player.powerDeck.drawPile,
         player.powerHand,
         discardedPowerCards.length,
         CardZone.PowerHand,
       ),
       ...this.drawFocusCards(
-        player,
         player.powerDeck.drawPile,
         player.powerHand,
         1,
@@ -1063,71 +1060,77 @@ export class GameEngine {
     const player = this.requirePlayer(game, action.playerId);
     this.assertActivePlayer(game, player.id);
 
-    const cardWithDefinition = player.getCardWithDefinition(action.cardId);
-    if (cardWithDefinition === undefined) {
+    const card = player.getCard(action.cardId);
+    if (card === undefined) {
       throw new Error(`Player ${player.name} does not have ploy card ${action.cardId}.`);
     }
 
-    if (cardWithDefinition.definition.kind !== CardKind.Ploy) {
-      throw new Error(`Card ${cardWithDefinition.definition.name} is not a ploy.`);
+    if (card.kind !== CardKind.Ploy) {
+      throw new Error(`Card ${card.name} is not a ploy.`);
     }
 
     const ployTarget = this.getPloyTargetDetails(game, action.targetFighterId);
     this.recordCardPlayed(
       game,
       player,
-      cardWithDefinition.definition,
-      cardWithDefinition.card,
+      card,
       {
         invokedByPlayerId: player.id,
-        invokedByCardId: cardWithDefinition.card.id,
+        invokedByCardId: card.id,
         actionKind: action.kind,
       },
       { target: ployTarget },
     );
-    const world = game.getEventLogState();
-    const effectDescriptions = cardWithDefinition.definition.play(
-      game,
-      world,
-      player,
-      cardWithDefinition.card,
-      { targetFighterId: action.targetFighterId },
-    );
+
+    // Apply the card's specific effect (guard token, push, heal, etc.)
+    const targetFighter = action.targetFighterId !== null
+      ? game.getFighter(action.targetFighterId) ?? null
+      : null;
+    const effectDescriptions = card.applyEffect(game, targetFighter ?? player);
+
+    // Move card from hand to discard pile.
+    const handIndex = player.powerHand.findIndex((c) => c.id === card.id);
+    if (handIndex !== -1) {
+      player.powerHand.splice(handIndex, 1);
+    }
+    card.zone = CardZone.PowerDiscard;
+    card.revealed = true;
+    player.powerDeck.discardPile.push(card);
+
     const resolution = new PloyResolution(
       player.id,
       player.name,
-      cardWithDefinition.card.id,
-      cardWithDefinition.card.definitionId,
-      cardWithDefinition.definition.name,
+      card.id,
+      card.name, // cardDefinitionId — Card IS the definition now, use name as identifier
+      card.name,
       ployTarget?.fighterId ?? null,
       ployTarget?.fighterName ?? null,
       ployTarget?.ownerPlayerId ?? null,
       ployTarget?.ownerPlayerName ?? null,
-      cardWithDefinition.definition.ployEffects,
+      [], // ployEffects — no longer tracked on Card; will be migrated later
       effectDescriptions,
     );
     game.addRecord(GameRecordKind.Ploy, resolution, {
       invokedByPlayerId: player.id,
-      invokedByCardId: cardWithDefinition.card.id,
+      invokedByCardId: card.id,
       actionKind: action.kind,
     });
     this.recordCardResolved(
       game,
       player,
-      cardWithDefinition.definition,
-      cardWithDefinition.card,
+      card,
       effectDescriptions,
       0,
       {
         invokedByPlayerId: player.id,
-        invokedByCardId: cardWithDefinition.card.id,
+        invokedByCardId: card.id,
         actionKind: action.kind,
       },
       { target: ployTarget },
     );
     game.consecutivePasses = 0;
     const effectSuffix = effectDescriptions.length > 0 ? ` and ${effectDescriptions.join(", ")}` : "";
-    game.eventLog.push(`${player.name} played ploy ${cardWithDefinition.definition.name}${effectSuffix}.`);
+    game.eventLog.push(`${player.name} played ploy ${card.name}${effectSuffix}.`);
   }
 
   private applyPlayUpgradeAction(game: Game, action: PlayUpgradeAction): void {
@@ -1139,14 +1142,14 @@ export class GameEngine {
     const player = this.requirePlayer(game, action.playerId);
     this.assertActivePlayer(game, player.id);
 
-    const cardWithDefinition = player.getCardWithDefinition(action.cardId);
+    const card = player.getCard(action.cardId);
     const fighter = this.requireOwnedDeployedFighter(player, action.fighterId);
-    if (cardWithDefinition === undefined) {
+    if (card === undefined) {
       throw new Error(`Player ${player.name} does not have upgrade card ${action.cardId}.`);
     }
 
-    if (cardWithDefinition.definition.kind !== CardKind.Upgrade) {
-      throw new Error(`Card ${cardWithDefinition.definition.name} is not an upgrade.`);
+    if (card.kind !== CardKind.Upgrade) {
+      throw new Error(`Card ${card.name} is not an upgrade.`);
     }
 
     const fighterDefinition = player.getFighterDefinition(fighter.id);
@@ -1158,31 +1161,37 @@ export class GameEngine {
     this.recordCardPlayed(
       game,
       player,
-      cardWithDefinition.definition,
-      cardWithDefinition.card,
+      card,
       {
         invokedByPlayerId: player.id,
         invokedByFighterId: fighter.id,
-        invokedByCardId: cardWithDefinition.card.id,
+        invokedByCardId: card.id,
         actionKind: action.kind,
       },
       { target: upgradeTarget },
     );
-    const world = game.getEventLogState();
-    const effectDescriptions = cardWithDefinition.definition.play(
-      game,
-      world,
-      player,
-      cardWithDefinition.card,
-      { equippedFighterId: fighter.id },
-    );
-    const upgradeCost = cardWithDefinition.definition.gloryValue;
+
+    // Inline upgrade play effects: move card from hand to equipped, attach to fighter, pay glory.
+    const handIndex = player.powerHand.findIndex((c) => c.id === card.id);
+    if (handIndex !== -1) {
+      player.powerHand.splice(handIndex, 1);
+    }
+    card.zone = CardZone.Equipped;
+    card.revealed = true;
+    card.attachedToFighter = fighter;
+    player.equippedUpgrades.push(card);
+
+    const upgradeCost = card.gloryValue;
+    player.glory -= upgradeCost;
+
+    const effectDescriptions: string[] = [];
+
     const resolution = new UpgradeResolution(
       player.id,
       player.name,
-      cardWithDefinition.card.id,
-      cardWithDefinition.card.definitionId,
-      cardWithDefinition.definition.name,
+      card.id,
+      card.name, // cardDefinitionId — Card IS the definition now
+      card.name,
       fighter.id,
       fighterDefinition.name,
       upgradeCost,
@@ -1190,27 +1199,26 @@ export class GameEngine {
     game.addRecord(GameRecordKind.Upgrade, resolution, {
       invokedByPlayerId: player.id,
       invokedByFighterId: fighter.id,
-      invokedByCardId: cardWithDefinition.card.id,
+      invokedByCardId: card.id,
       actionKind: action.kind,
     });
     this.recordCardResolved(
       game,
       player,
-      cardWithDefinition.definition,
-      cardWithDefinition.card,
+      card,
       [...effectDescriptions, `equipped to ${fighterDefinition.name}`, `paid ${upgradeCost} glory`],
       -upgradeCost,
       {
         invokedByPlayerId: player.id,
         invokedByFighterId: fighter.id,
-        invokedByCardId: cardWithDefinition.card.id,
+        invokedByCardId: card.id,
         actionKind: action.kind,
       },
       { target: upgradeTarget },
     );
     game.consecutivePasses = 0;
     game.eventLog.push(
-      `${player.name} played upgrade ${cardWithDefinition.definition.name} on fighter ${fighter.id} for ${upgradeCost} glory.`,
+      `${player.name} played upgrade ${card.name} on fighter ${fighter.id} for ${upgradeCost} glory.`,
     );
   }
 
@@ -1466,15 +1474,10 @@ export class GameEngine {
       );
 
       for (const card of player.objectiveHand.slice(handSizeBefore)) {
-        const cardWithDefinition = player.getCardWithDefinition(card.id);
-        if (cardWithDefinition === undefined) {
-          throw new Error(`Objective card ${card.id} is missing definition data after draw.`);
-        }
-
         drawnCards.push({
-          cardId: cardWithDefinition.card.id,
-          cardDefinitionId: cardWithDefinition.card.definitionId,
-          cardName: cardWithDefinition.definition.name,
+          cardId: card.id,
+          cardDefinitionId: card.name, // Card IS the definition — use name as identifier
+          cardName: card.name,
         });
       }
 
@@ -1526,15 +1529,10 @@ export class GameEngine {
       );
 
       for (const card of player.powerHand.slice(handSizeBefore)) {
-        const cardWithDefinition = player.getCardWithDefinition(card.id);
-        if (cardWithDefinition === undefined) {
-          throw new Error(`Power card ${card.id} is missing definition data after draw.`);
-        }
-
         drawnCards.push({
-          cardId: cardWithDefinition.card.id,
-          cardDefinitionId: cardWithDefinition.card.definitionId,
-          cardName: cardWithDefinition.definition.name,
+          cardId: card.id,
+          cardDefinitionId: card.name, // Card IS the definition — use name as identifier
+          cardName: card.name,
         });
       }
 
@@ -1781,8 +1779,7 @@ export class GameEngine {
   private recordCardPlayed(
     game: Game,
     player: PlayerState,
-    definition: CardDefinition,
-    card: CardInstance,
+    card: Card,
     metadata: GameEventMetadata = {},
     options: {
       timing?: ObjectiveConditionTiming | null;
@@ -1795,9 +1792,9 @@ export class GameEngine {
         player.id,
         player.name,
         card.id,
-        card.definitionId,
-        definition.kind,
-        definition.name,
+        card.name, // cardDefinitionId — Card IS the definition now
+        card.kind,
+        card.name,
         card.zone,
         options.target?.fighterId ?? null,
         options.target?.fighterName ?? null,
@@ -1812,8 +1809,7 @@ export class GameEngine {
   private recordCardResolved(
     game: Game,
     player: PlayerState,
-    definition: CardDefinition,
-    card: CardInstance,
+    card: Card,
     effectSummaries: readonly string[],
     gloryDelta: number,
     metadata: GameEventMetadata = {},
@@ -1828,9 +1824,9 @@ export class GameEngine {
         player.id,
         player.name,
         card.id,
-        card.definitionId,
-        definition.kind,
-        definition.name,
+        card.name, // cardDefinitionId — Card IS the definition now
+        card.kind,
+        card.name,
         card.zone,
         options.target?.fighterId ?? null,
         options.target?.fighterName ?? null,
@@ -1984,8 +1980,8 @@ export class GameEngine {
   }
 
   private drawCards(
-    drawPile: CardInstance[],
-    hand: CardInstance[],
+    drawPile: Card[],
+    hand: Card[],
     amount: number,
     zone: CardZoneType,
   ): void {
@@ -2037,7 +2033,6 @@ export class GameEngine {
           context,
           false,
           true,
-          game.getEventLogState(),
         );
         if (resolution.scoredObjectives.length === 0) {
           continue;
@@ -2093,7 +2088,6 @@ export class GameEngine {
     context: CardPlayContext,
     logEachObjective: boolean = true,
     recordResolution: boolean = false,
-    world: ReturnType<Game["getEventLogState"]> = game.getEventLogState(),
   ): ObjectiveScoringPlayerResolution {
     const timing = context.timing;
     if (timing === undefined) {
@@ -2105,49 +2099,58 @@ export class GameEngine {
       };
     }
 
-    const scorableObjectives = player
-      .getPlayableCards(game, world, context, player.objectiveHand)
-      .filter((playableCard) => playableCard.definition.kind === CardKind.Objective);
+    // Use the new Card-based API: each card self-reports its legal targets.
+    const playableOptions = player
+      .getPlayableCardOptions(game, player.objectiveHand)
+      .filter((option) => option.card.kind === CardKind.Objective);
     const scoredObjectives: ObjectiveScoringCardResolution[] = [];
     let gloryGained = 0;
 
-    for (const objective of scorableObjectives) {
-      if (objective.card.zone !== CardZone.ObjectiveHand) {
-        throw new Error(`Objective card ${objective.card.id} is not available to score for ${player.name}.`);
+    for (const option of playableOptions) {
+      const card = option.card;
+      if (card.zone !== CardZone.ObjectiveHand) {
+        throw new Error(`Objective card ${card.id} is not available to score for ${player.name}.`);
       }
 
       this.recordCardPlayed(
         game,
         player,
-        objective.definition,
-        objective.card,
+        card,
         {
           invokedByPlayerId: player.id,
-          invokedByCardId: objective.card.id,
+          invokedByCardId: card.id,
           actionKind: context.triggerActionKind ?? null,
         },
         { timing },
       );
-      const updatedWorld = game.getEventLogState();
-      objective.definition.play(game, updatedWorld, player, objective.card, context);
+
+      // Inline objective scoring effects: move card from hand to scored pile, add glory.
+      const handIndex = player.objectiveHand.findIndex((c) => c.id === card.id);
+      if (handIndex !== -1) {
+        player.objectiveHand.splice(handIndex, 1);
+      }
+      card.zone = CardZone.ScoredObjectives;
+      card.revealed = true;
+      player.scoredObjectives.push(card);
+      player.glory += card.gloryValue;
+
       const scoredObjective = {
-        cardId: objective.card.id,
-        cardDefinitionId: objective.card.definitionId,
-        cardName: objective.definition.name,
-        gloryValue: objective.definition.gloryValue,
+        cardId: card.id,
+        cardDefinitionId: card.name, // Card IS the definition — use name as identifier
+        cardName: card.name,
+        gloryValue: card.gloryValue,
       };
       gloryGained += scoredObjective.gloryValue;
       scoredObjectives.push(scoredObjective);
       this.recordCardResolved(
         game,
         player,
-        objective.definition,
-        objective.card,
+        card,
         [`scored for ${scoredObjective.gloryValue} glory`],
         scoredObjective.gloryValue,
         {
           invokedByPlayerId: player.id,
-          invokedByCardId: objective.card.id,
+          invokedByCardId: card.id,
           actionKind: context.triggerActionKind ?? null,
         },
         { timing },
@@ -2155,7 +2158,7 @@ export class GameEngine {
 
       if (logEachObjective) {
         game.eventLog.push(
-          `${player.name} scored ${objective.definition.name} for ${objective.definition.gloryValue} glory.`,
+          `${player.name} scored ${card.name} for ${card.gloryValue} glory.`,
         );
       }
     }
@@ -2184,9 +2187,8 @@ export class GameEngine {
   }
 
   private drawFocusCards(
-    player: PlayerState,
-    drawPile: CardInstance[],
-    hand: CardInstance[],
+    drawPile: Card[],
+    hand: Card[],
     amount: number,
     zone: CardZoneType,
   ): FocusCardResolution[] {
@@ -2200,11 +2202,10 @@ export class GameEngine {
 
       card.zone = zone;
       hand.push(card);
-      const definition = player.getCardDefinition(card.id);
       drawnCards.push({
         cardId: card.id,
-        cardDefinitionId: card.definitionId,
-        cardName: definition?.name ?? card.definitionId,
+        cardDefinitionId: card.name, // Card IS the definition — use name as identifier
+        cardName: card.name,
       });
     }
 
@@ -2214,34 +2215,34 @@ export class GameEngine {
   private discardFocusCard(
     player: PlayerState,
     cardId: CardId,
-    hand: CardInstance[],
-    discardPile: CardInstance[],
+    hand: Card[],
+    discardPile: Card[],
     discardZone: CardZoneType,
   ): FocusCardResolution {
-    const cardWithDefinition = player.getCardWithDefinition(cardId);
-    if (cardWithDefinition === undefined) {
+    const card = player.getCard(cardId);
+    if (card === undefined) {
       throw new Error(`Player ${player.name} does not have focus card ${cardId}.`);
     }
 
-    const handIndex = hand.findIndex((card) => card.id === cardWithDefinition.card.id);
+    const handIndex = hand.findIndex((c) => c.id === card.id);
     if (handIndex === -1) {
-      throw new Error(`Could not find focus card ${cardWithDefinition.card.id} in ${player.name}'s hand.`);
+      throw new Error(`Could not find focus card ${card.id} in ${player.name}'s hand.`);
     }
 
     hand.splice(handIndex, 1);
-    cardWithDefinition.card.zone = discardZone;
-    cardWithDefinition.card.revealed = true;
-    discardPile.push(cardWithDefinition.card);
+    card.zone = discardZone;
+    card.revealed = true;
+    discardPile.push(card);
     return {
-      cardId: cardWithDefinition.card.id,
-      cardDefinitionId: cardWithDefinition.card.definitionId,
-      cardName: cardWithDefinition.definition.name,
+      cardId: card.id,
+      cardDefinitionId: card.name, // Card IS the definition — use name as identifier
+      cardName: card.name,
     };
   }
 
   private redrawHand(
-    drawPile: CardInstance[],
-    hand: CardInstance[],
+    drawPile: Card[],
+    hand: Card[],
     handZone: CardZoneType,
   ): void {
     const setAsideCards = [...hand];
@@ -2490,7 +2491,7 @@ export class GameEngine {
     return `${winner.name} won the ${result.context.kind} roll-off against ${loser.name} in round ${decisiveRoundNumber}${tieBreakerSuffix}.`;
   }
 
-  private static copyCards(cards: readonly CardInstance[]): CardInstance[] {
+  private static copyCards(cards: readonly Card[]): Card[] {
     return [...cards];
   }
 

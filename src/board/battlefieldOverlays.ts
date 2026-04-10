@@ -12,6 +12,7 @@ import {
   type HexId,
   type PlayerState,
 } from "../domain";
+import { FighterState } from "../domain/state/FighterState";
 import { compactHexId, getFeatureTokenBadge, getFighterName } from "./battlefieldFormatters";
 import type {
   BoardTurnHeaderModel,
@@ -43,25 +44,20 @@ export function getPowerOverlayModel(
     };
   }
 
-  const world = game.getEventLogState();
-
   const ployOptions = new Map<string, PowerOverlayOption>();
-  const candidateTargetFighterIds: Array<FighterId | null> = [
-    null,
-    ...game.players.flatMap((player) => player.fighters.map((fighter) => fighter.id)),
-  ];
-  for (const targetFighterId of candidateTargetFighterIds) {
-    for (const playableCard of activePlayer.getPlayableCards(
-      game,
-      world,
-      { targetFighterId },
-      activePlayer.powerHand,
-    )) {
-      if (playableCard.definition.kind !== CardKind.Ploy) {
-        continue;
-      }
+  for (const card of activePlayer.powerHand) {
+    if (card.kind !== CardKind.Ploy) {
+      continue;
+    }
 
-      const action = new PlayPloyAction(activePlayer.id, playableCard.card.id, targetFighterId);
+    const targets = card.getLegalTargets(game);
+    if (targets.length === 0) {
+      continue;
+    }
+
+    for (const target of targets) {
+      const targetFighterId = target instanceof FighterState ? target.id : null;
+      const action = new PlayPloyAction(activePlayer.id, card.id, targetFighterId);
       const key = `ploy:${action.cardId}:${action.targetFighterId ?? "none"}`;
       if (ployOptions.has(key)) {
         continue;
@@ -69,10 +65,10 @@ export function getPowerOverlayModel(
 
       ployOptions.set(key, {
         key,
-        title: playableCard.definition.name,
+        title: card.name,
         detail:
           targetFighterId === null
-            ? playableCard.definition.text || "Play this ploy."
+            ? card.text || "Play this ploy."
             : `Target ${getFighterName(game, targetFighterId)}`,
         action,
       });
@@ -81,22 +77,22 @@ export function getPowerOverlayModel(
   const ploys = [...ployOptions.values()];
 
   const upgrades: PowerOverlayOption[] = [];
-  for (const fighter of activePlayer.fighters) {
-    for (const playableCard of activePlayer.getPlayableCards(
-      game,
-      world,
-      { equippedFighterId: fighter.id },
-      activePlayer.powerHand,
-    )) {
-      if (playableCard.definition.kind !== CardKind.Upgrade) {
+  for (const card of activePlayer.powerHand) {
+    if (card.kind !== CardKind.Upgrade) {
+      continue;
+    }
+
+    const targets = card.getLegalTargets(game);
+    for (const target of targets) {
+      if (!(target instanceof FighterState)) {
         continue;
       }
 
-      const action = new PlayUpgradeAction(activePlayer.id, playableCard.card.id, fighter.id);
+      const action = new PlayUpgradeAction(activePlayer.id, card.id, target.id);
       upgrades.push({
         key: `upgrade:${action.cardId}:${action.fighterId}`,
-        title: playableCard.definition.name,
-        detail: `Attach to ${getFighterName(game, fighter.id)} • ${playableCard.definition.gloryValue} glory`,
+        title: card.name,
+        detail: `Attach to ${getFighterName(game, target.id)} • ${card.gloryValue} glory`,
         action,
       });
     }

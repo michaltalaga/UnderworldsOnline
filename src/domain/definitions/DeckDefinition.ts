@@ -1,17 +1,17 @@
+import type { CardFactory } from "../cards/Card";
 import type { DeckDefinitionId } from "../values/ids";
-import { CardDefinition } from "./CardDefinition";
 
 export class DeckDefinition {
   public readonly id: DeckDefinitionId;
   public readonly name: string;
-  public readonly objectiveCards: readonly CardDefinition[];
-  public readonly powerCards: readonly CardDefinition[];
+  public readonly objectiveCards: readonly CardFactory[];
+  public readonly powerCards: readonly CardFactory[];
 
   public constructor(
     id: DeckDefinitionId,
     name: string,
-    objectiveCards: readonly CardDefinition[],
-    powerCards: readonly CardDefinition[],
+    objectiveCards: readonly CardFactory[],
+    powerCards: readonly CardFactory[],
   ) {
     this.id = id;
     this.name = name;

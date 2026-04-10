@@ -1,5 +1,5 @@
+import type { CardFactory } from "../cards/Card";
 import type { WarbandDefinitionId } from "../values/ids";
-import { CardDefinition } from "./CardDefinition";
 import { FighterDefinition } from "./FighterDefinition";
 import { WarscrollDefinition } from "./WarscrollDefinition";
 
@@ -8,16 +8,16 @@ export class WarbandDefinition {
   public readonly name: string;
   public readonly fighters: readonly FighterDefinition[];
   public readonly warscroll: WarscrollDefinition;
-  public readonly objectiveCards: readonly CardDefinition[];
-  public readonly powerCards: readonly CardDefinition[];
+  public readonly objectiveCards: readonly CardFactory[];
+  public readonly powerCards: readonly CardFactory[];
 
   public constructor(
     id: WarbandDefinitionId,
     name: string,
     fighters: readonly FighterDefinition[],
     warscroll: WarscrollDefinition,
-    objectiveCards: readonly CardDefinition[],
-    powerCards: readonly CardDefinition[],
+    objectiveCards: readonly CardFactory[],
+    powerCards: readonly CardFactory[],
   ) {
     this.id = id;
     this.name = name;

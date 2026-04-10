@@ -1,4 +1,4 @@
-import { CardDefinition } from "../../definitions/CardDefinition";
+import { Card, type CardFactory } from "../../cards/Card";
 import { FighterDefinition } from "../../definitions/FighterDefinition";
 import { WarbandDefinition } from "../../definitions/WarbandDefinition";
 import { WarscrollAbilityDefinition } from "../../definitions/WarscrollAbilityDefinition";
@@ -143,50 +143,32 @@ const warscroll = new WarscrollDefinition(
 // so they will not surface as playable options until the real effects are
 // implemented. They exist so the deck sizes match the warband template and
 // setup/muster flows stay legal.
-function createPlaceholderCard(
+function placeholderCardFactory(
   kind: CardKind,
-  idPrefix: string,
   namePrefix: string,
   cardNumber: string,
   gloryValue: number,
-): CardDefinition {
-  return new CardDefinition(
-    `card-def:emberwatch:${idPrefix}:${cardNumber}`,
-    kind,
-    `${namePrefix} ${cardNumber}`,
-    "(Placeholder — card effect not yet implemented.)",
-    gloryValue,
-  );
+): CardFactory {
+  return (id, owner, zone) =>
+    new Card(id, owner, kind, `${namePrefix} ${cardNumber}`, "(Placeholder — card effect not yet implemented.)", gloryValue, zone);
 }
 
-function createObjectiveCards(): CardDefinition[] {
+function createObjectiveCards(): CardFactory[] {
   return Array.from({ length: 12 }, (_, index) => {
     const cardNumber = String(index + 1).padStart(2, "0");
-    return createPlaceholderCard(
-      CardKind.Objective,
-      "objective",
-      "Emberwatch Objective",
-      cardNumber,
-      1,
-    );
+    return placeholderCardFactory(CardKind.Objective, "Emberwatch Objective", cardNumber, 1);
   });
 }
 
-function createPowerCards(): CardDefinition[] {
-  const ploys = Array.from({ length: 10 }, (_, index) => {
+function createPowerCards(): CardFactory[] {
+  const ploys: CardFactory[] = Array.from({ length: 10 }, (_, index) => {
     const cardNumber = String(index + 1).padStart(2, "0");
-    return createPlaceholderCard(CardKind.Ploy, "ploy", "Emberwatch Ploy", cardNumber, 0);
+    return placeholderCardFactory(CardKind.Ploy, "Emberwatch Ploy", cardNumber, 0);
   });
 
-  const upgrades = Array.from({ length: 10 }, (_, index) => {
+  const upgrades: CardFactory[] = Array.from({ length: 10 }, (_, index) => {
     const cardNumber = String(index + 1).padStart(2, "0");
-    return createPlaceholderCard(
-      CardKind.Upgrade,
-      "upgrade",
-      "Emberwatch Upgrade",
-      cardNumber,
-      1,
-    );
+    return placeholderCardFactory(CardKind.Upgrade, "Emberwatch Upgrade", cardNumber, 1);
   });
 
   return [...ploys, ...upgrades];

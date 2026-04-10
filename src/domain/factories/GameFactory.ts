@@ -1,7 +1,6 @@
-import { CardDefinition } from "../definitions/CardDefinition";
+import type { Card, CardFactory } from "../cards/Card";
 import { DeckDefinition } from "../definitions/DeckDefinition";
 import { WarbandDefinition } from "../definitions/WarbandDefinition";
-import { CardInstance } from "../state/CardInstance";
 import { BoardState } from "../state/BoardState";
 import { DeckState } from "../state/DeckState";
 import { FighterState } from "../state/FighterState";
@@ -12,7 +11,6 @@ import { Territory } from "../state/Territory";
 import { WarscrollState } from "../state/WarscrollState";
 import {
   BoardSide,
-  CardKind,
   CardZone,
   DeckKind,
   Phase,
@@ -20,7 +18,7 @@ import {
 } from "../values/enums";
 import type { GameId, PlayerId } from "../values/ids";
 
-export type ShuffleCards = (cards: readonly CardInstance[]) => CardInstance[];
+export type ShuffleCards = (cards: readonly Card[]) => Card[];
 
 export type GameFactoryPlayerConfig = {
   id: PlayerId;
@@ -74,15 +72,9 @@ export class GameFactory {
     config: GameFactoryPlayerConfig,
     shuffleCards: ShuffleCards,
   ): PlayerState {
-    const objectiveCardDefinitions = config.deck?.objectiveCards ?? config.warband.objectiveCards;
-    const powerCardDefinitions = config.deck?.powerCards ?? config.warband.powerCards;
+    const objectiveCardFactories = config.deck?.objectiveCards ?? config.warband.objectiveCards;
+    const powerCardFactories = config.deck?.powerCards ?? config.warband.powerCards;
     this.validateWarband(config.warband, config.name);
-    this.validateCardSelection(
-      objectiveCardDefinitions,
-      powerCardDefinitions,
-      config.name,
-      config.deck?.name ?? null,
-    );
 
     const fighters = config.warband.fighters.map(
       (fighter, index) =>
@@ -93,20 +85,8 @@ export class GameFactory {
         ),
     );
 
-    const objectiveCards = this.createCardInstances(
-      config.id,
-      objectiveCardDefinitions,
-      CardZone.ObjectiveDeck,
-      "objective",
-    );
-    const powerCards = this.createCardInstances(
-      config.id,
-      powerCardDefinitions,
-      CardZone.PowerDeck,
-      "power",
-    );
-
-    return new PlayerState(
+    // Create player first (without cards) so Card constructors can reference their owner.
+    const player = new PlayerState(
       config.id,
       config.name,
       config.warband,
@@ -116,8 +96,8 @@ export class GameFactory {
       0,
       false,
       fighters,
-      new DeckState(DeckKind.Objective, shuffleCards(objectiveCards), []),
-      new DeckState(DeckKind.Power, shuffleCards(powerCards), []),
+      new DeckState(DeckKind.Objective, [], []),
+      new DeckState(DeckKind.Power, [], []),
       [],
       [],
       [],
@@ -127,24 +107,26 @@ export class GameFactory {
         config.warband.warscroll.id,
         { ...config.warband.warscroll.startingTokens },
       ),
-      config.deck ?? null,
     );
+
+    // Now create card objects with the player as owner.
+    const objectiveCards = this.createCards(player, objectiveCardFactories, CardZone.ObjectiveDeck, "objective");
+    const powerCards = this.createCards(player, powerCardFactories, CardZone.PowerDeck, "power");
+    player.objectiveDeck = new DeckState(DeckKind.Objective, shuffleCards(objectiveCards), []);
+    player.powerDeck = new DeckState(DeckKind.Power, shuffleCards(powerCards), []);
+
+    return player;
   }
 
-  private createCardInstances(
-    playerId: PlayerId,
-    definitions: readonly CardDefinition[],
+  private createCards(
+    owner: PlayerState,
+    factories: readonly CardFactory[],
     zone: CardZone,
     prefix: string,
-  ): CardInstance[] {
-    return definitions.map(
-      (definition, index) =>
-        new CardInstance(
-          `${playerId}:card:${prefix}:${definition.id}:${index + 1}`,
-          definition.id,
-          playerId,
-          zone,
-        ),
+  ): Card[] {
+    return factories.map(
+      (factory, index) =>
+        factory(`${owner.id}:card:${prefix}:${index + 1}`, owner, zone),
     );
   }
 
@@ -207,46 +189,8 @@ export class GameFactory {
     }
   }
 
-  private validateCardSelection(
-    objectiveCards: readonly CardDefinition[],
-    powerCards: readonly CardDefinition[],
-    playerName: string,
-    deckName: string | null,
-  ): void {
-    const sourceLabel = deckName === null ? "warband" : `deck '${deckName}'`;
-
-    if (objectiveCards.length !== 12) {
-      throw new Error(
-        `${playerName}'s ${sourceLabel} must provide exactly 12 objective cards.`,
-      );
-    }
-
-    if (powerCards.length !== 20) {
-      throw new Error(
-        `${playerName}'s ${sourceLabel} must provide exactly 20 power cards.`,
-      );
-    }
-
-    if (objectiveCards.some((card) => card.kind !== CardKind.Objective)) {
-      throw new Error(`${playerName}'s objective deck contains a non-objective card.`);
-    }
-
-    if (
-      powerCards.some(
-        (card) => card.kind !== CardKind.Ploy && card.kind !== CardKind.Upgrade,
-      )
-    ) {
-      throw new Error(`${playerName}'s power deck contains an invalid card kind.`);
-    }
-
-    this.validateUniqueValues(
-      [
-        ...objectiveCards.map((card) => card.id),
-        ...powerCards.map((card) => card.id),
-      ],
-      `${playerName}'s card definition ids`,
-    );
-  }
+  // Card factories are opaque functions — can't validate kind/ID at definition time.
+  // Validation happens at runtime when cards are created.
 
   private validateUniqueValues(values: readonly string[], label: string): void {
     if (new Set(values).size !== values.length) {
@@ -305,7 +249,7 @@ export class GameFactory {
     }
   }
 
-  private copyCards(cards: readonly CardInstance[]): CardInstance[] {
+  private copyCards(cards: readonly Card[]): Card[] {
     return [...cards];
   }
 }

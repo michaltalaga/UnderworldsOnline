@@ -26,12 +26,12 @@ import {
   UseWarscrollAbilityAction,
   WeaponAbilityKind,
   createCombatReadySetupPracticeGame,
-  type CardInstance,
   type Game,
   type PlayerState,
   type WarscrollAbilityDefinition,
   type WeaponDefinition,
 } from "../domain";
+import type { Card } from "../domain/cards/Card";
 
 const playerOneFighterThreeId = "player:one:fighter:fighter-def:setup-practice:3:3";
 const playerOneFighterFourId = "player:one:fighter:fighter-def:setup-practice:4:4";
@@ -431,7 +431,7 @@ export function createPloyDebugSnapshot(
   }
 
   const friendlyTargetedPloy = playerOne.powerDeck.drawPile.find(
-    (card) => card.definitionId === "card-def:setup-practice:ploy:09",
+    (card) => card.name === "Practice Ploy 09",
   );
   if (friendlyTargetedPloy === undefined) {
     throw new Error("Could not find Practice Ploy 09 in Player One draw pile.");
@@ -445,7 +445,7 @@ export function createPloyDebugSnapshot(
   game.eventLog.push("Debug setup moved Practice Ploy 09 into Player One hand.");
 
   const enemyTargetedPloy = playerOne.powerDeck.drawPile.find(
-    (card) => card.definitionId === "card-def:setup-practice:ploy:10",
+    (card) => card.name === "Practice Ploy 10",
   );
   if (enemyTargetedPloy === undefined) {
     throw new Error("Could not find Practice Ploy 10 in Player One draw pile.");
@@ -512,12 +512,12 @@ export function createUpgradeDebugSnapshot(
   movePowerCardFromDrawPileToHand(
     game,
     playerOne.id,
-    "card-def:setup-practice:upgrade:01",
+    "Practice Upgrade 01",
   );
   movePowerCardFromDrawPileToHand(
     game,
     playerOne.id,
-    "card-def:setup-practice:upgrade:02",
+    "Practice Upgrade 02",
   );
 
   const gloryBeforeUpgrades = playerOne.glory;
@@ -558,8 +558,8 @@ export function createUpgradeDebugSnapshot(
 }
 
 function movePowerCardsToDiscard(
-  hand: CardInstance[],
-  discardPile: CardInstance[],
+  hand: Card[],
+  discardPile: Card[],
   count: number,
 ): void {
   const discardedCards = hand.splice(0, count);
@@ -656,17 +656,17 @@ function getDefenderFeatureTokenSnapshot(
 }
 
 function seedEndPhaseDebugObjective(game: Game, player: PlayerState): void {
-  const objectiveDefinitionId = "card-def:setup-practice:objective:04";
-  const existingObjective = player.objectiveHand.find((card) => card.definitionId === objectiveDefinitionId);
+  const objectiveName = "Practice Objective 04";
+  const existingObjective = player.objectiveHand.find((card) => card.name === objectiveName);
   if (existingObjective !== undefined) {
     return;
   }
 
   const sourceIndex = player.objectiveDeck.drawPile.findIndex(
-    (card) => card.definitionId === objectiveDefinitionId,
+    (card) => card.name === objectiveName,
   );
   if (sourceIndex === -1) {
-    throw new Error(`Could not find ${objectiveDefinitionId} in Player One objective deck for debug setup.`);
+    throw new Error(`Could not find ${objectiveName} in Player One objective deck for debug setup.`);
   }
 
   const replacementCard = player.objectiveHand.shift();
@@ -728,8 +728,8 @@ function createPloyDebugOption(
   action: PlayPloyAction,
 ): PloyDebugOption {
   const player = game.getPlayer(playerId);
-  const cardWithDefinition = player?.getCardWithDefinition(action.cardId);
-  if (player === undefined || cardWithDefinition === undefined) {
+  const card = player?.getCard(action.cardId);
+  if (player === undefined || card === undefined) {
     throw new Error(`Could not build ploy debug option for card ${action.cardId}.`);
   }
 
@@ -738,7 +738,7 @@ function createPloyDebugOption(
   return {
     actionKey: getPloyDebugActionKey(action),
     action,
-    cardName: cardWithDefinition.definition.name,
+    cardName: card.name,
     targetFighterName: targetDetails.targetFighterName,
     targetOwnerPlayerName: targetDetails.targetOwnerPlayerName,
   };
@@ -784,11 +784,11 @@ function createUpgradeDebugOption(
   action: PlayUpgradeAction,
 ): UpgradeDebugOption {
   const player = game.getPlayer(playerId);
-  const cardWithDefinition = player?.getCardWithDefinition(action.cardId);
+  const card = player?.getCard(action.cardId);
   const fighterDefinition = player?.getFighterDefinition(action.fighterId);
   if (
     player === undefined ||
-    cardWithDefinition === undefined ||
+    card === undefined ||
     fighterDefinition === undefined
   ) {
     throw new Error(`Could not build upgrade debug option for card ${action.cardId}.`);
@@ -797,9 +797,9 @@ function createUpgradeDebugOption(
   return {
     actionKey: getUpgradeDebugActionKey(action),
     action,
-    cardName: cardWithDefinition.definition.name,
+    cardName: card.name,
     fighterName: fighterDefinition.name,
-    gloryCost: cardWithDefinition.definition.gloryValue,
+    gloryCost: card.gloryValue,
   };
 }
 
@@ -810,21 +810,20 @@ function getUpgradeDebugActionKey(action: PlayUpgradeAction): string {
 function movePowerCardFromDrawPileToHand(
   game: Game,
   playerId: string,
-  definitionId: string,
+  cardName: string,
 ): void {
   const player = game.getPlayer(playerId);
   if (player === undefined) {
     throw new Error(`Could not find player ${playerId} for debug power card setup.`);
   }
 
-  const card = player.powerDeck.drawPile.find((candidate) => candidate.definitionId === definitionId);
+  const card = player.powerDeck.drawPile.find((candidate) => candidate.name === cardName);
   if (card === undefined) {
-    throw new Error(`Could not find power card ${definitionId} in ${player.name}'s draw pile.`);
+    throw new Error(`Could not find power card ${cardName} in ${player.name}'s draw pile.`);
   }
 
   player.powerDeck.drawPile = player.powerDeck.drawPile.filter((candidate) => candidate.id !== card.id);
   card.zone = CardZone.PowerHand;
   player.powerHand.push(card);
-  const cardName = player.getCardDefinition(card.id)?.name ?? definitionId;
-  game.eventLog.push(`Debug setup moved ${cardName} into ${player.name}'s hand.`);
+  game.eventLog.push(`Debug setup moved ${card.name} into ${player.name}'s hand.`);
 }

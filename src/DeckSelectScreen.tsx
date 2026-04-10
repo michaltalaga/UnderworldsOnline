@@ -1,5 +1,5 @@
 import "./WarbandSelectScreen.css";
-import { CardKind, type DeckDefinition, type DeckDefinitionId } from "./domain";
+import { type DeckDefinition, type DeckDefinitionId } from "./domain";
 
 type DeckSelectChoice = {
   id: DeckDefinitionId | null;
@@ -24,10 +24,7 @@ export default function DeckSelectScreen({ warbandName, choices, onSelect }: Dec
       <ul className="warband-select-list">
         {choices.map((choice) => {
           const objectiveCount = choice.deck?.objectiveCards.length ?? 12;
-          const ployCount =
-            choice.deck?.powerCards.filter((card) => card.kind === CardKind.Ploy).length ?? 10;
-          const upgradeCount =
-            choice.deck?.powerCards.filter((card) => card.kind === CardKind.Upgrade).length ?? 10;
+          const powerCount = choice.deck?.powerCards.length ?? 20;
           return (
             <li key={choice.id ?? "warband-default"}>
               <button
@@ -43,26 +40,10 @@ export default function DeckSelectScreen({ warbandName, choices, onSelect }: Dec
                     <dd>{objectiveCount}</dd>
                   </div>
                   <div>
-                    <dt>Ploys</dt>
-                    <dd>{ployCount}</dd>
-                  </div>
-                  <div>
-                    <dt>Upgrades</dt>
-                    <dd>{upgradeCount}</dd>
+                    <dt>Power Cards</dt>
+                    <dd>{powerCount}</dd>
                   </div>
                 </dl>
-                {choice.deck !== null && (
-                  <ul className="warband-select-fighter-list">
-                    {choice.deck.objectiveCards.slice(0, 4).map((card) => (
-                      <li key={card.id}>
-                        <span className="warband-select-fighter-name">{card.name}</span>
-                        <span className="warband-select-fighter-meta">
-                          {card.gloryValue} glory
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
               </button>
             </li>
           );
