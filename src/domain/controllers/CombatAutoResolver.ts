@@ -81,7 +81,7 @@ export class CombatAutoResolver {
       return this.tryApplyEndPhaseStep(game);
     }
 
-    if (game.state.kind === "combatReady") {
+    if (game.isCombatReady()) {
       this.engine.startCombatRound(
         game,
         [deterministicFirstPlayerRollOff],
@@ -90,7 +90,7 @@ export class CombatAutoResolver {
       return true;
     }
 
-    if (game.state.kind !== "combatTurn" || game.activePlayerId === null) {
+    if (!game.isInCombatTurn() || game.activePlayerId === null) {
       return false;
     }
 

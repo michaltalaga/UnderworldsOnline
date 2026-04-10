@@ -47,7 +47,7 @@ export class AgainstTheOdds extends ObjectiveCard {
     const thisRoundDelves = game.getEventHistory(GameRecordKind.Delve)
       .filter((e) => e.roundNumber === game.roundNumber && e.invokedByPlayerId === this.owner.id);
     return thisRoundDelves.some((e) => {
-      const token = game.board.getFeatureToken(e.data.featureTokenId);
+      const token = game.getFeatureToken(e.data.featureTokenId);
       return token !== undefined && token.value % 2 === 1;
     });
   }
@@ -67,9 +67,9 @@ export class LostInTheDepths extends ObjectiveCard {
     // Check no two alive friendly fighters are adjacent
     for (let i = 0; i < aliveFighters.length; i++) {
       for (let j = i + 1; j < aliveFighters.length; j++) {
-        const hexA = game.board.getHex(aliveFighters[i].currentHexId!);
-        const hexB = game.board.getHex(aliveFighters[j].currentHexId!);
-        if (hexA !== undefined && hexB !== undefined && game.board.areAdjacent(hexA, hexB)) {
+        const hexA = game.getHex(aliveFighters[i].currentHexId!);
+        const hexB = game.getHex(aliveFighters[j].currentHexId!);
+        if (hexA !== undefined && hexB !== undefined && game.areAdjacent(hexA, hexB)) {
           return false;
         }
       }
@@ -88,7 +88,7 @@ export class DesolateHomeland extends ObjectiveCard {
   protected override canScore(game: Game): boolean {
     if (game.phase !== "end") return false;
     let count = 0;
-    for (const token of game.board.featureTokens) {
+    for (const token of game.featureTokens) {
       if (token.side !== FeatureTokenSide.Treasure) continue;
       if (getTerritoryOwner(game, token.hexId) === this.owner.id) count++;
     }
@@ -105,7 +105,7 @@ export class TornLandscape extends ObjectiveCard {
 
   protected override canScore(game: Game): boolean {
     if (game.phase !== "end") return false;
-    const treasureCount = game.board.featureTokens
+    const treasureCount = game.featureTokens
       .filter((t) => t.side === FeatureTokenSide.Treasure).length;
     return treasureCount <= 2;
   }
@@ -120,7 +120,7 @@ export class StripTheRealm extends ObjectiveCard {
 
   protected override canScore(game: Game): boolean {
     if (game.phase !== "end") return false;
-    const treasures = game.board.featureTokens.filter((t) => t.side === FeatureTokenSide.Treasure);
+    const treasures = game.featureTokens.filter((t) => t.side === FeatureTokenSide.Treasure);
     if (treasures.length === 0) return true;
     const opponent = game.getOpponent(this.owner.id);
     if (opponent === undefined) return false;
@@ -196,7 +196,7 @@ export class ShareTheLoad extends ObjectiveCard {
     // Check how many friendly fighters are on feature tokens
     const friendlyOnFeatureTokens = this.owner.fighters.filter((f) => {
       if (f.isSlain || f.currentHexId === null) return false;
-      const hex = game.board.getHex(f.currentHexId);
+      const hex = game.getHex(f.currentHexId);
       return hex?.featureTokenId !== null && hex?.featureTokenId !== undefined;
     });
     return friendlyOnFeatureTokens.length >= 2;
@@ -232,7 +232,7 @@ export class CarefulSurvey extends ObjectiveCard {
   }
 
   protected override canScore(game: Game): boolean {
-    const territories = game.board.territories;
+    const territories = game.territories;
     if (territories.length === 0) return false;
     for (const territory of territories) {
       const hasFriendlyFighter = this.owner.fighters.some((f) => {
@@ -349,12 +349,12 @@ export class SuddenBlast extends PloyCard {
     // Only target enemies adjacent to at least one friendly
     return enemies.filter((enemy) => {
       if (enemy.currentHexId === null) return false;
-      const enemyHex = game.board.getHex(enemy.currentHexId);
+      const enemyHex = game.getHex(enemy.currentHexId);
       if (enemyHex === undefined) return false;
       return friendlies.some((friendly) => {
         if (friendly.currentHexId === null) return false;
-        const friendlyHex = game.board.getHex(friendly.currentHexId);
-        return friendlyHex !== undefined && game.board.areAdjacent(enemyHex, friendlyHex);
+        const friendlyHex = game.getHex(friendly.currentHexId);
+        return friendlyHex !== undefined && game.areAdjacent(enemyHex, friendlyHex);
       });
     });
   }
@@ -398,12 +398,12 @@ export class TrappedCache extends PloyCard {
     return enemies.filter((enemy) => {
       if (enemy.damage > 0) return false;
       if (enemy.currentHexId === null) return false;
-      const enemyHex = game.board.getHex(enemy.currentHexId);
+      const enemyHex = game.getHex(enemy.currentHexId);
       if (enemyHex === undefined) return false;
       // Check if any treasure token is within 1 hex
-      const neighbors = game.board.getNeighbors(enemyHex);
+      const neighbors = game.getNeighbors(enemyHex);
       const nearbyHexIds = [enemyHex.id, ...neighbors.map((h) => h.id)];
-      return game.board.featureTokens.some(
+      return game.featureTokens.some(
         (t) => t.side === FeatureTokenSide.Treasure && nearbyHexIds.includes(t.hexId),
       );
     });

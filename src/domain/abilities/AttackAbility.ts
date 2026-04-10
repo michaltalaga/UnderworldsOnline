@@ -2,7 +2,6 @@ import { AttackAction } from "../actions/AttackAction";
 import { GameAction } from "../actions/GameAction";
 import type { Game } from "../state/Game";
 import type { PlayerState } from "../state/PlayerState";
-import { TurnStep } from "../values/enums";
 import { Ability } from "./Ability";
 import { canFighterAttack } from "./fighterChecks";
 
@@ -10,7 +9,7 @@ export class AttackAbility extends Ability {
   readonly name = "Attack";
 
   getLegalActions(game: Game, player: PlayerState): GameAction[] {
-    if (!this.isActionStep(game, player.id)) return [];
+    if (!game.isCombatActionStep(player.id)) return [];
     const opponent = game.getOpponent(player.id);
     if (opponent === undefined) return [];
 
@@ -18,14 +17,14 @@ export class AttackAbility extends Ability {
       const definition = player.getFighterDefinition(fighter.id);
       if (definition === undefined || !canFighterAttack(fighter)) return [];
 
-      const attackerHex = game.board.getHex(fighter.currentHexId);
+      const attackerHex = game.getFighterHex(fighter);
       if (attackerHex === undefined) return [];
 
       return definition.weapons.flatMap((weapon) =>
         opponent.fighters.flatMap((target) => {
           if (target.isSlain || target.currentHexId === null) return [];
-          const targetHex = game.board.getHex(target.currentHexId);
-          if (targetHex === undefined || game.board.getDistance(attackerHex, targetHex) > weapon.range) return [];
+          const targetHex = game.getFighterHex(target);
+          if (targetHex === undefined || game.getDistance(attackerHex, targetHex) > weapon.range) return [];
 
           return [
             new AttackAction(player.id, fighter.id, target.id, weapon.id),
@@ -40,7 +39,7 @@ export class AttackAbility extends Ability {
 
   isLegalAction(game: Game, action: GameAction): boolean {
     if (!(action instanceof AttackAction)) return false;
-    if (!this.isActionStep(game, action.playerId)) return false;
+    if (!game.isCombatActionStep(action.playerId)) return false;
 
     const player = game.getPlayer(action.playerId);
     const opponent = game.getOpponent(action.playerId);
@@ -56,14 +55,10 @@ export class AttackAbility extends Ability {
     if (weapon === undefined) return false;
     if (action.selectedAbility !== null && !weapon.hasAbility(action.selectedAbility)) return false;
 
-    const attackerHex = game.board.getHex(attacker.currentHexId);
-    const targetHex = game.board.getHex(target.currentHexId);
+    const attackerHex = game.getFighterHex(attacker);
+    const targetHex = game.getFighterHex(target);
     if (attackerHex === undefined || targetHex === undefined) return false;
 
-    return game.board.getDistance(attackerHex, targetHex) <= weapon.range;
-  }
-
-  private isActionStep(game: Game, playerId: string): boolean {
-    return game.state.kind === "combatTurn" && game.turnStep === TurnStep.Action && game.activePlayerId === playerId;
+    return game.getDistance(attackerHex, targetHex) <= weapon.range;
   }
 }

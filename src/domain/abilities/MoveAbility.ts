@@ -3,7 +3,6 @@ import { MoveAction } from "../actions/MoveAction";
 import type { Game } from "../state/Game";
 import type { HexCell } from "../state/HexCell";
 import type { PlayerState } from "../state/PlayerState";
-import { TurnStep } from "../values/enums";
 import type { HexId } from "../values/ids";
 import { Ability } from "./Ability";
 import { canFighterMove, isTraversableMoveHex } from "./fighterChecks";
@@ -17,12 +16,12 @@ export class MoveAbility extends Ability {
   readonly name = "Move";
 
   getLegalActions(game: Game, player: PlayerState): GameAction[] {
-    if (!this.isActionStep(game, player.id)) return [];
+    if (!game.isCombatActionStep(player.id)) return [];
     return player.fighters.flatMap((fighter) => {
       const definition = player.getFighterDefinition(fighter.id);
       if (definition === undefined || !canFighterMove(fighter)) return [];
 
-      const startHex = game.board.getHex(fighter.currentHexId);
+      const startHex = game.getFighterHex(fighter);
       if (startHex === undefined) return [];
 
       const actions: MoveAction[] = [];
@@ -33,7 +32,7 @@ export class MoveAbility extends Ability {
         const node = frontier.shift();
         if (node === undefined || node.path.length >= definition.move) continue;
 
-        for (const neighbor of game.board.getNeighbors(node.hex)) {
+        for (const neighbor of game.getNeighbors(node.hex)) {
           if (!isTraversableMoveHex(neighbor)) continue;
           const nextLen = node.path.length + 1;
           const best = shortestPathLengths.get(neighbor.id);
@@ -52,7 +51,7 @@ export class MoveAbility extends Ability {
 
   isLegalAction(game: Game, action: GameAction): boolean {
     if (!(action instanceof MoveAction)) return false;
-    if (!this.isActionStep(game, action.playerId)) return false;
+    if (!game.isCombatActionStep(action.playerId)) return false;
 
     const player = game.getPlayer(action.playerId);
     if (player === undefined) return false;
@@ -63,22 +62,18 @@ export class MoveAbility extends Ability {
     if (action.path.length === 0 || action.path.length > definition.move) return false;
 
     const visited = new Set<HexId>([fighter.currentHexId]);
-    let currentHex = game.board.getHex(fighter.currentHexId);
+    let currentHex = game.getFighterHex(fighter);
     if (currentHex === undefined) return false;
 
     for (const nextHexId of action.path) {
       if (visited.has(nextHexId)) return false;
-      const nextHex = game.board.getHex(nextHexId);
-      if (nextHex === undefined || !game.board.areAdjacent(currentHex, nextHex)) return false;
+      const nextHex = game.getHex(nextHexId);
+      if (nextHex === undefined || !game.areAdjacent(currentHex, nextHex)) return false;
       if (!isTraversableMoveHex(nextHex)) return false;
       visited.add(nextHex.id);
       currentHex = nextHex;
     }
 
     return true;
-  }
-
-  private isActionStep(game: Game, playerId: string): boolean {
-    return game.state.kind === "combatTurn" && game.turnStep === TurnStep.Action && game.activePlayerId === playerId;
   }
 }

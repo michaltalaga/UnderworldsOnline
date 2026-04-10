@@ -24,8 +24,8 @@ export function getTerritoryOwner(
   game: Game,
   hexId: HexId,
 ): PlayerId | null {
-  const hex = game.board.getHex(hexId);
+  const hex = game.getHex(hexId);
   if (hex?.territoryId == null) return null;
-  const territory = game.board.getTerritory(hex.territoryId);
+  const territory = game.getTerritory(hex.territoryId);
   return territory?.ownerPlayerId ?? null;
 }

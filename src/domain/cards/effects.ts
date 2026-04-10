@@ -48,11 +48,11 @@ export function pushOneHex(game: Game, fighter: FighterState): string[] {
   if (fighter.currentHexId === null) {
     return [`${fighter.id} is not on the board`];
   }
-  const originHex = game.board.getHex(fighter.currentHexId);
+  const originHex = game.getFighterHex(fighter);
   if (originHex === undefined) {
     return [`${fighter.id} hex not found`];
   }
-  const neighbors = game.board.getNeighbors(originHex);
+  const neighbors = game.getNeighbors(originHex);
   const emptyNeighbors = neighbors.filter(
     (hex) => hex.occupantFighterId === null && hex.kind !== HexKind.Blocked,
   );

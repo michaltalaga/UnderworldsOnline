@@ -44,7 +44,7 @@ export class CombatActionService extends LegalActionService {
   }
 
   public getLegalActions(game: Game, playerId: PlayerId): GameAction[] {
-    if (game.state.kind !== "combatTurn" || game.activePlayerId !== playerId) {
+    if (!game.isInCombatTurn() || game.activePlayerId !== playerId) {
       return [];
     }
 
@@ -102,7 +102,7 @@ export class CombatActionService extends LegalActionService {
   // --- Power step validation (stays here — not core abilities) ---
 
   public isLegalDelveAction(game: Game, action: DelveAction): boolean {
-    if (!this.isCombatTurnStep(game, action.playerId, TurnStep.Power)) {
+    if (!game.isCombatPowerStep(action.playerId)) {
       return false;
     }
 
@@ -116,8 +116,8 @@ export class CombatActionService extends LegalActionService {
       return false;
     }
 
-    const fighterHex = game.board.getHex(fighter.currentHexId);
-    const featureToken = game.board.getFeatureToken(action.featureTokenId);
+    const fighterHex = game.getHex(fighter.currentHexId);
+    const featureToken = game.getFeatureToken(action.featureTokenId);
     if (fighterHex === undefined || featureToken === undefined) {
       return false;
     }
@@ -130,7 +130,7 @@ export class CombatActionService extends LegalActionService {
   }
 
   public isLegalPlayUpgradeAction(game: Game, action: PlayUpgradeAction): boolean {
-    if (!this.isCombatTurnStep(game, action.playerId, TurnStep.Power)) {
+    if (!game.isCombatPowerStep(action.playerId)) {
       return false;
     }
 
@@ -150,7 +150,7 @@ export class CombatActionService extends LegalActionService {
   }
 
   public isLegalPlayPloyAction(game: Game, action: PlayPloyAction): boolean {
-    if (!this.isCombatTurnStep(game, action.playerId, TurnStep.Power)) {
+    if (!game.isCombatPowerStep(action.playerId)) {
       return false;
     }
 
@@ -171,7 +171,7 @@ export class CombatActionService extends LegalActionService {
   }
 
   public isLegalUseWarscrollAbilityAction(game: Game, action: UseWarscrollAbilityAction): boolean {
-    if (!this.isCombatTurnStep(game, action.playerId, TurnStep.Power)) {
+    if (!game.isCombatPowerStep(action.playerId)) {
       return false;
     }
 
@@ -186,7 +186,7 @@ export class CombatActionService extends LegalActionService {
 
     return (
       Object.entries(ability.tokenCosts).every(
-        ([tokenName, tokenCost]) => (player.warscrollState.tokens[tokenName] ?? 0) >= tokenCost,
+        ([tokenName, tokenCost]) => player.getWarscrollTokenCount(tokenName) >= tokenCost,
       ) &&
       this.warscrollEffectResolver.canResolve(game, player, ability)
     );
@@ -212,15 +212,15 @@ export class CombatActionService extends LegalActionService {
   }
 
   private getLegalDelveActions(game: Game, player: PlayerState): DelveAction[] {
-    if (player.hasDelvedThisPowerStep || !this.isCombatTurnStep(game, player.id, TurnStep.Power)) {
+    if (player.hasDelvedThisPowerStep || !game.isCombatPowerStep(player.id)) {
       return [];
     }
 
     return player.fighters.flatMap((fighter) => {
       if (fighter.isSlain || fighter.currentHexId === null) return [];
-      const fighterHex = game.board.getHex(fighter.currentHexId);
+      const fighterHex = game.getFighterHex(fighter);
       if (fighterHex?.featureTokenId === null || fighterHex?.featureTokenId === undefined) return [];
-      const featureToken = game.board.getFeatureToken(fighterHex.featureTokenId);
+      const featureToken = game.getFeatureToken(fighterHex.featureTokenId);
       if (featureToken === undefined || featureToken.hexId !== fighterHex.id || featureToken.side === FeatureTokenSide.Hidden) {
         return [];
       }
@@ -229,7 +229,7 @@ export class CombatActionService extends LegalActionService {
   }
 
   private getLegalPlayUpgradeActions(game: Game, player: PlayerState): PlayUpgradeAction[] {
-    if (!this.isCombatTurnStep(game, player.id, TurnStep.Power)) return [];
+    if (!game.isCombatPowerStep(player.id)) return [];
 
     return player.powerHand.flatMap((card) => {
       if (card.kind !== CardKind.Upgrade) return [];
@@ -243,7 +243,7 @@ export class CombatActionService extends LegalActionService {
   }
 
   private getLegalPlayPloyActions(game: Game, player: PlayerState): PlayPloyAction[] {
-    if (!this.isCombatTurnStep(game, player.id, TurnStep.Power)) return [];
+    if (!game.isCombatPowerStep(player.id)) return [];
 
     const legalActions = new Map<string, PlayPloyAction>();
     for (const card of player.powerHand) {
@@ -260,7 +260,7 @@ export class CombatActionService extends LegalActionService {
 
   private getLegalUseWarscrollAbilityActions(game: Game, player: PlayerState): UseWarscrollAbilityAction[] {
     const warscrollDefinition = player.getWarscrollDefinition();
-    if (warscrollDefinition === undefined || !this.isCombatTurnStep(game, player.id, TurnStep.Power)) {
+    if (warscrollDefinition === undefined || !game.isCombatPowerStep(player.id)) {
       return [];
     }
 
@@ -270,7 +270,4 @@ export class CombatActionService extends LegalActionService {
     });
   }
 
-  private isCombatTurnStep(game: Game, playerId: PlayerId, turnStep: TurnStep): boolean {
-    return game.state.kind === "combatTurn" && game.turnStep === turnStep && game.activePlayerId === playerId;
-  }
 }

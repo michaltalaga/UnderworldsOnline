@@ -1,5 +1,8 @@
 import type { Card } from "../cards/Card";
-import type { FighterId, GameId, PlayerId } from "../values/ids";
+import type { FeatureTokenState } from "./FeatureTokenState";
+import type { HexCell } from "./HexCell";
+import type { Territory } from "./Territory";
+import type { FeatureTokenId, FighterId, GameId, HexId, PlayerId, TerritoryId } from "../values/ids";
 import { EndPhaseStep, Phase, SetupStep, TurnStep } from "../values/enums";
 import { BoardState } from "./BoardState";
 import { FighterState } from "./FighterState";
@@ -125,6 +128,62 @@ export class Game {
 
   public isFinalRound(): boolean {
     return this.roundNumber >= this.maxRounds;
+  }
+
+  // --- State queries (eliminate game.state.kind checks) ---
+
+  public isInCombatTurn(): boolean {
+    return this.flowState.kind === "combatTurn";
+  }
+
+  public isCombatReady(): boolean {
+    return this.flowState.kind === "combatReady";
+  }
+
+  public isCombatActionStep(playerId: PlayerId): boolean {
+    return this.isInCombatTurn() && this.turnStep === TurnStep.Action && this.activePlayerId === playerId;
+  }
+
+  public isCombatPowerStep(playerId: PlayerId): boolean {
+    return this.isInCombatTurn() && this.turnStep === TurnStep.Power && this.activePlayerId === playerId;
+  }
+
+  // --- Board delegation (eliminate game.board.* chains) ---
+
+  public getHex(hexId: HexId): HexCell | undefined {
+    return this.board.getHex(hexId);
+  }
+
+  public getFighterHex(fighter: FighterState): HexCell | undefined {
+    return fighter.currentHexId === null ? undefined : this.board.getHex(fighter.currentHexId);
+  }
+
+  public getNeighbors(hex: HexCell): HexCell[] {
+    return this.board.getNeighbors(hex);
+  }
+
+  public getDistance(a: HexCell, b: HexCell): number {
+    return this.board.getDistance(a, b);
+  }
+
+  public areAdjacent(a: HexCell, b: HexCell): boolean {
+    return this.board.areAdjacent(a, b);
+  }
+
+  public getTerritory(territoryId: TerritoryId): Territory | undefined {
+    return this.board.getTerritory(territoryId);
+  }
+
+  public getFeatureToken(tokenId: FeatureTokenId): FeatureTokenState | undefined {
+    return this.board.getFeatureToken(tokenId);
+  }
+
+  public get featureTokens(): readonly FeatureTokenState[] {
+    return this.board.featureTokens;
+  }
+
+  public get territories(): readonly Territory[] {
+    return this.board.territories;
   }
 
   public transitionTo(nextState: GameState): void {

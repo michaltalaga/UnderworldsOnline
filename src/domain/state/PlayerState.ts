@@ -114,6 +114,10 @@ export class PlayerState {
     };
   }
 
+  public getWarscrollTokenCount(tokenName: string): number {
+    return this.warscrollState.tokens[tokenName] ?? 0;
+  }
+
   // Find a card by ID — for debugging/engine compatibility only.
   // Prefer holding object references instead of looking up by ID.
   public getCard(cardId: string): Card | undefined {
