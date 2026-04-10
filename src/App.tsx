@@ -41,6 +41,27 @@ const deckChoices = [
 
 type DeckSelection = { kind: "none" } | { kind: "selected"; deck: DeckDefinition | null };
 
+function CommitBadge() {
+  return (
+    <span
+      style={{
+        position: "fixed",
+        top: 8,
+        left: 8,
+        fontSize: 11,
+        fontFamily: "monospace",
+        color: "#111",
+        opacity: 0.8,
+        zIndex: 9999,
+        pointerEvents: "none",
+        userSelect: "none",
+      }}
+    >
+      Version: {__GIT_HASH__}
+    </span>
+  );
+}
+
 export default function App() {
   const [selectedWarbandId, setSelectedWarbandId] = useState<WarbandDefinitionId | null>(null);
   const [deckSelection, setDeckSelection] = useState<DeckSelection>({ kind: "none" });
@@ -48,14 +69,17 @@ export default function App() {
 
   if (selectedWarbandId === null) {
     return (
-      <WarbandSelectScreen
-        warbands={availableWarbands}
-        onSelect={(warbandId) => {
-          setSelectedWarbandId(warbandId);
-          setDeckSelection({ kind: "none" });
-          setSetupGame(null);
-        }}
-      />
+      <>
+        <CommitBadge />
+        <WarbandSelectScreen
+          warbands={availableWarbands}
+          onSelect={(warbandId) => {
+            setSelectedWarbandId(warbandId);
+            setDeckSelection({ kind: "none" });
+            setSetupGame(null);
+          }}
+        />
+      </>
     );
   }
 
@@ -64,35 +88,44 @@ export default function App() {
 
   if (deckSelection.kind === "none") {
     return (
-      <DeckSelectScreen
-        warbandName={selectedWarband.name}
-        choices={deckChoices}
-        onSelect={(deck) => {
-          setDeckSelection({ kind: "selected", deck });
-          setSetupGame(null);
-        }}
-      />
+      <>
+        <CommitBadge />
+        <DeckSelectScreen
+          warbandName={selectedWarband.name}
+          choices={deckChoices}
+          onSelect={(deck) => {
+            setDeckSelection({ kind: "selected", deck });
+            setSetupGame(null);
+          }}
+        />
+      </>
     );
   }
 
   if (setupGame === null) {
     return (
-      <SetupApp
-        warband={selectedWarband}
-        deck={deckSelection.deck}
-        onSetupComplete={(game) => setSetupGame(game)}
-        boardTheme={embergard1BoardTheme}
-      />
+      <>
+        <CommitBadge />
+        <SetupApp
+          warband={selectedWarband}
+          deck={deckSelection.deck}
+          onSetupComplete={(game) => setSetupGame(game)}
+          boardTheme={embergard1BoardTheme}
+        />
+      </>
     );
   }
 
   return (
-    <PracticeBattlefieldApp
-      warband={selectedWarband}
-      deck={deckSelection.deck}
-      game={setupGame}
-      boardTheme={embergard1BoardTheme}
-    />
+    <>
+      <CommitBadge />
+      <PracticeBattlefieldApp
+        warband={selectedWarband}
+        deck={deckSelection.deck}
+        game={setupGame}
+        boardTheme={embergard1BoardTheme}
+      />
+    </>
   );
 }
 import {
