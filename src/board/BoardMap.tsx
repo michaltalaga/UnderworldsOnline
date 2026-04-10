@@ -121,6 +121,15 @@ export default function BoardMap({
           {statusBadge.activePlayerName}
         </strong>
         <p className="battlefield-board-status-copy">{statusBadge.interactionLabel}</p>
+        {statusBadge.scores !== null && statusBadge.scores.length > 0 ? (
+          <div className="battlefield-board-status-scores">
+            {statusBadge.scores.map((s) => (
+              <span key={s.name} className="battlefield-board-status-score">
+                {s.name}: <strong>{s.glory}</strong>
+              </span>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       {lastResolvedAction === null ? null : (

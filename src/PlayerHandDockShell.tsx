@@ -1,6 +1,6 @@
-import type { PlayerState } from "./domain";
+import type { CardId, PlayerState } from "./domain";
 import DeckPileWidget from "./DeckPileWidget";
-import PlayerHandDock, { type DockInteraction } from "./PlayerHandDock";
+import PlayerHandDock, { type DockInteraction, type ScorableObjective } from "./PlayerHandDock";
 
 // The fixed bar at the bottom of the screen that hosts the hand dock in
 // the center and the deck/discard pile widgets on the sides. This wrapper
@@ -11,11 +11,15 @@ import PlayerHandDock, { type DockInteraction } from "./PlayerHandDock";
 type PlayerHandDockShellProps = {
   player: PlayerState;
   interaction: DockInteraction;
+  scorableObjectives?: ScorableObjective[];
+  onScoreObjective?: (cardId: CardId) => void;
 };
 
 export default function PlayerHandDockShell({
   player,
   interaction,
+  scorableObjectives,
+  onScoreObjective,
 }: PlayerHandDockShellProps) {
   return (
     <div className="player-hand-dock-shell">
@@ -25,7 +29,12 @@ export default function PlayerHandDockShell({
         discardCount={player.objectiveDeck.discardPile.length}
         tone="objective"
       />
-      <PlayerHandDock player={player} interaction={interaction} />
+      <PlayerHandDock
+        player={player}
+        interaction={interaction}
+        scorableObjectives={scorableObjectives}
+        onScoreObjective={onScoreObjective}
+      />
       <DeckPileWidget
         label="Power"
         drawCount={player.powerDeck.drawPile.length}

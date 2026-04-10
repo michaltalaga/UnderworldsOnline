@@ -849,6 +849,22 @@ body {
   color: #5f4d3f;
 }
 
+.battlefield-board-status-scores {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.battlefield-board-status-score {
+  font-size: 0.78rem;
+  color: #5f4d3f;
+}
+
+.battlefield-board-status-score strong {
+  color: #c8a33d;
+  font-size: 0.88rem;
+}
+
 .battlefield-board-last-action {
   position: absolute;
   top: 126px;

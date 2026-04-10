@@ -210,6 +210,7 @@ export function getBoardTurnHeaderModel({
   selectedFeatureToken: FeatureTokenState | null;
 }): BoardTurnHeaderModel {
   const roundLabel = getRoundLabel(game);
+  const scores = game.players.map((p) => ({ name: p.name, glory: p.glory }));
   if (game.turnStep === TurnStep.Action) {
     if (pendingFocus) {
       return {
@@ -219,6 +220,7 @@ export function getBoardTurnHeaderModel({
         stepLabel: "Action Step",
         tone: "action",
         roundLabel,
+        scores,
       };
     }
 
@@ -230,6 +232,7 @@ export function getBoardTurnHeaderModel({
         stepLabel: "Action Step",
         tone: "action",
         roundLabel,
+        scores,
       };
     }
 
@@ -244,6 +247,7 @@ export function getBoardTurnHeaderModel({
         stepLabel: "Action Step",
         tone: "action",
         roundLabel,
+        scores,
       };
     }
 
@@ -258,6 +262,7 @@ export function getBoardTurnHeaderModel({
         stepLabel: "Action Step",
         tone: "action",
         roundLabel,
+        scores,
       };
     }
 
@@ -269,6 +274,7 @@ export function getBoardTurnHeaderModel({
         stepLabel: "Action Step",
         tone: "action",
         roundLabel,
+        scores,
       };
     }
 
@@ -280,6 +286,7 @@ export function getBoardTurnHeaderModel({
         stepLabel: "Action Step",
         tone: "action",
         roundLabel,
+        scores,
       };
     }
 
@@ -290,6 +297,7 @@ export function getBoardTurnHeaderModel({
       stepLabel: "Action Step",
       tone: "action",
       roundLabel,
+      scores,
     };
   }
 
@@ -302,6 +310,7 @@ export function getBoardTurnHeaderModel({
         stepLabel: "Power Step",
         tone: "power",
         roundLabel,
+        scores,
       };
     }
 
@@ -313,6 +322,7 @@ export function getBoardTurnHeaderModel({
         stepLabel: "Power Step",
         tone: "power",
         roundLabel,
+        scores,
       };
     }
 
@@ -324,6 +334,7 @@ export function getBoardTurnHeaderModel({
         stepLabel: "Power Step",
         tone: "power",
         roundLabel,
+        scores,
       };
     }
 
@@ -334,6 +345,7 @@ export function getBoardTurnHeaderModel({
       stepLabel: "Power Step",
       tone: "power",
       roundLabel,
+      scores,
     };
   }
 
@@ -344,6 +356,7 @@ export function getBoardTurnHeaderModel({
     stepLabel: "Board State",
     tone: "neutral",
     roundLabel,
+    scores,
   };
 }
 

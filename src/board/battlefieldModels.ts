@@ -108,6 +108,8 @@ export type BoardTurnHeaderModel = {
   // Round + activation label like "Round 1 · Turn 2/4". Null when the
   // game isn't in a combat turn (setup, end phase, finished).
   roundLabel: string | null;
+  // Glory scores: [player1Name, player1Glory, player2Name, player2Glory]
+  scores: { name: string; glory: number }[] | null;
 };
 
 export type ArmedPathModel = {

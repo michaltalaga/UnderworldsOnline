@@ -3,6 +3,13 @@ import type { CardId, PlayerState } from "./domain";
 import type { Card } from "./domain/cards/Card";
 import type { PowerOverlayOption } from "./board/battlefieldModels";
 
+// Scorable objective info passed from the parent.
+export type ScorableObjective = {
+  cardId: CardId;
+  cardName: string;
+  gloryValue: number;
+};
+
 // The hand dock is the single visual surface for card interactions. It
 // runs in one of four modes, driven by the `interaction` prop supplied by
 // the parent (SetupApp or PracticeBattlefieldApp):
@@ -46,21 +53,27 @@ export type DockInteraction =
 type PlayerHandDockProps = {
   player: PlayerState;
   interaction: DockInteraction;
+  scorableObjectives?: ScorableObjective[];
+  onScoreObjective?: (cardId: CardId) => void;
 };
 
 type DockCard = {
   cardId: CardId;
   card: Card;
+  isScorable: boolean;
 };
 
-export default function PlayerHandDock({ player, interaction }: PlayerHandDockProps) {
+export default function PlayerHandDock({ player, interaction, scorableObjectives = [], onScoreObjective }: PlayerHandDockProps) {
+  const scorableIds = new Set(scorableObjectives.map((s) => s.cardId));
   const objectiveCards: DockCard[] = player.objectiveHand.map((card) => ({
     cardId: card.id,
     card,
+    isScorable: scorableIds.has(card.id),
   }));
   const powerCards: DockCard[] = player.powerHand.map((card) => ({
     cardId: card.id,
     card,
+    isScorable: false,
   }));
   const totalCards = objectiveCards.length + powerCards.length;
 
@@ -90,6 +103,7 @@ export default function PlayerHandDock({ player, interaction }: PlayerHandDockPr
             cards={objectiveCards}
             tone="objective"
             interaction={interaction}
+            onScoreObjective={onScoreObjective}
           />
           <PlayerHandDockSection
             label="Power"
@@ -133,11 +147,13 @@ function PlayerHandDockSection({
   cards,
   tone,
   interaction,
+  onScoreObjective,
 }: {
   label: string;
   cards: DockCard[];
   tone: "objective" | "power";
   interaction: DockInteraction;
+  onScoreObjective?: (cardId: CardId) => void;
 }) {
   if (cards.length === 0) {
     return null;
@@ -153,6 +169,7 @@ function PlayerHandDockSection({
             card={card}
             tone={tone}
             interaction={interaction}
+            onScoreObjective={onScoreObjective}
           />
         ))}
       </ul>
@@ -164,10 +181,12 @@ function DockCardListItem({
   card,
   tone,
   interaction,
+  onScoreObjective,
 }: {
   card: DockCard;
   tone: "objective" | "power";
   interaction: DockInteraction;
+  onScoreObjective?: (cardId: CardId) => void;
 }) {
   const name = card.card.name;
   const text = card.card.text;
@@ -200,6 +219,9 @@ function DockCardListItem({
         {playState.isArmed ? (
           <span className="player-hand-dock-card-tag">armed</span>
         ) : null}
+        {card.isScorable ? (
+          <span className="player-hand-dock-card-tag player-hand-dock-card-tag-scorable">scorable</span>
+        ) : null}
       </div>
       {text !== "" ? (
         <p className="player-hand-dock-card-text">{text}</p>
@@ -212,6 +234,18 @@ function DockCardListItem({
           pendingOptionKey={playState.pendingOptionKey}
           onSelect={playState.onSelectOption}
         />
+      ) : null}
+      {card.isScorable && onScoreObjective !== undefined ? (
+        <button
+          type="button"
+          className="player-hand-dock-card-score-button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onScoreObjective(card.cardId);
+          }}
+        >
+          Score ({glory} glory)
+        </button>
       ) : null}
     </>
   );

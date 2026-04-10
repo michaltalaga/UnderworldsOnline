@@ -292,6 +292,31 @@ button.player-hand-dock-card:hover {
   color: #6e4f0e;
 }
 
+.player-hand-dock-card-tag-scorable {
+  background: rgba(46, 160, 67, 0.18);
+  border-color: rgba(46, 160, 67, 0.46);
+  color: #1a7f37;
+}
+
+.player-hand-dock-card-score-button {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border: 1px solid rgba(46, 160, 67, 0.5);
+  border-radius: 6px;
+  background: rgba(46, 160, 67, 0.12);
+  color: #1a7f37;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.player-hand-dock-card-score-button:hover {
+  background: rgba(46, 160, 67, 0.25);
+}
+
 .player-hand-dock-card-text {
   margin: 0;
   font-size: 0.72rem;

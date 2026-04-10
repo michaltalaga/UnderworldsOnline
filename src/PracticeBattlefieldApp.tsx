@@ -13,6 +13,7 @@ import {
   GameEngine,
   GameRecordKind,
   LocalPlayerController,
+  CardZone,
   TurnStep,
   type CardId,
   type CombatController,
@@ -73,7 +74,10 @@ import {
 } from "./board/fighterActionLens";
 
 const combatActionService = new CombatActionService();
-const demoEngine = new GameEngine();
+const demoEngine = new GameEngine(
+  undefined, undefined, undefined, undefined, undefined, undefined,
+  new Set([LOCAL_PLAYER_ID]),
+);
 
 type PracticeBattlefieldAppProps = {
   warband?: WarbandDefinition;
@@ -179,6 +183,9 @@ export default function PracticeBattlefieldApp({
       : `Discard ${selectedFocusObjectiveIds.length} objective card${selectedFocusObjectiveIds.length === 1 ? "" : "s"} and ${selectedFocusPowerIds.length} power card${selectedFocusPowerIds.length === 1 ? "" : "s"}, then draw ${selectedFocusObjectiveIds.length} objective card${selectedFocusObjectiveIds.length === 1 ? "" : "s"} and ${selectedFocusPowerIds.length + 1} power card${selectedFocusPowerIds.length + 1 === 1 ? "" : "s"}.`;
   const latestCombat = game.getLatestRecord(GameRecordKind.Combat);
   const diceTrayModel = getDiceTrayModel(game);
+  const scorableObjectives = localPlayer === null ? [] : localPlayer.objectiveHand
+    .filter((card) => card.getLegalTargets(game).length > 0)
+    .map((card) => ({ cardId: card.id, cardName: card.name, gloryValue: card.gloryValue }));
   const recentCombat =
     latestCombat !== null &&
     selectedFighterId !== null &&
@@ -419,6 +426,34 @@ export default function PracticeBattlefieldApp({
     setSelectedAttackKeysByTarget({});
     setSelectedChargeKeysByPair({});
     setSelectedFighterId(getNextSelectedFighterId(game, previousActivePlayerId, previousSelectedFighterId));
+    refreshGame();
+  }
+
+  function scoreObjective(cardId: CardId): void {
+    if (localPlayer === null) return;
+    const card = localPlayer.getCard(cardId);
+    if (card === undefined) return;
+    // Manually score: move from hand to scored pile, add glory
+    const handIndex = localPlayer.objectiveHand.findIndex((c) => c.id === cardId);
+    if (handIndex === -1) return;
+    localPlayer.objectiveHand.splice(handIndex, 1);
+    card.zone = CardZone.ScoredObjectives;
+    card.revealed = true;
+    localPlayer.scoredObjectives.push(card);
+    localPlayer.glory += card.gloryValue;
+    game.eventLog.push(`${localPlayer.name} scored ${card.name} for ${card.gloryValue} glory.`);
+    setResultFlash({
+      id: Date.now(),
+      tone: "power",
+      title: `Scored: ${card.name}`,
+      detail: `+${card.gloryValue} glory`,
+    });
+    setLastResolvedAction({
+      id: Date.now(),
+      tone: "power",
+      title: `Scored: ${card.name}`,
+      detail: `+${card.gloryValue} glory`,
+    });
     refreshGame();
   }
 
@@ -664,7 +699,7 @@ export default function PracticeBattlefieldApp({
 
     const timeoutId = window.setTimeout(() => {
       setResultFlash((current) => (current?.id === resultFlash.id ? null : current));
-    }, 2200);
+    }, 5000);
 
     return () => window.clearTimeout(timeoutId);
   }, [resultFlash]);
@@ -753,7 +788,12 @@ export default function PracticeBattlefieldApp({
       </section>
 
       {dockPlayer === null ? null : (
-        <PlayerHandDockShell player={dockPlayer} interaction={dockInteraction} />
+        <PlayerHandDockShell
+          player={dockPlayer}
+          interaction={dockInteraction}
+          scorableObjectives={scorableObjectives}
+          onScoreObjective={scoreObjective}
+        />
       )}
     </main>
     <DebugPanel>

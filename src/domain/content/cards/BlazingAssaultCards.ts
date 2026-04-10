@@ -83,19 +83,19 @@ export class GetStuckIn extends ObjectiveCard {
   protected override canScore(game: Game): boolean {
     const combat = getMyLatestCombat(game, this.owner.id);
     if (combat === null) return false;
-    // Use the FighterSlain event's hex if the target was killed, otherwise current hex
-    const targetFighter = game.getFighter(combat.data.context.targetFighterId);
-    let targetHexId = targetFighter?.currentHexId ?? null;
-    if (targetHexId === null && combat.data.targetSlain) {
+    // If target was slain, the latest FighterSlain event has the hex they died on.
+    // Otherwise the target is still on the board — use the combat record's target.
+    let targetHexId: string | null = null;
+    if (combat.data.targetSlain) {
       const slainEvent = game.getLatestEvent(GameRecordKind.FighterSlain);
-      if (slainEvent !== null && slainEvent.data.slainFighterId === combat.data.context.targetFighterId) {
-        targetHexId = slainEvent.data.slainHexId;
-      }
+      targetHexId = slainEvent?.data.slainHexId ?? null;
+    } else {
+      const target = game.getFighter(combat.data.context.targetFighterId);
+      targetHexId = target?.currentHexId ?? null;
     }
     if (targetHexId === null) return false;
     const owner = getTerritoryOwner(game, targetHexId);
-    // "Enemy territory" from the target's perspective = territory owned by the attacker
-    return owner === this.owner.id;
+    return owner !== null && owner !== this.owner.id;
   }
 }
 

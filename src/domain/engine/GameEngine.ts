@@ -127,6 +127,7 @@ export class GameEngine {
   private readonly combatResolver: CombatResolver;
   private readonly victoryResolver: VictoryResolver;
   private readonly warscrollEffectResolver: WarscrollEffectResolver;
+  private readonly manualScoringPlayerIds: ReadonlySet<PlayerId>;
 
   public constructor(
     shuffleCards: GameEngineShuffleCards = GameEngine.copyCards,
@@ -135,6 +136,7 @@ export class GameEngine {
     victoryResolver: VictoryResolver = new DefaultVictoryResolver(),
     warscrollEffectResolver: WarscrollEffectResolver = new DefaultWarscrollEffectResolver(),
     combatActionService: CombatActionService = new CombatActionService(warscrollEffectResolver),
+    manualScoringPlayerIds: ReadonlySet<PlayerId> = new Set(),
   ) {
     this.shuffleCards = shuffleCards;
     this.rollOffResolver = rollOffResolver;
@@ -142,6 +144,7 @@ export class GameEngine {
     this.combatResolver = combatResolver;
     this.victoryResolver = victoryResolver;
     this.warscrollEffectResolver = warscrollEffectResolver;
+    this.manualScoringPlayerIds = manualScoringPlayerIds;
   }
 
   public applySetupAction(game: Game, action: SetupAction): Game {
@@ -1405,6 +1408,15 @@ export class GameEngine {
     const scoringContext = this.createEndPhaseTriggerContext(EndPhaseActionKind.ResolveScoreObjectives);
     const playerResolutions: ObjectiveScoringPlayerResolution[] = [];
     for (const player of game.players) {
+      if (this.manualScoringPlayerIds.has(player.id)) {
+        playerResolutions.push({
+          playerId: player.id,
+          playerName: player.name,
+          gloryGained: 0,
+          scoredObjectives: [],
+        });
+        continue;
+      }
       playerResolutions.push(
         this.scoreObjectivesForPlayer(game, player, scoringContext),
       );
@@ -2027,6 +2039,7 @@ export class GameEngine {
     do {
       scoredObjectives = false;
       for (const player of game.players) {
+        if (this.manualScoringPlayerIds.has(player.id)) continue;
         const resolution = this.scoreObjectivesForPlayer(
           game,
           player,
