@@ -7,13 +7,12 @@ import { GameRecordKind } from "../../state/GameRecord";
 import type { Game } from "../../state/Game";
 import type { PlayerState } from "../../state/PlayerState";
 import { CardZone, FeatureTokenSide } from "../../values/enums";
-import { friendlyFightersWithoutGuard } from "../../cards/targeting";
-import { enemyFightersWithoutStagger } from "../../cards/targeting";
+import { friendlyFightersWithoutGuard, enemyFightersWithoutStagger } from "../../cards/targeting";
 import { giveGuard, giveStagger } from "../../cards/effects";
+import { getMyLatestCombat, getTerritoryOwner } from "../../cards/scoring";
 
 // ─── Custom Objectives (event-log aware) ────────────────────────────────────
 
-/** Score immediately after an Attack roll if all results were successes. */
 export class PracticeObjective01 extends ObjectiveCard {
   constructor(id: string, owner: PlayerState, zone: CardZone) {
     super(id, owner, "Practice Objective 01",
@@ -22,15 +21,13 @@ export class PracticeObjective01 extends ObjectiveCard {
   }
 
   protected override canScore(game: Game): boolean {
-    const world = game.getEventLogState();
-    const latestCombat = world.getLatestEvent(GameRecordKind.Combat);
-    if (latestCombat === null || latestCombat.invokedByPlayerId !== this.owner.id) return false;
-    if (latestCombat.data.attackRoll.length === 0) return false;
-    return latestCombat.data.attackSuccesses === latestCombat.data.attackRoll.length;
+    const combat = getMyLatestCombat(game, this.owner.id);
+    if (combat === null) return false;
+    if (combat.data.attackRoll.length === 0) return false;
+    return combat.data.attackSuccesses === combat.data.attackRoll.length;
   }
 }
 
-/** Score after an enemy fighter is slain if target was leader or Health >= attacker's. */
 export class PracticeObjective02 extends ObjectiveCard {
   constructor(id: string, owner: PlayerState, zone: CardZone) {
     super(id, owner, "Practice Objective 02",
@@ -39,19 +36,17 @@ export class PracticeObjective02 extends ObjectiveCard {
   }
 
   protected override canScore(game: Game): boolean {
-    const world = game.getEventLogState();
-    const latestCombat = world.getLatestEvent(GameRecordKind.Combat);
-    if (latestCombat === null || latestCombat.invokedByPlayerId !== this.owner.id || !latestCombat.data.targetSlain) return false;
-    const attackerPlayer = game.getPlayer(latestCombat.data.context.attackerPlayerId);
-    const defenderPlayer = game.getPlayer(latestCombat.data.context.defenderPlayerId);
-    const attackerDef = attackerPlayer?.getFighterDefinition(latestCombat.data.context.attackerFighterId);
-    const targetDef = defenderPlayer?.getFighterDefinition(latestCombat.data.context.targetFighterId);
+    const combat = getMyLatestCombat(game, this.owner.id);
+    if (combat === null || !combat.data.targetSlain) return false;
+    const attackerPlayer = game.getPlayer(combat.data.context.attackerPlayerId);
+    const defenderPlayer = game.getPlayer(combat.data.context.defenderPlayerId);
+    const attackerDef = attackerPlayer?.getFighterDefinition(combat.data.context.attackerFighterId);
+    const targetDef = defenderPlayer?.getFighterDefinition(combat.data.context.targetFighterId);
     if (attackerDef === undefined || targetDef === undefined) return false;
     return targetDef.isLeader || targetDef.health >= attackerDef.health;
   }
 }
 
-/** Score after a friendly fighter Delves in enemy territory. */
 export class PracticeObjective03 extends ObjectiveCard {
   constructor(id: string, owner: PlayerState, zone: CardZone) {
     super(id, owner, "Practice Objective 03",
@@ -60,21 +55,18 @@ export class PracticeObjective03 extends ObjectiveCard {
   }
 
   protected override canScore(game: Game): boolean {
-    const world = game.getEventLogState();
-    const latestDelve = world.getLatestEvent(GameRecordKind.Delve);
+    const latestDelve = game.getLatestEvent(GameRecordKind.Delve);
     if (latestDelve === null || latestDelve.invokedByPlayerId !== this.owner.id) return false;
-    const delveHex = game.board.getHex(latestDelve.data.featureTokenHexId);
-    if (delveHex?.territoryId == null) return false;
-    const territory = game.board.getTerritory(delveHex.territoryId);
-    if (territory?.ownerPlayerId == null) return false;
-    if (territory.ownerPlayerId !== this.owner.id) return true;
+    const owner = getTerritoryOwner(game, latestDelve.data.featureTokenHexId);
+    if (owner === null) return false;
+    // Enemy territory = not ours
+    if (owner !== this.owner.id) return true;
+    // Underdog exception: score even in own territory if behind on glory
     const opponent = game.getOpponent(this.owner.id);
-    if (opponent !== undefined && this.owner.glory < opponent.glory) return true;
-    return false;
+    return opponent !== undefined && this.owner.glory < opponent.glory;
   }
 }
 
-/** Score in end phase if 3+ different treasure tokens were Delved this round. */
 export class PracticeObjective04 extends ObjectiveCard {
   constructor(id: string, owner: PlayerState, zone: CardZone) {
     super(id, owner, "Practice Objective 04",
@@ -84,8 +76,7 @@ export class PracticeObjective04 extends ObjectiveCard {
 
   protected override canScore(game: Game): boolean {
     if (game.phase !== "end") return false;
-    const world = game.getEventLogState();
-    const thisRoundDelves = world.getEventHistory(GameRecordKind.Delve).filter((event) =>
+    const thisRoundDelves = game.getEventHistory(GameRecordKind.Delve).filter((event) =>
       event.roundNumber === game.roundNumber && event.invokedByPlayerId === this.owner.id,
     );
     const thisRoundTreasureDelves = thisRoundDelves.filter((event) =>

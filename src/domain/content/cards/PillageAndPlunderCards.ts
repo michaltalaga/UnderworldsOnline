@@ -1,19 +1,37 @@
+import type { Target } from "../../cards/Card";
+import { FighterState } from "../../state/FighterState";
+import { GameRecordKind } from "../../state/GameRecord";
+import type { Game } from "../../state/Game";
 import type { PlayerState } from "../../state/PlayerState";
-import type { CardZone } from "../../values/enums";
+import { type CardZone, FeatureTokenSide, GameActionKind } from "../../values/enums";
 import { ObjectiveCard } from "../../cards/ObjectiveCard";
 import { PloyCard } from "../../cards/PloyCard";
 import { UpgradeCard } from "../../cards/UpgradeCard";
+import {
+  friendlyFightersOnBoard,
+  enemyFightersOnBoard,
+} from "../../cards/targeting";
+import { giveGuard, giveStagger, heal, dealDamage, pushFighter } from "../../cards/effects";
+import { getMyLatestCombat, getTerritoryOwner } from "../../cards/scoring";
 
 // Source: Warhammer Underworlds — Pillage and Plunder Rivals deck.
-// Rules text is NOT enforced by the engine.
 
 // ─── Objectives ─────────────────────────────────────────────────────────────
 
 export class BrokenProspects extends ObjectiveCard {
   constructor(id: string, owner: PlayerState, zone: CardZone) {
     super(id, owner, "Broken Prospects",
-      "Score this in an end phase if 3 or more different treasure tokens were Delved by your warband this battle round or if a treasure token held by an enemy fighter at the start of the battle round was Delved by your warband this battle round.",
+      "Score this in an end phase if 3 or more different treasure tokens were Delved by your warband this battle round.",
       2, zone);
+  }
+
+  protected override canScore(game: Game): boolean {
+    if (game.phase !== "end") return false;
+    const thisRoundDelves = game.getEventHistory(GameRecordKind.Delve)
+      .filter((e) => e.roundNumber === game.roundNumber && e.invokedByPlayerId === this.owner.id);
+    const treasureDelves = thisRoundDelves.filter((e) => e.data.sideBeforeDelve === FeatureTokenSide.Treasure);
+    const uniqueTokens = new Set(treasureDelves.map((e) => e.data.featureTokenId));
+    return uniqueTokens.size >= 3;
   }
 }
 
@@ -23,6 +41,16 @@ export class AgainstTheOdds extends ObjectiveCard {
       "Score this in an end phase if an odd-numbered treasure token was Delved by your warband this battle round.",
       1, zone);
   }
+
+  protected override canScore(game: Game): boolean {
+    if (game.phase !== "end") return false;
+    const thisRoundDelves = game.getEventHistory(GameRecordKind.Delve)
+      .filter((e) => e.roundNumber === game.roundNumber && e.invokedByPlayerId === this.owner.id);
+    return thisRoundDelves.some((e) => {
+      const token = game.board.getFeatureToken(e.data.featureTokenId);
+      return token !== undefined && token.value % 2 === 1;
+    });
+  }
 }
 
 export class LostInTheDepths extends ObjectiveCard {
@@ -30,6 +58,23 @@ export class LostInTheDepths extends ObjectiveCard {
     super(id, owner, "Lost in the Depths",
       "Score this in an end phase if no friendly fighters are adjacent and any friendly fighters are not slain.",
       1, zone);
+  }
+
+  protected override canScore(game: Game): boolean {
+    if (game.phase !== "end") return false;
+    const aliveFighters = this.owner.fighters.filter((f) => !f.isSlain && f.currentHexId !== null);
+    if (aliveFighters.length === 0) return false;
+    // Check no two alive friendly fighters are adjacent
+    for (let i = 0; i < aliveFighters.length; i++) {
+      for (let j = i + 1; j < aliveFighters.length; j++) {
+        const hexA = game.board.getHex(aliveFighters[i].currentHexId!);
+        const hexB = game.board.getHex(aliveFighters[j].currentHexId!);
+        if (hexA !== undefined && hexB !== undefined && game.board.areAdjacent(hexA, hexB)) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 }
 
@@ -39,6 +84,16 @@ export class DesolateHomeland extends ObjectiveCard {
       "Score this in an end phase if there are 1 or fewer treasure tokens in friendly territory.",
       1, zone);
   }
+
+  protected override canScore(game: Game): boolean {
+    if (game.phase !== "end") return false;
+    let count = 0;
+    for (const token of game.board.featureTokens) {
+      if (token.side !== FeatureTokenSide.Treasure) continue;
+      if (getTerritoryOwner(game, token.hexId) === this.owner.id) count++;
+    }
+    return count <= 1;
+  }
 }
 
 export class TornLandscape extends ObjectiveCard {
@@ -46,6 +101,13 @@ export class TornLandscape extends ObjectiveCard {
     super(id, owner, "Torn Landscape",
       "Score this in an end phase if there are 2 or fewer treasure tokens on the battlefield.",
       2, zone);
+  }
+
+  protected override canScore(game: Game): boolean {
+    if (game.phase !== "end") return false;
+    const treasureCount = game.board.featureTokens
+      .filter((t) => t.side === FeatureTokenSide.Treasure).length;
+    return treasureCount <= 2;
   }
 }
 
@@ -55,6 +117,19 @@ export class StripTheRealm extends ObjectiveCard {
       "Score this in an end phase if there are no treasure tokens on the battlefield or if no enemy fighters hold any treasure tokens.",
       3, zone);
   }
+
+  protected override canScore(game: Game): boolean {
+    if (game.phase !== "end") return false;
+    const treasures = game.board.featureTokens.filter((t) => t.side === FeatureTokenSide.Treasure);
+    if (treasures.length === 0) return true;
+    const opponent = game.getOpponent(this.owner.id);
+    if (opponent === undefined) return false;
+    const enemyHoldsTreasure = treasures.some((t) =>
+      t.heldByFighterId !== null &&
+      opponent.fighters.some((f) => f.id === t.heldByFighterId),
+    );
+    return !enemyHoldsTreasure;
+  }
 }
 
 export class AggressiveClaimant extends ObjectiveCard {
@@ -62,6 +137,15 @@ export class AggressiveClaimant extends ObjectiveCard {
     super(id, owner, "Aggressive Claimant",
       "Score this immediately after a friendly fighter's successful Attack if the target was in neutral territory.",
       1, zone);
+  }
+
+  protected override canScore(game: Game): boolean {
+    const combat = getMyLatestCombat(game, this.owner.id);
+    if (combat === null || combat.data.damageInflicted === 0) return false;
+    const targetFighter = game.getFighter(combat.data.context.targetFighterId);
+    if (targetFighter === undefined || targetFighter.currentHexId === null) return false;
+    // Neutral territory: no owner
+    return getTerritoryOwner(game, targetFighter.currentHexId) === null;
   }
 }
 
@@ -71,6 +155,14 @@ export class ClaimThePrize extends ObjectiveCard {
       "Score this immediately after a friendly fighter Delves in enemy territory.",
       1, zone);
   }
+
+  protected override canScore(game: Game): boolean {
+    const latestDelve = game.getLatestEvent(GameRecordKind.Delve);
+    if (latestDelve === null || latestDelve.invokedByPlayerId !== this.owner.id) return false;
+    const owner = getTerritoryOwner(game, latestDelve.data.featureTokenHexId);
+    // Enemy territory: owned by someone, but not us
+    return owner !== null && owner !== this.owner.id;
+  }
 }
 
 export class DelvingForWealth extends ObjectiveCard {
@@ -78,6 +170,15 @@ export class DelvingForWealth extends ObjectiveCard {
     super(id, owner, "Delving for Wealth (Restricted)",
       "Score this immediately after your warband Delves for the third or subsequent time this combat phase.",
       1, zone);
+  }
+
+  protected override canScore(game: Game): boolean {
+    // Early exit: only scorable right after a delve by us
+    const latestDelve = game.getLatestEvent(GameRecordKind.Delve);
+    if (latestDelve === null || latestDelve.invokedByPlayerId !== this.owner.id) return false;
+    const thisRoundDelves = game.getEventHistory(GameRecordKind.Delve)
+      .filter((e) => e.roundNumber === game.roundNumber && e.invokedByPlayerId === this.owner.id);
+    return thisRoundDelves.length >= 3;
   }
 }
 
@@ -87,6 +188,19 @@ export class ShareTheLoad extends ObjectiveCard {
       "Score this immediately after a friendly fighter Moves, if that fighter and any other friendly fighters are each on feature tokens.",
       1, zone);
   }
+
+  protected override canScore(game: Game): boolean {
+    const latestMove = game.getLatestEvent(GameRecordKind.Move);
+    if (latestMove === null) return false;
+    if (latestMove.invokedByPlayerId !== this.owner.id) return false;
+    // Check how many friendly fighters are on feature tokens
+    const friendlyOnFeatureTokens = this.owner.fighters.filter((f) => {
+      if (f.isSlain || f.currentHexId === null) return false;
+      const hex = game.board.getHex(f.currentHexId);
+      return hex?.featureTokenId !== null && hex?.featureTokenId !== undefined;
+    });
+    return friendlyOnFeatureTokens.length >= 2;
+  }
 }
 
 export class HostileTakeover extends ObjectiveCard {
@@ -95,6 +209,19 @@ export class HostileTakeover extends ObjectiveCard {
       "Score this immediately after the second or subsequent Attack made by your warband that was not part of a Charge.",
       1, zone);
   }
+
+  protected override canScore(game: Game): boolean {
+    // Early exit: only scorable right after a combat by us
+    const combat = getMyLatestCombat(game, this.owner.id);
+    if (combat === null) return false;
+    const nonChargeAttacks = game.getEventHistory(GameRecordKind.Combat)
+      .filter((e) =>
+        e.roundNumber === game.roundNumber &&
+        e.invokedByPlayerId === this.owner.id &&
+        e.actionKind !== GameActionKind.Charge,
+      );
+    return nonChargeAttacks.length >= 2;
+  }
 }
 
 export class CarefulSurvey extends ObjectiveCard {
@@ -102,6 +229,19 @@ export class CarefulSurvey extends ObjectiveCard {
     super(id, owner, "Careful Survey",
       "Score this immediately after an Action step if there is a friendly fighter in each territory.",
       1, zone);
+  }
+
+  protected override canScore(game: Game): boolean {
+    const territories = game.board.territories;
+    if (territories.length === 0) return false;
+    for (const territory of territories) {
+      const hasFriendlyFighter = this.owner.fighters.some((f) => {
+        if (f.isSlain || f.currentHexId === null) return false;
+        return territory.hexIds.includes(f.currentHexId);
+      });
+      if (!hasFriendlyFighter) return false;
+    }
+    return true;
   }
 }
 
@@ -112,12 +252,30 @@ export class PillageSidestep extends PloyCard {
     super(id, owner, "Sidestep",
       "Pick a friendly fighter. Push that fighter 1 hex.", zone);
   }
+
+  protected override getTargets(): Target[] {
+    return friendlyFightersOnBoard(this);
+  }
+
+  protected override onPlay(game: Game, target: Target | null): string[] {
+    if (!(target instanceof FighterState)) return [];
+    return pushFighter(game, target, 1);
+  }
 }
 
 export class PridefulDuellist extends PloyCard {
   constructor(id: string, owner: PlayerState, zone: CardZone) {
     super(id, owner, "Prideful Duellist",
       "Play this immediately after a friendly fighter's Attack if the attacker is in enemy territory. Heal the attacker.", zone);
+  }
+
+  protected override getTargets(): Target[] {
+    return friendlyFightersOnBoard(this);
+  }
+
+  protected override onPlay(_game: Game, target: Target | null): string[] {
+    if (!(target instanceof FighterState)) return [];
+    return heal(target);
   }
 }
 
@@ -126,6 +284,15 @@ export class PillageCommandingStride extends PloyCard {
     super(id, owner, "Commanding Stride",
       "Push your leader up to 3 hexes. That push must end in a starting hex.", zone);
   }
+
+  protected override getTargets(): Target[] {
+    return friendlyFightersOnBoard(this);
+  }
+
+  protected override onPlay(game: Game, target: Target | null): string[] {
+    if (!(target instanceof FighterState)) return [];
+    return pushFighter(game, target, 1);
+  }
 }
 
 export class CrumblingMine extends PloyCard {
@@ -133,6 +300,7 @@ export class CrumblingMine extends PloyCard {
     super(id, owner, "Crumbling Mine",
       "Pick a treasure token that is not held. Flip that treasure token.", zone);
   }
+  // Untargeted, no-op for now (would need to target feature tokens, not fighters).
 }
 
 export class ExplosiveCharges extends PloyCard {
@@ -140,12 +308,24 @@ export class ExplosiveCharges extends PloyCard {
     super(id, owner, "Explosive Charges",
       "Domain: Friendly fighters have +1 Move while using Charge abilities.", zone);
   }
+  // Domain effect — passive modifier, no-op for now.
 }
 
 export class WaryDelver extends PloyCard {
   constructor(id: string, owner: PlayerState, zone: CardZone) {
     super(id, owner, "Wary Delver",
       "Pick a friendly fighter with any Charge tokens. Give that fighter a Guard token.", zone);
+  }
+
+  protected override getTargets(): Target[] {
+    return this.owner.fighters.filter(
+      (f) => !f.isSlain && f.currentHexId !== null && f.hasChargeToken,
+    );
+  }
+
+  protected override onPlay(_game: Game, target: Target | null): string[] {
+    if (!(target instanceof FighterState)) return [];
+    return giveGuard(target);
   }
 }
 
@@ -154,12 +334,34 @@ export class BrashScout extends PloyCard {
     super(id, owner, "Brash Scout",
       "Play this immediately after you make an Attack roll for a fighter in enemy territory. Re-roll 1 dice.", zone);
   }
+  // Reaction-timing ploy: untargeted, no-op for now.
 }
 
 export class SuddenBlast extends PloyCard {
   constructor(id: string, owner: PlayerState, zone: CardZone) {
     super(id, owner, "Sudden Blast",
       "Pick an enemy fighter adjacent to a friendly fighter. Give that enemy fighter a Stagger token.", zone);
+  }
+
+  protected override getTargets(game: Game): Target[] {
+    const friendlies = friendlyFightersOnBoard(this);
+    const enemies = enemyFightersOnBoard(this, game);
+    // Only target enemies adjacent to at least one friendly
+    return enemies.filter((enemy) => {
+      if (enemy.currentHexId === null) return false;
+      const enemyHex = game.board.getHex(enemy.currentHexId);
+      if (enemyHex === undefined) return false;
+      return friendlies.some((friendly) => {
+        if (friendly.currentHexId === null) return false;
+        const friendlyHex = game.board.getHex(friendly.currentHexId);
+        return friendlyHex !== undefined && game.board.areAdjacent(enemyHex, friendlyHex);
+      });
+    });
+  }
+
+  protected override onPlay(_game: Game, target: Target | null): string[] {
+    if (!(target instanceof FighterState)) return [];
+    return giveStagger(target);
   }
 }
 
@@ -168,12 +370,48 @@ export class TunnellingTerror extends PloyCard {
     super(id, owner, "Tunnelling Terror",
       "Pick a friendly fighter with no Move or Charge tokens. Remove, place in empty stagger hex, give Charge token.", zone);
   }
+
+  protected override getTargets(): Target[] {
+    return this.owner.fighters.filter(
+      (f) => !f.isSlain && f.currentHexId !== null && !f.hasMoveToken && !f.hasChargeToken,
+    );
+  }
+
+  protected override onPlay(game: Game, target: Target | null): string[] {
+    if (!(target instanceof FighterState)) return [];
+    // Simplified: push 1 hex and give charge token
+    const messages = pushFighter(game, target, 1);
+    target.hasChargeToken = true;
+    messages.push(`gave Charge token to ${target.id}`);
+    return messages;
+  }
 }
 
 export class TrappedCache extends PloyCard {
   constructor(id: string, owner: PlayerState, zone: CardZone) {
     super(id, owner, "Trapped Cache",
       "Pick an undamaged enemy fighter within 1 hex of a treasure token. Inflict 1 damage on that fighter.", zone);
+  }
+
+  protected override getTargets(game: Game): Target[] {
+    const enemies = enemyFightersOnBoard(this, game);
+    return enemies.filter((enemy) => {
+      if (enemy.damage > 0) return false;
+      if (enemy.currentHexId === null) return false;
+      const enemyHex = game.board.getHex(enemy.currentHexId);
+      if (enemyHex === undefined) return false;
+      // Check if any treasure token is within 1 hex
+      const neighbors = game.board.getNeighbors(enemyHex);
+      const nearbyHexIds = [enemyHex.id, ...neighbors.map((h) => h.id)];
+      return game.board.featureTokens.some(
+        (t) => t.side === FeatureTokenSide.Treasure && nearbyHexIds.includes(t.hexId),
+      );
+    });
+  }
+
+  protected override onPlay(_game: Game, target: Target | null): string[] {
+    if (!(target instanceof FighterState)) return [];
+    return dealDamage(target, 1);
   }
 }
 

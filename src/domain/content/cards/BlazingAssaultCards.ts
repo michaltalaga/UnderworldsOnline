@@ -1,5 +1,6 @@
 import type { Target } from "../../cards/Card";
 import { FighterState } from "../../state/FighterState";
+import { GameRecordKind } from "../../state/GameRecord";
 import type { Game } from "../../state/Game";
 import type { PlayerState } from "../../state/PlayerState";
 import type { CardZone } from "../../values/enums";
@@ -8,6 +9,7 @@ import { PloyCard } from "../../cards/PloyCard";
 import { UpgradeCard } from "../../cards/UpgradeCard";
 import { friendlyFightersOnBoard } from "../../cards/targeting";
 import { giveGuard, heal, dealDamage, removeMovementToken, pushFighter } from "../../cards/effects";
+import { getMyLatestCombat, getTerritoryOwner } from "../../cards/scoring";
 
 // ─── Objectives ─────────────────────────────────────────────────────────────
 
@@ -16,12 +18,32 @@ export class StrikeTheHead extends ObjectiveCard {
     super(id, owner, "Strike the Head",
       "Score this immediately after an enemy fighter is slain by a friendly fighter if the target was a leader or had Health \u2265 attacker's.", 1, zone);
   }
+
+  protected override canScore(game: Game): boolean {
+    const combat = getMyLatestCombat(game, this.owner.id);
+    if (combat === null || !combat.data.targetSlain) return false;
+    const attackerPlayer = game.getPlayer(combat.data.context.attackerPlayerId);
+    const defenderPlayer = game.getPlayer(combat.data.context.defenderPlayerId);
+    const attackerDef = attackerPlayer?.getFighterDefinition(combat.data.context.attackerFighterId);
+    const targetDef = defenderPlayer?.getFighterDefinition(combat.data.context.targetFighterId);
+    if (attackerDef === undefined || targetDef === undefined) return false;
+    return targetDef.isLeader || targetDef.health >= attackerDef.health;
+  }
 }
 
 export class BranchingFate extends ObjectiveCard {
   constructor(id: string, owner: PlayerState, zone: CardZone) {
     super(id, owner, "Branching Fate",
       "Score after an Attack roll with 3+ dice of different symbols (2+ if underdog).", 1, zone);
+  }
+
+  protected override canScore(game: Game): boolean {
+    const combat = getMyLatestCombat(game, this.owner.id);
+    if (combat === null) return false;
+    const uniqueSymbols = new Set(combat.data.attackRoll);
+    const opponent = game.getOpponent(this.owner.id);
+    const isUnderdog = opponent !== undefined && this.owner.glory < opponent.glory;
+    return uniqueSymbols.size >= (isUnderdog ? 2 : 3);
   }
 }
 
@@ -30,12 +52,25 @@ export class PerfectStrike extends ObjectiveCard {
     super(id, owner, "Perfect Strike",
       "Score immediately after an Attack roll if all results were successes.", 1, zone);
   }
+
+  protected override canScore(game: Game): boolean {
+    const combat = getMyLatestCombat(game, this.owner.id);
+    if (combat === null) return false;
+    if (combat.data.attackRoll.length === 0) return false;
+    return combat.data.attackSuccesses === combat.data.attackRoll.length;
+  }
 }
 
 export class CriticalEffort extends ObjectiveCard {
   constructor(id: string, owner: PlayerState, zone: CardZone) {
     super(id, owner, "Critical Effort",
       "Score immediately after an Attack roll if any result was a critical success.", 1, zone);
+  }
+
+  protected override canScore(game: Game): boolean {
+    const combat = getMyLatestCombat(game, this.owner.id);
+    if (combat === null) return false;
+    return combat.data.attackCriticals > 0;
   }
 }
 
@@ -44,12 +79,38 @@ export class GetStuckIn extends ObjectiveCard {
     super(id, owner, "Get Stuck In",
       "Score after a friendly fighter's Attack if the target was in enemy territory.", 1, zone);
   }
+
+  protected override canScore(game: Game): boolean {
+    const combat = getMyLatestCombat(game, this.owner.id);
+    if (combat === null) return false;
+    // Use the FighterSlain event's hex if the target was killed, otherwise current hex
+    const targetFighter = game.getFighter(combat.data.context.targetFighterId);
+    let targetHexId = targetFighter?.currentHexId ?? null;
+    if (targetHexId === null && combat.data.targetSlain) {
+      const slainEvent = game.getLatestEvent(GameRecordKind.FighterSlain);
+      if (slainEvent !== null && slainEvent.data.slainFighterId === combat.data.context.targetFighterId) {
+        targetHexId = slainEvent.data.slainHexId;
+      }
+    }
+    if (targetHexId === null) return false;
+    const owner = getTerritoryOwner(game, targetHexId);
+    // "Enemy territory" from the target's perspective = territory owned by the attacker
+    return owner === this.owner.id;
+  }
 }
 
 export class StrongStart extends ObjectiveCard {
   constructor(id: string, owner: PlayerState, zone: CardZone) {
     super(id, owner, "Strong Start",
       "Score after an enemy fighter is slain if it was the first fighter slain this combat phase.", 1, zone);
+  }
+
+  protected override canScore(game: Game): boolean {
+    const combat = getMyLatestCombat(game, this.owner.id);
+    if (combat === null || !combat.data.targetSlain) return false;
+    const slainEvents = game.getEventHistory(GameRecordKind.FighterSlain)
+      .filter((e) => e.roundNumber === game.roundNumber);
+    return slainEvents.length === 1;
   }
 }
 
@@ -58,12 +119,30 @@ export class KeepChoppin extends ObjectiveCard {
     super(id, owner, "Keep Choppin'",
       "Score in an end phase if your warband Attacked 3+ times this combat phase.", 1, zone);
   }
+
+  protected override canScore(game: Game): boolean {
+    if (game.phase !== "end") return false;
+    const combatEvents = game.getEventHistory(GameRecordKind.Combat)
+      .filter((e) => e.roundNumber === game.roundNumber && e.invokedByPlayerId === this.owner.id);
+    return combatEvents.length >= 3;
+  }
 }
 
 export class FieldsOfBlood extends ObjectiveCard {
   constructor(id: string, owner: PlayerState, zone: CardZone) {
     super(id, owner, "Fields of Blood",
       "Score in an end phase if 4+ fighters are damaged and/or slain.", 1, zone);
+  }
+
+  protected override canScore(game: Game): boolean {
+    if (game.phase !== "end") return false;
+    let count = 0;
+    for (const player of game.players) {
+      for (const f of player.fighters) {
+        if (f.damage > 0 || f.isSlain) count++;
+      }
+    }
+    return count >= 4;
   }
 }
 
@@ -72,12 +151,30 @@ export class GoAllOut extends ObjectiveCard {
     super(id, owner, "Go All Out",
       "Score in an end phase if 5+ fighters have Move and/or Charge tokens.", 1, zone);
   }
+
+  protected override canScore(game: Game): boolean {
+    if (game.phase !== "end") return false;
+    let count = 0;
+    for (const player of game.players) {
+      for (const f of player.fighters) {
+        if (!f.isSlain && (f.hasMoveToken || f.hasChargeToken)) count++;
+      }
+    }
+    return count >= 5;
+  }
 }
 
 export class OnTheEdge extends ObjectiveCard {
   constructor(id: string, owner: PlayerState, zone: CardZone) {
     super(id, owner, "On the Edge",
       "Score in an end phase if any enemy fighters are vulnerable.", 1, zone);
+  }
+
+  protected override canScore(game: Game): boolean {
+    if (game.phase !== "end") return false;
+    const opponent = game.getOpponent(this.owner.id);
+    if (opponent === undefined) return false;
+    return opponent.fighters.some((f) => !f.isSlain && f.damage > 0);
   }
 }
 
@@ -86,12 +183,30 @@ export class Denial extends ObjectiveCard {
     super(id, owner, "Denial",
       "Score in an end phase if no enemy fighters are in friendly territory.", 1, zone);
   }
+
+  protected override canScore(game: Game): boolean {
+    if (game.phase !== "end") return false;
+    const opponent = game.getOpponent(this.owner.id);
+    if (opponent === undefined) return false;
+    for (const fighter of opponent.fighters) {
+      if (fighter.isSlain || fighter.currentHexId === null) continue;
+      if (getTerritoryOwner(game, fighter.currentHexId) === this.owner.id) return false;
+    }
+    return true;
+  }
 }
 
 export class Annihilation extends ObjectiveCard {
   constructor(id: string, owner: PlayerState, zone: CardZone) {
     super(id, owner, "Annihilation",
       "Score in an end phase if each enemy fighter is slain.", 5, zone);
+  }
+
+  protected override canScore(game: Game): boolean {
+    if (game.phase !== "end") return false;
+    const opponent = game.getOpponent(this.owner.id);
+    if (opponent === undefined) return false;
+    return opponent.fighters.every((f) => f.isSlain);
   }
 }
 
@@ -102,7 +217,6 @@ export class DeterminedEffort extends PloyCard {
     super(id, owner, "Determined Effort",
       "Play after picking a weapon for an Attack. That weapon gains +1 Attack dice (+2 if underdog).", zone);
   }
-  // Reaction-timing ploy: untargeted, no-op for now.
 }
 
 export class TwistTheKnife extends PloyCard {
@@ -110,7 +224,6 @@ export class TwistTheKnife extends PloyCard {
     super(id, owner, "Twist the Knife",
       "Play after picking a melee weapon for an Attack. That weapon gains Grievous for that Attack.", zone);
   }
-  // Reaction-timing ploy: untargeted, no-op for now.
 }
 
 export class WingsOfWar extends PloyCard {
