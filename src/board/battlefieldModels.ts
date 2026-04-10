@@ -4,7 +4,7 @@ import type {
   DelveAction,
   EndActionStepAction,
   FighterId,
-  FighterState,
+  Fighter,
   FocusAction,
   GuardAction,
   HexId,
@@ -20,7 +20,7 @@ import type {
 // `getFighterActionLens` and consumed by the board map, the action panel,
 // and the various armed-interaction handlers.
 export type FighterActionLens = {
-  fighter: FighterState | null;
+  fighter: Fighter | null;
   attackTargetHexIds: Set<HexId>;
   attackTargetIds: Set<FighterId>;
   moveHexIds: Set<HexId>;

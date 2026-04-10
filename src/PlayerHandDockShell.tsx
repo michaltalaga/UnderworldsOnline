@@ -1,4 +1,4 @@
-import type { CardId, PlayerState } from "./domain";
+import type { CardId, Player } from "./domain";
 import DeckPileWidget from "./DeckPileWidget";
 import PlayerHandDock, { type DockInteraction, type ScorableObjective } from "./PlayerHandDock";
 
@@ -9,7 +9,7 @@ import PlayerHandDock, { type DockInteraction, type ScorableObjective } from "./
 // Callers (`SetupApp`, `PracticeBattlefieldApp`) mount this instead of
 // `PlayerHandDock` directly.
 type PlayerHandDockShellProps = {
-  player: PlayerState;
+  player: Player;
   interaction: DockInteraction;
   scorableObjectives?: ScorableObjective[];
   onScoreObjective?: (cardId: CardId) => void;

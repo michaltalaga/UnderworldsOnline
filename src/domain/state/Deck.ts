@@ -1,7 +1,7 @@
 import { DeckKind } from "../values/enums";
 import type { Card } from "../cards/Card";
 
-export class DeckState {
+export class Deck {
   public readonly kind: DeckKind;
   public drawPile: Card[];
   public discardPile: Card[];

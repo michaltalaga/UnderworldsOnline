@@ -1,4 +1,4 @@
-import type { Game, PlayerState } from "./domain";
+import type { Game, Player } from "./domain";
 
 // The UI currently treats player:one as the viewer; the opponent is either
 // auto-resolved during setup or will eventually be driven by AI / network.
@@ -6,7 +6,7 @@ import type { Game, PlayerState } from "./domain";
 // through this helper so the concept lives in exactly one place.
 export const LOCAL_PLAYER_ID = "player:one";
 
-export function getLocalPlayer(game: Game): PlayerState | null {
+export function getLocalPlayer(game: Game): Player | null {
   return (
     game.players.find((player) => player.id === LOCAL_PLAYER_ID) ??
     game.players[0] ??

@@ -1,14 +1,14 @@
 import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
 import type { Game } from "../state/Game";
-import type { PlayerState } from "../state/PlayerState";
+import type { Player } from "../state/Player";
 import { Ability } from "./Ability";
 import { canFighterGuard } from "./fighterChecks";
 
 export class GuardAbility extends Ability {
   readonly name = "Guard";
 
-  getLegalActions(game: Game, player: PlayerState): GameAction[] {
+  getLegalActions(game: Game, player: Player): GameAction[] {
     if (!game.isCombatActionStep(player.id)) return [];
     return player.fighters.flatMap((fighter) =>
       canFighterGuard(fighter) ? [new GuardAction(player.id, fighter.id)] : [],

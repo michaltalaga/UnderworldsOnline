@@ -1,14 +1,14 @@
 import { AttackAction } from "../actions/AttackAction";
 import { GameAction } from "../actions/GameAction";
 import type { Game } from "../state/Game";
-import type { PlayerState } from "../state/PlayerState";
+import type { Player } from "../state/Player";
 import { Ability } from "./Ability";
 import { canFighterAttack } from "./fighterChecks";
 
 export class AttackAbility extends Ability {
   readonly name = "Attack";
 
-  getLegalActions(game: Game, player: PlayerState): GameAction[] {
+  getLegalActions(game: Game, player: Player): GameAction[] {
     if (!game.isCombatActionStep(player.id)) return [];
     const opponent = game.getOpponent(player.id);
     if (opponent === undefined) return [];

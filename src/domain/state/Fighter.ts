@@ -1,6 +1,6 @@
 import type { CardId, FighterDefinitionId, FighterId, HexId, PlayerId } from "../values/ids";
 
-export class FighterState {
+export class Fighter {
   public readonly id: FighterId;
   public readonly definitionId: FighterDefinitionId;
   public readonly ownerPlayerId: PlayerId;

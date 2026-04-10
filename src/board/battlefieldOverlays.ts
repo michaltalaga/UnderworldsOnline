@@ -5,14 +5,14 @@ import {
   TurnStep,
   UseWarscrollAbilityAction,
   type CardId,
-  type FeatureTokenState,
+  type FeatureToken,
   type FighterId,
   type Game,
   type GameAction,
   type HexId,
-  type PlayerState,
+  type Player,
 } from "../domain";
-import { FighterState } from "../domain/state/FighterState";
+import { Fighter } from "../domain/state/Fighter";
 import { compactHexId, getFeatureTokenBadge, getFighterName } from "./battlefieldFormatters";
 import type {
   BoardTurnHeaderModel,
@@ -32,7 +32,7 @@ import type {
 
 export function getPowerOverlayModel(
   game: Game,
-  activePlayer: PlayerState | null,
+  activePlayer: Player | null,
   legalActions: GameAction[],
 ): PowerOverlayModel {
   if (activePlayer === null || game.turnStep !== TurnStep.Power) {
@@ -56,7 +56,7 @@ export function getPowerOverlayModel(
     }
 
     for (const target of targets) {
-      const targetFighterId = target instanceof FighterState ? target.id : null;
+      const targetFighterId = target instanceof Fighter ? target.id : null;
       const action = new PlayPloyAction(activePlayer.id, card.id, targetFighterId);
       const key = `ploy:${action.cardId}:${action.targetFighterId ?? "none"}`;
       if (ployOptions.has(key)) {
@@ -84,7 +84,7 @@ export function getPowerOverlayModel(
 
     const targets = card.getLegalTargets(game);
     for (const target of targets) {
-      if (!(target instanceof FighterState)) {
+      if (!(target instanceof Fighter)) {
         continue;
       }
 
@@ -200,14 +200,14 @@ export function getBoardTurnHeaderModel({
   pendingChargeBadgeLabel: string | null;
   pendingChargeHexId: HexId | null;
   pendingChargeTargetName: string | null;
-  pendingDelveFeatureTokenId: FeatureTokenState["id"] | null;
+  pendingDelveFeatureTokenId: FeatureToken["id"] | null;
   pendingFocus: boolean;
   pendingGuardFighterId: FighterId | null;
   pendingMoveHexId: HexId | null;
   pendingPassPower: boolean;
   pendingPowerOption: PowerOverlayOption | null;
   selectedFighterName: string;
-  selectedFeatureToken: FeatureTokenState | null;
+  selectedFeatureToken: FeatureToken | null;
 }): BoardTurnHeaderModel {
   const roundLabel = getRoundLabel(game);
   const scores = game.players.map((p) => ({ name: p.name, glory: p.glory }));

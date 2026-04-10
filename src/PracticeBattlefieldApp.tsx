@@ -18,7 +18,7 @@ import {
   TurnStep,
   type CardId,
   type CombatController,
-  type FeatureTokenState,
+  type FeatureToken,
   type FighterId,
   type Game,
   type DeckDefinition,
@@ -127,7 +127,7 @@ export default function PracticeBattlefieldApp({
   const [selectedMoveHexId, setSelectedMoveHexId] = useState<HexId | null>(null);
   const [selectedChargeKey, setSelectedChargeKey] = useState<string | null>(null);
   const [pendingMoveHexId, setPendingMoveHexId] = useState<HexId | null>(null);
-  const [pendingDelveFeatureTokenId, setPendingDelveFeatureTokenId] = useState<FeatureTokenState["id"] | null>(null);
+  const [pendingDelveFeatureTokenId, setPendingDelveFeatureTokenId] = useState<FeatureToken["id"] | null>(null);
   const [pendingFocus, setPendingFocus] = useState(false);
   const [pendingGuardFighterId, setPendingGuardFighterId] = useState<FighterId | null>(null);
   const [pendingPassPower, setPendingPassPower] = useState(false);

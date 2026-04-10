@@ -1,12 +1,12 @@
 import type { Card } from "../cards/Card";
-import type { FeatureTokenState } from "./FeatureTokenState";
+import type { FeatureToken } from "./FeatureToken";
 import type { HexCell } from "./HexCell";
 import type { Territory } from "./Territory";
 import type { FeatureTokenId, FighterId, GameId, HexId, PlayerId, TerritoryId } from "../values/ids";
 import { EndPhaseStep, Phase, SetupStep, TurnStep } from "../values/enums";
-import { BoardState } from "./BoardState";
-import { FighterState } from "./FighterState";
-import { GameEventLogState } from "./GameEventLogState";
+import { Board } from "./Board";
+import { Fighter } from "./Fighter";
+import { GameEventLog } from "./GameEventLog";
 import {
   type GameRecord,
   type GameRecordDataByKind,
@@ -18,12 +18,12 @@ import {
   createGameStateFromLegacyFields,
   type GameState,
 } from "./GameState";
-import { PlayerState } from "./PlayerState";
+import { Player } from "./Player";
 
 export class Game {
   public readonly id: GameId;
-  public board: BoardState;
-  public players: PlayerState[];
+  public board: Board;
+  public players: Player[];
   public roundNumber: number;
   public maxRounds: number;
   public consecutivePasses: number;
@@ -34,8 +34,8 @@ export class Game {
 
   public constructor(
     id: GameId,
-    board: BoardState,
-    players: PlayerState[] = [],
+    board: Board,
+    players: Player[] = [],
     roundNumber: number = 1,
     maxRounds: number = 3,
     phase: Phase = Phase.Setup,
@@ -106,15 +106,15 @@ export class Game {
     return this.records;
   }
 
-  public getPlayer(playerId: PlayerId): PlayerState | undefined {
+  public getPlayer(playerId: PlayerId): Player | undefined {
     return this.players.find((player) => player.id === playerId);
   }
 
-  public getOpponent(playerId: PlayerId): PlayerState | undefined {
+  public getOpponent(playerId: PlayerId): Player | undefined {
     return this.players.find((player) => player.id !== playerId);
   }
 
-  public getFighter(fighterId: FighterId): FighterState | undefined {
+  public getFighter(fighterId: FighterId): Fighter | undefined {
     return this.players
       .flatMap((player) => player.fighters)
       .find((fighter) => fighter.id === fighterId);
@@ -154,7 +154,7 @@ export class Game {
     return this.board.getHex(hexId);
   }
 
-  public getFighterHex(fighter: FighterState): HexCell | undefined {
+  public getFighterHex(fighter: Fighter): HexCell | undefined {
     return fighter.currentHexId === null ? undefined : this.board.getHex(fighter.currentHexId);
   }
 
@@ -174,11 +174,11 @@ export class Game {
     return this.board.getTerritory(territoryId);
   }
 
-  public getFeatureToken(tokenId: FeatureTokenId): FeatureTokenState | undefined {
+  public getFeatureToken(tokenId: FeatureTokenId): FeatureToken | undefined {
     return this.board.getFeatureToken(tokenId);
   }
 
-  public get featureTokens(): readonly FeatureTokenState[] {
+  public get featureTokens(): readonly FeatureToken[] {
     return this.board.featureTokens;
   }
 
@@ -251,8 +251,8 @@ export class Game {
     return this.getEventHistory(kind).map((event) => event.data);
   }
 
-  public getEventLogState(): GameEventLogState {
-    return new GameEventLogState(this.records);
+  public getEventLogState(): GameEventLog {
+    return new GameEventLog(this.records);
   }
 
   public toJSON(): object {

@@ -24,7 +24,7 @@ import {
 // treats them as blank stubs until we add the real card rules.
 //
 // NOTE ON INSPIRED STATS: `FighterDefinition` only stores a single profile,
-// but `FighterState.isInspired` tracks the inspired flag. The fighters below
+// but `Fighter.isInspired` tracks the inspired flag. The fighters below
 // use the uninspired profile. Inspired stat swaps will need engine-level
 // support before they can be encoded.
 

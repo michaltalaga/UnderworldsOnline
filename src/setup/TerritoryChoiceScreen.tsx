@@ -2,13 +2,13 @@ import {
   BoardSide,
   ChooseTerritoryAction,
   type Game,
-  type PlayerState,
+  type Player,
   type Territory,
 } from "../domain";
 
 type TerritoryChoiceScreenProps = {
   game: Game;
-  player: PlayerState;
+  player: Player;
   onChoose: (action: ChooseTerritoryAction) => void;
 };
 

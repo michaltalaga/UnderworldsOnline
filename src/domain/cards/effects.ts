@@ -1,21 +1,21 @@
 import type { Game } from "../state/Game";
-import type { FighterState } from "../state/FighterState";
+import type { Fighter } from "../state/Fighter";
 import { HexKind } from "../values/enums";
 
 /** Give a fighter a Guard token. */
-export function giveGuard(fighter: FighterState): string[] {
+export function giveGuard(fighter: Fighter): string[] {
   fighter.hasGuardToken = true;
   return [`gave Guard token to ${fighter.id}`];
 }
 
 /** Give a fighter a Stagger token. */
-export function giveStagger(fighter: FighterState): string[] {
+export function giveStagger(fighter: Fighter): string[] {
   fighter.hasStaggerToken = true;
   return [`gave Stagger token to ${fighter.id}`];
 }
 
 /** Heal a fighter for the given amount (default 1). */
-export function heal(fighter: FighterState, amount: number = 1): string[] {
+export function heal(fighter: Fighter, amount: number = 1): string[] {
   const healed = Math.min(fighter.damage, amount);
   fighter.damage -= healed;
   return [`healed ${fighter.id} for ${healed} damage`];
@@ -23,7 +23,7 @@ export function heal(fighter: FighterState, amount: number = 1): string[] {
 
 /** Inflict damage on a fighter. */
 export function dealDamage(
-  fighter: FighterState,
+  fighter: Fighter,
   amount: number,
 ): string[] {
   fighter.damage += amount;
@@ -31,7 +31,7 @@ export function dealDamage(
 }
 
 /** Remove a Move token (or Charge token if no Move token). */
-export function removeMovementToken(fighter: FighterState): string[] {
+export function removeMovementToken(fighter: Fighter): string[] {
   if (fighter.hasMoveToken) {
     fighter.hasMoveToken = false;
     return [`removed Move token from ${fighter.id}`];
@@ -44,7 +44,7 @@ export function removeMovementToken(fighter: FighterState): string[] {
 }
 
 /** Push a fighter one hex in a random valid direction. */
-export function pushOneHex(game: Game, fighter: FighterState): string[] {
+export function pushOneHex(game: Game, fighter: Fighter): string[] {
   if (fighter.currentHexId === null) {
     return [`${fighter.id} is not on the board`];
   }
@@ -70,7 +70,7 @@ export function pushOneHex(game: Game, fighter: FighterState): string[] {
 /** Push a fighter the given number of hexes. */
 export function pushFighter(
   game: Game,
-  fighter: FighterState,
+  fighter: Fighter,
   hexCount: number,
 ): string[] {
   const messages: string[] = [];

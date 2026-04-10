@@ -1,7 +1,7 @@
 import type { FeatureTokenId, FighterId, HexId } from "../values/ids";
 import { FeatureTokenSide } from "../values/enums";
 
-export class FeatureTokenState {
+export class FeatureToken {
   public readonly id: FeatureTokenId;
   public readonly value: number;
   public hexId: HexId;

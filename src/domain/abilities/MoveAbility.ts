@@ -2,7 +2,7 @@ import { GameAction } from "../actions/GameAction";
 import { MoveAction } from "../actions/MoveAction";
 import type { Game } from "../state/Game";
 import type { HexCell } from "../state/HexCell";
-import type { PlayerState } from "../state/PlayerState";
+import type { Player } from "../state/Player";
 import type { HexId } from "../values/ids";
 import { Ability } from "./Ability";
 import { canFighterMove, isTraversableMoveHex } from "./fighterChecks";
@@ -15,7 +15,7 @@ type MovePathSearchNode = {
 export class MoveAbility extends Ability {
   readonly name = "Move";
 
-  getLegalActions(game: Game, player: PlayerState): GameAction[] {
+  getLegalActions(game: Game, player: Player): GameAction[] {
     if (!game.isCombatActionStep(player.id)) return [];
     return player.fighters.flatMap((fighter) => {
       const definition = player.getFighterDefinition(fighter.id);

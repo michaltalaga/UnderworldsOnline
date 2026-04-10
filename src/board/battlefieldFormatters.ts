@@ -1,8 +1,8 @@
 import {
   FeatureTokenSide,
   HexKind,
-  type FeatureTokenState,
-  type FighterState,
+  type FeatureToken,
+  type Fighter,
   type Game,
   type HexCell,
 } from "../domain";
@@ -37,7 +37,7 @@ export function formatFeatureTokenSide(side: FeatureTokenSide): string {
   return side === FeatureTokenSide.Hidden ? "hidden" : side;
 }
 
-export function getFeatureTokenBadge(featureToken: FeatureTokenState): string {
+export function getFeatureTokenBadge(featureToken: FeatureToken): string {
   const prefix =
     featureToken.side === FeatureTokenSide.Hidden
       ? "H"
@@ -64,7 +64,7 @@ export function getFighterName(game: Game, fighterId: string): string {
   return player?.getFighterDefinition(fighter.id)?.name ?? fighter.id;
 }
 
-export function getFighterMapLabel(game: Game, fighter: FighterState): string {
+export function getFighterMapLabel(game: Game, fighter: Fighter): string {
   const player = game.getPlayer(fighter.ownerPlayerId);
   const fighterName = player?.getFighterDefinition(fighter.id)?.name ?? fighter.id;
   const numericSuffix = fighterName.match(/(\d+)$/);
@@ -79,7 +79,7 @@ export function getFighterMapLabel(game: Game, fighter: FighterState): string {
     .join("");
 }
 
-export function getFighterStatusTags(fighter: FighterState): string[] {
+export function getFighterStatusTags(fighter: Fighter): string[] {
   const tags: string[] = [];
 
   if (fighter.hasMoveToken) {
@@ -116,8 +116,8 @@ export function getFighterStatusTags(fighter: FighterState): string[] {
 export function buildHexTitle(
   game: Game,
   hex: HexCell,
-  fighter: FighterState | null,
-  featureToken: FeatureTokenState | null,
+  fighter: Fighter | null,
+  featureToken: FeatureToken | null,
 ): string {
   const parts = [hex.id, formatTerritoryLabel(game, hex)];
 

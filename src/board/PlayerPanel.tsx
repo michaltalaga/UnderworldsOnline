@@ -1,4 +1,4 @@
-import type { FighterId, Game, PlayerState } from "../domain";
+import type { FighterId, Game, Player } from "../domain";
 import {
   formatWeaponAccuracy,
   getFighterStatusTags,
@@ -9,10 +9,10 @@ import {
 // fighter showing health, weapons, and status tags. The list on the side of
 // the battlefield view mounts one of these per player.
 export type PlayerPanelProps = {
-  activePlayerId: PlayerState["id"] | null;
+  activePlayerId: Player["id"] | null;
   game: Game;
   onSelectFighter: (fighterId: FighterId | null) => void;
-  player: PlayerState;
+  player: Player;
   selectedFighterId: FighterId | null;
 };
 

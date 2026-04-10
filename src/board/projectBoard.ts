@@ -1,4 +1,4 @@
-import type { BoardState, HexCell } from "../domain";
+import type { Board, HexCell } from "../domain";
 
 export const hexRadius = 46;
 export const hexWidth = Math.sqrt(3) * hexRadius;
@@ -11,7 +11,7 @@ export type PositionedHex = {
   top: number;
 };
 
-export function projectBoard(board: BoardState): { positionedHexes: PositionedHex[] } {
+export function projectBoard(board: Board): { positionedHexes: PositionedHex[] } {
   const rawHexes = board.hexes.map((hex) => {
     const centerX = hexRadius * Math.sqrt(3) * (hex.q + hex.r / 2);
     const centerY = hexRadius * 1.5 * hex.r;

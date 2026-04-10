@@ -27,7 +27,7 @@ import {
   WeaponAbilityKind,
   createCombatReadySetupPracticeGame,
   type Game,
-  type PlayerState,
+  type Player,
   type WarscrollAbilityDefinition,
   type WeaponDefinition,
 } from "../domain";
@@ -267,7 +267,7 @@ export function createCombatDebugSnapshot(
     throw new Error(`Could not find debug defender ${debugDefenderId}.`);
   }
 
-  applyDebugDefenderFeatureTokenState(game, defender.id, defenderState);
+  applyDebugDefenderFeatureToken(game, defender.id, defenderState);
   defender.hasGuardToken = defenderState.hasGuardToken ?? false;
   defender.hasStaggerToken = defenderState.hasStaggerToken ?? false;
 
@@ -569,7 +569,7 @@ function movePowerCardsToDiscard(
   }
 }
 
-function applyDebugDefenderFeatureTokenState(
+function applyDebugDefenderFeatureToken(
   game: Game,
   defenderId: string,
   defenderState: CombatDebugDefenderState,
@@ -655,7 +655,7 @@ function getDefenderFeatureTokenSnapshot(
   };
 }
 
-function seedEndPhaseDebugObjective(game: Game, player: PlayerState): void {
+function seedEndPhaseDebugObjective(game: Game, player: Player): void {
   const objectiveName = "Practice Objective 04";
   const existingObjective = player.objectiveHand.find((card) => card.name === objectiveName);
   if (existingObjective !== undefined) {
@@ -682,7 +682,7 @@ function seedEndPhaseDebugObjective(game: Game, player: PlayerState): void {
   game.eventLog.push("Debug setup swapped Practice Objective 04 into Player One's hand.");
 }
 
-function seedEndPhaseDebugDelves(game: Game, player: PlayerState): void {
+function seedEndPhaseDebugDelves(game: Game, player: Player): void {
   const fighter = player.fighters[0];
   const fighterDefinition = fighter === undefined ? undefined : player.getFighterDefinition(fighter.id);
   if (fighter === undefined || fighterDefinition === undefined) {

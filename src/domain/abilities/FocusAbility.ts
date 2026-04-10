@@ -1,13 +1,13 @@
 import { FocusAction } from "../actions/FocusAction";
 import { GameAction } from "../actions/GameAction";
 import type { Game } from "../state/Game";
-import type { PlayerState } from "../state/PlayerState";
+import type { Player } from "../state/Player";
 import { Ability } from "./Ability";
 
 export class FocusAbility extends Ability {
   readonly name = "Focus";
 
-  getLegalActions(game: Game, player: PlayerState): GameAction[] {
+  getLegalActions(game: Game, player: Player): GameAction[] {
     if (!game.isCombatActionStep(player.id)) return [];
     return [new FocusAction(player.id)];
   }

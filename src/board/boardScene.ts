@@ -2,7 +2,7 @@ import {
   FeatureTokenSide,
   HexKind,
   TurnStep,
-  type FeatureTokenState,
+  type FeatureToken,
   type FighterId,
   type Game,
   type HexId,
@@ -199,7 +199,7 @@ export type ProjectBoardSceneParams = {
   actionLens: FighterActionLens;
   activePlayerId: string | null;
   selectedFighterId: FighterId | null;
-  selectedFeatureToken: FeatureTokenState | null;
+  selectedFeatureToken: FeatureToken | null;
   pendingMoveHexId: HexId | null;
   pendingDelveFeatureTokenId: string | null;
   pendingFocus: boolean;

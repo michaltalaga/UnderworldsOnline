@@ -1,6 +1,6 @@
 import type { GameEvent, GameEventDataByKind, GameEventKind } from "./GameRecord";
 
-export class GameEventLogState {
+export class GameEventLog {
   public readonly events: readonly GameEvent[];
 
   public constructor(events: readonly GameEvent[]) {

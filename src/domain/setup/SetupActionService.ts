@@ -2,7 +2,7 @@ import { BoardSide, HexKind, Phase } from "../values/enums";
 import type { TerritoryId } from "../values/ids";
 import { Game } from "../state/Game";
 import { HexCell } from "../state/HexCell";
-import { PlayerState } from "../state/PlayerState";
+import { Player } from "../state/Player";
 import { ChooseTerritoryAction } from "./ChooseTerritoryAction";
 import { CompleteMusterAction } from "./CompleteMusterAction";
 import { DeployFighterAction } from "./DeployFighterAction";
@@ -119,7 +119,7 @@ export class SetupActionService {
     });
   }
 
-  private getLegalDeploymentHexes(game: Game, player: PlayerState): HexCell[] {
+  private getLegalDeploymentHexes(game: Game, player: Player): HexCell[] {
     const territoryId = player.territoryId;
     if (territoryId === null) {
       return [];
@@ -194,7 +194,7 @@ export class SetupActionService {
     return (Math.abs(qDistance) + Math.abs(rDistance) + Math.abs(sDistance)) / 2;
   }
 
-  private getActivePlayer(game: Game): PlayerState | null {
+  private getActivePlayer(game: Game): Player | null {
     if (game.activePlayerId === null) {
       return null;
     }

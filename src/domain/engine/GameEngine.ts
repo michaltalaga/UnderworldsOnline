@@ -7,8 +7,8 @@ import {
   type CleanupFighterResolution,
   type CleanupPlayerResolution,
 } from "../endPhase/CleanupResolution";
-import { FeatureTokenState } from "../state/FeatureTokenState";
-import { FighterState } from "../state/FighterState";
+import { FeatureToken } from "../state/FeatureToken";
+import { Fighter } from "../state/Fighter";
 import { Game } from "../state/Game";
 import { type GameEventMetadata, GameRecordKind } from "../state/GameRecord";
 import {
@@ -26,7 +26,7 @@ import {
   type GameState,
 } from "../state/GameState";
 import { HexCell } from "../state/HexCell";
-import { PlayerState } from "../state/PlayerState";
+import { Player } from "../state/Player";
 import { Territory } from "../state/Territory";
 import {
   RollOffKind,
@@ -513,7 +513,7 @@ export class GameEngine {
       throw new Error("The fifth feature token must leave at least one token in each territory.");
     }
 
-    const featureToken = new FeatureTokenState(
+    const featureToken = new FeatureToken(
       `feature:${placementNumber}`,
       placementNumber,
       hex.id,
@@ -1719,7 +1719,7 @@ export class GameEngine {
 
   private recordMoveEvent(
     game: Game,
-    player: PlayerState,
+    player: Player,
     fighterId: FighterId,
     fighterName: string,
     fromHexId: HexId,
@@ -1748,7 +1748,7 @@ export class GameEngine {
 
   private recordCardPlayed(
     game: Game,
-    player: PlayerState,
+    player: Player,
     card: Card,
     metadata: GameEventMetadata = {},
     options: {
@@ -1778,7 +1778,7 @@ export class GameEngine {
 
   private recordCardResolved(
     game: Game,
-    player: PlayerState,
+    player: Player,
     card: Card,
     effectSummaries: readonly string[],
     gloryDelta: number,
@@ -1858,7 +1858,7 @@ export class GameEngine {
 
   private recordActionStepEnded(
     game: Game,
-    player: PlayerState,
+    player: Player,
     nextState: GameState,
     metadata: GameEventMetadata = {},
   ): void {
@@ -1887,7 +1887,7 @@ export class GameEngine {
 
   private recordPowerStepEnded(
     game: Game,
-    player: PlayerState,
+    player: Player,
     nextState: GameState,
     metadata: GameEventMetadata = {},
   ): void {
@@ -1919,7 +1919,7 @@ export class GameEngine {
 
   private recordTurnEnded(
     game: Game,
-    player: PlayerState,
+    player: Player,
     nextState: GameState,
     metadata: GameEventMetadata = {},
   ): void {
@@ -2055,7 +2055,7 @@ export class GameEngine {
 
   private scoreObjectivesForPlayer(
     game: Game,
-    player: PlayerState,
+    player: Player,
     context: CardPlayContext,
     logEachObjective: boolean = true,
     recordResolution: boolean = false,
@@ -2184,7 +2184,7 @@ export class GameEngine {
   }
 
   private discardFocusCard(
-    player: PlayerState,
+    player: Player,
     cardId: CardId,
     hand: Card[],
     discardPile: Card[],
@@ -2290,7 +2290,7 @@ export class GameEngine {
     return (Math.abs(qDistance) + Math.abs(rDistance) + Math.abs(sDistance)) / 2;
   }
 
-  private getNextDeploymentPlayer(game: Game, currentPlayerId: PlayerId): PlayerState {
+  private getNextDeploymentPlayer(game: Game, currentPlayerId: PlayerId): Player {
     const currentPlayer = this.requirePlayer(game, currentPlayerId);
     const opponent = this.requireOpponent(game, currentPlayerId);
 
@@ -2309,13 +2309,13 @@ export class GameEngine {
     return game.players.every((player) => this.getUndeployedFighters(player).length === 0);
   }
 
-  private getUndeployedFighters(player: PlayerState): FighterState[] {
+  private getUndeployedFighters(player: Player): Fighter[] {
     return player.fighters.filter(
       (fighter) => fighter.currentHexId === null && !fighter.isSlain,
     );
   }
 
-  private requireOwnedUndeployedFighter(player: PlayerState, fighterId: FighterId): FighterState {
+  private requireOwnedUndeployedFighter(player: Player, fighterId: FighterId): Fighter {
     const fighter = player.getFighter(fighterId);
     if (fighter === undefined) {
       throw new Error(`Player ${player.name} does not control fighter ${fighterId}.`);
@@ -2328,7 +2328,7 @@ export class GameEngine {
     return fighter;
   }
 
-  private requireOwnedDeployedFighter(player: PlayerState, fighterId: FighterId): FighterState {
+  private requireOwnedDeployedFighter(player: Player, fighterId: FighterId): Fighter {
     const fighter = player.getFighter(fighterId);
     if (fighter === undefined) {
       throw new Error(`Player ${player.name} does not control fighter ${fighterId}.`);
@@ -2341,7 +2341,7 @@ export class GameEngine {
     return fighter;
   }
 
-  private requirePlayerTerritory(player: PlayerState): TerritoryId {
+  private requirePlayerTerritory(player: Player): TerritoryId {
     if (player.territoryId === null) {
       throw new Error(`Player ${player.name} does not have an assigned territory.`);
     }
@@ -2349,7 +2349,7 @@ export class GameEngine {
     return player.territoryId;
   }
 
-  private requirePlayer(game: Game, playerId: PlayerId | null): PlayerState {
+  private requirePlayer(game: Game, playerId: PlayerId | null): Player {
     if (playerId === null) {
       throw new Error("This action requires a player id.");
     }
@@ -2362,7 +2362,7 @@ export class GameEngine {
     return player;
   }
 
-  private requireTwoPlayers(game: Game): [PlayerState, PlayerState] {
+  private requireTwoPlayers(game: Game): [Player, Player] {
     const [playerOne, playerTwo] = game.players;
     if (playerOne === undefined || playerTwo === undefined || game.players.length !== 2) {
       throw new Error("Roll-offs require exactly two players.");
@@ -2371,7 +2371,7 @@ export class GameEngine {
     return [playerOne, playerTwo];
   }
 
-  private requireOpponent(game: Game, playerId: PlayerId): PlayerState {
+  private requireOpponent(game: Game, playerId: PlayerId): Player {
     const opponent = game.getOpponent(playerId);
     if (opponent === undefined) {
       throw new Error(`Could not find opponent for player ${playerId}.`);
@@ -2424,7 +2424,7 @@ export class GameEngine {
     }
   }
 
-  private getUnderdogPlayerId(playerOne: PlayerState, playerTwo: PlayerState): PlayerId | null {
+  private getUnderdogPlayerId(playerOne: Player, playerTwo: Player): PlayerId | null {
     if (playerOne.glory === playerTwo.glory) {
       return null;
     }
@@ -2468,12 +2468,12 @@ export class GameEngine {
 
   private resolveCombatAction(
     game: Game,
-    attackerPlayer: PlayerState,
-    defenderPlayer: PlayerState,
-    attacker: FighterState,
-    attackerDefinition: PlayerState["warband"]["fighters"][number],
-    target: FighterState,
-    targetDefinition: PlayerState["warband"]["fighters"][number],
+    attackerPlayer: Player,
+    defenderPlayer: Player,
+    attacker: Fighter,
+    attackerDefinition: Player["warband"]["fighters"][number],
+    target: Fighter,
+    targetDefinition: Player["warband"]["fighters"][number],
     weaponId: string,
     weaponName: string,
     selectedAbility: AttackAction["selectedAbility"],

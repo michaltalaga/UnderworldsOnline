@@ -1,6 +1,6 @@
 import type { FeatureTokenId, HexId, TerritoryId } from "../values/ids";
 import { BoardSide } from "../values/enums";
-import { FeatureTokenState } from "./FeatureTokenState";
+import { FeatureToken } from "./FeatureToken";
 import { HexCell } from "./HexCell";
 import { Territory } from "./Territory";
 
@@ -15,21 +15,21 @@ const hexNeighborOffsets: readonly (readonly [number, number])[] = [
   [0, 1],
 ];
 
-export class BoardState {
+export class Board {
   public layoutId: string;
   public side: BoardSide;
   public frontHexes: HexCell[];
   public frontTerritories: Territory[];
   public backHexes: HexCell[];
   public backTerritories: Territory[];
-  public featureTokens: FeatureTokenState[];
+  public featureTokens: FeatureToken[];
 
   public constructor(
     layoutId: string,
     side: BoardSide = BoardSide.Front,
     frontHexes: HexCell[] = [],
     frontTerritories: Territory[] = [],
-    featureTokens: FeatureTokenState[] = [],
+    featureTokens: FeatureToken[] = [],
     backHexes: HexCell[] = [],
     backTerritories: Territory[] = [],
   ) {
@@ -86,7 +86,7 @@ export class BoardState {
     return this.territories.find((territory) => territory.id === territoryId);
   }
 
-  public getFeatureToken(featureTokenId: FeatureTokenId): FeatureTokenState | undefined {
+  public getFeatureToken(featureTokenId: FeatureTokenId): FeatureToken | undefined {
     return this.featureTokens.find((token) => token.id === featureTokenId);
   }
 

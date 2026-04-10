@@ -1,4 +1,4 @@
-import { BoardState } from "../../state/BoardState";
+import { Board } from "../../state/Board";
 import { HexCell } from "../../state/HexCell";
 import { Territory } from "../../state/Territory";
 import { BoardSide, HexKind } from "../../values/enums";
@@ -29,7 +29,7 @@ const southStartingHexIds = new Set([
 
 export const centeredBattlefield = createCenteredBattlefield();
 
-function createCenteredBattlefield(): BoardState {
+function createCenteredBattlefield(): Board {
   const hexes = createHexes();
   const northHexIds = hexes
     .filter((hex) => hex.territoryId === northTerritoryId)
@@ -38,7 +38,7 @@ function createCenteredBattlefield(): BoardState {
     .filter((hex) => hex.territoryId === southTerritoryId)
     .map((hex) => hex.id);
 
-  const board = new BoardState(
+  const board = new Board(
     "board:centered-battlefield",
     BoardSide.Front,
     hexes,

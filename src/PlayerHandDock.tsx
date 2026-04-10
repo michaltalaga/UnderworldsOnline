@@ -1,5 +1,5 @@
 import "./PlayerHandDock.css";
-import type { CardId, PlayerState } from "./domain";
+import type { CardId, Player } from "./domain";
 import type { Card } from "./domain/cards/Card";
 import type { PowerOverlayOption } from "./board/battlefieldModels";
 
@@ -51,7 +51,7 @@ export type DockInteraction =
     };
 
 type PlayerHandDockProps = {
-  player: PlayerState;
+  player: Player;
   interaction: DockInteraction;
   scorableObjectives?: ScorableObjective[];
   onScoreObjective?: (cardId: CardId) => void;

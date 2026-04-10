@@ -1,6 +1,6 @@
 import type { PlayerId, WarscrollDefinitionId } from "../values/ids";
 
-export class WarscrollState {
+export class Warscroll {
   public readonly ownerPlayerId: PlayerId;
   public readonly definitionId: WarscrollDefinitionId;
   public tokens: Record<string, number>;

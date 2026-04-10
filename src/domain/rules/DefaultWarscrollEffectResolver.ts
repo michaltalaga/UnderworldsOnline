@@ -1,14 +1,14 @@
 import { WarscrollAbilityDefinition } from "../definitions/WarscrollAbilityDefinition";
 import type { WarscrollAbilityEffect } from "../definitions/WarscrollAbilityEffect";
 import { Game } from "../state/Game";
-import { PlayerState } from "../state/PlayerState";
+import { Player } from "../state/Player";
 import { CardZone, WarscrollAbilityEffectKind } from "../values/enums";
 import { WarscrollEffectResolver } from "./WarscrollEffectResolver";
 
 export class DefaultWarscrollEffectResolver extends WarscrollEffectResolver {
   public canResolve(
     _game: Game,
-    player: PlayerState,
+    player: Player,
     ability: WarscrollAbilityDefinition,
   ): boolean {
     return ability.effects.length > 0 && ability.effects.every((effect) => this.canResolveEffect(player, effect));
@@ -16,7 +16,7 @@ export class DefaultWarscrollEffectResolver extends WarscrollEffectResolver {
 
   public resolve(
     game: Game,
-    player: PlayerState,
+    player: Player,
     ability: WarscrollAbilityDefinition,
   ): string[] {
     if (!this.canResolve(game, player, ability)) {
@@ -26,7 +26,7 @@ export class DefaultWarscrollEffectResolver extends WarscrollEffectResolver {
     return ability.effects.map((effect) => this.resolveEffect(player, effect));
   }
 
-  private canResolveEffect(player: PlayerState, effect: WarscrollAbilityEffect): boolean {
+  private canResolveEffect(player: Player, effect: WarscrollAbilityEffect): boolean {
     switch (effect.kind) {
       case WarscrollAbilityEffectKind.DrawPowerCards:
         return Number.isInteger(effect.count) && effect.count > 0 && player.powerDeck.drawPile.length >= effect.count;
@@ -35,7 +35,7 @@ export class DefaultWarscrollEffectResolver extends WarscrollEffectResolver {
     }
   }
 
-  private resolveEffect(player: PlayerState, effect: WarscrollAbilityEffect): string {
+  private resolveEffect(player: Player, effect: WarscrollAbilityEffect): string {
     switch (effect.kind) {
       case WarscrollAbilityEffectKind.DrawPowerCards:
         this.drawPowerCards(player, effect.count);
@@ -51,7 +51,7 @@ export class DefaultWarscrollEffectResolver extends WarscrollEffectResolver {
     }
   }
 
-  private drawPowerCards(player: PlayerState, count: number): void {
+  private drawPowerCards(player: Player, count: number): void {
     for (let drawIndex = 0; drawIndex < count; drawIndex += 1) {
       const nextCard = player.powerDeck.drawPile.shift();
       if (nextCard === undefined) {

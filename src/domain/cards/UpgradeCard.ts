@@ -1,6 +1,6 @@
 import { Card, type Target } from "./Card";
 import type { Game } from "../state/Game";
-import type { PlayerState } from "../state/PlayerState";
+import type { Player } from "../state/Player";
 import { CardKind, CardZone } from "../values/enums";
 
 /**
@@ -14,7 +14,7 @@ import { CardKind, CardZone } from "../values/enums";
 export class UpgradeCard extends Card {
   constructor(
     id: string,
-    owner: PlayerState,
+    owner: Player,
     name: string,
     text: string,
     gloryValue: number,

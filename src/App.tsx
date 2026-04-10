@@ -15,7 +15,7 @@ import {
   zikkitsTunnelpackWarband,
   type CombatResult,
   type DeckDefinition,
-  type FighterState,
+  type Fighter,
   type Game,
   type WarbandDefinitionId,
   type WarscrollAbilityEffect,
@@ -940,7 +940,7 @@ function CombatResultCard({
         {defenderFeatureTokenBeforeAttack !== undefined ? (
           <div>
             <dt>Defender Feature</dt>
-            <dd>{formatDefenderFeatureTokenState(game, defenderFeatureTokenBeforeAttack)}</dd>
+            <dd>{formatDefenderFeatureToken(game, defenderFeatureTokenBeforeAttack)}</dd>
           </div>
         ) : null}
       </dl>
@@ -1084,7 +1084,7 @@ function formatCombatEffects(result: CombatResult): string {
   return effects.length === 0 ? "none" : effects.join(", ");
 }
 
-function formatFighterTokens(fighter: FighterState): string {
+function formatFighterTokens(fighter: Fighter): string {
   const tokens: string[] = [];
 
   if (fighter.hasMoveToken) {
@@ -1124,7 +1124,7 @@ function formatDefenderStateDescription(defenderState: CombatDebugDefenderState)
   return states.length === 0 ? "Defender starts clean." : `Defender starts ${states.join(" and ")}.`;
 }
 
-function formatDefenderFeatureTokenState(
+function formatDefenderFeatureToken(
   game: Game,
   featureTokenSnapshot: CombatDebugSnapshot["defenderFeatureTokenBeforeAttack"],
 ): string {

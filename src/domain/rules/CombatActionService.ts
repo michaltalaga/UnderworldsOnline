@@ -12,8 +12,8 @@ import { PlayPloyAction } from "../actions/PlayPloyAction";
 import { PlayUpgradeAction } from "../actions/PlayUpgradeAction";
 import { UseWarscrollAbilityAction } from "../actions/UseWarscrollAbilityAction";
 import { Game } from "../state/Game";
-import { FighterState } from "../state/FighterState";
-import { PlayerState } from "../state/PlayerState";
+import { Fighter } from "../state/Fighter";
+import { Player } from "../state/Player";
 import { CardKind, FeatureTokenSide, TurnStep } from "../values/enums";
 import type { PlayerId } from "../values/ids";
 import { DefaultWarscrollEffectResolver } from "./DefaultWarscrollEffectResolver";
@@ -145,7 +145,7 @@ export class CombatActionService extends LegalActionService {
 
     const targets = card.getLegalTargets(game);
     return targets.some((target) =>
-      target instanceof FighterState && target.id === fighter.id,
+      target instanceof Fighter && target.id === fighter.id,
     );
   }
 
@@ -162,11 +162,11 @@ export class CombatActionService extends LegalActionService {
 
     const targets = card.getLegalTargets(game);
     if (action.targetFighterId === null) {
-      return targets.some((target) => !(target instanceof FighterState));
+      return targets.some((target) => !(target instanceof Fighter));
     }
 
     return targets.some((target) =>
-      target instanceof FighterState && target.id === action.targetFighterId,
+      target instanceof Fighter && target.id === action.targetFighterId,
     );
   }
 
@@ -211,7 +211,7 @@ export class CombatActionService extends LegalActionService {
     return false;
   }
 
-  private getLegalDelveActions(game: Game, player: PlayerState): DelveAction[] {
+  private getLegalDelveActions(game: Game, player: Player): DelveAction[] {
     if (player.hasDelvedThisPowerStep || !game.isCombatPowerStep(player.id)) {
       return [];
     }
@@ -228,21 +228,21 @@ export class CombatActionService extends LegalActionService {
     });
   }
 
-  private getLegalPlayUpgradeActions(game: Game, player: PlayerState): PlayUpgradeAction[] {
+  private getLegalPlayUpgradeActions(game: Game, player: Player): PlayUpgradeAction[] {
     if (!game.isCombatPowerStep(player.id)) return [];
 
     return player.powerHand.flatMap((card) => {
       if (card.kind !== CardKind.Upgrade) return [];
       const targets = card.getLegalTargets(game);
       return targets.flatMap((target) =>
-        target instanceof FighterState
+        target instanceof Fighter
           ? [new PlayUpgradeAction(player.id, card.id, target.id)]
           : [],
       );
     });
   }
 
-  private getLegalPlayPloyActions(game: Game, player: PlayerState): PlayPloyAction[] {
+  private getLegalPlayPloyActions(game: Game, player: Player): PlayPloyAction[] {
     if (!game.isCombatPowerStep(player.id)) return [];
 
     const legalActions = new Map<string, PlayPloyAction>();
@@ -250,7 +250,7 @@ export class CombatActionService extends LegalActionService {
       if (card.kind !== CardKind.Ploy) continue;
       const targets = card.getLegalTargets(game);
       for (const target of targets) {
-        const targetFighterId = target instanceof FighterState ? target.id : null;
+        const targetFighterId = target instanceof Fighter ? target.id : null;
         const action = new PlayPloyAction(player.id, card.id, targetFighterId);
         legalActions.set(`${action.cardId}:${action.targetFighterId ?? ""}`, action);
       }
@@ -258,7 +258,7 @@ export class CombatActionService extends LegalActionService {
     return [...legalActions.values()];
   }
 
-  private getLegalUseWarscrollAbilityActions(game: Game, player: PlayerState): UseWarscrollAbilityAction[] {
+  private getLegalUseWarscrollAbilityActions(game: Game, player: Player): UseWarscrollAbilityAction[] {
     const warscrollDefinition = player.getWarscrollDefinition();
     if (warscrollDefinition === undefined || !game.isCombatPowerStep(player.id)) {
       return [];

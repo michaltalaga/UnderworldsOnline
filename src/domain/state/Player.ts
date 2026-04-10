@@ -11,16 +11,16 @@ import { WarscrollDefinition } from "../definitions/WarscrollDefinition";
 import { WeaponDefinition } from "../definitions/WeaponDefinition";
 import { WarbandDefinition } from "../definitions/WarbandDefinition";
 import type { Game } from "./Game";
-import { DeckState } from "./DeckState";
-import { FighterState } from "./FighterState";
-import { WarscrollState } from "./WarscrollState";
+import { Deck } from "./Deck";
+import { Fighter } from "./Fighter";
+import { Warscroll } from "./Warscroll";
 
 export type PlayerWarscrollWithDefinition = {
-  state: WarscrollState;
+  state: Warscroll;
   definition: WarscrollDefinition;
 };
 
-export class PlayerState {
+export class Player {
   public readonly id: PlayerId;
   public name: string;
   public readonly warband: WarbandDefinition;
@@ -29,14 +29,14 @@ export class PlayerState {
   public mulliganUsed: boolean;
   public turnsTakenThisRound: number;
   public hasDelvedThisPowerStep: boolean;
-  public fighters: FighterState[];
-  public objectiveDeck: DeckState;
-  public powerDeck: DeckState;
+  public fighters: Fighter[];
+  public objectiveDeck: Deck;
+  public powerDeck: Deck;
   public objectiveHand: Card[];
   public powerHand: Card[];
   public scoredObjectives: Card[];
   public equippedUpgrades: Card[];
-  public warscrollState: WarscrollState;
+  public warscrollState: Warscroll;
 
   public constructor(
     id: PlayerId,
@@ -47,14 +47,14 @@ export class PlayerState {
     mulliganUsed: boolean = false,
     turnsTakenThisRound: number = 0,
     hasDelvedThisPowerStep: boolean = false,
-    fighters: FighterState[] = [],
-    objectiveDeck: DeckState = new DeckState(DeckKind.Objective),
-    powerDeck: DeckState = new DeckState(DeckKind.Power),
+    fighters: Fighter[] = [],
+    objectiveDeck: Deck = new Deck(DeckKind.Objective),
+    powerDeck: Deck = new Deck(DeckKind.Power),
     objectiveHand: Card[] = [],
     powerHand: Card[] = [],
     scoredObjectives: Card[] = [],
     equippedUpgrades: Card[] = [],
-    warscrollState: WarscrollState = new WarscrollState(id, warband.warscroll.id),
+    warscrollState: Warscroll = new Warscroll(id, warband.warscroll.id),
   ) {
     this.id = id;
     this.name = name;
@@ -74,7 +74,7 @@ export class PlayerState {
     this.warscrollState = warscrollState;
   }
 
-  public getFighter(fighterId: FighterId): FighterState | undefined {
+  public getFighter(fighterId: FighterId): Fighter | undefined {
     return this.fighters.find((fighter) => fighter.id === fighterId);
   }
 
@@ -150,7 +150,7 @@ export class PlayerState {
     });
   }
 
-  public getUndeployedFighters(): FighterState[] {
+  public getUndeployedFighters(): Fighter[] {
     return this.fighters.filter(
       (fighter) => fighter.currentHexId === null && !fighter.isSlain,
     );

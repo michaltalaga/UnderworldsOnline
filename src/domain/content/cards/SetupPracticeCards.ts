@@ -2,10 +2,10 @@ import type { Target } from "../../cards/Card";
 import { ObjectiveCard } from "../../cards/ObjectiveCard";
 import { PloyCard } from "../../cards/PloyCard";
 import { UpgradeCard } from "../../cards/UpgradeCard";
-import { FighterState } from "../../state/FighterState";
+import { Fighter } from "../../state/Fighter";
 import { GameRecordKind } from "../../state/GameRecord";
 import type { Game } from "../../state/Game";
-import type { PlayerState } from "../../state/PlayerState";
+import type { Player } from "../../state/Player";
 import { CardZone, FeatureTokenSide } from "../../values/enums";
 import { friendlyFightersWithoutGuard, enemyFightersWithoutStagger } from "../../cards/targeting";
 import { giveGuard, giveStagger } from "../../cards/effects";
@@ -14,7 +14,7 @@ import { getMyLatestCombat, getTerritoryOwner } from "../../cards/scoring";
 // ─── Custom Objectives (event-log aware) ────────────────────────────────────
 
 export class PracticeObjective01 extends ObjectiveCard {
-  constructor(id: string, owner: PlayerState, zone: CardZone) {
+  constructor(id: string, owner: Player, zone: CardZone) {
     super(id, owner, "Practice Objective 01",
       "Score this immediately after you make an Attack roll if all of the results were successes.",
       1, zone);
@@ -29,7 +29,7 @@ export class PracticeObjective01 extends ObjectiveCard {
 }
 
 export class PracticeObjective02 extends ObjectiveCard {
-  constructor(id: string, owner: PlayerState, zone: CardZone) {
+  constructor(id: string, owner: Player, zone: CardZone) {
     super(id, owner, "Practice Objective 02",
       "Score this immediately after an enemy fighter is slain by a friendly fighter if the target was a leader or the target's Health was >= the attacker's.",
       1, zone);
@@ -48,7 +48,7 @@ export class PracticeObjective02 extends ObjectiveCard {
 }
 
 export class PracticeObjective03 extends ObjectiveCard {
-  constructor(id: string, owner: PlayerState, zone: CardZone) {
+  constructor(id: string, owner: Player, zone: CardZone) {
     super(id, owner, "Practice Objective 03",
       "Score this immediately after a friendly fighter Delves in enemy territory.",
       1, zone);
@@ -68,7 +68,7 @@ export class PracticeObjective03 extends ObjectiveCard {
 }
 
 export class PracticeObjective04 extends ObjectiveCard {
-  constructor(id: string, owner: PlayerState, zone: CardZone) {
+  constructor(id: string, owner: Player, zone: CardZone) {
     super(id, owner, "Practice Objective 04",
       "Score this in an end phase if 3 or more different treasure tokens were Delved by your warband this battle round.",
       1, zone);
@@ -89,7 +89,7 @@ export class PracticeObjective04 extends ObjectiveCard {
 
 /** Generic end-phase practice objective (no special scoring condition). */
 export class PracticeObjectiveGeneric extends ObjectiveCard {
-  constructor(id: string, owner: PlayerState, zone: CardZone, cardNumber: string) {
+  constructor(id: string, owner: Player, zone: CardZone, cardNumber: string) {
     super(id, owner, `Practice Objective ${cardNumber}`, "", 1, zone);
   }
 }
@@ -98,7 +98,7 @@ export class PracticeObjectiveGeneric extends ObjectiveCard {
 
 /** Draw 1 power card. */
 export class DrawPowerCardsPloy extends PloyCard {
-  constructor(id: string, owner: PlayerState, zone: CardZone, cardNumber: string) {
+  constructor(id: string, owner: Player, zone: CardZone, cardNumber: string) {
     super(id, owner, `Practice Ploy ${cardNumber}`, "Draw 1 power card.", zone);
   }
 
@@ -112,7 +112,7 @@ export class DrawPowerCardsPloy extends PloyCard {
 
 /** Gain 1 signal token. */
 export class GainWarscrollTokensPloy extends PloyCard {
-  constructor(id: string, owner: PlayerState, zone: CardZone, cardNumber: string) {
+  constructor(id: string, owner: Player, zone: CardZone, cardNumber: string) {
     super(id, owner, `Practice Ploy ${cardNumber}`, "Gain 1 signal token.", zone);
   }
   // Untargeted, default getTargets returns [this.owner]. No effect yet.
@@ -120,7 +120,7 @@ export class GainWarscrollTokensPloy extends PloyCard {
 
 /** Give a friendly fighter a guard token. */
 export class GiveGuardPloy extends PloyCard {
-  constructor(id: string, owner: PlayerState, zone: CardZone, cardNumber: string) {
+  constructor(id: string, owner: Player, zone: CardZone, cardNumber: string) {
     super(id, owner, `Practice Ploy ${cardNumber}`, "Give a friendly fighter a guard token.", zone);
   }
 
@@ -129,14 +129,14 @@ export class GiveGuardPloy extends PloyCard {
   }
 
   protected override onPlay(_game: Game, target: Target | null): string[] {
-    if (!(target instanceof FighterState)) return [];
+    if (!(target instanceof Fighter)) return [];
     return giveGuard(target);
   }
 }
 
 /** Give an enemy fighter a stagger token. */
 export class GiveStaggerPloy extends PloyCard {
-  constructor(id: string, owner: PlayerState, zone: CardZone, cardNumber: string) {
+  constructor(id: string, owner: Player, zone: CardZone, cardNumber: string) {
     super(id, owner, `Practice Ploy ${cardNumber}`, "Give an enemy fighter a stagger token.", zone);
   }
 
@@ -145,14 +145,14 @@ export class GiveStaggerPloy extends PloyCard {
   }
 
   protected override onPlay(_game: Game, target: Target | null): string[] {
-    if (!(target instanceof FighterState)) return [];
+    if (!(target instanceof Fighter)) return [];
     return giveStagger(target);
   }
 }
 
 /** Generic practice upgrade (no special effect). */
 export class PracticeUpgrade extends UpgradeCard {
-  constructor(id: string, owner: PlayerState, zone: CardZone, cardNumber: string) {
+  constructor(id: string, owner: Player, zone: CardZone, cardNumber: string) {
     super(id, owner, `Practice Upgrade ${cardNumber}`, "", 1, zone);
   }
 }

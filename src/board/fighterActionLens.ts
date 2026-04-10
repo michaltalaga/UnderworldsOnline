@@ -11,7 +11,7 @@ import {
   type Game,
   type GameAction,
   type HexId,
-  type PlayerState,
+  type Player,
 } from "../domain";
 import { formatWeaponAccuracy, getFighterName } from "./battlefieldFormatters";
 import type {
@@ -97,7 +97,7 @@ function prefersBaseAbility(
 // handlers.
 export function getFighterActionLens(
   game: Game,
-  activePlayer: PlayerState | null,
+  activePlayer: Player | null,
   selectedFighterId: FighterId | null,
   legalActions: GameAction[],
 ): FighterActionLens {
@@ -454,7 +454,7 @@ export function getAttackPreviewByTarget(
 }
 
 export function getChargePreviewByTarget(
-  activePlayer: PlayerState | null,
+  activePlayer: Player | null,
   actionLens: FighterActionLens,
 ): ProfilePreviewModel {
   if (activePlayer === null || actionLens.fighter === null || actionLens.chargeActions.length === 0) {
@@ -492,7 +492,7 @@ function formatProfilePreviewLabel(label: string): string {
 
 export function getAttackProfiles(
   game: Game,
-  activePlayer: PlayerState | null,
+  activePlayer: Player | null,
   actionLens: FighterActionLens,
   selectedAttackKeysByTarget: Record<string, string>,
 ): AttackProfileSummary[] {
@@ -538,7 +538,7 @@ export function getProfileForTarget<T extends { readonly targetId: FighterId }>(
 
 export function getChargeProfiles(
   game: Game,
-  activePlayer: PlayerState | null,
+  activePlayer: Player | null,
   actionLens: FighterActionLens,
   destinationHexId: HexId | null,
   selectedChargeKeysByPair: Record<string, string>,
@@ -584,7 +584,7 @@ export function getChargeProfiles(
 }
 
 function describeAttackAction(
-  player: PlayerState,
+  player: Player,
   action: AttackAction,
 ): {
   label: string;
@@ -594,7 +594,7 @@ function describeAttackAction(
 }
 
 function describeWeaponProfile(
-  player: PlayerState,
+  player: Player,
   fighterId: FighterId,
   weaponId: string,
   selectedAbility: AttackAction["selectedAbility"] | ChargeAction["selectedAbility"],
@@ -672,7 +672,7 @@ export function getDefaultSelectableFighterId(game: Game): FighterId | null {
 
 export function getNextSelectedFighterId(
   game: Game,
-  previousActivePlayerId: PlayerState["id"] | null,
+  previousActivePlayerId: Player["id"] | null,
   previousSelectedFighterId: FighterId | null,
 ): FighterId | null {
   if (

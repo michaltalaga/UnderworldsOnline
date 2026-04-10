@@ -1,14 +1,14 @@
 import type { Card, CardFactory } from "../cards/Card";
 import { DeckDefinition } from "../definitions/DeckDefinition";
 import { WarbandDefinition } from "../definitions/WarbandDefinition";
-import { BoardState } from "../state/BoardState";
-import { DeckState } from "../state/DeckState";
-import { FighterState } from "../state/FighterState";
+import { Board } from "../state/Board";
+import { Deck } from "../state/Deck";
+import { Fighter } from "../state/Fighter";
 import { Game } from "../state/Game";
 import { HexCell } from "../state/HexCell";
-import { PlayerState } from "../state/PlayerState";
+import { Player } from "../state/Player";
 import { Territory } from "../state/Territory";
-import { WarscrollState } from "../state/WarscrollState";
+import { Warscroll } from "../state/Warscroll";
 import {
   BoardSide,
   CardZone,
@@ -31,7 +31,7 @@ export type GameFactoryPlayerConfig = {
 
 export type GameFactoryCreateParams = {
   gameId: GameId;
-  board: BoardState;
+  board: Board;
   players: readonly [GameFactoryPlayerConfig, GameFactoryPlayerConfig];
   shuffleCards?: ShuffleCards;
 };
@@ -42,8 +42,8 @@ export class GameFactory {
     this.validateBoard(params.board);
 
     const shuffleCards = params.shuffleCards ?? this.shuffleCards;
-    const board = this.createBoardState(params.board);
-    const players = params.players.map((player) => this.createPlayerState(player, shuffleCards));
+    const board = this.createBoard(params.board);
+    const players = params.players.map((player) => this.createPlayer(player, shuffleCards));
 
     return new Game(
       params.gameId,
@@ -68,17 +68,17 @@ export class GameFactory {
     );
   }
 
-  private createPlayerState(
+  private createPlayer(
     config: GameFactoryPlayerConfig,
     shuffleCards: ShuffleCards,
-  ): PlayerState {
+  ): Player {
     const objectiveCardFactories = config.deck?.objectiveCards ?? config.warband.objectiveCards;
     const powerCardFactories = config.deck?.powerCards ?? config.warband.powerCards;
     this.validateWarband(config.warband, config.name);
 
     const fighters = config.warband.fighters.map(
       (fighter, index) =>
-        new FighterState(
+        new Fighter(
           `${config.id}:fighter:${fighter.id}:${index + 1}`,
           fighter.id,
           config.id,
@@ -86,7 +86,7 @@ export class GameFactory {
     );
 
     // Create player first (without cards) so Card constructors can reference their owner.
-    const player = new PlayerState(
+    const player = new Player(
       config.id,
       config.name,
       config.warband,
@@ -96,13 +96,13 @@ export class GameFactory {
       0,
       false,
       fighters,
-      new DeckState(DeckKind.Objective, [], []),
-      new DeckState(DeckKind.Power, [], []),
+      new Deck(DeckKind.Objective, [], []),
+      new Deck(DeckKind.Power, [], []),
       [],
       [],
       [],
       [],
-      new WarscrollState(
+      new Warscroll(
         config.id,
         config.warband.warscroll.id,
         { ...config.warband.warscroll.startingTokens },
@@ -112,14 +112,14 @@ export class GameFactory {
     // Now create card objects with the player as owner.
     const objectiveCards = this.createCards(player, objectiveCardFactories, CardZone.ObjectiveDeck, "objective");
     const powerCards = this.createCards(player, powerCardFactories, CardZone.PowerDeck, "power");
-    player.objectiveDeck = new DeckState(DeckKind.Objective, shuffleCards(objectiveCards), []);
-    player.powerDeck = new DeckState(DeckKind.Power, shuffleCards(powerCards), []);
+    player.objectiveDeck = new Deck(DeckKind.Objective, shuffleCards(objectiveCards), []);
+    player.powerDeck = new Deck(DeckKind.Power, shuffleCards(powerCards), []);
 
     return player;
   }
 
   private createCards(
-    owner: PlayerState,
+    owner: Player,
     factories: readonly CardFactory[],
     zone: CardZone,
     prefix: string,
@@ -130,7 +130,7 @@ export class GameFactory {
     );
   }
 
-  private createBoardState(board: BoardState): BoardState {
+  private createBoard(board: Board): Board {
     const frontHexes = this.createSideHexes(board.getHexesForSide(BoardSide.Front));
     const frontTerritories = this.createSideTerritories(board.getTerritoriesForSide(BoardSide.Front));
     const backHexes = board.getAvailableSides().includes(BoardSide.Back)
@@ -140,7 +140,7 @@ export class GameFactory {
       ? this.createSideTerritories(board.getTerritoriesForSide(BoardSide.Back))
       : [];
 
-    return new BoardState(
+    return new Board(
       board.layoutId,
       board.side,
       frontHexes,
@@ -160,7 +160,7 @@ export class GameFactory {
     this.validateUniqueValues(playerIds, "player ids");
   }
 
-  private validateBoard(board: BoardState): void {
+  private validateBoard(board: Board): void {
     for (const side of board.getAvailableSides()) {
       this.validateBoardSide(
         board.getHexesForSide(side),

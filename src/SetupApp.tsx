@@ -9,10 +9,10 @@ import {
   SetupActionService,
   SetupAutoResolver,
   type DeckDefinition,
-  type FighterState,
+  type Fighter,
   type Game,
   type HexId,
-  type PlayerState,
+  type Player,
   type SetupAction,
   type WarbandDefinition,
 } from "./domain";
@@ -217,7 +217,7 @@ function noop(): void {}
 // so this returns an empty set + undefined click handler.
 function getSetupMapWiring(
   game: Game,
-  activePlayer: PlayerState | null,
+  activePlayer: Player | null,
   applySetupAction: (action: SetupAction) => void,
 ): { legalHexIds: ReadonlySet<HexId>; onHexClick: ((hexId: HexId) => void) | undefined } {
   if (activePlayer === null) {
@@ -283,7 +283,7 @@ function getSetupBannerText(game: Game): string {
 
 function renderPhaseContent(
   game: Game,
-  activePlayer: PlayerState | null,
+  activePlayer: Player | null,
   applySetupAction: (action: SetupAction) => void,
 ): ReactNode {
   if (
@@ -351,13 +351,13 @@ function DeploymentPanel({
   player,
 }: {
   game: Game;
-  player: PlayerState | null;
+  player: Player | null;
 }) {
   if (player === null) {
     return null;
   }
   const undeployedFighters = player.getUndeployedFighters();
-  const nextFighter: FighterState | null = undeployedFighters[0] ?? null;
+  const nextFighter: Fighter | null = undeployedFighters[0] ?? null;
   const nextFighterName =
     nextFighter === null
       ? null

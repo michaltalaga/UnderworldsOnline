@@ -1,4 +1,4 @@
-import type { PlayerState } from "../state/PlayerState";
+import type { Player } from "../state/Player";
 import type { CardZone } from "../values/enums";
 import type { CardFactory } from "./Card";
 import { ObjectiveCard } from "./ObjectiveCard";
@@ -9,7 +9,7 @@ const PLACEHOLDER_TEXT = "(Placeholder — card effect not yet implemented.)";
 
 /** An objective with no scoring condition — never playable. */
 export class PlaceholderObjective extends ObjectiveCard {
-  constructor(id: string, owner: PlayerState, name: string, zone: CardZone) {
+  constructor(id: string, owner: Player, name: string, zone: CardZone) {
     super(id, owner, name, PLACEHOLDER_TEXT, 1, zone);
   }
 
@@ -20,7 +20,7 @@ export class PlaceholderObjective extends ObjectiveCard {
 
 /** A ploy with no targets — never playable. */
 export class PlaceholderPloy extends PloyCard {
-  constructor(id: string, owner: PlayerState, name: string, zone: CardZone) {
+  constructor(id: string, owner: Player, name: string, zone: CardZone) {
     super(id, owner, name, PLACEHOLDER_TEXT, zone);
   }
 
@@ -31,7 +31,7 @@ export class PlaceholderPloy extends PloyCard {
 
 /** An upgrade with no targets — never playable. */
 export class PlaceholderUpgrade extends UpgradeCard {
-  constructor(id: string, owner: PlayerState, name: string, zone: CardZone) {
+  constructor(id: string, owner: Player, name: string, zone: CardZone) {
     super(id, owner, name, PLACEHOLDER_TEXT, 1, zone);
   }
 
