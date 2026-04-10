@@ -1371,30 +1371,45 @@ body {
   pointer-events: none;
 }
 
+/* When a board image is present, hexes are invisible by default.
+   Hover and interactive states still show subtle overlays. */
 .battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex {
-  background: rgba(246, 240, 229, 0.25);
-  border-color: rgba(255, 255, 255, 0.35);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }
 
-.battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex-neutral {
-  background: rgba(228, 218, 201, 0.2);
-}
-
-.battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex-player-one {
-  background: rgba(140, 180, 210, 0.25);
-}
-
-.battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex-player-two {
-  background: rgba(210, 160, 120, 0.25);
-}
-
+.battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex-neutral,
+.battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex-player-one,
+.battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex-player-two,
 .battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex-unclaimed {
-  background: rgba(226, 220, 213, 0.2);
+  background: transparent;
 }
 
 .battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex-edge {
-  border-color: rgba(255, 255, 255, 0.45);
+  border-color: transparent;
+}
+
+.battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex-start {
+  box-shadow: none;
+}
+
+.battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex-blocked::after,
+.battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex-stagger::after {
+  display: none;
+}
+
+.battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-hex-starting-icon {
+  display: none;
+}
+
+.battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex-selectable:hover,
+.battlefield-board-map:has(.battlefield-board-map-bg) .battlefield-map-hex-clickable:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 @keyframes battlefield-board-flash-enter {
