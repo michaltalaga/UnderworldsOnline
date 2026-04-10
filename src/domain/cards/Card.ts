@@ -70,3 +70,11 @@ export class Card {
 // knows what KIND of card to create; the factory is called at game
 // setup time when the owner (PlayerState) is known.
 export type CardFactory = (id: string, owner: PlayerState, zone: CardZone) => Card;
+
+// Constructor type for concrete card classes whose constructor is (id, owner, zone).
+export type CardConstructor = new (id: string, owner: PlayerState, zone: CardZone) => Card;
+
+/** Wrap a concrete card class in a CardFactory. */
+export function asFactory(Ctor: CardConstructor): CardFactory {
+  return (id, owner, zone) => new Ctor(id, owner, zone);
+}

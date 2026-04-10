@@ -1,4 +1,9 @@
-import { Card, type CardFactory } from "../../cards/Card";
+import type { CardFactory } from "../../cards/Card";
+import {
+  placeholderObjectiveFactory,
+  placeholderPloyFactory,
+  placeholderUpgradeFactory,
+} from "../../cards/PlaceholderCard";
 import { FighterDefinition } from "../../definitions/FighterDefinition";
 import { WarbandDefinition } from "../../definitions/WarbandDefinition";
 import { WarscrollAbilityDefinition } from "../../definitions/WarscrollAbilityDefinition";
@@ -6,7 +11,6 @@ import { WarscrollDefinition } from "../../definitions/WarscrollDefinition";
 import { WeaponAbilityDefinition } from "../../definitions/WeaponAbilityDefinition";
 import { WeaponDefinition } from "../../definitions/WeaponDefinition";
 import {
-  CardKind,
   SaveSymbol,
   TurnStep,
   WeaponAbilityKind,
@@ -162,36 +166,22 @@ const warscroll = new WarscrollDefinition(
   ],
 );
 
-// Placeholder cards inherit the base `canPlay` which always returns `false`,
-// so they will not surface as playable options until the real effects are
-// implemented. They exist so the deck sizes match the warband template and
-// setup/muster flows stay legal.
-function placeholderCardFactory(
-  kind: CardKind,
-  namePrefix: string,
-  cardNumber: string,
-  gloryValue: number,
-): CardFactory {
-  return (id, owner, zone) =>
-    new Card(id, owner, kind, `${namePrefix} ${cardNumber}`, "(Placeholder — card effect not yet implemented.)", gloryValue, zone);
-}
-
 function createObjectiveCards(): CardFactory[] {
   return Array.from({ length: 12 }, (_, index) => {
     const cardNumber = String(index + 1).padStart(2, "0");
-    return placeholderCardFactory(CardKind.Objective, "Tunnelpack Objective", cardNumber, 1);
+    return placeholderObjectiveFactory(`Tunnelpack Objective ${cardNumber}`);
   });
 }
 
 function createPowerCards(): CardFactory[] {
   const ploys: CardFactory[] = Array.from({ length: 10 }, (_, index) => {
     const cardNumber = String(index + 1).padStart(2, "0");
-    return placeholderCardFactory(CardKind.Ploy, "Tunnelpack Ploy", cardNumber, 0);
+    return placeholderPloyFactory(`Tunnelpack Ploy ${cardNumber}`);
   });
 
   const upgrades: CardFactory[] = Array.from({ length: 10 }, (_, index) => {
     const cardNumber = String(index + 1).padStart(2, "0");
-    return placeholderCardFactory(CardKind.Upgrade, "Tunnelpack Upgrade", cardNumber, 1);
+    return placeholderUpgradeFactory(`Tunnelpack Upgrade ${cardNumber}`);
   });
 
   return [...ploys, ...upgrades];

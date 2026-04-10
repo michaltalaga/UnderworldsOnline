@@ -1,5 +1,5 @@
 import { Card } from "../cards/Card";
-import { type CardPlayContext } from "../definitions/CardDefinition";
+import { type CardPlayContext } from "../cards/types";
 import { WeaponAbilityDefinition } from "../definitions/WeaponAbilityDefinition";
 import {
   CleanupResolution,
