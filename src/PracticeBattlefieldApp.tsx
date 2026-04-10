@@ -62,7 +62,6 @@ import {
   getChargePreviewByTarget,
   getChargeProfiles,
   getChargeTargetIdsForHex,
-  getDefaultSelectableFighterId,
   getFighterActionLens,
   getMoveActionForHex,
   getMoveOptions,
@@ -102,11 +101,7 @@ export default function PracticeBattlefieldApp({
   const localPlayer = getLocalPlayer(game);
   const activePlayer = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
   const legalActions = activePlayer === null ? [] : combatActionService.getLegalActions(game, activePlayer.id);
-  const selectableFighters =
-    activePlayer?.fighters.filter((fighter) => !fighter.isSlain && fighter.currentHexId !== null) ?? [];
-  const [selectedFighterId, setSelectedFighterId] = useState<FighterId | null>(
-    selectableFighters[0]?.id ?? getDefaultSelectableFighterId(game),
-  );
+  const [selectedFighterId, setSelectedFighterId] = useState<FighterId | null>(null);
   const selectedFighter =
     selectedFighterId === null || activePlayer === null
       ? null
@@ -330,6 +325,9 @@ export default function PracticeBattlefieldApp({
       case "select-fighter":
         selectFighter(intent.fighterId);
         return;
+      case "deselect-fighter":
+        selectFighter(null);
+        return;
       case "cancel-charge":
         cancelPendingCharge();
         return;
@@ -375,12 +373,25 @@ export default function PracticeBattlefieldApp({
   }
 
   function selectFighter(fighterId: FighterId | null): void {
+    if (fighterId !== null) {
+      game.eventLog.push(`Selected ${getFighterName(game, fighterId)}`);
+    } else if (selectedFighterId !== null) {
+      game.eventLog.push(`Deselected ${getFighterName(game, selectedFighterId)}`);
+    }
     setSelectedFighterId(fighterId);
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
     clearPendingInteractions();
     setSelectedAttackKeysByTarget({});
     setSelectedChargeKeysByPair({});
+    refreshGame();
+  }
+
+  function dismissSelection(event: React.MouseEvent | null): void {
+    if (event !== null && (event.target as HTMLElement).closest(".battlefield-map-hex") !== null) {
+      return;
+    }
+    selectFighter(null);
   }
 
   function refreshGame(): void {
@@ -676,30 +687,15 @@ export default function PracticeBattlefieldApp({
   }, [pendingPlayCardId, handPowerPlayable]);
 
   useEffect(() => {
-    if (
-      pendingMoveHexId === null &&
-      pendingDelveFeatureTokenId === null &&
-      !pendingFocus &&
-      pendingGuardFighterId === null &&
-      !pendingPassPower &&
-      pendingPowerOptionKey === null &&
-      pendingPlayCardId === null &&
-      pendingChargeHexId === null &&
-      pendingChargeTargetId === null &&
-      pendingAttackTargetId === null
-    ) {
-      return;
-    }
-
     function handleKeyDown(event: KeyboardEvent): void {
       if (event.key === "Escape") {
-        clearPendingInteractions();
+        dismissSelection(null);
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [pendingMoveHexId, pendingDelveFeatureTokenId, pendingFocus, pendingGuardFighterId, pendingPassPower, pendingPowerOptionKey, pendingPlayCardId, pendingChargeHexId, pendingChargeTargetId, pendingAttackTargetId]);
+  });
 
   useEffect(() => {
     if (resultFlash === null) {
@@ -718,7 +714,7 @@ export default function PracticeBattlefieldApp({
     setGame(nextGame);
     setResultFlash(null);
     setLastResolvedAction(null);
-    setSelectedFighterId(getDefaultSelectableFighterId(nextGame));
+    setSelectedFighterId(null);
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
     clearPendingInteractions();
@@ -771,7 +767,7 @@ export default function PracticeBattlefieldApp({
 
   return (
     <>
-    <main className="battlefield-app-shell">
+    <main className="battlefield-app-shell" onClick={dismissSelection}>
       <section className="battlefield-layout">
         <section className="battlefield-panel battlefield-board-panel">
           <BoardMap

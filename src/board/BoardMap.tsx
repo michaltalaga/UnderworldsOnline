@@ -584,6 +584,7 @@ function HexCell({
             className={[
               "battlefield-fighter-badge",
               hex.occupant.toneClass,
+              hex.visual.isSelectedHex ? "battlefield-fighter-badge-selected" : "",
               hex.isPowerResponseFighter ? "battlefield-fighter-badge-power-response" : "",
             ]
               .filter(Boolean)

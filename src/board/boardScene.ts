@@ -112,6 +112,7 @@ export type HexActionBadgeModel = {
 export type BoardSceneHexClickIntent =
   | { kind: "none" }
   | { kind: "select-fighter"; fighterId: FighterId }
+  | { kind: "deselect-fighter" }
   | { kind: "cancel-charge" }
   | { kind: "attack-target"; fighterId: FighterId }
   | { kind: "start-charge-against-target"; fighterId: FighterId }
@@ -497,7 +498,9 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
       if (!isInteractionEnabled) return { kind: "none" };
       if (isClickableSetupHex) return { kind: "setup-hex", hexId: hex.id };
       if (isSelectableFighter && occupant !== null) {
-        return { kind: "select-fighter", fighterId: occupant.id };
+        return isSelectedHex
+          ? { kind: "deselect-fighter" }
+          : { kind: "select-fighter", fighterId: occupant.id };
       }
       if (isPendingChargeHex) return { kind: "cancel-charge" };
       if (isClickableAttackTarget && occupant !== null) {
