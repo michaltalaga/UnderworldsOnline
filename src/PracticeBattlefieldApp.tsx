@@ -393,8 +393,11 @@ export default function PracticeBattlefieldApp({
   }
 
   function dismissSelection(event: React.MouseEvent | null): void {
-    if (event !== null && (event.target as HTMLElement).closest(".battlefield-map-hex") !== null) {
-      return;
+    if (event !== null) {
+      const target = event.target as HTMLElement;
+      if (target.closest(".battlefield-map-hex") !== null) return;
+      if (target.closest(".player-hand-dock-shell") !== null) return;
+      if (target.closest(".battlefield-board-quick-actions") !== null) return;
     }
     selectFighter(null);
   }
