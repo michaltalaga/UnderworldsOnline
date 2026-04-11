@@ -255,6 +255,10 @@ body {
   overflow: hidden;
 }
 
+.battlefield-layout:has(.battlefield-side-rail) {
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+
 /* --- Roster panel (fighter cards sidebar) --- */
 
 .roster-panel {
@@ -531,7 +535,7 @@ body {
 }
 
 .battlefield-side-rail > .setup-phase-panel {
-  overflow: hidden;
+  overflow-y: auto;
   min-height: 0;
   padding: 16px 18px;
 }

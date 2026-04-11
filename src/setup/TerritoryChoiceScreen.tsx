@@ -31,7 +31,7 @@ export default function TerritoryChoiceScreen({
     );
 
   return (
-    <main className="setup-shell">
+    <>
       <header className="setup-hero">
         <span className="setup-active-player">{player.name} chooses</span>
         <h1>Pick your territory</h1>
@@ -54,6 +54,6 @@ export default function TerritoryChoiceScreen({
           </li>
         ))}
       </ul>
-    </main>
+    </>
   );
 }
