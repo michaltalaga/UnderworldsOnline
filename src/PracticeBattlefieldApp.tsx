@@ -40,7 +40,7 @@ import {
 import BoardMap from "./board/BoardMap";
 import type { BoardTheme } from "./board/boardTheme";
 import { projectBoardScene, type BoardSceneHexClickIntent, type BoardSceneQuickAction } from "./board/boardScene";
-import DiceTray, { getDiceTrayModel } from "./board/DiceTray";
+// import DiceTray, { getDiceTrayModel } from "./board/DiceTray";
 import DebugPanel from "./DebugPanel";
 import PlayerPanel from "./board/PlayerPanel";
 import { buildBattlefieldResultFlash } from "./board/battlefieldResultFlash";
@@ -102,6 +102,7 @@ export default function PracticeBattlefieldApp({
   const boardProjection = projectBoard(game.board);
   const recentEvents = [...game.eventLog].slice(-10).reverse();
   const localPlayer = getLocalPlayer(game);
+  const opponentPlayer = game.players.find((p) => p.id !== LOCAL_PLAYER_ID) ?? null;
   const activePlayer = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
   const legalActions = activePlayer === null ? [] : combatActionService.getLegalActions(game, activePlayer.id);
   const [selectedFighterId, setSelectedFighterId] = useState<FighterId | null>(null);
@@ -181,7 +182,7 @@ export default function PracticeBattlefieldApp({
       ? "Discard nothing and draw 1 additional power card."
       : `Discard ${selectedFocusObjectiveIds.length} objective card${selectedFocusObjectiveIds.length === 1 ? "" : "s"} and ${selectedFocusPowerIds.length} power card${selectedFocusPowerIds.length === 1 ? "" : "s"}, then draw ${selectedFocusObjectiveIds.length} objective card${selectedFocusObjectiveIds.length === 1 ? "" : "s"} and ${selectedFocusPowerIds.length + 1} power card${selectedFocusPowerIds.length + 1 === 1 ? "" : "s"}.`;
   const latestCombat = game.getLatestRecord(GameRecordKind.Combat);
-  const diceTrayModel = getDiceTrayModel(game);
+  // const diceTrayModel = getDiceTrayModel(game);
   const scorableObjectives = localPlayer === null ? [] : localPlayer.objectiveHand
     .filter((card) => card.getLegalTargets(game).length > 0)
     .map((card) => ({ cardId: card.id, cardName: card.name, gloryValue: card.gloryValue }));
@@ -398,6 +399,7 @@ export default function PracticeBattlefieldApp({
       if (target.closest(".battlefield-map-hex") !== null) return;
       if (target.closest(".player-hand-dock-shell") !== null) return;
       if (target.closest(".battlefield-board-quick-actions") !== null) return;
+      if (target.closest(".battlefield-roster-rail") !== null) return;
     }
     selectFighter(null);
   }
@@ -787,17 +789,26 @@ export default function PracticeBattlefieldApp({
             onQuickAction={handleQuickAction}
             onApplyPowerOption={selectPowerOption}
             onDelveInlineFeature={delveSelectedFighter}
+            leftPanel={localPlayer !== null ? (
+              <PlayerPanel
+                activePlayerId={activePlayer?.id ?? null}
+                game={game}
+                onSelectFighter={selectFighter}
+                player={localPlayer}
+                selectedFighterId={selectedFighterId}
+              />
+            ) : undefined}
+            rightPanel={opponentPlayer !== null ? (
+              <PlayerPanel
+                activePlayerId={activePlayer?.id ?? null}
+                game={game}
+                onSelectFighter={() => {}}
+                player={opponentPlayer}
+                selectedFighterId={null}
+              />
+            ) : undefined}
           />
         </section>
-
-        <aside className="battlefield-side-rail">
-          <DiceTray model={diceTrayModel} />
-          {diceTrayModel === null ? (
-            <div className="battlefield-side-rail-empty">
-              Dice results will appear here
-            </div>
-          ) : null}
-        </aside>
       </section>
 
       {dockPlayer === null ? null : (

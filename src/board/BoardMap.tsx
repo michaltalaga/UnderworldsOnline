@@ -30,6 +30,8 @@ export type BoardMapProps = {
   onQuickAction: (action: BoardSceneQuickAction) => void;
   onApplyPowerOption: (option: PowerOverlayOption) => void;
   onDelveInlineFeature: () => void;
+  leftPanel?: React.ReactNode;
+  rightPanel?: React.ReactNode;
 };
 
 export default function BoardMap({
@@ -39,6 +41,8 @@ export default function BoardMap({
   onQuickAction,
   onApplyPowerOption,
   onDelveInlineFeature,
+  leftPanel,
+  rightPanel,
 }: BoardMapProps) {
   const [actionTooltip, setActionTooltip] = useState<{
     label: string;
@@ -190,14 +194,16 @@ export default function BoardMap({
         </div>
       )}
 
-      <div
-        ref={mapWrapperRef}
-        className="battlefield-board-map-scaler"
-        style={{
-          width: `${scene.viewport.width * mapScale}px`,
-          height: `${scene.viewport.height * mapScale}px`,
-        }}
-      >
+      <div className="battlefield-board-map-area">
+        {leftPanel && <div className="battlefield-roster-rail battlefield-roster-rail-left">{leftPanel}</div>}
+        <div
+          ref={mapWrapperRef}
+          className="battlefield-board-map-scaler"
+          style={{
+            width: `${scene.viewport.width * mapScale}px`,
+            height: `${scene.viewport.height * mapScale}px`,
+          }}
+        >
         <div
           className="battlefield-board-map"
           data-territory-indicator={scene.territoryIndicator}
@@ -266,6 +272,8 @@ export default function BoardMap({
             </div>
           )}
         </div>
+      </div>
+      {rightPanel && <div className="battlefield-roster-rail battlefield-roster-rail-right">{rightPanel}</div>}
       </div>
     </div>
   );

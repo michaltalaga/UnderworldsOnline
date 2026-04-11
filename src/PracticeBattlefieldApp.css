@@ -244,7 +244,7 @@ body {
 
 .battlefield-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   align-items: stretch;
   padding: 12px;
@@ -255,9 +255,201 @@ body {
   overflow: hidden;
 }
 
-/* Board panel: the left column of the layout. Stripped of chrome so the
-   map fills the available space — no padding, border, background, or
-   shadow. The map itself draws the gradient backdrop inside the frame. */
+/* --- Roster panel (fighter cards sidebar) --- */
+
+.roster-panel {
+  padding: 6px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.roster-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px;
+  color: #fff8f2;
+}
+
+.roster-name {
+  font-weight: 800;
+  font-size: 0.72rem;
+}
+
+.roster-glory {
+  font-size: 0.62rem;
+  opacity: 0.7;
+}
+
+/* --- Roster icon base --- */
+
+.roster-icon {
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+  border-radius: 3px;
+}
+
+.roster-icon-leader {
+  margin-right: 2px;
+}
+
+/* --- Individual fighter card --- */
+
+.roster-card {
+  background: rgba(255, 252, 245, 0.88);
+  border: 1px solid rgba(100, 80, 55, 0.15);
+  border-radius: 8px;
+  padding: 7px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.roster-card-slain {
+  opacity: 0.4;
+}
+
+.roster-card-selectable {
+  cursor: pointer;
+}
+
+.roster-card-selectable:hover {
+  border-color: rgba(100, 80, 55, 0.35);
+  box-shadow: 0 2px 8px rgba(40, 30, 20, 0.12);
+}
+
+.roster-card-selected {
+  border-color: rgba(60, 120, 180, 0.6);
+  box-shadow:
+    0 0 0 2px rgba(60, 120, 180, 0.25),
+    0 2px 8px rgba(40, 30, 20, 0.1);
+}
+
+/* -- Card top row: name + slain badge -- */
+
+.roster-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.roster-card-name {
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: #3a2e22;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.roster-card-slain-badge {
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #a04040;
+  letter-spacing: 0.05em;
+}
+
+/* -- Stat row: move / health / save with icons -- */
+
+.roster-card-stats {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.roster-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #4a3d30;
+}
+
+.roster-stat-health {
+  color: #8b3030;
+}
+
+/* -- Weapons: compact icon rows -- */
+
+.roster-card-weapons {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 0 0;
+  border-top: 1px solid rgba(100, 80, 55, 0.1);
+}
+
+.roster-weapon {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #5a4a3a;
+}
+
+.roster-weapon-sep {
+  opacity: 0.3;
+}
+
+.roster-weapon-ability {
+  font-size: 0.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: rgba(100, 80, 55, 0.1);
+  color: #6a5a4a;
+}
+
+/* -- Token badges -- */
+
+.roster-card-tokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.roster-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(100, 80, 55, 0.1);
+  color: #6a5a4a;
+}
+
+.roster-token-guard {
+  background: rgba(40, 120, 80, 0.12);
+  color: #2a6a4a;
+}
+
+.roster-token-stagger {
+  background: rgba(160, 60, 30, 0.12);
+  color: #8a3a20;
+}
+
+.roster-token-charge {
+  background: rgba(180, 140, 30, 0.12);
+  color: #7a6a20;
+}
+
+/* Board panel: the left column of the layout. Contains the map flanked
+   by roster panels. Stripped of chrome so the map fills the available
+   space — no padding, border, background, or shadow. */
 .battlefield-board-panel {
   padding: 0;
   overflow: hidden;
@@ -272,9 +464,28 @@ body {
   backdrop-filter: none;
 }
 
+.battlefield-board-map-area {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.battlefield-roster-rail {
+  flex: 0 0 170px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
 .battlefield-board-panel > .battlefield-board-frame {
   flex: 1 1 0;
   min-height: 0;
+}
+
+.battlefield-board-map-area > .battlefield-board-map-scaler {
+  flex: 0 1 auto;
 }
 
 /* Side rail: fixed-width right column in both setup and combat. Holds the
