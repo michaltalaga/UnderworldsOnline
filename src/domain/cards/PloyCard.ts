@@ -24,8 +24,14 @@ export class PloyCard extends Card {
 
   override getLegalTargets(game: Game): Target[] {
     if (this.zone !== CardZone.PowerHand) return [];
-    if (game.turnStep !== "power") return [];
+    if (!this.canPlay(game)) return [];
     return this.getTargets(game);
+  }
+
+  /** When can this card be played? Default: power step only.
+   *  Reaction cards override to check game state/events. */
+  protected canPlay(game: Game): boolean {
+    return game.turnStep === "power";
   }
 
   /** Who can this ploy target? Default: untargeted (player is the target). */

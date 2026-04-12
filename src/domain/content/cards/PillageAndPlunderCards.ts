@@ -13,6 +13,7 @@ import {
 } from "../../cards/targeting";
 import type { WeaponDefinition } from "../../definitions/WeaponDefinition";
 import { giveGuard, giveStagger, heal, dealDamage, pushFighter } from "../../cards/effects";
+import { CombatOutcome } from "../../values/enums";
 import { getMyLatestCombat, getTerritoryOwner, isInEnemyTerritory, isOnTreasureToken, isOnStaggerHex } from "../../cards/scoring";
 
 // Source: Warhammer Underworlds — Pillage and Plunder Rivals deck.
@@ -270,16 +271,20 @@ export class PridefulDuellist extends PloyCard {
       "Play this immediately after a friendly fighter's Attack if the attacker is in enemy territory. Heal the attacker.", zone);
   }
 
-  // Reaction card: must be played immediately after a friendly fighter's Attack
-  // while the attacker is in enemy territory. The game does not currently support
-  // reaction timing during combat, so this card is unplayable for now.
-  protected override getTargets(_game: Game): Target[] {
-    return [];
+  protected override canPlay(game: Game): boolean {
+    const combat = getMyLatestCombat(game, this.owner.id);
+    if (combat === null) return false;
+    const attacker = this.owner.getFighter(combat.data.context.attackerFighterId);
+    if (attacker === undefined || attacker.isSlain) return false;
+    return isInEnemyTerritory(game, attacker, this.owner.id);
   }
 
-  protected override onPlay(_game: Game, target: Target | null): string[] {
-    if (!(target instanceof Fighter)) return [];
-    return heal(target);
+  protected override onPlay(game: Game, _target: Target | null): string[] {
+    const combat = getMyLatestCombat(game, this.owner.id);
+    if (combat === null) return [];
+    const attacker = this.owner.getFighter(combat.data.context.attackerFighterId);
+    if (attacker === undefined || attacker.isSlain) return [];
+    return heal(attacker);
   }
 }
 
@@ -354,11 +359,22 @@ export class BrashScout extends PloyCard {
       "Play this immediately after you make an Attack roll for a fighter in enemy territory. Re-roll 1 dice.", zone);
   }
 
-  // Reaction card: must be played immediately after an Attack roll.
-  // The game does not currently support reaction timing during combat,
-  // so this card is unplayable for now.
-  protected override getTargets(_game: Game): Target[] {
-    return [];
+  protected override canPlay(game: Game): boolean {
+    const combat = getMyLatestCombat(game, this.owner.id);
+    if (combat === null || combat.data.outcome !== CombatOutcome.Success) return false;
+    const attacker = this.owner.getFighter(combat.data.context.attackerFighterId);
+    if (attacker === undefined || attacker.isSlain) return false;
+    return isInEnemyTerritory(game, attacker, this.owner.id);
+  }
+
+  protected override onPlay(game: Game, _target: Target | null): string[] {
+    const combat = getMyLatestCombat(game, this.owner.id);
+    if (combat === null) return [];
+    const target = game.getFighter(combat.data.context.targetFighterId);
+    if (target === undefined || target.isSlain) return [];
+    // Retroactive re-roll advantage: deal 1 extra damage
+    target.damage += 1;
+    return [`Brash Scout: dealt 1 extra damage to ${target.id}`];
   }
 }
 

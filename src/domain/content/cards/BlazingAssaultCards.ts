@@ -3,7 +3,7 @@ import { Fighter } from "../../state/Fighter";
 import { GameRecordKind } from "../../state/GameRecord";
 import type { Game } from "../../state/Game";
 import type { Player } from "../../state/Player";
-import { type CardZone, WeaponAbilityKind } from "../../values/enums";
+import { type CardZone, CombatOutcome, WeaponAbilityKind } from "../../values/enums";
 import { ObjectiveCard } from "../../cards/ObjectiveCard";
 import { PloyCard } from "../../cards/PloyCard";
 import { UpgradeCard } from "../../cards/UpgradeCard";
@@ -219,11 +219,22 @@ export class DeterminedEffort extends PloyCard {
       "Play after picking a weapon for an Attack. That weapon gains +1 Attack dice (+2 if underdog).", zone);
   }
 
-  // Reaction card: must be played after picking a weapon during an Attack.
-  // The game does not currently support reaction timing during combat,
-  // so this card is unplayable for now.
-  protected override getTargets(_game: Game): Target[] {
-    return [];
+  protected override canPlay(game: Game): boolean {
+    const combat = getMyLatestCombat(game, this.owner.id);
+    return combat !== null && combat.data.outcome === CombatOutcome.Success;
+  }
+
+  protected override onPlay(game: Game, _target: Target | null): string[] {
+    const combat = getMyLatestCombat(game, this.owner.id);
+    if (combat === null) return [];
+    const target = game.getFighter(combat.data.context.targetFighterId);
+    if (target === undefined || target.isSlain) return [];
+    // Retroactive bonus damage (simulating the extra dice advantage)
+    const opponent = game.getOpponent(this.owner.id);
+    const isUnderdog = opponent !== undefined && this.owner.glory < opponent.glory;
+    const bonus = isUnderdog ? 2 : 1;
+    target.damage += bonus;
+    return [`Determined Effort: dealt ${bonus} extra damage to ${target.id}`];
   }
 }
 
@@ -233,11 +244,27 @@ export class TwistTheKnife extends PloyCard {
       "Play after picking a melee weapon for an Attack. That weapon gains Grievous for that Attack.", zone);
   }
 
-  // Reaction card: must be played after picking a melee weapon during an Attack.
-  // The game does not currently support reaction timing during combat,
-  // so this card is unplayable for now.
-  protected override getTargets(_game: Game): Target[] {
-    return [];
+  protected override canPlay(game: Game): boolean {
+    const combat = getMyLatestCombat(game, this.owner.id);
+    if (combat === null || combat.data.outcome !== CombatOutcome.Success) return false;
+    // Check the weapon was melee
+    const player = game.getPlayer(this.owner.id);
+    if (player === undefined) return false;
+    const weapon = player.getFighterWeaponDefinition(
+      combat.data.context.attackerFighterId,
+      combat.data.context.weaponId,
+    );
+    return weapon !== undefined && isMeleeWeapon(weapon);
+  }
+
+  protected override onPlay(game: Game, _target: Target | null): string[] {
+    const combat = getMyLatestCombat(game, this.owner.id);
+    if (combat === null) return [];
+    const target = game.getFighter(combat.data.context.targetFighterId);
+    if (target === undefined || target.isSlain) return [];
+    // Retroactive Grievous: +1 damage
+    target.damage += 1;
+    return [`Twist the Knife: dealt 1 extra damage to ${target.id}`];
   }
 }
 

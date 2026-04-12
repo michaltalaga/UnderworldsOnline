@@ -35,7 +35,7 @@ export function getPowerOverlayModel(
   activePlayer: Player | null,
   legalActions: GameAction[],
 ): PowerOverlayModel {
-  if (activePlayer === null || game.turnStep !== TurnStep.Power) {
+  if (activePlayer === null) {
     return {
       ploys: [],
       upgrades: [],

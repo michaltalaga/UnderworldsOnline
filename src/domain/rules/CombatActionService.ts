@@ -73,6 +73,7 @@ export class CombatActionService extends LegalActionService {
 
     return [
       ...this.coreAbilities.flatMap((ability) => ability.getLegalActions(game, player)),
+      ...this.getLegalPlayPloyActions(game, player),
       new PassAction(playerId),
     ];
   }
@@ -150,16 +151,13 @@ export class CombatActionService extends LegalActionService {
   }
 
   public isLegalPlayPloyAction(game: Game, action: PlayPloyAction): boolean {
-    if (!game.isCombatPowerStep(action.playerId)) {
-      return false;
-    }
-
     const player = game.getPlayer(action.playerId);
     if (player === undefined) return false;
 
     const card = player.getCard(action.cardId);
     if (card === undefined || card.kind !== CardKind.Ploy) return false;
 
+    // The card itself decides when it's playable via getLegalTargets.
     const targets = card.getLegalTargets(game);
     if (action.targetFighterId === null) {
       return targets.some((target) => !(target instanceof Fighter));
@@ -243,7 +241,6 @@ export class CombatActionService extends LegalActionService {
   }
 
   private getLegalPlayPloyActions(game: Game, player: Player): PlayPloyAction[] {
-    if (!game.isCombatPowerStep(player.id)) return [];
 
     const legalActions = new Map<string, PlayPloyAction>();
     for (const card of player.powerHand) {
