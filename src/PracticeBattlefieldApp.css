@@ -256,7 +256,7 @@ body {
 }
 
 .battlefield-layout:has(.battlefield-side-rail) {
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 /* --- Roster panel (fighter cards sidebar) --- */
@@ -495,12 +495,18 @@ body {
 /* Side rail: fixed-width right column in both setup and combat. Holds the
    dice tray (always present) and, during setup, the phase panel below it. */
 .battlefield-side-rail {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  width: 320px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   min-height: 0;
   min-width: 0;
   overflow: hidden;
+  z-index: 15;
 }
 
 .battlefield-side-rail > .setup-phase-panel {
@@ -2555,12 +2561,6 @@ body {
   display: grid;
   gap: 8px;
   line-height: 1.55;
-}
-
-@media (max-width: 1100px) {
-  .battlefield-layout:has(.setup-phase-panel) {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 @media (max-width: 640px) {
