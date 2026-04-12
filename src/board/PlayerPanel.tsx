@@ -33,6 +33,9 @@ export default function PlayerPanel({
         const def = player.getFighterDefinition(fighter.id);
         const isSelected = fighter.id === selectedFighterId;
         const isSelectable = isActivePlayer && !fighter.isSlain && fighter.currentHexId !== null;
+        const upgrades = player.equippedUpgrades
+          .filter((c) => c.attachedToFighter?.id === fighter.id)
+          .map((c) => c.name);
 
         return (
           <FighterCard
@@ -45,6 +48,7 @@ export default function PlayerPanel({
             saveDice={def?.saveDice ?? 0}
             saveSymbol={def?.saveSymbol ?? SaveSymbol.Dodge}
             weapons={def?.weapons ?? []}
+            upgrades={upgrades}
             isSelected={isSelected}
             isSelectable={isSelectable}
             onSelect={() => isSelectable && onSelectFighter(fighter.id)}
@@ -66,6 +70,7 @@ function FighterCard({
   saveDice,
   saveSymbol,
   weapons,
+  upgrades,
   isSelected,
   isSelectable,
   onSelect,
@@ -78,6 +83,7 @@ function FighterCard({
   saveDice: number;
   saveSymbol: string;
   weapons: readonly WeaponDefinition[];
+  upgrades: string[];
   isSelected: boolean;
   isSelectable: boolean;
   onSelect: () => void;
@@ -128,6 +134,14 @@ function FighterCard({
         <div className="roster-card-tokens">
           {tokenTags.map((tag) => (
             <TokenBadge key={tag} tag={tag} />
+          ))}
+        </div>
+      )}
+
+      {upgrades.length > 0 && (
+        <div className="roster-card-upgrades">
+          {upgrades.map((name) => (
+            <span key={name} className="roster-upgrade">{name}</span>
           ))}
         </div>
       )}

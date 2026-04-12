@@ -451,6 +451,29 @@ body {
   color: #7a6a20;
 }
 
+/* -- Upgrade badges -- */
+
+.roster-card-upgrades {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding-top: 2px;
+  border-top: 1px solid rgba(100, 80, 55, 0.1);
+}
+
+.roster-upgrade {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(200, 170, 120, 0.18), rgba(180, 140, 80, 0.22));
+  color: #6e5520;
+  border: 1px solid rgba(180, 140, 80, 0.2);
+}
+
 /* Board panel: the left column of the layout. Contains the map flanked
    by roster panels. Stripped of chrome so the map fills the available
    space — no padding, border, background, or shadow. */
