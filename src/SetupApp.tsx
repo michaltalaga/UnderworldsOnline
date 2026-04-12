@@ -157,6 +157,7 @@ export default function SetupApp({ warband, deck, onSetupComplete, boardTheme = 
     // Setup has no AI loop; interactions are controlled by the phase
     // panel and setup-hex legality, not a per-player controller.
     isInteractionEnabled: true,
+    activeActionMode: null,
     boardTheme: boardTheme,
     territoryIndicator: "labels",
   });

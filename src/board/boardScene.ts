@@ -82,6 +82,28 @@ export type BoardSceneFeatureToken = {
   badge: string;
 };
 
+// ---------------------------------------------------------------------------
+// Action mode: the user picks an action from the context menu, then hex
+// visuals and click intents are filtered to only that action.
+// ---------------------------------------------------------------------------
+
+export type ActiveActionMode = "move" | "charge" | "attack" | "guard" | null;
+
+export type FighterContextMenuAction = {
+  mode: "move" | "charge" | "attack" | "guard";
+  label: string;
+  count: number;
+};
+
+export type FighterContextMenuModel = {
+  visible: boolean;
+  left: number;
+  top: number;
+  fighterName: string;
+  actions: FighterContextMenuAction[];
+  guardArmed: boolean;
+};
+
 // Flattened state flags a renderer uses to decide how to paint a hex and
 // its occupants. Mirrors the `HexRenderState` used internally by the DOM
 // renderer, but is now the shared contract.
@@ -205,6 +227,7 @@ export type BoardSceneModel = {
   showWarscrollOverlay: boolean;
   pendingPowerOptionKey: string | null;
   armedPathTone: "move" | "charge" | null;
+  contextMenu: FighterContextMenuModel;
 };
 
 // ---------------------------------------------------------------------------
@@ -244,6 +267,7 @@ export type ProjectBoardSceneParams = {
   // row is empty. Used to lock the UI during AI turns so the user
   // doesn't accidentally play for the opponent.
   isInteractionEnabled: boolean;
+  activeActionMode: ActiveActionMode;
   boardTheme?: BoardTheme | null;
   territoryIndicator?: TerritoryIndicatorMode;
 };
@@ -279,6 +303,7 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
     isSetupClickEnabled,
     hoveredChargeTargetId,
     isInteractionEnabled,
+    activeActionMode,
   } = params;
 
   const isActionStep = game.turnStep === TurnStep.Action;
@@ -437,22 +462,31 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
       featureToken !== null &&
       featureToken.id === pendingDelveFeatureTokenId;
 
-    const isClickableMoveDestination = isMoveDestination && isActionStep;
-    const isClickableChargeDestination = isChargeDestination && isActionStep;
+    // --- Action-mode gating ---
+    // When an action mode is active, only the relevant visuals and click
+    // intents are enabled. When null (context menu showing), hex action
+    // highlights are suppressed — only fighter selection works.
+    const showMoveVisuals = activeActionMode === "move" || activeActionMode === "charge";
+    const showChargeVisuals = activeActionMode === "charge";
+    const showAttackVisuals = activeActionMode === "attack";
+
+    const isClickableMoveDestination = isMoveDestination && isActionStep && showMoveVisuals;
     const isClickableChargeTarget =
       pendingChargeHexId !== null &&
       isChargeTarget &&
+      showChargeVisuals &&
       occupant !== null &&
       occupant.ownerPlayerId !== activePlayerId;
     const isClickableTargetFirstChargeTarget =
       pendingChargeHexId === null &&
       isChargeTarget &&
-      !isAttackTarget &&
+      showChargeVisuals &&
       occupant !== null &&
       occupant.ownerPlayerId !== activePlayerId;
     const isClickableAttackTarget =
       pendingChargeHexId === null &&
       isAttackTarget &&
+      showAttackVisuals &&
       occupant !== null &&
       occupant.ownerPlayerId !== activePlayerId;
     const isSetupLegalHex = setupLegalHexIds?.has(hex.id) ?? false;
@@ -462,7 +496,6 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
       isClickableAttackTarget ||
       isClickableChargeTarget ||
       isClickableTargetFirstChargeTarget ||
-      isClickableChargeDestination ||
       isClickableMoveDestination ||
       isClickableSetupHex;
 
@@ -471,48 +504,47 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
       kind: hex.kind,
       isStarting: hex.isStartingHex,
       isEdge: hex.isEdgeHex,
-      isAttackTarget: isAttackTarget && isInteractionEnabled,
-      isChargeDestination: isChargeDestination && isInteractionEnabled,
-      isHoveredChargeDestination,
+      isAttackTarget: showAttackVisuals && isAttackTarget && isInteractionEnabled,
+      isChargeDestination: showChargeVisuals && isChargeDestination && isMoveDestination && isInteractionEnabled,
+      isHoveredChargeDestination: showChargeVisuals && isHoveredChargeDestination,
       isPendingDelveHex: isPendingDelveFeature,
       isPendingGuardHex,
-      isPendingAttackTarget,
-      isPendingChargeHex,
-      isPendingChargeTarget,
-      isChargeTarget: isChargeTarget && isInteractionEnabled,
-      isHoveredChargeTarget,
+      isPendingAttackTarget: showAttackVisuals && isPendingAttackTarget,
+      isPendingChargeHex: showChargeVisuals && isPendingChargeHex,
+      isPendingChargeTarget: showChargeVisuals && isPendingChargeTarget,
+      isChargeTarget: showChargeVisuals && isChargeTarget && isInteractionEnabled,
+      isHoveredChargeTarget: showChargeVisuals && isHoveredChargeTarget,
       isClickableHex: isInteractiveHex && isInteractionEnabled,
       isDelveReadyHex: isDelveReadyFeature,
-      isPendingMoveHex,
-      isMoveDestination: isMoveDestination && isInteractionEnabled,
+      isPendingMoveHex: showMoveVisuals && isPendingMoveHex,
+      isMoveDestination: showMoveVisuals && isMoveDestination && isInteractionEnabled,
       isPowerResponseHex: isPowerResponseFighter,
       isRecentCombatTarget,
       isSelectedHex,
       isSelectableHex: isSelectableFighter && isInteractionEnabled,
-      isGuardReadyHex: isSelectedHex && actionLens.guardAvailable && isInteractionEnabled,
+      isGuardReadyHex: isSelectedHex && activeActionMode === "guard" && actionLens.guardAvailable && isInteractionEnabled,
       isSetupLegalHex,
     };
 
     const actionBadge = buildHexActionBadge({
-      isAttackTarget,
-      isChargeDestination,
+      isAttackTarget: showAttackVisuals && isAttackTarget,
+      isChargeDestination: showChargeVisuals && isChargeDestination,
       isPendingDelveHex: isPendingDelveFeature,
       isPendingGuardHex,
-      isPendingAttackTarget,
-      isPendingChargeHex,
+      isPendingAttackTarget: showAttackVisuals && isPendingAttackTarget,
+      isPendingChargeHex: showChargeVisuals && isPendingChargeHex,
       pendingChargeBadgeLabel,
       pendingAttackBadgeLabel,
-      isPendingChargeTarget,
-      isChargeTarget,
-      isPendingMoveHex,
-      isMoveDestination,
+      isPendingChargeTarget: showChargeVisuals && isPendingChargeTarget,
+      isChargeTarget: showChargeVisuals && isChargeTarget,
+      isPendingMoveHex: showMoveVisuals && isPendingMoveHex,
+      isMoveDestination: showMoveVisuals && isMoveDestination,
       isRecentCombatTarget,
     });
 
-    // Click intent priority matches BoardMap's old onClick ladder exactly.
+    // Click intent priority — gated by activeActionMode.
     // When `isInteractionEnabled` is false (AI turn), every hex reports
-    // `"none"` and renders as non-interactive, regardless of the
-    // underlying flags.
+    // `"none"` and renders as non-interactive.
     const clickIntent: BoardSceneHexClickIntent = (() => {
       if (!isInteractionEnabled) return { kind: "none" };
       if (isClickableSetupHex) return { kind: "setup-hex", hexId: hex.id };
@@ -530,9 +562,6 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
       }
       if (isClickableChargeTarget && occupant !== null) {
         return { kind: "complete-charge-against-target", fighterId: occupant.id };
-      }
-      if (isClickableChargeDestination) {
-        return { kind: "start-charge-to-hex", hexId: hex.id };
       }
       if (isClickableMoveDestination) {
         return { kind: "move-to-hex", hexId: hex.id };
@@ -590,6 +619,7 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
   // Quick actions disappear entirely when interaction is locked (AI
   // turn) so the user can't click "Pass Power" or similar on the
   // opponent's behalf.
+  // Guard is now in the context menu, not here.
   const quickActions: BoardSceneQuickAction[] = [];
   if (isInteractionEnabled) {
     if (isActionStep && actionLens.focusAction !== null) {
@@ -609,16 +639,6 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
         featureTokenId: selectedFeatureToken.id,
       });
     }
-    if (isActionStep && actionLens.guardAction !== null && selectedFighterName !== null) {
-      const armed =
-        pendingGuardFighterId === selectedFighterId && selectedFighterId !== null;
-      quickActions.push({
-        key: "guard",
-        armed,
-        label: armed ? "Confirm Guard" : "Guard",
-        selectedFighterName,
-      });
-    }
     if (isActionStep) {
       quickActions.push({
         key: "end-action-step",
@@ -634,6 +654,78 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
       });
     }
   }
+
+  // --- Context menu ---
+  // Shown when a fighter is selected but no action mode is active yet.
+  const guardArmed =
+    pendingGuardFighterId !== null &&
+    pendingGuardFighterId === selectedFighterId;
+  const contextMenu: FighterContextMenuModel = (() => {
+    if (
+      !isInteractionEnabled ||
+      selectedFighterId === null ||
+      !isActionStep ||
+      activeActionMode !== null
+    ) {
+      // When an action mode IS set, hide the context menu — the user
+      // has already picked their action and is interacting with hexes.
+      // Exception: guard mode keeps the menu visible for confirm/cancel.
+      if (activeActionMode === "guard") {
+        const selectedHex = hexes.find((h) => h.visual.isSelectedHex);
+        return {
+          visible: true,
+          left: (selectedHex?.left ?? 0) + hexPixelWidth + 8,
+          top: selectedHex?.top ?? 0,
+          fighterName: selectedFighterName ?? "",
+          actions: [],
+          guardArmed,
+        };
+      }
+      return {
+        visible: false,
+        left: 0,
+        top: 0,
+        fighterName: "",
+        actions: [],
+        guardArmed: false,
+      };
+    }
+
+    const selectedHex = hexes.find((h) => h.visual.isSelectedHex);
+    if (selectedHex === undefined) {
+      return {
+        visible: false,
+        left: 0,
+        top: 0,
+        fighterName: "",
+        actions: [],
+        guardArmed: false,
+      };
+    }
+
+    const actions: FighterContextMenuAction[] = [];
+    if (actionLens.moveCount > 0) {
+      actions.push({ mode: "move", label: "Move", count: actionLens.moveCount });
+    }
+    if (actionLens.chargeCount > 0) {
+      actions.push({ mode: "charge", label: "Charge", count: actionLens.chargeCount });
+    }
+    if (actionLens.attackCount > 0) {
+      actions.push({ mode: "attack", label: "Attack", count: actionLens.attackCount });
+    }
+    if (actionLens.guardAvailable) {
+      actions.push({ mode: "guard", label: "Guard", count: 0 });
+    }
+
+    return {
+      visible: true,
+      left: selectedHex.left + hexPixelWidth + 8,
+      top: selectedHex.top,
+      fighterName: selectedFighterName ?? "",
+      actions,
+      guardArmed: false,
+    };
+  })();
 
   return {
     viewport,
@@ -657,6 +749,7 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
       isPowerStep && powerOverlay.warscrollAbilities.length > 0,
     pendingPowerOptionKey,
     armedPathTone: armedPath?.tone ?? null,
+    contextMenu,
   };
 }
 

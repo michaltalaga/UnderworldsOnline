@@ -2,12 +2,14 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { FeatureTokenSide, HexKind } from "../domain";
 import type { PowerOverlayOption } from "./battlefieldModels";
 import type {
+  ActiveActionMode,
   BoardSceneHex,
   BoardSceneHexClickIntent,
   BoardSceneHexVisual,
   BoardSceneModel,
   BoardSceneQuickAction,
 } from "./boardScene";
+import FighterContextMenu from "./FighterContextMenu";
 
 // -----------------------------------------------------------------------
 // BoardMap (DOM renderer)
@@ -30,6 +32,8 @@ export type BoardMapProps = {
   onQuickAction: (action: BoardSceneQuickAction) => void;
   onApplyPowerOption: (option: PowerOverlayOption) => void;
   onDelveInlineFeature: () => void;
+  onContextMenuAction?: (mode: ActiveActionMode) => void;
+  onDismissContextMenu?: () => void;
   leftPanel?: React.ReactNode;
   rightPanel?: React.ReactNode;
 };
@@ -41,6 +45,8 @@ export default function BoardMap({
   onQuickAction,
   onApplyPowerOption,
   onDelveInlineFeature,
+  onContextMenuAction,
+  onDismissContextMenu,
   leftPanel,
   rightPanel,
 }: BoardMapProps) {
@@ -260,6 +266,18 @@ export default function BoardMap({
               }
             />
           ))}
+          {scene.contextMenu.visible && onContextMenuAction !== undefined && onDismissContextMenu !== undefined && (
+            <FighterContextMenu
+              model={scene.contextMenu}
+              mapScale={mapScale}
+              onSelectAction={onContextMenuAction}
+              onDismiss={onDismissContextMenu}
+              onConfirmGuard={() => {
+                // Second call to guard triggers confirm.
+                onContextMenuAction("guard");
+              }}
+            />
+          )}
           {actionTooltip === null ? null : (
             <div
               className="battlefield-board-tooltip"

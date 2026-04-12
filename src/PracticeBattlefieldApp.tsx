@@ -39,7 +39,7 @@ import {
 } from "./board/battlefieldFormatters";
 import BoardMap from "./board/BoardMap";
 import type { BoardTheme } from "./board/boardTheme";
-import { projectBoardScene, type BoardSceneHexClickIntent, type BoardSceneQuickAction } from "./board/boardScene";
+import { projectBoardScene, type ActiveActionMode, type BoardSceneHexClickIntent, type BoardSceneQuickAction } from "./board/boardScene";
 // import DiceTray, { getDiceTrayModel } from "./board/DiceTray";
 import DebugPanel from "./DebugPanel";
 import PlayerPanel from "./board/PlayerPanel";
@@ -58,6 +58,7 @@ import {
   getAttackProfiles,
   getChargeActionForTarget,
   getChargeActionsForHex,
+  getChargeDestinationHexIdsForTarget,
   getChargeOptions,
   getChargePairKey,
   getChargePreviewByTarget,
@@ -139,6 +140,7 @@ export default function PracticeBattlefieldApp({
   const [selectedFocusPowerIds, setSelectedFocusPowerIds] = useState<CardId[]>([]);
   const [selectedAttackKeysByTarget, setSelectedAttackKeysByTarget] = useState<Record<string, string>>({});
   const [selectedChargeKeysByPair, setSelectedChargeKeysByPair] = useState<Record<string, string>>({});
+  const [activeActionMode, setActiveActionMode] = useState<ActiveActionMode>(null);
   const selectedMoveOption = moveOptions.find((option) => option.hexId === selectedMoveHexId) ?? moveOptions[0] ?? null;
   const selectedChargeOption = chargeOptions.find((option) => option.key === selectedChargeKey) ?? chargeOptions[0] ?? null;
   const pendingPowerOption =
@@ -317,6 +319,7 @@ export default function PracticeBattlefieldApp({
     isSetupClickEnabled: false,
     hoveredChargeTargetId,
     isInteractionEnabled: isHumanTurn,
+    activeActionMode,
     boardTheme: boardTheme,
     territoryIndicator: "labels",
   });
@@ -388,6 +391,7 @@ export default function PracticeBattlefieldApp({
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
     clearPendingInteractions();
+    setActiveActionMode(null);
     setSelectedAttackKeysByTarget({});
     setSelectedChargeKeysByPair({});
     refreshGame();
@@ -400,7 +404,22 @@ export default function PracticeBattlefieldApp({
       if (target.closest(".player-hand-dock-shell") !== null) return;
       if (target.closest(".battlefield-board-quick-actions") !== null) return;
       if (target.closest(".battlefield-roster-rail") !== null) return;
+      if (target.closest(".battlefield-context-menu") !== null) return;
     }
+    selectFighter(null);
+  }
+
+  function handleContextMenuAction(mode: ActiveActionMode): void {
+    if (mode === "guard") {
+      setActiveActionMode("guard");
+      guardSelectedFighter();
+      return;
+    }
+    clearPendingInteractions();
+    setActiveActionMode(mode);
+  }
+
+  function dismissContextMenu(): void {
     selectFighter(null);
   }
 
@@ -448,6 +467,7 @@ export default function PracticeBattlefieldApp({
     setSelectedMoveHexId(null);
     setSelectedChargeKey(null);
     clearPendingInteractions();
+    setActiveActionMode(null);
     setSelectedAttackKeysByTarget({});
     setSelectedChargeKeysByPair({});
     setSelectedFighterId(getNextSelectedFighterId(game, previousActivePlayerId, previousSelectedFighterId));
@@ -511,7 +531,13 @@ export default function PracticeBattlefieldApp({
   }
 
   function startChargeAgainstTarget(targetId: FighterId): void {
-    const destinationHexId = getPreferredChargeDestinationForTarget(actionLens, targetId);
+    // If the player already armed a move hex, prefer that hex as the
+    // charge destination so the fighter goes where the player intended.
+    const validDestsForTarget = getChargeDestinationHexIdsForTarget(actionLens, targetId);
+    const destinationHexId =
+      pendingMoveHexId !== null && validDestsForTarget.has(pendingMoveHexId)
+        ? pendingMoveHexId
+        : getPreferredChargeDestinationForTarget(actionLens, targetId);
     if (destinationHexId === null) {
       return;
     }
@@ -699,13 +725,20 @@ export default function PracticeBattlefieldApp({
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
       if (event.key === "Escape") {
-        dismissSelection(null);
+        if (activeActionMode !== null) {
+          // Step back to context menu first.
+          clearPendingInteractions();
+          setActiveActionMode(null);
+        } else {
+          dismissSelection(null);
+        }
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeActionMode]);
 
   useEffect(() => {
     if (resultFlash === null) {
@@ -789,6 +822,8 @@ export default function PracticeBattlefieldApp({
             onQuickAction={handleQuickAction}
             onApplyPowerOption={selectPowerOption}
             onDelveInlineFeature={delveSelectedFighter}
+            onContextMenuAction={handleContextMenuAction}
+            onDismissContextMenu={dismissContextMenu}
             leftPanel={localPlayer !== null ? (
               <PlayerPanel
                 activePlayerId={activePlayer?.id ?? null}
