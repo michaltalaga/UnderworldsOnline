@@ -1,5 +1,6 @@
 import { Card } from "../cards/Card";
 import { type CardPlayContext } from "../cards/types";
+import { getEffectiveHealth } from "../cards/upgradeEffects";
 import { WeaponAbilityDefinition } from "../definitions/WeaponAbilityDefinition";
 import {
   CleanupResolution,
@@ -2531,7 +2532,7 @@ export class GameEngine {
       target.hasStaggerToken = true;
     }
 
-    const targetSlain = combatResult.targetSlain || target.damage >= targetDefinition.health;
+    const targetSlain = combatResult.targetSlain || target.damage >= getEffectiveHealth(targetDefinition, defenderPlayer, target);
     if (targetSlain) {
       const targetHexId = target.currentHexId;
       if (targetHexId === null) {

@@ -6,6 +6,7 @@ import type { Player } from "../state/Player";
 import type { HexId } from "../values/ids";
 import { Ability } from "./Ability";
 import { canFighterMove, isTraversableMoveHex } from "./fighterChecks";
+import { getEffectiveMove } from "../cards/upgradeEffects";
 
 type MovePathSearchNode = {
   hex: HexCell;
@@ -24,13 +25,14 @@ export class MoveAbility extends Ability {
       const startHex = game.getFighterHex(fighter);
       if (startHex === undefined) return [];
 
+      const moveDistance = getEffectiveMove(definition, player, fighter);
       const actions: MoveAction[] = [];
       const frontier: MovePathSearchNode[] = [{ hex: startHex, path: [] }];
       const shortestPathLengths = new Map<HexId, number>([[startHex.id, 0]]);
 
       while (frontier.length > 0) {
         const node = frontier.shift();
-        if (node === undefined || node.path.length >= definition.move) continue;
+        if (node === undefined || node.path.length >= moveDistance) continue;
 
         for (const neighbor of game.getNeighbors(node.hex)) {
           if (!isTraversableMoveHex(neighbor)) continue;
@@ -59,7 +61,8 @@ export class MoveAbility extends Ability {
     const fighter = player.getFighter(action.fighterId);
     const definition = player.getFighterDefinition(action.fighterId);
     if (fighter === undefined || definition === undefined || !canFighterMove(fighter)) return false;
-    if (action.path.length === 0 || action.path.length > definition.move) return false;
+    const moveDistance = getEffectiveMove(definition, player, fighter);
+    if (action.path.length === 0 || action.path.length > moveDistance) return false;
 
     const visited = new Set<HexId>([fighter.currentHexId]);
     let currentHex = game.getFighterHex(fighter);

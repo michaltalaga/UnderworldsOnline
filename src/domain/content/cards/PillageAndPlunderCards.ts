@@ -3,7 +3,7 @@ import { Fighter } from "../../state/Fighter";
 import { GameRecordKind } from "../../state/GameRecord";
 import type { Game } from "../../state/Game";
 import type { Player } from "../../state/Player";
-import { type CardZone, FeatureTokenSide, GameActionKind } from "../../values/enums";
+import { type CardZone, FeatureTokenSide, GameActionKind, WeaponAbilityKind } from "../../values/enums";
 import { ObjectiveCard } from "../../cards/ObjectiveCard";
 import { PloyCard } from "../../cards/PloyCard";
 import { UpgradeCard } from "../../cards/UpgradeCard";
@@ -11,8 +11,9 @@ import {
   friendlyFightersOnBoard,
   enemyFightersOnBoard,
 } from "../../cards/targeting";
+import type { WeaponDefinition } from "../../definitions/WeaponDefinition";
 import { giveGuard, giveStagger, heal, dealDamage, pushFighter } from "../../cards/effects";
-import { getMyLatestCombat, getTerritoryOwner } from "../../cards/scoring";
+import { getMyLatestCombat, getTerritoryOwner, isInEnemyTerritory, isOnTreasureToken, isOnStaggerHex } from "../../cards/scoring";
 
 // Source: Warhammer Underworlds — Pillage and Plunder Rivals deck.
 
@@ -269,8 +270,11 @@ export class PridefulDuellist extends PloyCard {
       "Play this immediately after a friendly fighter's Attack if the attacker is in enemy territory. Heal the attacker.", zone);
   }
 
-  protected override getTargets(): Target[] {
-    return friendlyFightersOnBoard(this);
+  // Reaction card: must be played immediately after a friendly fighter's Attack
+  // while the attacker is in enemy territory. The game does not currently support
+  // reaction timing during combat, so this card is unplayable for now.
+  protected override getTargets(_game: Game): Target[] {
+    return [];
   }
 
   protected override onPlay(_game: Game, target: Target | null): string[] {
@@ -286,12 +290,16 @@ export class PillageCommandingStride extends PloyCard {
   }
 
   protected override getTargets(): Target[] {
-    return friendlyFightersOnBoard(this);
+    return this.owner.fighters.filter(f => {
+      if (f.isSlain || f.currentHexId === null) return false;
+      const def = this.owner.getFighterDefinition(f.id);
+      return def?.isLeader === true;
+    });
   }
 
   protected override onPlay(game: Game, target: Target | null): string[] {
     if (!(target instanceof Fighter)) return [];
-    return pushFighter(game, target, 1);
+    return pushFighter(game, target, 3);
   }
 }
 
@@ -300,7 +308,12 @@ export class CrumblingMine extends PloyCard {
     super(id, owner, "Crumbling Mine",
       "Pick a treasure token that is not held. Flip that treasure token.", zone);
   }
-  // Untargeted, no-op for now (would need to target feature tokens, not fighters).
+
+  // This card targets feature tokens, not fighters. The system does not
+  // currently support targeting tokens, so this card is unplayable for now.
+  protected override getTargets(_game: Game): Target[] {
+    return [];
+  }
 }
 
 export class ExplosiveCharges extends PloyCard {
@@ -308,7 +321,13 @@ export class ExplosiveCharges extends PloyCard {
     super(id, owner, "Explosive Charges",
       "Domain: Friendly fighters have +1 Move while using Charge abilities.", zone);
   }
-  // Domain effect — passive modifier, no-op for now.
+
+  // Domain effect: passive modifier that is not a playable action.
+  // The system does not currently support domain effects, so this card
+  // is unplayable for now.
+  protected override getTargets(_game: Game): Target[] {
+    return [];
+  }
 }
 
 export class WaryDelver extends PloyCard {
@@ -334,7 +353,13 @@ export class BrashScout extends PloyCard {
     super(id, owner, "Brash Scout",
       "Play this immediately after you make an Attack roll for a fighter in enemy territory. Re-roll 1 dice.", zone);
   }
-  // Reaction-timing ploy: untargeted, no-op for now.
+
+  // Reaction card: must be played immediately after an Attack roll.
+  // The game does not currently support reaction timing during combat,
+  // so this card is unplayable for now.
+  protected override getTargets(_game: Game): Target[] {
+    return [];
+  }
 }
 
 export class SuddenBlast extends PloyCard {
@@ -379,8 +404,8 @@ export class TunnellingTerror extends PloyCard {
 
   protected override onPlay(game: Game, target: Target | null): string[] {
     if (!(target instanceof Fighter)) return [];
-    // Simplified: push 1 hex and give charge token
-    const messages = pushFighter(game, target, 1);
+    // Simplified: push 2 hexes (approximation of remove-and-place) and give charge token
+    const messages = pushFighter(game, target, 2);
     target.hasChargeToken = true;
     messages.push(`gave Charge token to ${target.id}`);
     return messages;
@@ -421,6 +446,7 @@ export class GreatSpeed extends UpgradeCard {
   constructor(id: string, owner: Player, zone: CardZone) {
     super(id, owner, "Great Speed", "This fighter has +1 Move.", 0, zone);
   }
+  override getMovementBonus(): number { return 1; }
 }
 
 export class SwiftStep extends UpgradeCard {
@@ -428,6 +454,7 @@ export class SwiftStep extends UpgradeCard {
     super(id, owner, "Swift Step",
       "Quick: Immediately after this fighter has Charged, you can push this fighter 1 hex.", 1, zone);
   }
+  // Post-charge trigger — requires reaction system, not yet implemented.
 }
 
 export class BurrowingStrike extends UpgradeCard {
@@ -435,12 +462,18 @@ export class BurrowingStrike extends UpgradeCard {
     super(id, owner, "Burrowing Strike",
       "Melee Attack (2 hex, Fury 2, 2 damage). +1 Attack dice while on a feature token.", 1, zone);
   }
+  // Adds a weapon — requires weapon addition system, not yet implemented.
 }
 
 export class ToughEnough extends UpgradeCard {
   constructor(id: string, owner: Player, zone: CardZone) {
     super(id, owner, "Tough Enough",
       "While in enemy territory, Save rolls not affected by Cleave and Ensnare.", 1, zone);
+  }
+  override shouldIgnoreSaveKeyword(keyword: WeaponAbilityKind, game: Game): boolean {
+    if (keyword !== WeaponAbilityKind.Cleave && keyword !== WeaponAbilityKind.Ensnare) return false;
+    if (this.attachedToFighter === null) return false;
+    return isInEnemyTerritory(game, this.attachedToFighter, this.owner.id);
   }
 }
 
@@ -449,6 +482,7 @@ export class CannySapper extends UpgradeCard {
     super(id, owner, "Canny Sapper",
       "Sneaky: After playing a Ploy, remove and place in empty stagger hex or starting hex in friendly territory.", 0, zone);
   }
+  // Post-ploy trigger — requires reaction system, not yet implemented.
 }
 
 export class ImpossiblyQuick extends UpgradeCard {
@@ -456,11 +490,16 @@ export class ImpossiblyQuick extends UpgradeCard {
     super(id, owner, "Impossibly Quick",
       "This fighter has +1 Save. Discard after enemy's failed Attack.", 1, zone);
   }
+  override getSaveDiceBonus(): number { return 1; }
+  // Discard-after-failed-attack — requires reaction system, not yet implemented.
 }
 
 export class Linebreaker extends UpgradeCard {
   constructor(id: string, owner: Player, zone: CardZone) {
     super(id, owner, "Linebreaker", "This fighter's weapons have Brutal.", 1, zone);
+  }
+  override getGrantedWeaponAbility(): WeaponAbilityKind | null {
+    return WeaponAbilityKind.Brutal;
   }
 }
 
@@ -469,6 +508,7 @@ export class ExcavatingBlast extends UpgradeCard {
     super(id, owner, "Excavating Blast",
       "Ranged Attack (3 hex, Smash 2, 1 damage). Stagger while in enemy territory.", 1, zone);
   }
+  // Adds a weapon — requires weapon addition system, not yet implemented.
 }
 
 export class Gloryseeker extends UpgradeCard {
@@ -476,11 +516,22 @@ export class Gloryseeker extends UpgradeCard {
     super(id, owner, "Gloryseeker",
       "This fighter's melee weapons have Grievous if target Health 4+.", 1, zone);
   }
+  override getGrantedWeaponAbility(weapon: WeaponDefinition, targetHealth: number): WeaponAbilityKind | null {
+    if (weapon.range <= 1 && targetHealth >= 4) return WeaponAbilityKind.Grievous;
+    return null;
+  }
 }
 
 export class FrenzyOfGreed extends UpgradeCard {
   constructor(id: string, owner: Player, zone: CardZone) {
     super(id, owner, "Frenzy of Greed",
       "While on treasure token in enemy territory or stagger hex, Save not affected by Cleave/Ensnare.", 2, zone);
+  }
+  override shouldIgnoreSaveKeyword(keyword: WeaponAbilityKind, game: Game): boolean {
+    if (keyword !== WeaponAbilityKind.Cleave && keyword !== WeaponAbilityKind.Ensnare) return false;
+    if (this.attachedToFighter === null) return false;
+    const fighter = this.attachedToFighter;
+    const onTreasureInEnemy = isOnTreasureToken(game, fighter) && isInEnemyTerritory(game, fighter, this.owner.id);
+    return onTreasureInEnemy || isOnStaggerHex(game, fighter);
   }
 }

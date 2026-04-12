@@ -3,13 +3,14 @@ import { Fighter } from "../../state/Fighter";
 import { GameRecordKind } from "../../state/GameRecord";
 import type { Game } from "../../state/Game";
 import type { Player } from "../../state/Player";
-import type { CardZone } from "../../values/enums";
+import { type CardZone, WeaponAbilityKind } from "../../values/enums";
 import { ObjectiveCard } from "../../cards/ObjectiveCard";
 import { PloyCard } from "../../cards/PloyCard";
 import { UpgradeCard } from "../../cards/UpgradeCard";
+import type { WeaponDefinition } from "../../definitions/WeaponDefinition";
 import { friendlyFightersOnBoard } from "../../cards/targeting";
 import { giveGuard, heal, dealDamage, removeMovementToken, pushFighter } from "../../cards/effects";
-import { getMyLatestCombat, getTerritoryOwner } from "../../cards/scoring";
+import { getMyLatestCombat, getTerritoryOwner, isMeleeWeapon } from "../../cards/scoring";
 
 // ─── Objectives ─────────────────────────────────────────────────────────────
 
@@ -217,12 +218,26 @@ export class DeterminedEffort extends PloyCard {
     super(id, owner, "Determined Effort",
       "Play after picking a weapon for an Attack. That weapon gains +1 Attack dice (+2 if underdog).", zone);
   }
+
+  // Reaction card: must be played after picking a weapon during an Attack.
+  // The game does not currently support reaction timing during combat,
+  // so this card is unplayable for now.
+  protected override getTargets(_game: Game): Target[] {
+    return [];
+  }
 }
 
 export class TwistTheKnife extends PloyCard {
   constructor(id: string, owner: Player, zone: CardZone) {
     super(id, owner, "Twist the Knife",
       "Play after picking a melee weapon for an Attack. That weapon gains Grievous for that Attack.", zone);
+  }
+
+  // Reaction card: must be played after picking a melee weapon during an Attack.
+  // The game does not currently support reaction timing during combat,
+  // so this card is unplayable for now.
+  protected override getTargets(_game: Game): Target[] {
+    return [];
   }
 }
 
@@ -314,8 +329,26 @@ export class LureOfBattle extends PloyCard {
       "Pick a friendly fighter within 2 hexes of another fighter. Push the other fighter 1 hex closer.", zone);
   }
 
-  protected override getTargets(): Target[] {
-    return friendlyFightersOnBoard(this);
+  protected override getTargets(game: Game): Target[] {
+    const friendlies = friendlyFightersOnBoard(this);
+    const opponent = game.getOpponent(this.owner.id);
+    const allFighters = [
+      ...this.owner.fighters.filter(f => !f.isSlain && f.currentHexId !== null),
+      ...(opponent ? opponent.fighters.filter(f => !f.isSlain && f.currentHexId !== null) : []),
+    ];
+    return friendlies.filter(f => {
+      if (f.currentHexId === null) return false;
+      const hex = game.getHex(f.currentHexId);
+      if (hex === undefined) return false;
+      const neighbors = game.getNeighbors(hex);
+      const ring2HexIds = new Set([hex.id, ...neighbors.map(n => n.id)]);
+      for (const n of neighbors) {
+        for (const n2 of game.getNeighbors(n)) {
+          ring2HexIds.add(n2.id);
+        }
+      }
+      return allFighters.some(other => other.id !== f.id && other.currentHexId !== null && ring2HexIds.has(other.currentHexId));
+    });
   }
 
   protected override onPlay(game: Game, target: Target | null): string[] {
@@ -331,12 +364,16 @@ export class CommandingStride extends PloyCard {
   }
 
   protected override getTargets(): Target[] {
-    return friendlyFightersOnBoard(this);
+    return this.owner.fighters.filter(f => {
+      if (f.isSlain || f.currentHexId === null) return false;
+      const def = this.owner.getFighterDefinition(f.id);
+      return def?.isLeader === true;
+    });
   }
 
   protected override onPlay(game: Game, target: Target | null): string[] {
     if (!(target instanceof Fighter)) return [];
-    return pushFighter(game, target, 1);
+    return pushFighter(game, target, 3);
   }
 }
 
@@ -351,8 +388,27 @@ export class IllusoryFighter extends PloyCard {
   }
 
   protected override onPlay(game: Game, target: Target | null): string[] {
-    if (!(target instanceof Fighter)) return [];
-    return pushFighter(game, target, 1);
+    if (!(target instanceof Fighter) || target.currentHexId === null) return [];
+    const originHex = game.getHex(target.currentHexId);
+    if (originHex === undefined) return [];
+    // Remove from current hex
+    originHex.occupantFighterId = null;
+    // Find an empty starting hex in friendly territory
+    const friendlyTerritoryId = this.owner.territoryId;
+    const startingHexes = game.board.hexes.filter(h =>
+      h.isStartingHex &&
+      h.occupantFighterId === null &&
+      h.territoryId === friendlyTerritoryId
+    );
+    if (startingHexes.length === 0) {
+      // No valid hex, put fighter back
+      originHex.occupantFighterId = target.id;
+      return [`no empty starting hex available for ${target.id}`];
+    }
+    const destination = startingHexes[Math.floor(Math.random() * startingHexes.length)];
+    destination.occupantFighterId = target.id;
+    target.currentHexId = destination.id;
+    return [`removed ${target.id} and placed in ${destination.id}`];
   }
 }
 
@@ -380,11 +436,17 @@ export class GreatStrength extends UpgradeCard {
   constructor(id: string, owner: Player, zone: CardZone) {
     super(id, owner, "Great Strength", "This fighter's melee weapons have Grievous.", 2, zone);
   }
+  override getGrantedWeaponAbility(weapon: WeaponDefinition): WeaponAbilityKind | null {
+    return isMeleeWeapon(weapon) ? WeaponAbilityKind.Grievous : null;
+  }
 }
 
 export class DeadlyAim extends UpgradeCard {
   constructor(id: string, owner: Player, zone: CardZone) {
     super(id, owner, "Deadly Aim", "This fighter's weapons have Ensnare.", 1, zone);
+  }
+  override getGrantedWeaponAbility(): WeaponAbilityKind | null {
+    return WeaponAbilityKind.Ensnare;
   }
 }
 
@@ -392,28 +454,37 @@ export class SharpenedPoints extends UpgradeCard {
   constructor(id: string, owner: Player, zone: CardZone) {
     super(id, owner, "Sharpened Points", "This fighter's weapons have Cleave.", 1, zone);
   }
+  override getGrantedWeaponAbility(): WeaponAbilityKind | null {
+    return WeaponAbilityKind.Cleave;
+  }
 }
 
 export class Duellist extends UpgradeCard {
   constructor(id: string, owner: Player, zone: CardZone) {
     super(id, owner, "Duellist", "Immediately after this fighter Attacks, push this fighter 1 hex.", 1, zone);
   }
+  // Post-attack trigger — requires reaction system, not yet implemented.
 }
 
 export class Tough extends UpgradeCard {
   constructor(id: string, owner: Player, zone: CardZone) {
     super(id, owner, "Tough", "No more than 3 damage can be inflicted on this fighter in the same turn.", 2, zone);
   }
+  // Per-turn damage cap — requires damage tracking, not yet implemented.
 }
 
 export class GreatFortitude extends UpgradeCard {
   constructor(id: string, owner: Player, zone: CardZone) {
     super(id, owner, "Great Fortitude", "This fighter has +1 Health.", 2, zone);
   }
+  override getHealthBonus(): number { return 1; }
 }
 
 export class KeenEye extends UpgradeCard {
   constructor(id: string, owner: Player, zone: CardZone) {
     super(id, owner, "Keen Eye", "This fighter's melee weapons have +1 Attack dice.", 2, zone);
+  }
+  override getAttackDiceBonus(weapon: WeaponDefinition): number {
+    return isMeleeWeapon(weapon) ? 1 : 0;
   }
 }

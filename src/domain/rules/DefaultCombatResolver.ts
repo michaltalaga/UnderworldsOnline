@@ -12,6 +12,13 @@ import { CombatContext } from "./CombatContext";
 import { CombatResolver } from "./CombatResolver";
 import { CombatResult } from "./CombatResult";
 import { rollAttackDie as rollAttackDieFace, rollSaveDie as rollSaveDieFace } from "./Dice";
+import {
+  getEffectiveAttackDice,
+  getEffectiveHealth,
+  getEffectiveSaveDice,
+  getUpgradeWeaponAbility,
+  shouldIgnoreSaveKeyword,
+} from "../cards/upgradeEffects";
 
 export type DefaultCombatResolverRollAttackDie = () => AttackDieFace;
 export type DefaultCombatResolverRollSaveDie = () => SaveDieFace;
@@ -84,17 +91,29 @@ export class DefaultCombatResolver extends CombatResolver {
       throw new Error(`Weapon ability ${context.selectedAbility} is not supported by the default combat resolver.`);
     }
 
+    // --- Upgrade-derived effective stats ---
+    const effectiveAttackDice = getEffectiveAttackDice(weapon, attackerPlayer, attacker);
+    const effectiveSaveDice = getEffectiveSaveDice(targetDefinition, defenderPlayer, target);
+    const effectiveHealth = getEffectiveHealth(targetDefinition, defenderPlayer, target);
+
+    // Check if an upgrade grants a weapon ability (e.g. GreatStrength → Grievous).
+    // Only applies when the weapon's own selected ability is null (no innate ability chosen).
+    const upgradeAbility = context.selectedAbility === null
+      ? getUpgradeWeaponAbility(weapon, attackerPlayer, attacker, targetDefinition.health)
+      : null;
+    const resolvedAbility = context.selectedAbility ?? upgradeAbility;
+
     const defenderIsStaggered = target.hasStaggerToken;
     const defenderIsGuarded = target.hasGuardToken && !defenderIsStaggered;
     const defenderIsOnCoverToken = this.isFighterOnCoverToken(game, target.currentHexId);
     const attackRoll = this.resolveRoll(
-      weapon.dice,
+      effectiveAttackDice,
       attackRollInput,
       this.rollAttackDie,
       "attack",
     );
     const saveRoll = this.resolveRoll(
-      targetDefinition.saveDice,
+      effectiveSaveDice,
       saveRollInput,
       this.rollSaveDie,
       "save",
@@ -108,10 +127,22 @@ export class DefaultCombatResolver extends CombatResolver {
     const canTriggerSelectedAbility =
       selectedAbilityDefinition !== null &&
       (!selectedAbilityDefinition.requiresCritical || attackStats.criticals > 0);
+    // For upgrade-granted abilities, they always trigger (no requiresCritical
+    // check on the upgrade — the ability definition lives on the weapon, not
+    // the upgrade).
+    const canTriggerUpgradeAbility = upgradeAbility !== null;
+    const canTriggerAbility = canTriggerSelectedAbility || canTriggerUpgradeAbility;
+
+    // Check if defender should ignore the save keyword (ToughEnough / FrenzyOfGreed)
+    const defenderIgnoresSaveKeyword =
+      resolvedAbility !== null &&
+      shouldIgnoreSaveKeyword(target, resolvedAbility, game, defenderPlayer);
+    const effectiveSaveAbility = defenderIgnoresSaveKeyword ? null : resolvedAbility;
+
     const saveSuccessFaces = this.getSaveSuccessFaces(
       targetDefinition.saveSymbol,
-      context.selectedAbility,
-      canTriggerSelectedAbility,
+      effectiveSaveAbility,
+      canTriggerAbility,
       defenderIsGuarded,
     );
     const saveStats = this.getSaveRollStats(
@@ -121,16 +152,16 @@ export class DefaultCombatResolver extends CombatResolver {
     );
     const outcome = this.getCombatOutcome(attackStats, saveStats);
     const grievousDamageBonus =
-      context.selectedAbility === WeaponAbilityKind.Grievous &&
-      canTriggerSelectedAbility &&
+      resolvedAbility === WeaponAbilityKind.Grievous &&
+      canTriggerAbility &&
       outcome === CombatOutcome.Success
         ? 1
         : 0;
     const damageInflicted = outcome === CombatOutcome.Success ? weapon.damage + grievousDamageBonus : 0;
-    const targetSlain = target.damage + damageInflicted >= targetDefinition.health;
+    const targetSlain = target.damage + damageInflicted >= effectiveHealth;
     const staggerApplied =
-      context.selectedAbility === WeaponAbilityKind.Stagger &&
-      canTriggerSelectedAbility &&
+      resolvedAbility === WeaponAbilityKind.Stagger &&
+      canTriggerAbility &&
       outcome === CombatOutcome.Success &&
       !targetSlain &&
       !target.hasStaggerToken;
