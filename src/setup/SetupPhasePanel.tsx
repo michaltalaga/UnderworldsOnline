@@ -15,53 +15,48 @@ export default function SetupPhasePanel({
   activePlayer,
   applySetupAction,
 }: SetupPhasePanelProps): ReactNode {
+  let content: ReactNode = null;
+
   if (
     game.state.kind === "setupMusterWarbands" ||
     game.state.kind === "setupDrawStartingHands" ||
     game.state.kind === "combatReady"
   ) {
-    return (
+    content = (
       <SetupHero title="Preparing the battlefield..." description="Resolving setup actions." />
     );
-  }
-
-  if (game.state.kind === "setupMulligan") {
-    return (
+  } else if (game.state.kind === "setupMulligan") {
+    content = (
       <SetupHero
         badge="Mulligan"
         title="Keep or redraw?"
         description="Set any of your starting hands aside and draw replacements. You only get one mulligan. Use the buttons in the hand dock below."
       />
     );
-  }
-
-  if (game.state.kind === "setupDetermineTerritoriesRollOff") {
-    return <TerritoryRollOffScreen game={game} onResolve={applySetupAction} />;
-  }
-
-  if (game.state.kind === "setupDetermineTerritoriesChoice") {
-    if (activePlayer === null) {
-      return null;
+  } else if (game.state.kind === "setupDetermineTerritoriesRollOff") {
+    content = <TerritoryRollOffScreen game={game} onResolve={applySetupAction} />;
+  } else if (game.state.kind === "setupDetermineTerritoriesChoice") {
+    if (activePlayer !== null) {
+      content = <TerritoryChoiceScreen game={game} player={activePlayer} onChoose={applySetupAction} />;
     }
-    return <TerritoryChoiceScreen game={game} player={activePlayer} onChoose={applySetupAction} />;
-  }
-
-  if (game.state.kind === "setupPlaceFeatureTokens") {
+  } else if (game.state.kind === "setupPlaceFeatureTokens") {
     const placementNumber = game.board.featureTokens.length + 1;
-    return (
+    content = (
       <SetupHero
         badge={`${activePlayer?.name ?? "Setup"} placing`}
         title={`Place feature token ${placementNumber} of 5`}
         description="Pick an empty neutral hex on the map. Tokens cannot sit on starting, blocked, stagger, or edge hexes, and must be at least 2 hexes from another token."
       />
     );
+  } else if (game.state.kind === "setupDeployFighters") {
+    content = <DeploymentPanel player={activePlayer} />;
   }
 
-  if (game.state.kind === "setupDeployFighters") {
-    return <DeploymentPanel player={activePlayer} />;
-  }
-
-  return null;
+  return (
+    <section className="bg-surface border border-border rounded-panel shadow-panel backdrop-blur-[12px] py-4 px-[18px]">
+      {content}
+    </section>
+  );
 }
 
 function DeploymentPanel({

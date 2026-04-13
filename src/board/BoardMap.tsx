@@ -45,6 +45,8 @@ export default function BoardMap({
   const frameRef = useRef<HTMLDivElement>(null);
   const mapWrapperRef = useRef<HTMLDivElement>(null);
   const [mapScale, setMapScale] = useState(1);
+  const mapScaleRef = useRef(mapScale);
+  mapScaleRef.current = mapScale;
 
   // Scale the map to fit the surrounding frame so the whole battlefield is
   // always visible without scroll bars. The map has a fixed intrinsic
@@ -52,16 +54,14 @@ export default function BoardMap({
   // dimensions and the inner map applies `transform: scale`.
   useEffect(() => {
     const frame = frameRef.current;
-    const mapWrapper = mapWrapperRef.current;
-    if (frame === null || mapWrapper === null) {
+    if (frame === null) {
       return;
     }
     const update = () => {
       const frameRect = frame.getBoundingClientRect();
-      const wrapperOffsetTop = mapWrapper.offsetTop;
       const available = {
         w: Math.max(0, frameRect.width),
-        h: Math.max(0, frameRect.height - wrapperOffsetTop),
+        h: Math.max(0, frameRect.height),
       };
       if (available.w === 0 || available.h === 0) {
         return;
@@ -71,7 +71,7 @@ export default function BoardMap({
         available.w / scene.viewport.width,
         available.h / scene.viewport.height,
       );
-      if (Math.abs(nextScale - mapScale) > 0.005) {
+      if (Math.abs(nextScale - mapScaleRef.current) > 0.005) {
         setMapScale(nextScale);
       }
     };
@@ -79,7 +79,7 @@ export default function BoardMap({
     const observer = new ResizeObserver(update);
     observer.observe(frame);
     return () => observer.disconnect();
-  }, [scene.viewport.width, scene.viewport.height, mapScale]);
+  }, [scene.viewport.width, scene.viewport.height]);
 
   const { hexes, armedPathTone } = scene;
 

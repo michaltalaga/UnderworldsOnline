@@ -80,12 +80,14 @@ export default function GameView({ warband, deck = null, boardTheme = null }: Ga
         <div className="flex-1 min-w-0 min-h-0 flex flex-col items-center overflow-hidden">
           <StatusBar badge={boardScene.statusBadge} />
           <div className="flex-1 min-h-0 flex flex-row items-stretch justify-center">
-            <div data-roster-rail className="shrink-0 grow-0 basis-[210px] overflow-y-auto min-h-0 bg-[rgba(253,249,242,0.5)] border-r border-[rgba(85,66,40,0.06)]">
-              {e.localPlayer !== null && (
-                <PlayerPanel activePlayerId={e.activePlayer?.id ?? null} game={e.game}
-                  onSelectFighter={e.isSetup ? noop : e.selectFighter} player={e.localPlayer}
-                  selectedFighterId={e.selectedFighterId} />
-              )}
+            <div data-roster-rail className="shrink-0 grow-0 w-[210px] min-w-[210px] max-w-[210px] overflow-hidden min-h-0 bg-[rgba(253,249,242,0.5)] border-r border-[rgba(85,66,40,0.06)]">
+              <div className="w-full h-full overflow-y-auto [scrollbar-gutter:stable]">
+                {e.localPlayer !== null && (
+                  <PlayerPanel activePlayerId={e.activePlayer?.id ?? null} game={e.game}
+                    onSelectFighter={e.isSetup ? noop : e.selectFighter} player={e.localPlayer}
+                    selectedFighterId={e.selectedFighterId} />
+                )}
+              </div>
             </div>
             <div className="flex-1 min-h-0 min-w-0 flex flex-col items-center">
               <BoardMap scene={boardScene}
@@ -100,19 +102,19 @@ export default function GameView({ warband, deck = null, boardTheme = null }: Ga
                 ))}
               </div>
             </div>
-            <div data-roster-rail className="shrink-0 grow-0 basis-[210px] overflow-y-auto min-h-0 bg-[rgba(253,249,242,0.5)] border-l border-[rgba(85,66,40,0.06)]">
-              {e.isSetup ? (
-                <div className="flex flex-col">
-                  <section className="bg-surface border border-border rounded-panel shadow-panel backdrop-blur-[12px] flex-1 min-h-0 overflow-y-auto py-4 px-[18px]">
-                    <SetupPhasePanel game={e.game} activePlayer={e.activePlayer} applySetupAction={e.applySetupAction} />
-                  </section>
-                </div>
-              ) : (
-                e.opponentPlayer !== null && (
-                  <PlayerPanel activePlayerId={e.activePlayer?.id ?? null} game={e.game}
-                    onSelectFighter={noop} player={e.opponentPlayer} selectedFighterId={null} />
-                )
-              )}
+            <div data-roster-rail className="shrink-0 grow-0 w-[210px] min-w-[210px] max-w-[210px] overflow-hidden min-h-0 bg-[rgba(253,249,242,0.5)] border-l border-[rgba(85,66,40,0.06)]">
+              <div className="w-full h-full overflow-y-auto [scrollbar-gutter:stable]">
+                {e.isSetup ? (
+                  <SetupPhasePanel game={e.game} activePlayer={e.activePlayer} applySetupAction={e.applySetupAction} />
+                ) : (
+                  e.opponentPlayer !== null ? (
+                    <PlayerPanel activePlayerId={e.activePlayer?.id ?? null} game={e.game}
+                      onSelectFighter={noop} player={e.opponentPlayer} selectedFighterId={null} />
+                  ) : (
+                    <div className="w-full h-full" />
+                  )
+                )}
+              </div>
             </div>
           </div>
         </div>
