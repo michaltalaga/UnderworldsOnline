@@ -836,7 +836,7 @@ export default function PracticeBattlefieldApp({
                 />
               )}
             </div>
-            <div className="battlefield-map-wrapper">
+            <div className="battlefield-map-and-actions">
               <BoardMap
                 scene={boardScene}
                 onHoverChargeTarget={(fighterId) =>
