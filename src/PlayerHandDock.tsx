@@ -1,4 +1,3 @@
-import "./PlayerHandDock.css";
 import type { CardId, Player } from "./domain";
 import type { Card } from "./domain/cards/Card";
 import type { PowerOverlayOption } from "./board/battlefieldModels";
@@ -79,15 +78,12 @@ export default function PlayerHandDock({ player, interaction, scorableObjectives
 
   return (
     <aside
-      className={[
-        "player-hand-dock",
-        `player-hand-dock-mode-${interaction.kind}`,
-      ].join(" ")}
+      className="grid grid-rows-[auto_1fr] gap-2.5 min-w-0 min-h-0 h-full overflow-hidden"
     >
-      <header className="player-hand-dock-header">
-        <div className="player-hand-dock-title">
-          <p className="player-hand-dock-eyebrow">{player.name}&apos;s Hand</p>
-          <strong>
+      <header className="flex items-center justify-between gap-3">
+        <div className="grid gap-0.5">
+          <p className="m-0 uppercase tracking-[0.14em] text-[0.74rem] text-[#8a5630]">{player.name}&apos;s Hand</p>
+          <strong className="font-heading text-base text-heading">
             {objectiveCards.length} objective{objectiveCards.length === 1 ? "" : "s"} ·{" "}
             {powerCards.length} power
           </strong>
@@ -95,9 +91,9 @@ export default function PlayerHandDock({ player, interaction, scorableObjectives
       </header>
 
       {totalCards === 0 ? (
-        <p className="player-hand-dock-empty">No cards in hand.</p>
+        <p className="m-0 text-[0.82rem] text-[#8e7a66]">No cards in hand.</p>
       ) : (
-        <div className="player-hand-dock-sections">
+        <div className="grid grid-cols-2 gap-3 min-h-0 overflow-hidden">
           <PlayerHandDockSection
             label="Objectives"
             cards={objectiveCards}
@@ -123,18 +119,19 @@ export default function PlayerHandDock({ player, interaction, scorableObjectives
 export function DockActionOverlay({ interaction }: { interaction: DockInteraction }) {
   if (interaction.kind === "mulligan") {
     return (
-      <div className="dock-action-overlay dock-action-overlay-mulligan">
-        <MulliganControls onResolve={interaction.onResolve} />
+      <div className="fixed left-1/2 bottom-[calc(28vh+16px)] -translate-x-1/2 z-[34] box-border max-w-[calc(100vw-32px)] py-3 px-[18px] flex gap-2.5 items-center rounded-card bg-[rgba(253,249,242,0.98)] border border-[rgba(85,66,40,0.26)] shadow-[0_18px_44px_rgba(63,46,29,0.26)] backdrop-blur-[10px] font-body animate-[dice-tray-enter_320ms_cubic-bezier(0.2,0.7,0.1,1.05)_both]">
+        <MulliganControls onResolve={interaction.onResolve} inOverlay />
       </div>
     );
   }
   if (interaction.kind === "focus") {
     return (
-      <div className="dock-action-overlay dock-action-overlay-focus">
+      <div className="fixed left-1/2 bottom-[calc(28vh+16px)] -translate-x-1/2 z-[34] box-border max-w-[calc(100vw-32px)] py-3 px-[18px] flex gap-2.5 items-center rounded-card bg-[rgba(253,249,242,0.98)] border border-[rgba(85,66,40,0.26)] shadow-[0_18px_44px_rgba(63,46,29,0.26)] backdrop-blur-[10px] font-body animate-[dice-tray-enter_320ms_cubic-bezier(0.2,0.7,0.1,1.05)_both]">
         <FocusConfirmBar
           summary={interaction.summary}
           onConfirm={interaction.onConfirm}
           onCancel={interaction.onCancel}
+          inOverlay
         />
       </div>
     );
@@ -160,9 +157,9 @@ function PlayerHandDockSection({
   }
 
   return (
-    <section className={`player-hand-dock-section player-hand-dock-section-${tone}`}>
-      <p className="player-hand-dock-section-label">{label}</p>
-      <ul className="player-hand-dock-card-list">
+    <section className="grid grid-rows-[auto_1fr] gap-1.5 min-h-0 overflow-hidden">
+      <p className={`m-0 text-[0.72rem] font-extrabold tracking-[0.06em] uppercase ${tone === "objective" ? "text-objective" : tone === "power" ? "text-power-card" : "text-[#7a624d]"}`}>{label}</p>
+      <ul className="m-0 p-0 list-none grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] content-start gap-1.5 min-h-0 overflow-hidden">
         {cards.map((card) => (
           <DockCardListItem
             key={card.cardId}
@@ -198,33 +195,41 @@ function DockCardListItem({
 
   const isClickable =
     focusState.mode === "focus" || playState.mode === "play-playable";
+
+  const toneCardBg = tone === "objective"
+    ? "bg-objective-bg border-objective-border"
+    : tone === "power"
+    ? "bg-power-card-bg border-power-card-border"
+    : "bg-[rgba(250,244,232,0.94)] border-[rgba(117,92,64,0.2)]";
+
   const classes = [
-    "player-hand-dock-card",
-    focusState.isMarkedDiscard ? "player-hand-dock-card-marked-discard" : "",
-    playState.isPlayable ? "player-hand-dock-card-playable" : "",
-    playState.isArmed ? "player-hand-dock-card-armed" : "",
-    playState.isDim ? "player-hand-dock-card-dim" : "",
+    "border rounded-[12px] px-2.5 py-1.5 grid gap-1 min-w-0 min-h-0 overflow-hidden text-left font-[inherit] text-[inherit]",
+    toneCardBg,
+    focusState.isMarkedDiscard ? "outline-2 outline-[#c24a2f] -outline-offset-2 !bg-[rgba(255,224,215,0.96)]" : "",
+    playState.isPlayable ? "outline-2 outline-[#aa7ac9] -outline-offset-2" : "",
+    playState.isArmed ? "outline-3 outline-[#d3a135] -outline-offset-2 !bg-[rgba(255,244,212,0.98)]" : "",
+    playState.isDim ? "opacity-48" : "",
   ].filter(Boolean).join(" ");
 
   const cardBody = (
     <>
-      <div className="player-hand-dock-card-title-row">
-        <span className="player-hand-dock-card-name">{name}</span>
+      <div className="flex items-center justify-between gap-2.5 flex-wrap">
+        <span className="font-bold text-heading text-[0.88rem]">{name}</span>
         {glory > 0 ? (
-          <span className="player-hand-dock-card-glory">{glory} glory</span>
+          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-pill bg-[rgba(168,122,42,0.16)] border border-[rgba(168,122,42,0.28)] text-[#7a5a18] text-[0.66rem] font-bold uppercase tracking-[0.04em]">{glory} glory</span>
         ) : null}
         {focusState.isMarkedDiscard ? (
-          <span className="player-hand-dock-card-tag">discard</span>
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-pill border text-[0.62rem] font-extrabold uppercase tracking-[0.08em] ${playState.isArmed ? "bg-[rgba(211,161,53,0.18)] border-[rgba(181,130,22,0.46)] text-[#6e4f0e]" : "bg-[rgba(195,78,47,0.16)] border-[rgba(195,78,47,0.36)] text-[#903418]"}`}>discard</span>
         ) : null}
         {playState.isArmed ? (
-          <span className="player-hand-dock-card-tag">armed</span>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-pill bg-[rgba(211,161,53,0.18)] border border-[rgba(181,130,22,0.46)] text-[#6e4f0e] text-[0.62rem] font-extrabold uppercase tracking-[0.08em]">armed</span>
         ) : null}
         {card.isScorable ? (
-          <span className="player-hand-dock-card-tag player-hand-dock-card-tag-scorable">scorable</span>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-pill bg-[rgba(46,160,67,0.18)] border border-[rgba(46,160,67,0.46)] text-[#1a7f37] text-[0.62rem] font-extrabold uppercase tracking-[0.08em]">scorable</span>
         ) : null}
       </div>
       {text !== "" ? (
-        <p className="player-hand-dock-card-text">{text}</p>
+        <p className="m-0 text-[0.72rem] leading-[1.35] text-[#5e4b3a] line-clamp-3 overflow-hidden">{text}</p>
       ) : null}
       {playState.mode === "play-playable" &&
       playState.showTargetPicker &&
@@ -238,7 +243,7 @@ function DockCardListItem({
       {card.isScorable && onScoreObjective !== undefined ? (
         <button
           type="button"
-          className="player-hand-dock-card-score-button"
+          className="block w-full mt-1.5 px-2.5 py-1 border border-[rgba(46,160,67,0.5)] rounded-[6px] bg-[rgba(46,160,67,0.12)] text-[#1a7f37] text-[0.75rem] font-semibold cursor-pointer transition-colors hover:bg-[rgba(46,160,67,0.25)]"
           onClick={(event) => {
             event.stopPropagation();
             onScoreObjective(card.cardId);
@@ -255,7 +260,7 @@ function DockCardListItem({
       <li>
         <button
           type="button"
-          className={classes}
+          className={`${classes} cursor-pointer transition-[transform,box-shadow,background] duration-[120ms] ease-out hover:-translate-y-px hover:shadow-[0_6px_14px_rgba(35,24,18,0.12)]`}
           onClick={() => {
             if (focusState.mode === "focus") {
               focusState.onToggle();
@@ -362,35 +367,39 @@ function getPlayCardState(
 
 function MulliganControls({
   onResolve,
+  inOverlay = false,
 }: {
   onResolve: (redrawObjectives: boolean, redrawPower: boolean) => void;
+  inOverlay?: boolean;
 }) {
+  const mulliganBtn = "border border-[rgba(85,66,40,0.28)] bg-[rgba(239,231,219,0.92)] text-heading rounded-pill px-4 py-2 font-[inherit] text-[0.82rem] font-bold cursor-pointer transition-[transform,box-shadow,background] duration-[120ms] ease-out hover:-translate-y-px hover:shadow-[0_8px_18px_rgba(35,24,18,0.12)] hover:bg-[rgba(244,236,220,1)]";
+  const primaryBtn = `${mulliganBtn} !bg-[#7a5a18] !text-[#fff8e7] !border-[#5a4010] hover:!bg-[#8a6a28]`;
   return (
-    <div className="player-hand-dock-mulligan-row">
+    <div className={`flex flex-wrap gap-2 ${inOverlay ? "" : "pt-1.5 border-t border-dashed border-[rgba(85,66,40,0.18)]"}`}>
       <button
         type="button"
-        className="player-hand-dock-mulligan-button player-hand-dock-mulligan-button-primary"
+        className={primaryBtn}
         onClick={() => onResolve(false, false)}
       >
         Keep both
       </button>
       <button
         type="button"
-        className="player-hand-dock-mulligan-button"
+        className={mulliganBtn}
         onClick={() => onResolve(true, false)}
       >
         Mulligan objectives
       </button>
       <button
         type="button"
-        className="player-hand-dock-mulligan-button"
+        className={mulliganBtn}
         onClick={() => onResolve(false, true)}
       >
         Mulligan power
       </button>
       <button
         type="button"
-        className="player-hand-dock-mulligan-button"
+        className={mulliganBtn}
         onClick={() => onResolve(true, true)}
       >
         Mulligan both
@@ -403,25 +412,29 @@ function FocusConfirmBar({
   summary,
   onConfirm,
   onCancel,
+  inOverlay = false,
 }: {
   summary: string;
   onConfirm: () => void;
   onCancel: () => void;
+  inOverlay?: boolean;
 }) {
+  const confirmBtn = "border border-[rgba(85,66,40,0.28)] bg-[rgba(239,231,219,0.92)] text-heading rounded-pill px-4 py-2 font-[inherit] text-[0.82rem] font-bold cursor-pointer";
+  const primaryConfirmBtn = `${confirmBtn} !bg-[#5b6d3c] !text-[#fdf7ea] !border-[#3e4a28] hover:!bg-[#6d7f4a]`;
   return (
-    <div className="player-hand-dock-focus-confirm-bar">
-      <p className="player-hand-dock-focus-confirm-summary">{summary}</p>
-      <div className="player-hand-dock-focus-confirm-actions">
+    <div className={`flex flex-wrap items-center gap-3 ${inOverlay ? "" : "pt-1.5 border-t border-dashed border-[rgba(85,66,40,0.18)]"}`}>
+      <p className="flex-auto m-0 text-[0.78rem] text-[#5e4b3a]">{summary}</p>
+      <div className="flex gap-2">
         <button
           type="button"
-          className="player-hand-dock-focus-confirm-button player-hand-dock-focus-confirm-button-primary"
+          className={primaryConfirmBtn}
           onClick={onConfirm}
         >
           Confirm Focus
         </button>
         <button
           type="button"
-          className="player-hand-dock-focus-confirm-button"
+          className={confirmBtn}
           onClick={onCancel}
         >
           Cancel
@@ -441,32 +454,30 @@ function PlayTargetPicker({
   onSelect: (option: PowerOverlayOption) => void;
 }) {
   return (
-    <div className="player-hand-dock-play-target-picker">
-      <p className="player-hand-dock-play-target-picker-label">Choose target</p>
-      <ul className="player-hand-dock-play-target-list">
-        {options.map((option) => (
+    <div className="grid gap-1.5 p-2 mt-1 bg-[rgba(255,253,246,0.96)] border border-dashed border-[rgba(123,83,156,0.4)] rounded-[10px]">
+      <p className="m-0 text-[0.66rem] font-extrabold uppercase tracking-[0.08em] text-power-card">Choose target</p>
+      <ul className="m-0 p-0 list-none grid gap-1">
+        {options.map((option) => {
+          const isArmed = option.key === pendingOptionKey;
+          return (
           <li key={option.key}>
             <button
               type="button"
-              className={[
-                "player-hand-dock-play-target-option",
-                option.key === pendingOptionKey
-                  ? "player-hand-dock-play-target-option-armed"
-                  : "",
-              ].filter(Boolean).join(" ")}
+              className={`flex flex-wrap gap-2 items-center px-2.5 py-1.5 border border-power-card-border rounded-lg bg-[rgba(249,241,254,0.96)] text-heading font-[inherit] text-[0.78rem] cursor-pointer text-left w-full hover:bg-[rgba(239,226,250,1)] ${isArmed ? "outline-2 outline-[#d3a135] -outline-offset-2 !bg-[rgba(255,244,212,0.98)]" : ""}`}
               onClick={(event) => {
                 event.stopPropagation();
                 onSelect(option);
               }}
             >
-              <span className="player-hand-dock-play-target-option-title">{option.title}</span>
-              <span className="player-hand-dock-play-target-option-detail">{option.detail}</span>
-              {option.key === pendingOptionKey ? (
-                <span className="player-hand-dock-card-tag">armed</span>
+              <span className="font-bold text-heading">{option.title}</span>
+              <span className="text-[#5e4b3a]">{option.detail}</span>
+              {isArmed ? (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-pill bg-[rgba(211,161,53,0.18)] border border-[rgba(181,130,22,0.46)] text-[#6e4f0e] text-[0.62rem] font-extrabold uppercase tracking-[0.08em]">armed</span>
               ) : null}
             </button>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </div>
   );

@@ -7,11 +7,8 @@ import {
   rollAttackDie,
   type Game,
 } from "../domain";
+import { SetupHero } from "../ui";
 
-// Shows the continue button for the territory roll-off phase. The dice
-// themselves are rendered by the DiceTray (docked inside the map panel)
-// once the engine applies the action — here we just generate random
-// rounds, pass them to the engine, and let the tray surface the result.
 type TerritoryRollOffScreenProps = {
   game: Game;
   onResolve: (action: ResolveTerritoryRollOffAction) => void;
@@ -26,19 +23,15 @@ export default function TerritoryRollOffScreen({ game, onResolve }: TerritoryRol
 
   return (
     <>
-      <header className="setup-hero">
-        <span className="setup-active-player">Territory roll-off</span>
-        <h1>Roll for first pick</h1>
-        <p>
-          Both players roll an attack die. The winner picks the board side and territory;
-          the loser places the first feature token. The rolled dice appear in the dice
-          tray above.
-        </p>
-      </header>
-      <section className="setup-rolloff">
+      <SetupHero
+        badge="Territory roll-off"
+        title="Roll for first pick"
+        description="Both players roll an attack die. The winner picks the board side and territory; the loser places the first feature token. The rolled dice appear in the dice tray above."
+      />
+      <section className="grid gap-6 justify-items-center">
         <button
           type="button"
-          className="setup-button setup-button-primary"
+          className="appearance-none border border-[#6e4513] bg-linear-to-b from-[#c08a3e] to-[#a06b25] text-[#fdf7e9] font-[inherit] text-[0.95rem] py-3 px-[22px] rounded-button cursor-pointer transition-all duration-[120ms] ease-in-out hover:-translate-y-px hover:border-[rgba(85,66,40,0.64)] hover:shadow-[0_14px_30px_rgba(63,46,29,0.18)] hover:from-[#cf9a4a] hover:to-[#b07a30] focus-visible:-translate-y-px focus-visible:outline-none"
           onClick={() => onResolve(new ResolveTerritoryRollOffAction(generated.rounds))}
         >
           Roll &amp; continue

@@ -52,33 +52,43 @@ export type DiceTrayProps = {
   model: DiceTrayModel | null;
 };
 
+const outcomeToneClasses: Record<string, string> = {
+  success: "bg-[rgba(82,129,68,0.22)] border border-[rgba(82,129,68,0.48)] text-[#2a4012]",
+  failure: "bg-[rgba(41,95,150,0.18)] border border-[rgba(41,95,150,0.44)] text-[#1d4a7a]",
+  draw: "bg-[rgba(120,98,72,0.2)] border border-[rgba(120,98,72,0.44)] text-[#5a4a32]",
+  neutral: "bg-[rgba(120,98,72,0.16)] border border-[rgba(120,98,72,0.36)] text-[#5a4a32]",
+};
+
+const rollToneClasses: Record<string, string> = {
+  attack: "bg-[rgba(252,228,214,0.74)] border-[rgba(195,78,47,0.3)]",
+  save: "bg-[rgba(224,234,250,0.74)] border-[rgba(41,95,150,0.3)]",
+};
+
 export default function DiceTray({ model }: DiceTrayProps) {
   if (model === null) {
-    // Hide entirely when there's nothing to show — the tray is docked
-    // top-right as an overlay and an empty panel would clutter the
-    // corner. It pops back in (with the entrance animation) the next
-    // time a dice-producing event lands.
     return null;
   }
 
   return (
     <section
       key={model.rollId}
-      className={`dice-tray dice-tray-${model.outcomeTone}`}
+      className="relative box-border w-full max-h-[55%] overflow-hidden p-3.5 px-[18px] grid gap-2.5 rounded-card bg-[rgba(253,249,242,0.96)] border border-[rgba(85,66,40,0.22)] shadow-[0_18px_44px_rgba(63,46,29,0.22)] backdrop-blur-[10px] animate-[dice-tray-enter_420ms_cubic-bezier(0.2,0.7,0.1,1.05)_both]"
       aria-live="polite"
     >
-      <div className="dice-tray-heading">
-        <p className="dice-tray-eyebrow">{model.kindLabel}</p>
-        <h3>{model.title}</h3>
-        <p className="dice-tray-summary">
-          <span className={`dice-tray-outcome dice-tray-outcome-${model.outcomeTone}`}>
+      <div className="grid gap-0.5">
+        <p className="m-0 text-[0.68rem] font-extrabold tracking-[0.12em] uppercase text-[#8a5630]">
+          {model.kindLabel}
+        </p>
+        <h3 className="m-0 font-heading text-[1.1rem] text-heading">{model.title}</h3>
+        <p className="mt-1 text-[0.86rem] text-ink-soft">
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-pill text-[0.72rem] font-extrabold uppercase tracking-[0.06em] ${outcomeToneClasses[model.outcomeTone] ?? outcomeToneClasses.neutral}`}>
             {model.outcomeLabel}
           </span>
           {model.subtitle === null ? null : <> · {model.subtitle}</>}
         </p>
       </div>
 
-      <div className="dice-tray-rolls">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3.5">
         {model.rolls.map((roll) => (
           <DiceTrayRollSection key={roll.label} roll={roll} />
         ))}
@@ -88,33 +98,43 @@ export default function DiceTray({ model }: DiceTrayProps) {
 }
 
 function DiceTrayRollSection({ roll }: { roll: DiceTrayRoll }) {
+  const tone = rollToneClasses[roll.tone] ?? "";
   return (
-    <div className={`dice-tray-roll dice-tray-roll-${roll.tone}`}>
-      <div className="dice-tray-roll-header">
-        <p className="dice-tray-roll-label">{roll.label}</p>
-        <p className="dice-tray-roll-summary">{roll.summary}</p>
+    <div className={`grid gap-2 p-3 px-3.5 rounded-button bg-surface-inner border border-[rgba(85,66,40,0.18)] ${tone}`}>
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="m-0 text-[0.7rem] font-extrabold uppercase tracking-[0.08em] text-[#5a4a32]">{roll.label}</p>
+        <p className="m-0 text-[0.78rem] text-[#5a4a32] font-semibold">{roll.summary}</p>
       </div>
       {roll.faces.length === 0 ? (
-        <p className="dice-tray-roll-empty">No dice rolled.</p>
+        <p className="m-0 text-[0.82rem] text-[#8e7a66] italic">No dice rolled.</p>
       ) : (
-        <ul className="dice-tray-roll-list">
-          {roll.faces.map((face, index) => (
-            <li
-              key={`${face.short}:${index}`}
-              className={[
-                "dice-tray-face",
-                `dice-tray-face-${roll.tone}`,
-                face.isCritical ? "dice-tray-face-critical" : "",
-                face.isSuccess ? "dice-tray-face-success" : "",
-              ].filter(Boolean).join(" ")}
-              title={face.full}
-              style={{ animationDelay: `${index * 70}ms` }}
-            >
-              {face.icon !== null
-                ? <img src={face.icon} alt={face.full} className="dice-tray-face-icon" />
-                : face.short}
-            </li>
-          ))}
+        <ul className="m-0 p-0 list-none flex flex-wrap gap-2">
+          {roll.faces.map((face, index) => {
+            const faceClasses = [
+              "inline-flex items-center justify-center min-w-[44px] h-[44px] px-2.5 rounded-[12px] bg-[rgba(253,249,242,0.94)] border border-[rgba(85,66,40,0.28)] text-heading font-heading text-[0.88rem] font-bold shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_6px_14px_rgba(35,24,18,0.1)] animate-[dice-tray-face-enter_360ms_cubic-bezier(0.2,0.7,0.1,1.1)_both]",
+              face.isSuccess && roll.tone === "attack"
+                ? "!border-[rgba(82,129,68,0.66)] !bg-linear-to-b !from-[rgba(220,244,204,0.96)] !to-[rgba(168,210,132,0.96)] !text-[#2a4012]"
+                : "",
+              face.isSuccess && roll.tone === "save"
+                ? "!border-[rgba(41,95,150,0.6)] !bg-linear-to-b !from-[rgba(206,226,248,0.98)] !to-[rgba(122,165,214,0.98)] !text-[#0e2a4c]"
+                : "",
+              face.isCritical
+                ? "!border-[rgba(168,58,30,0.76)] !bg-linear-to-b !from-[rgba(255,219,186,0.98)] !to-[rgba(220,120,60,0.98)] !text-[#4a1a08] !shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_0_0_2px_rgba(168,58,30,0.22),0_8px_18px_rgba(168,58,30,0.32)]"
+                : "",
+            ].filter(Boolean).join(" ");
+            return (
+              <li
+                key={`${face.short}:${index}`}
+                className={faceClasses}
+                title={face.full}
+                style={{ animationDelay: `${index * 70}ms` }}
+              >
+                {face.icon !== null
+                  ? <img src={face.icon} alt={face.full} className="w-[22px] h-[22px] rounded-[3px]" />
+                  : face.short}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

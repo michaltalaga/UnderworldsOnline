@@ -50,8 +50,8 @@ export function getFeatureTokenBadge(featureToken: FeatureToken): string {
 
 export function getPlayerToneClass(playerId: string): string {
   return playerId === LOCAL_PLAYER_ID
-    ? "battlefield-tone-player-one"
-    : "battlefield-tone-player-two";
+    ? "bg-linear-to-b from-player-one to-player-one-dark"
+    : "bg-linear-to-b from-player-two to-player-two-dark";
 }
 
 export function getFighterName(game: Game, fighterId: string): string {

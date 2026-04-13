@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Core palette ── */
+  --color-parchment: #fdf9f2;
+  --color-parchment-dark: #f4ecdc;
+  --color-parchment-muted: #e6ddcf;
+  --color-ink: #201814;
+  --color-ink-soft: #695440;
+  --color-ink-muted: #7a6650;
+  --color-ink-light: #8f7457;
+  --color-accent: #8a442a;
+  --color-heading: #3f3228;
+
+  /* ── Semantic surface / border ── */
+  --color-surface: rgba(253, 249, 242, 0.86);
+  --color-surface-inner: rgba(244, 236, 220, 0.6);
+  --color-surface-controls: rgba(243, 233, 212, 0.72);
+  --color-border: rgba(85, 66, 40, 0.16);
+  --color-border-strong: rgba(85, 66, 40, 0.36);
+
+  /* ── Status ── */
+  --color-success: #2d6a39;
+  --color-success-bg: rgba(69, 127, 77, 0.14);
+  --color-failure: #8d321f;
+  --color-failure-bg: rgba(152, 61, 40, 0.14);
+  --color-idle: #7a5b29;
+  --color-idle-bg: rgba(138, 102, 55, 0.14);
+
+  /* ── Player tones ── */
+  --color-player-one: #54738b;
+  --color-player-one-dark: #35546a;
+  --color-player-two: #b46845;
+  --color-player-two-dark: #8f472c;
+
+  /* ── Action tones ── */
+  --color-move: #1a5c5e;
+  --color-charge: #c8a33d;
+  --color-attack: #8a3a20;
+  --color-guard: #2a6a4a;
+  --color-power-step: #2e5a5f;
+  --color-action-step: #6a4a11;
+
+  /* ── Card tones ── */
+  --color-objective: #5b6d3c;
+  --color-objective-bg: rgba(238, 244, 222, 0.72);
+  --color-objective-border: rgba(105, 130, 70, 0.24);
+  --color-power-card: #7f5a95;
+  --color-power-card-bg: rgba(244, 232, 250, 0.72);
+  --color-power-card-border: rgba(123, 83, 156, 0.24);
+
+  /* ── Typography ── */
+  --font-heading: Georgia, "Times New Roman", serif;
+  --font-body: "Trebuchet MS", "Gill Sans", sans-serif;
+  --font-mono: "Consolas", "Courier New", monospace;
+
+  /* ── Border radius ── */
+  --radius-panel: 24px;
+  --radius-card: 18px;
+  --radius-button: 14px;
+  --radius-pill: 999px;
+
+  /* ── Shadows ── */
+  --shadow-panel: 0 18px 44px rgba(63, 46, 29, 0.14);
+  --shadow-panel-hover: 0 22px 52px rgba(63, 46, 29, 0.22);
+  --shadow-card: 0 14px 28px rgba(35, 24, 18, 0.14);
+  --shadow-button: 0 4px 12px rgba(35, 24, 18, 0.15);
+  --shadow-button-hover: 0 8px 18px rgba(35, 24, 18, 0.12);
+
+  /* ── Animation ── */
+  --animate-duration-fast: 120ms;
+}
+
+/* ── Base styles ── */
+@layer base {
+  :root {
+    color: #1e1d21;
+    background:
+      radial-gradient(circle at top, rgba(244, 236, 220, 0.78), transparent 40%),
+      linear-gradient(180deg, #e6ddcf 0%, #d4c4ae 100%);
+  }
+
+  body {
+    margin: 0;
+    color: #1e1d21;
+    font-family: "Trebuchet MS", "Gill Sans", sans-serif;
+    background:
+      radial-gradient(circle at top, rgba(244, 236, 220, 0.78), transparent 40%),
+      linear-gradient(180deg, #e6ddcf 0%, #d4c4ae 100%);
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+}
+
+/* ── Keyframe animations ── */
+@keyframes dice-tray-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+    box-shadow: 0 0 0 0 rgba(195, 145, 58, 0);
+  }
+  45% {
+    opacity: 1;
+    box-shadow: 0 0 0 6px rgba(195, 145, 58, 0.18);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    box-shadow: 0 10px 28px rgba(63, 46, 29, 0.12);
+  }
+}
+
+@keyframes dice-tray-face-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) rotate(-8deg) scale(0.6);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(2px) rotate(3deg) scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes battlefield-board-flash-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
+  }
+  12% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.01);
+  }
+  82% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-2px) scale(0.99);
+  }
+}
+
+@keyframes battlefield-power-response-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(20, 136, 140, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(20, 136, 140, 0.2);
+  }
+}

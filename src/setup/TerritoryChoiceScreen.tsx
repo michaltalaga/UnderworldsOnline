@@ -5,6 +5,7 @@ import {
   type Player,
   type Territory,
 } from "../domain";
+import { PanelButton, SetupHero } from "../ui";
 
 type TerritoryChoiceScreenProps = {
   game: Game;
@@ -32,25 +33,23 @@ export default function TerritoryChoiceScreen({
 
   return (
     <>
-      <header className="setup-hero">
-        <span className="setup-active-player">{player.name} chooses</span>
-        <h1>Pick your territory</h1>
-        <p>Choose a board side and the territory you want to defend. Your opponent gets the other side.</p>
-      </header>
-      <ul className="setup-card-grid">
+      <SetupHero
+        badge={`${player.name} chooses`}
+        title="Pick your territory"
+        description="Choose a board side and the territory you want to defend. Your opponent gets the other side."
+      />
+      <ul className="list-none m-0 p-0 grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-[18px]">
         {choices.map(({ boardSide, territory }) => (
           <li key={`${boardSide}:${territory.id}`}>
-            <button
-              type="button"
-              className="setup-panel"
-              style={{ width: "100%", textAlign: "left", cursor: "pointer", font: "inherit", color: "inherit" }}
+            <PanelButton
+              className="!rounded-[22px] !p-[22px] !gap-3.5"
               onClick={() => onChoose(new ChooseTerritoryAction(player.id, boardSide, territory.id))}
             >
-              <h2>{territory.name}</h2>
-              <p className="setup-panel-meta">
+              <h2 className="m-0 font-heading text-[1.35rem]">{territory.name}</h2>
+              <p className="m-0 text-ink-muted text-[0.92rem] italic">
                 {boardSide === BoardSide.Front ? "Front side" : "Back side"} · {territory.hexIds.length} hexes
               </p>
-            </button>
+            </PanelButton>
           </li>
         ))}
       </ul>

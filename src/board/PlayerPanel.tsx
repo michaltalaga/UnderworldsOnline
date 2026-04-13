@@ -23,10 +23,10 @@ export default function PlayerPanel({
   const isActivePlayer = player.id === activePlayerId;
 
   return (
-    <div className={`roster-panel ${getPlayerToneClass(player.id)}`}>
-      <div className="roster-header">
-        <span className="roster-name">{player.name}</span>
-        <span className="roster-glory">{player.glory} glory</span>
+    <div className={`p-2 rounded-[10px] flex flex-col gap-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] ${getPlayerToneClass(player.id)}`}>
+      <div className="flex justify-between items-center px-1.5 py-1 text-[#fff8f2]">
+        <span className="font-extrabold text-[0.82rem]">{player.name}</span>
+        <span className="text-[0.62rem] opacity-70">{player.glory} glory</span>
       </div>
 
       {player.fighters.map((fighter) => {
@@ -92,38 +92,37 @@ function FighterCard({
   const slain = fighter.isSlain;
   const saveIcon = saveSymbol === SaveSymbol.Shield ? "/assets/shield.png" : "/assets/dodge.png";
 
+  const cardClasses = [
+    "bg-[rgba(255,252,245,0.88)] border border-[rgba(100,80,55,0.15)] rounded-[10px] py-2.5 px-3 flex flex-col gap-[5px]",
+    slain ? "opacity-40" : "",
+    isSelectable ? "cursor-pointer hover:border-[rgba(100,80,55,0.35)] hover:shadow-[0_2px_8px_rgba(40,30,20,0.12)]" : "",
+    isSelected ? "!border-[rgba(60,120,180,0.6)] shadow-[0_0_0_2px_rgba(60,120,180,0.25),0_2px_8px_rgba(40,30,20,0.1)]" : "",
+  ].filter(Boolean).join(" ");
+
   return (
-    <article
-      className={[
-        "roster-card",
-        slain ? "roster-card-slain" : "",
-        isSelectable ? "roster-card-selectable" : "",
-        isSelected ? "roster-card-selected" : "",
-      ].filter(Boolean).join(" ")}
-      onClick={onSelect}
-    >
-      <div className="roster-card-top">
-        <span className="roster-card-name">
-          {isLeader && <img src="/assets/leader.png" alt="Leader" className="roster-icon roster-icon-leader" />}
+    <article className={cardClasses} onClick={onSelect}>
+      <div className="flex items-center justify-between gap-1">
+        <span className="font-bold text-[0.88rem] text-[#3a2e22] whitespace-nowrap overflow-hidden text-ellipsis">
+          {isLeader && <img src="/assets/leader.png" alt="Leader" className="w-[18px] h-[18px] align-[-3px] rounded-[3px] mr-0.5 inline" />}
           {name}
         </span>
-        {slain && <span className="roster-card-slain-badge">slain</span>}
+        {slain && <span className="text-[0.55rem] font-bold uppercase text-[#a04040] tracking-[0.05em]">slain</span>}
       </div>
 
-      <div className="roster-card-stats">
-        <span className="roster-stat roster-stat-move" title="Move">
-          <img src="/assets/move.jpg" alt="" className="roster-icon" />{move}
+      <div className="flex gap-1.5 items-center">
+        <span className="inline-flex items-center gap-[3px] text-[0.82rem] font-bold text-[#4a3d30]" title="Move">
+          <img src="/assets/move.jpg" alt="" className="w-[18px] h-[18px] align-[-3px] rounded-[3px] inline" />{move}
         </span>
-        <span className="roster-stat roster-stat-health" title="Health">
-          <img src="/assets/damage.png" alt="" className="roster-icon" />{fighter.damage}/{health}
+        <span className="inline-flex items-center gap-[3px] text-[0.82rem] font-bold text-[#8b3030]" title="Health">
+          <img src="/assets/damage.png" alt="" className="w-[18px] h-[18px] align-[-3px] rounded-[3px] inline" />{fighter.damage}/{health}
         </span>
-        <span className="roster-stat roster-stat-save" title="Save">
-          <img src={saveIcon} alt="" className="roster-icon" />{saveDice}
+        <span className="inline-flex items-center gap-[3px] text-[0.82rem] font-bold text-[#4a3d30]" title="Save">
+          <img src={saveIcon} alt="" className="w-[18px] h-[18px] align-[-3px] rounded-[3px] inline" />{saveDice}
         </span>
       </div>
 
       {weapons.length > 0 && (
-        <div className="roster-card-weapons">
+        <div className="flex flex-col gap-px pt-0.5 border-t border-[rgba(100,80,55,0.1)]">
           {weapons.map((w) => (
             <WeaponRow key={w.id} weapon={w} />
           ))}
@@ -131,7 +130,7 @@ function FighterCard({
       )}
 
       {tokenTags.length > 0 && (
-        <div className="roster-card-tokens">
+        <div className="flex flex-wrap gap-0.5">
           {tokenTags.map((tag) => (
             <TokenBadge key={tag} tag={tag} />
           ))}
@@ -139,9 +138,11 @@ function FighterCard({
       )}
 
       {upgrades.length > 0 && (
-        <div className="roster-card-upgrades">
+        <div className="flex flex-wrap gap-0.5 pt-0.5 border-t border-[rgba(100,80,55,0.1)]">
           {upgrades.map((name) => (
-            <span key={name} className="roster-upgrade">{name}</span>
+            <span key={name} className="inline-flex items-center text-[0.5rem] font-bold tracking-[0.03em] px-[5px] py-px rounded-[4px] bg-linear-to-b from-[rgba(200,170,120,0.18)] to-[rgba(180,140,80,0.22)] text-[#6e5520] border border-[rgba(180,140,80,0.2)]">
+              {name}
+            </span>
           ))}
         </div>
       )}
@@ -158,21 +159,30 @@ function WeaponRow({ weapon }: { weapon: WeaponDefinition }) {
   const rangeIcon = weapon.range <= 1 ? "/assets/melee.png" : "/assets/ranged.png";
 
   return (
-    <div className="roster-weapon">
-      <img src={rangeIcon} alt="" className="roster-icon" />
-      <img src={accIcon} alt="" className="roster-icon" />
+    <div className="flex items-center gap-1 text-[0.78rem] font-semibold text-[#5a4a3a]">
+      <img src={rangeIcon} alt="" className="w-[18px] h-[18px] align-[-3px] rounded-[3px] inline" />
+      <img src={accIcon} alt="" className="w-[18px] h-[18px] align-[-3px] rounded-[3px] inline" />
       <span>{weapon.dice}</span>
-      <span className="roster-weapon-sep">|</span>
-      <img src="/assets/damage.png" alt="" className="roster-icon" />
+      <span className="opacity-30">|</span>
+      <img src="/assets/damage.png" alt="" className="w-[18px] h-[18px] align-[-3px] rounded-[3px] inline" />
       <span>{weapon.damage}</span>
       {weapon.abilities.map((a) => (
-        <span key={a.displayName} className="roster-weapon-ability">{a.displayName}</span>
+        <span key={a.displayName} className="text-[0.5rem] font-bold uppercase tracking-[0.03em] px-[3px] rounded-[3px] bg-[rgba(100,80,55,0.1)] text-[#6a5a4a]">
+          {a.displayName}
+        </span>
       ))}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
+
+const tokenColors: Record<string, string> = {
+  move: "bg-[rgba(100,80,55,0.1)] text-[#6a5a4a]",
+  charge: "bg-[rgba(180,140,30,0.12)] text-[#7a6a20]",
+  guard: "bg-[rgba(40,120,80,0.12)] text-guard",
+  stagger: "bg-[rgba(160,60,30,0.12)] text-attack",
+};
 
 const tokenIcons: Record<string, string> = {
   move: "/assets/move.jpg",
@@ -184,9 +194,10 @@ const tokenIcons: Record<string, string> = {
 function TokenBadge({ tag }: { tag: string }) {
   const key = tag.toLowerCase().replace(" token", "").trim();
   const icon = tokenIcons[key];
+  const colors = tokenColors[key] ?? "bg-[rgba(100,80,55,0.1)] text-[#6a5a4a]";
   return (
-    <span className={`roster-token roster-token-${key}`}>
-      {icon && <img src={icon} alt="" className="roster-icon" />}
+    <span className={`inline-flex items-center gap-0.5 text-[0.5rem] font-bold uppercase tracking-[0.04em] px-1 py-px rounded-[4px] ${colors}`}>
+      {icon && <img src={icon} alt="" className="w-[18px] h-[18px] align-[-3px] rounded-[3px] inline" />}
       {tag}
     </span>
   );
