@@ -2,6 +2,36 @@ import { Card } from "../cards/Card";
 import { type CardPlayContext } from "../cards/types";
 import { getEffectiveAttackDice, getEffectiveHealth, getEffectiveSaveDice } from "../cards/upgradeEffects";
 import { ConfirmCombatAction } from "../actions/ConfirmCombatAction";
+import {
+  RoundStartedEvent,
+  TurnStartedEvent,
+  ActionStepStartedEvent,
+  ActionStepEndedEvent,
+  PowerStepEndedEvent,
+  TurnEndedEvent,
+  TurnStepChangedEvent,
+  FighterMovedEvent,
+  FighterGuardedEvent,
+  FighterFocusedEvent,
+  FighterDelvedEvent,
+  FighterSlainEvent,
+  CombatStartedEvent,
+  AttackDiceRolledEvent,
+  SaveDiceRolledEvent,
+  CombatResolvedEvent,
+  CombatEndedEvent,
+  CardPlayedEvent,
+  CardResolvedEvent,
+  PloyPlayedEvent,
+  UpgradeEquippedEvent,
+  WarscrollAbilityUsedEvent,
+  PlayerPassedEvent,
+  RollOffResolvedEvent,
+  ObjectivesScoredEvent,
+  ObjectivesDrawnEvent,
+  PowerCardsDrawnEvent,
+  CleanupEvent,
+} from "../events";
 import { rollAttackDie, rollSaveDie } from "../rules/Dice";
 import { WeaponAbilityDefinition } from "../definitions/WeaponAbilityDefinition";
 import {
@@ -460,6 +490,17 @@ export class GameEngine {
       invokedByPlayerId: null,
       actionKind: action.kind,
     });
+    game.emitEvent(new RollOffResolvedEvent(
+      game.roundNumber,
+      result.context.kind,
+      playerOne,
+      playerTwo,
+      result.rounds,
+      result.decisiveRound,
+      this.requirePlayer(game, result.winnerPlayerId),
+      this.requirePlayer(game, result.loserPlayerId),
+      result.resolvedByTieBreaker,
+    ));
     game.transitionTo(createSetupDetermineTerritoriesChoiceGameState(result.winnerPlayerId));
     game.eventLog.push(this.describeRollOff(game, result));
   }
@@ -687,6 +728,17 @@ export class GameEngine {
       outcome: null,
       damageInflicted: 0,
     };
+    game.emitEvent(new AttackDiceRolledEvent(
+      game.roundNumber,
+      attackerPlayer,
+      defenderPlayer,
+      attacker,
+      target,
+      weapon,
+      action.selectedAbility,
+      attackRoll,
+      action.kind,
+    ));
 
     game.consecutivePasses = 0;
     game.eventLog.push(
@@ -780,6 +832,17 @@ export class GameEngine {
       outcome: null,
       damageInflicted: 0,
     };
+    game.emitEvent(new AttackDiceRolledEvent(
+      game.roundNumber,
+      attackerPlayer,
+      defenderPlayer,
+      attacker,
+      target,
+      weapon,
+      action.selectedAbility,
+      attackRoll,
+      action.kind,
+    ));
 
     game.consecutivePasses = 0;
     game.eventLog.push(
@@ -814,6 +877,24 @@ export class GameEngine {
       const saveDiceCount = getEffectiveSaveDice(targetDefinition, defenderPlayer, target);
       pending.saveRoll = Array.from({ length: saveDiceCount }, () => rollSaveDie());
       pending.phase = "save-rolled";
+      const saveRollAttacker = attackerPlayer.getFighter(pending.attackerFighterId);
+      const saveRollWeapon = saveRollAttacker !== undefined
+        ? attackerPlayer.getFighterWeaponDefinition(saveRollAttacker.id, pending.weaponId)
+        : undefined;
+      if (saveRollAttacker !== undefined && saveRollWeapon !== undefined) {
+        game.emitEvent(new SaveDiceRolledEvent(
+          game.roundNumber,
+          attackerPlayer,
+          defenderPlayer,
+          saveRollAttacker,
+          target,
+          saveRollWeapon,
+          pending.selectedAbility,
+          pending.attackRoll,
+          pending.saveRoll,
+          pending.actionKind,
+        ));
+      }
       game.eventLog.push(`Save dice rolled for ${targetDefinition.name}.`);
       return;
     }
@@ -921,6 +1002,12 @@ export class GameEngine {
         actionKind: action.kind,
       },
     );
+    game.emitEvent(new FighterGuardedEvent(
+      game.roundNumber,
+      player,
+      fighter,
+      action.kind,
+    ));
 
     game.consecutivePasses = 0;
     game.eventLog.push(`${player.name} put fighter ${fighter.id} on guard.`);
@@ -993,6 +1080,18 @@ export class GameEngine {
       invokedByFighterId: fighter.id,
       actionKind: action.kind,
     });
+    game.emitEvent(new FighterDelvedEvent(
+      game.roundNumber,
+      player,
+      fighter,
+      featureToken.id,
+      fighterHex.id,
+      sideBeforeDelve,
+      featureToken.side,
+      !hadStaggerTokenBeforeDelve && fighter.hasStaggerToken,
+      holderAfterDelve ? (game.getFighter(holderAfterDelve.fighterId) ?? null) : null,
+      action.kind,
+    ));
     game.consecutivePasses = 0;
     const effectText = [
       `It is now a ${featureToken.side} token`,
@@ -1064,6 +1163,15 @@ export class GameEngine {
       invokedByPlayerId: player.id,
       actionKind: action.kind,
     });
+    game.emitEvent(new FighterFocusedEvent(
+      game.roundNumber,
+      player,
+      discardedObjectives.map((fc) => player.getCard(fc.cardId)).filter((c): c is Card => c !== undefined),
+      discardedPowerCards.map((fc) => player.getCard(fc.cardId)).filter((c): c is Card => c !== undefined),
+      drawnObjectives.map((fc) => player.getCard(fc.cardId)).filter((c): c is Card => c !== undefined),
+      drawnPowerCards.map((fc) => player.getCard(fc.cardId)).filter((c): c is Card => c !== undefined),
+      action.kind,
+    ));
     game.consecutivePasses = 0;
     game.eventLog.push(
       `${player.name} focused, discarded ${discardedObjectives.length} objective card${discardedObjectives.length === 1 ? "" : "s"} `
@@ -1162,6 +1270,18 @@ export class GameEngine {
       invokedByCardId: card.id,
       actionKind: action.kind,
     });
+    game.emitEvent(new PloyPlayedEvent(
+      game.roundNumber,
+      player,
+      card,
+      targetFighter ?? null,
+      targetFighter !== null && targetFighter !== undefined
+        ? game.players.find((p) => p.getFighter(targetFighter.id) !== undefined) ?? null
+        : null,
+      [], // ployEffects — not tracked on Card yet
+      effectDescriptions,
+      action.kind,
+    ));
     this.recordCardResolved(
       game,
       player,
@@ -1249,6 +1369,14 @@ export class GameEngine {
       invokedByCardId: card.id,
       actionKind: action.kind,
     });
+    game.emitEvent(new UpgradeEquippedEvent(
+      game.roundNumber,
+      player,
+      card,
+      fighter,
+      upgradeCost,
+      action.kind,
+    ));
     this.recordCardResolved(
       game,
       player,
@@ -1308,6 +1436,17 @@ export class GameEngine {
       invokedByPlayerId: player.id,
       actionKind: action.kind,
     });
+    game.emitEvent(new WarscrollAbilityUsedEvent(
+      game.roundNumber,
+      player,
+      warscroll.definition.name,
+      action.abilityIndex,
+      ability.name,
+      { ...ability.tokenCosts },
+      ability.effects,
+      effectSummaries,
+      action.kind,
+    ));
     game.consecutivePasses = 0;
     game.eventLog.push(
       `${player.name} used warscroll ability ${ability.name} and ${resolution.effectSummaries.join(" and ")}.`,
@@ -1351,6 +1490,20 @@ export class GameEngine {
           actionKind: action.kind,
         },
       );
+      game.emitEvent(new PlayerPassedEvent(
+        game.roundNumber,
+        player,
+        TurnStep.Action,
+        nextState.phase,
+        consecutivePassesBefore,
+        game.consecutivePasses,
+        turnsTakenBefore,
+        player.turnsTakenThisRound,
+        player,
+        nextState.turnStep,
+        false,
+        action.kind,
+      ));
       this.transitionToState(
         game,
         nextState,
@@ -1393,6 +1546,20 @@ export class GameEngine {
             actionKind: action.kind,
           },
         );
+        game.emitEvent(new PlayerPassedEvent(
+          game.roundNumber,
+          player,
+          TurnStep.Power,
+          nextState.phase,
+          consecutivePassesBefore,
+          game.consecutivePasses,
+          turnsTakenBefore,
+          player.turnsTakenThisRound,
+          null,
+          nextState.turnStep,
+          true,
+          action.kind,
+        ));
         this.transitionToState(
           game,
           nextState,
@@ -1431,6 +1598,20 @@ export class GameEngine {
           actionKind: action.kind,
         },
       );
+      game.emitEvent(new PlayerPassedEvent(
+        game.roundNumber,
+        player,
+        TurnStep.Power,
+        nextState.phase,
+        consecutivePassesBefore,
+        game.consecutivePasses,
+        turnsTakenBefore,
+        player.turnsTakenThisRound,
+        nextPlayer,
+        nextState.turnStep,
+        false,
+        action.kind,
+      ));
       this.transitionToState(
         game,
         nextState,
@@ -1470,6 +1651,7 @@ export class GameEngine {
     game.addRecord(GameRecordKind.ObjectiveScoring, resolution, {
       actionKind: EndPhaseActionKind.ResolveScoreObjectives,
     });
+    // TODO: emit ObjectivesScoredEvent for Phase 1 (requires building snapshot arrays with object references from string-ID sub-resolutions)
     game.transitionTo(
       createEndPhaseGameState(
         EndPhaseStep.EquipUpgrades,
@@ -1549,6 +1731,7 @@ export class GameEngine {
     game.addRecord(GameRecordKind.ObjectiveDraw, resolution, {
       actionKind: EndPhaseActionKind.ResolveDrawObjectives,
     });
+    // TODO: emit ObjectivesDrawnEvent for Phase 1 (requires building snapshot arrays with object references from string-ID sub-resolutions)
     game.transitionTo(
       createEndPhaseGameState(
         EndPhaseStep.DrawPowerCards,
@@ -1604,6 +1787,7 @@ export class GameEngine {
     game.addRecord(GameRecordKind.PowerDraw, resolution, {
       actionKind: EndPhaseActionKind.ResolveDrawPowerCards,
     });
+    // TODO: emit PowerCardsDrawnEvent for Phase 1 (requires building snapshot arrays with object references from string-ID sub-resolutions)
     game.transitionTo(
       createEndPhaseGameState(
         EndPhaseStep.Cleanup,
@@ -1678,6 +1862,7 @@ export class GameEngine {
       game.addRecord(GameRecordKind.Cleanup, resolution, {
         actionKind: EndPhaseActionKind.ResolveCleanup,
       });
+      // TODO: emit CleanupEvent for Phase 1 (requires building CleanupPlayerSnapshot arrays with Fighter object references)
 
       if (outcome.winnerPlayerId === null) {
         game.eventLog.push(`Cleanup complete. Game finished in a draw. ${outcome.reason}`);
@@ -1702,6 +1887,7 @@ export class GameEngine {
     game.addRecord(GameRecordKind.Cleanup, resolution, {
       actionKind: EndPhaseActionKind.ResolveCleanup,
     });
+    // TODO: emit CleanupEvent for Phase 1 (requires building CleanupPlayerSnapshot arrays with Fighter object references)
     game.eventLog.push(
       `Cleanup complete. Round ${completedRoundNumber + 1} is ready to begin.`,
     );
@@ -1727,6 +1913,24 @@ export class GameEngine {
         invokedByPlayerId: firstPlayerId,
       },
     );
+    const firstPlayer = this.requirePlayer(game, firstPlayerId);
+    game.emitEvent(new RoundStartedEvent(
+      game.roundNumber,
+      firstPlayer,
+      game.board.featureTokens.map((featureToken) => {
+        const holder = featureToken.heldByFighterId !== null ? game.getFighter(featureToken.heldByFighterId) : undefined;
+        const holderOwner = holder !== undefined
+          ? game.players.find((p) => p.getFighter(holder.id) !== undefined) ?? null
+          : null;
+        return {
+          featureTokenId: featureToken.id,
+          featureTokenHexId: featureToken.hexId,
+          side: featureToken.side,
+          heldByFighter: holder ?? null,
+          holderOwnerPlayer: holderOwner,
+        };
+      }),
+    ));
   }
 
   private transitionToState(
@@ -1788,6 +1992,17 @@ export class GameEngine {
       ),
       metadata,
     );
+    game.emitEvent(new TurnStepChangedEvent(
+      game.roundNumber,
+      previousState.kind,
+      currentState.kind,
+      previousState.phase,
+      currentState.phase,
+      previousState.turnStep,
+      currentState.turnStep,
+      previousState.activePlayerId !== null ? game.getPlayer(previousState.activePlayerId) ?? null : null,
+      currentState.activePlayerId !== null ? game.getPlayer(currentState.activePlayerId) ?? null : null,
+    ));
 
     if (
       currentState.kind === "combatTurn" &&
@@ -1830,6 +2045,20 @@ export class GameEngine {
       ),
       metadata,
     );
+    const fighter = player.getFighter(fighterId);
+    if (fighter !== undefined) {
+      game.emitEvent(new FighterMovedEvent(
+        game.roundNumber,
+        player,
+        fighter,
+        fromHexId,
+        toHexId,
+        path,
+        destinationHexKind,
+        staggerApplied,
+        metadata.actionKind ?? null,
+      ));
+    }
   }
 
   private recordCardPlayed(
@@ -1860,6 +2089,23 @@ export class GameEngine {
       ),
       metadata,
     );
+    const targetFighter = options.target?.fighterId !== undefined
+      ? game.getFighter(options.target.fighterId) ?? null
+      : null;
+    const targetOwnerPlayer = options.target?.ownerPlayerId !== undefined
+      ? game.getPlayer(options.target.ownerPlayerId) ?? null
+      : null;
+    game.emitEvent(new CardPlayedEvent(
+      game.roundNumber,
+      player,
+      card,
+      card.kind,
+      card.zone,
+      targetFighter,
+      targetOwnerPlayer,
+      options.timing ?? null,
+      metadata.actionKind ?? null,
+    ));
   }
 
   private recordCardResolved(
@@ -1894,6 +2140,25 @@ export class GameEngine {
       ),
       metadata,
     );
+    const resolvedTargetFighter = options.target?.fighterId !== undefined
+      ? game.getFighter(options.target.fighterId) ?? null
+      : null;
+    const resolvedTargetOwnerPlayer = options.target?.ownerPlayerId !== undefined
+      ? game.getPlayer(options.target.ownerPlayerId) ?? null
+      : null;
+    game.emitEvent(new CardResolvedEvent(
+      game.roundNumber,
+      player,
+      card,
+      card.kind,
+      card.zone,
+      resolvedTargetFighter,
+      resolvedTargetOwnerPlayer,
+      options.timing ?? null,
+      gloryDelta,
+      effectSummaries,
+      metadata.actionKind ?? null,
+    ));
   }
 
   private recordTurnStarted(
@@ -1917,6 +2182,13 @@ export class GameEngine {
       ),
       metadata,
     );
+    game.emitEvent(new TurnStartedEvent(
+      game.roundNumber,
+      player,
+      player.turnsTakenThisRound + 1,
+      roundTurnNumber,
+      roundTurnNumber === 1,
+    ));
   }
 
   private recordActionStepStarted(
@@ -1940,6 +2212,13 @@ export class GameEngine {
       ),
       metadata,
     );
+    game.emitEvent(new ActionStepStartedEvent(
+      game.roundNumber,
+      player,
+      player.turnsTakenThisRound + 1,
+      roundTurnNumber,
+      roundTurnNumber === 1,
+    ));
   }
 
   private recordActionStepEnded(
@@ -1969,6 +2248,16 @@ export class GameEngine {
       ),
       metadata,
     );
+    game.emitEvent(new ActionStepEndedEvent(
+      game.roundNumber,
+      player,
+      player.turnsTakenThisRound + 1,
+      roundTurnNumber,
+      nextState.kind,
+      nextState.phase,
+      nextState.turnStep,
+      nextActivePlayer ?? null,
+    ));
   }
 
   private recordPowerStepEnded(
@@ -2001,6 +2290,17 @@ export class GameEngine {
       ),
       metadata,
     );
+    game.emitEvent(new PowerStepEndedEvent(
+      game.roundNumber,
+      player,
+      player.turnsTakenThisRound,
+      completedRoundTurnNumber,
+      nextState.kind,
+      nextState.phase,
+      nextState.turnStep,
+      nextActivePlayer ?? null,
+      nextState.kind === "endPhase",
+    ));
   }
 
   private recordTurnEnded(
@@ -2033,6 +2333,17 @@ export class GameEngine {
       ),
       metadata,
     );
+    game.emitEvent(new TurnEndedEvent(
+      game.roundNumber,
+      player,
+      player.turnsTakenThisRound,
+      completedRoundTurnNumber,
+      nextState.kind,
+      nextState.phase,
+      nextState.turnStep,
+      nextActivePlayer ?? null,
+      nextState.kind === "endPhase",
+    ));
   }
 
   private drawCards(
@@ -2238,6 +2549,7 @@ export class GameEngine {
           actionKind: context.triggerActionKind ?? null,
         },
       );
+      // TODO: emit ObjectivesScoredEvent for Phase 1 (auto-scored objectives during combat)
     }
 
     return playerResolution;
@@ -2567,6 +2879,7 @@ export class GameEngine {
     saveRoll: AttackAction["saveRoll"],
     actionKind: GameActionKind,
   ): { combatResult: ReturnType<CombatResolver["resolve"]>; targetSlain: boolean } {
+    const weapon = attackerPlayer.getFighterWeaponDefinition(attacker.id, weaponId);
     game.addRecord(
       GameRecordKind.CombatStarted,
       new CombatStartedResolution(
@@ -2588,6 +2901,18 @@ export class GameEngine {
         actionKind,
       },
     );
+    if (weapon !== undefined) {
+      game.emitEvent(new CombatStartedEvent(
+        game.roundNumber,
+        attackerPlayer,
+        defenderPlayer,
+        attacker,
+        target,
+        weapon,
+        selectedAbility,
+        actionKind,
+      ));
+    }
 
     const combatResult = this.combatResolver.resolve(
       game,
@@ -2612,6 +2937,32 @@ export class GameEngine {
       invokedByFighterId: attacker.id,
       actionKind,
     });
+    if (weapon !== undefined) {
+      game.emitEvent(new CombatResolvedEvent(
+        game.roundNumber,
+        attackerPlayer,
+        defenderPlayer,
+        attacker,
+        target,
+        weapon,
+        selectedAbility,
+        combatResult.selectedAbilityRequiresCritical,
+        combatResult.selectedAbilityTriggered,
+        combatResult.attackRoll,
+        combatResult.saveRoll,
+        combatResult.outcome,
+        combatResult.attackSuccesses,
+        combatResult.saveSuccesses,
+        combatResult.attackCriticals,
+        combatResult.saveCriticals,
+        combatResult.damageInflicted,
+        combatResult.targetSlain,
+        combatResult.targetMoved,
+        combatResult.attackerMoved,
+        combatResult.staggerApplied,
+        actionKind,
+      ));
+    }
     target.damage += combatResult.damageInflicted;
     if (combatResult.staggerApplied) {
       target.hasStaggerToken = true;
@@ -2650,6 +3001,16 @@ export class GameEngine {
           actionKind,
         },
       );
+      game.emitEvent(new FighterSlainEvent(
+        game.roundNumber,
+        attackerPlayer,
+        attacker,
+        defenderPlayer,
+        target,
+        targetHex.id,
+        targetDefinition.bounty,
+        actionKind,
+      ));
     }
 
     game.addRecord(
@@ -2685,6 +3046,30 @@ export class GameEngine {
         actionKind,
       },
     );
+    if (weapon !== undefined) {
+      game.emitEvent(new CombatEndedEvent(
+        game.roundNumber,
+        attackerPlayer,
+        defenderPlayer,
+        attacker,
+        target,
+        weapon,
+        selectedAbility,
+        combatResult.selectedAbilityRequiresCritical,
+        combatResult.selectedAbilityTriggered,
+        combatResult.attackRoll,
+        combatResult.saveRoll,
+        combatResult.outcome,
+        combatResult.attackSuccesses,
+        combatResult.saveSuccesses,
+        combatResult.attackCriticals,
+        combatResult.saveCriticals,
+        combatResult.damageInflicted,
+        targetSlain,
+        combatResult.staggerApplied,
+        actionKind,
+      ));
+    }
 
     return { combatResult, targetSlain };
   }

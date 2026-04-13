@@ -19,6 +19,10 @@ import {
   type GameState,
 } from "./GameState";
 import { Player } from "./Player";
+import { GameEvent } from "../events/GameEvent";
+
+/** Constructor type used for instanceof-based event queries. */
+type EventConstructor<T extends GameEvent> = abstract new (...args: any[]) => T;
 
 /**
  * Combat sequence phases (mirrors the rulebook):
@@ -59,6 +63,7 @@ export class Game {
   public records: GameRecord[];
   public eventLog: string[];
   public pendingCombat: PendingCombat | null = null;
+  public readonly gameEvents: GameEvent[] = [];
   private flowState: GameState;
 
   public constructor(
@@ -282,6 +287,64 @@ export class Game {
 
   public getEventLogState(): GameEventLog {
     return new GameEventLog(this.records);
+  }
+
+  // --- New event system (instanceof-based, object references) ---
+
+  public emitEvent(event: GameEvent): void {
+    this.gameEvents.push(event);
+  }
+
+  /** Get the most recent event of the given class, or null. */
+  public getLatestEventOfType<T extends GameEvent>(
+    eventType: EventConstructor<T>,
+  ): T | null {
+    for (let i = this.gameEvents.length - 1; i >= 0; i--) {
+      const event = this.gameEvents[i];
+      if (event instanceof eventType) {
+        return event as T;
+      }
+    }
+    return null;
+  }
+
+  /** Get all events of the given class, in chronological order. */
+  public getEventsOfType<T extends GameEvent>(
+    eventType: EventConstructor<T>,
+  ): T[] {
+    return this.gameEvents.filter(
+      (e): e is T => e instanceof eventType,
+    );
+  }
+
+  /** Get the most recent event of the given class that occurred after `afterEvent`, or null. */
+  public getLatestEventAfter<T extends GameEvent>(
+    afterEvent: GameEvent,
+    eventType: EventConstructor<T>,
+  ): T | null {
+    const afterIndex = this.gameEvents.indexOf(afterEvent);
+    if (afterIndex === -1) return null;
+    for (let i = this.gameEvents.length - 1; i > afterIndex; i--) {
+      const event = this.gameEvents[i];
+      if (event instanceof eventType) {
+        return event as T;
+      }
+    }
+    return null;
+  }
+
+  /** Get all events that occurred in the current round. */
+  public getEventsThisRound(): GameEvent[] {
+    return this.gameEvents.filter((e) => e.roundNumber === this.roundNumber);
+  }
+
+  /** Get all events of the given class that occurred in the current round. */
+  public getEventsOfTypeThisRound<T extends GameEvent>(
+    eventType: EventConstructor<T>,
+  ): T[] {
+    return this.gameEvents.filter(
+      (e): e is T => e instanceof eventType && e.roundNumber === this.roundNumber,
+    );
   }
 
   public toJSON(): object {
