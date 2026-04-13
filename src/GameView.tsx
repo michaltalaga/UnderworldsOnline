@@ -73,64 +73,74 @@ export default function GameView({ warband, deck = null, boardTheme = null }: Ga
   });
 
   // ===== Render =====
+  // Layout: top bar → 5-column grid → bottom dock.
+  // Columns: gutter | panel | map (auto) | panel | gutter.
+  // Panels use minmax(12rem,20vw). Map sizes to intrinsic width (auto).
+  // Outer gutters (1fr) absorb all leftover horizontal space.
   return (
     <>
-    <main className="max-w-none m-0 p-0 flex flex-col h-screen gap-0 overflow-hidden" onClick={e.dismissSelection}>
-      <section className="flex-1 min-h-0 flex flex-row items-stretch justify-center overflow-hidden">
-        <div className="flex-1 min-w-0 min-h-0 flex flex-col items-center overflow-hidden">
-          <StatusBar badge={boardScene.statusBadge} />
-          <div className="flex-1 min-h-0 flex flex-row items-stretch justify-center">
-            <div data-roster-rail className="shrink-0 grow-0 w-[210px] min-w-[210px] max-w-[210px] overflow-hidden min-h-0 bg-[rgba(253,249,242,0.5)] border-r border-[rgba(85,66,40,0.06)]">
-              <div className="w-full h-full overflow-y-auto [scrollbar-gutter:stable]">
-                {e.localPlayer !== null && (
-                  <PlayerPanel activePlayerId={e.activePlayer?.id ?? null} game={e.game}
-                    onSelectFighter={e.isSetup ? noop : e.selectFighter} player={e.localPlayer}
-                    selectedFighterId={e.selectedFighterId} />
-                )}
-              </div>
-            </div>
-            <div className="flex-1 min-h-0 min-w-0 flex flex-col items-center">
-              <BoardMap scene={boardScene}
-                onHoverChargeTarget={(fighterId) => e.setHoveredChargeTargetId(fighterId as FighterId | null)}
-                onHexClickIntent={e.handleHexClickIntent} onDelveInlineFeature={e.delveSelectedFighter}
-                onContextMenuAction={e.handleContextMenuAction} onDismissContextMenu={e.dismissContextMenu} />
-              <div className="shrink-0 grow-0 basis-auto flex gap-2 py-1.5 min-h-9">
-                {boardScene.quickActions.map((action) => (
-                  <button key={action.key} type="button"
-                    className={`border border-[rgba(84,63,45,0.2)] rounded-pill py-1.5 px-4 font-[inherit] text-[0.75rem] font-bold cursor-pointer bg-[rgba(255,251,245,0.95)] text-[#3a2e24] shadow-button whitespace-nowrap hover:bg-[rgba(245,238,225,1)]${action.armed ? " bg-[rgba(141,92,13,0.2)] border-[rgba(141,92,13,0.35)]" : ""}`}
-                    onClick={() => e.handleQuickAction(action)}>{action.label}</button>
-                ))}
-              </div>
-            </div>
-            <div data-roster-rail className="shrink-0 grow-0 w-[210px] min-w-[210px] max-w-[210px] overflow-hidden min-h-0 bg-[rgba(253,249,242,0.5)] border-l border-[rgba(85,66,40,0.06)]">
-              <div className="w-full h-full overflow-y-auto [scrollbar-gutter:stable]">
-                {e.isSetup ? (
-                  <SetupPhasePanel game={e.game} activePlayer={e.activePlayer} applySetupAction={e.applySetupAction} />
-                ) : (
-                  e.opponentPlayer !== null ? (
-                    <PlayerPanel activePlayerId={e.activePlayer?.id ?? null} game={e.game}
-                      onSelectFighter={noop} player={e.opponentPlayer} selectedFighterId={null} />
-                  ) : (
-                    <div className="w-full h-full" />
-                  )
-                )}
-              </div>
-            </div>
+    <main className="h-screen m-0 p-0 grid grid-rows-[auto_1fr_auto] overflow-hidden" onClick={e.dismissSelection}>
+      {/* ── Row 1: top bar ──────────────────────────────────── */}
+      <StatusBar badge={boardScene.statusBadge} />
+
+      {/* ── Row 2: 5-column game area ───────────────────────── */}
+      <div className="min-h-0 grid grid-cols-[1fr_minmax(12rem,min(20vw,256px))_auto_minmax(12rem,min(20vw,256px))_1fr] gap-0 overflow-hidden">
+        {/* Col 1: left side (future: extra widgets) */}
+        <div className="min-h-0 overflow-hidden" />
+
+        {/* Col 2: left roster */}
+        <div className="min-h-0 overflow-y-auto bg-[rgba(253,249,242,0.5)] border-r border-[rgba(85,66,40,0.06)]">
+          {e.localPlayer !== null && (
+            <PlayerPanel activePlayerId={e.activePlayer?.id ?? null} game={e.game}
+              onSelectFighter={e.isSetup ? noop : e.selectFighter} player={e.localPlayer}
+              selectedFighterId={e.selectedFighterId} />
+          )}
+        </div>
+
+        {/* Col 3: map + quick actions */}
+        <div className="min-h-0 overflow-hidden relative"
+          style={{ aspectRatio: `${boardScene.viewport.width} / ${boardScene.viewport.height}` }}>
+          <BoardMap scene={boardScene}
+            onHoverChargeTarget={(fighterId) => e.setHoveredChargeTargetId(fighterId as FighterId | null)}
+            onHexClickIntent={e.handleHexClickIntent} onDelveInlineFeature={e.delveSelectedFighter}
+            onContextMenuAction={e.handleContextMenuAction} onDismissContextMenu={e.dismissContextMenu} />
+          <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-2 py-1.5 pointer-events-none [&>*]:pointer-events-auto">
+            {boardScene.quickActions.map((action) => (
+              <button key={action.key} type="button"
+                className={`border border-[rgba(84,63,45,0.2)] rounded-pill py-1.5 px-4 font-[inherit] text-[0.75rem] font-bold cursor-pointer bg-[rgba(255,251,245,0.95)] text-[#3a2e24] shadow-button whitespace-nowrap hover:bg-[rgba(245,238,225,1)]${action.armed ? " bg-[rgba(141,92,13,0.2)] border-[rgba(141,92,13,0.35)]" : ""}`}
+                onClick={() => e.handleQuickAction(action)}>{action.label}</button>
+            ))}
           </div>
         </div>
-      </section>
 
-      {diceTrayModel !== null && (
-        <div className="fixed bottom-[calc(28vh+12px)] right-3 w-[280px] max-h-[40vh] overflow-y-auto z-20 pointer-events-none [&>*]:pointer-events-auto">
-          <DiceTray model={diceTrayModel} />
+        {/* Col 4: right roster / setup panel */}
+        <div className="min-h-0 overflow-y-auto bg-[rgba(253,249,242,0.5)] border-l border-[rgba(85,66,40,0.06)]">
+          {e.isSetup ? (
+            <SetupPhasePanel game={e.game} activePlayer={e.activePlayer} applySetupAction={e.applySetupAction} />
+          ) : (
+            e.opponentPlayer !== null && (
+              <PlayerPanel activePlayerId={e.activePlayer?.id ?? null} game={e.game}
+                onSelectFighter={noop} player={e.opponentPlayer} selectedFighterId={null} />
+            )
+          )}
         </div>
-      )}
 
-      {e.localPlayer === null ? null : (
+        {/* Col 5: right side (future: extra widgets) */}
+        <div className="min-h-0 overflow-hidden" />
+      </div>
+
+      {/* ── Row 3: bottom dock ──────────────────────────────── */}
+      {e.localPlayer !== null && (
         <PlayerHandDockShell player={e.localPlayer} interaction={dockInteraction}
           scorableObjectives={e.scorableObjectives} onScoreObjective={e.scoreObjective} />
       )}
     </main>
+
+    {diceTrayModel !== null && (
+      <div className="fixed bottom-[calc(28vh+12px)] right-3 w-[280px] max-h-[40vh] overflow-y-auto z-20 pointer-events-none [&>*]:pointer-events-auto">
+        <DiceTray model={diceTrayModel} />
+      </div>
+    )}
 
     {e.isSetup && (
       <button type="button"

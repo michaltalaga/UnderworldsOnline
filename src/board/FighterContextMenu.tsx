@@ -2,7 +2,7 @@ import type { ActiveActionMode, FighterContextMenuModel } from "./boardScene";
 
 export type FighterContextMenuProps = {
   model: FighterContextMenuModel;
-  mapScale: number;
+  counterZoom: string;
   onSelectAction: (mode: ActiveActionMode) => void;
   onDismiss: () => void;
   onConfirmGuard: () => void;
@@ -21,7 +21,7 @@ const toneBg: Record<string, string> = {
 
 export default function FighterContextMenu({
   model,
-  mapScale,
+  counterZoom,
   onSelectAction,
   onDismiss,
   onConfirmGuard,
@@ -31,8 +31,7 @@ export default function FighterContextMenu({
   const posStyle = {
     left: `${model.left}px`,
     top: `${model.top}px`,
-    transform: `scale(${1 / mapScale})`,
-    transformOrigin: "top left" as const,
+    zoom: counterZoom,
   };
 
   if (model.guardArmed) {

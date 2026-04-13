@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { FeatureTokenSide, HexKind } from "../domain";
 import type {
   ActiveActionMode,
@@ -42,68 +42,28 @@ export default function BoardMap({
     top: number;
   } | null>(null);
 
-  const frameRef = useRef<HTMLDivElement>(null);
-  const mapWrapperRef = useRef<HTMLDivElement>(null);
-  const [mapScale, setMapScale] = useState(1);
-  const mapScaleRef = useRef(mapScale);
-  mapScaleRef.current = mapScale;
-
-  // Scale the map to fit the surrounding frame so the whole battlefield is
-  // always visible without scroll bars. The map has a fixed intrinsic
-  // pixel size (`scene.viewport`); the scaler wrapper takes the scaled
-  // dimensions and the inner map applies `transform: scale`.
-  useEffect(() => {
-    const frame = frameRef.current;
-    if (frame === null) {
-      return;
-    }
-    const update = () => {
-      const frameRect = frame.getBoundingClientRect();
-      const available = {
-        w: Math.max(0, frameRect.width),
-        h: Math.max(0, frameRect.height),
-      };
-      if (available.w === 0 || available.h === 0) {
-        return;
-      }
-      const nextScale = Math.min(
-        1,
-        available.w / scene.viewport.width,
-        available.h / scene.viewport.height,
-      );
-      if (Math.abs(nextScale - mapScaleRef.current) > 0.005) {
-        setMapScale(nextScale);
-      }
-    };
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(frame);
-    return () => observer.disconnect();
-  }, [scene.viewport.width, scene.viewport.height]);
+  // CSS zoom expression: the browser computes scale to fit the frame using
+  // container-query units + trig identity  tan(atan2(a,b)) = a/b.
+  // No JS resize logic needed — the browser re-evaluates on every layout.
+  // CSS zoom: browser computes fit-scale via container-query units + trig
+  // identity tan(atan2(a,b)) = a/b.  No JS resize logic needed.
+  const cssZoom = `min(1, tan(atan2(100cqw, ${scene.viewport.width}px)), tan(atan2(100cqh, ${scene.viewport.height}px)))`;
+  const cssCounterZoom = `max(1, tan(atan2(${scene.viewport.width}px, 100cqw)), tan(atan2(${scene.viewport.height}px, 100cqh)))`;
 
   const { hexes, armedPathTone } = scene;
 
   return (
-    <div ref={frameRef} className="flex-1 min-h-0 w-full flex items-center justify-center overflow-hidden">
+    <div className="w-full h-full overflow-hidden [container-type:size] flex items-center justify-center">
       <div
-        ref={mapWrapperRef}
-        className="relative flex-none self-center"
+        className="relative"
+        data-territory-indicator={scene.territoryIndicator}
+        data-has-bg={scene.backgroundImage !== null ? "" : undefined}
         style={{
-          width: `${scene.viewport.width * mapScale}px`,
-          height: `${scene.viewport.height * mapScale}px`,
+          width: `${scene.viewport.width}px`,
+          height: `${scene.viewport.height}px`,
+          zoom: cssZoom,
         }}
       >
-        <div
-          className="relative"
-          data-territory-indicator={scene.territoryIndicator}
-          data-has-bg={scene.backgroundImage !== null ? "" : undefined}
-          style={{
-            width: `${scene.viewport.width}px`,
-            height: `${scene.viewport.height}px`,
-            transform: `scale(${mapScale})`,
-            transformOrigin: "top left",
-          }}
-        >
           {scene.backgroundImage !== null && (
             <img
               src={scene.backgroundImage}
@@ -158,7 +118,7 @@ export default function BoardMap({
           {scene.contextMenu.visible && onContextMenuAction !== undefined && onDismissContextMenu !== undefined && (
             <FighterContextMenu
               model={scene.contextMenu}
-              mapScale={mapScale}
+              counterZoom={cssCounterZoom}
               onSelectAction={onContextMenuAction}
               onDismiss={onDismissContextMenu}
               onConfirmGuard={() => {
@@ -177,7 +137,6 @@ export default function BoardMap({
               {actionTooltip.label}
             </div>
           )}
-        </div>
       </div>
     </div>
   );
