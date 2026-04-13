@@ -1,9 +1,8 @@
 import { useState } from "react";
 import DeckSelectScreen from "./DeckSelectScreen";
 import { LOCAL_PLAYER_ID } from "./localPlayer";
-import PracticeBattlefieldApp from "./PracticeBattlefieldApp";
+import GameView from "./GameView";
 import { embergard1BoardTheme } from "./domain/content/boards/Embergard1Board";
-import SetupApp from "./SetupApp";
 import WarbandSelectScreen from "./WarbandSelectScreen";
 import {
   blazingAssaultDeck,
@@ -65,7 +64,6 @@ function CommitBadge() {
 export default function App() {
   const [selectedWarbandId, setSelectedWarbandId] = useState<WarbandDefinitionId | null>(null);
   const [deckSelection, setDeckSelection] = useState<DeckSelection>({ kind: "none" });
-  const [setupGame, setSetupGame] = useState<Game | null>(null);
 
   if (selectedWarbandId === null) {
     return (
@@ -76,7 +74,6 @@ export default function App() {
           onSelect={(warbandId) => {
             setSelectedWarbandId(warbandId);
             setDeckSelection({ kind: "none" });
-            setSetupGame(null);
           }}
         />
       </>
@@ -95,22 +92,7 @@ export default function App() {
           choices={deckChoices}
           onSelect={(deck) => {
             setDeckSelection({ kind: "selected", deck });
-            setSetupGame(null);
           }}
-        />
-      </>
-    );
-  }
-
-  if (setupGame === null) {
-    return (
-      <>
-        <CommitBadge />
-        <SetupApp
-          warband={selectedWarband}
-          deck={deckSelection.deck}
-          onSetupComplete={(game) => setSetupGame(game)}
-          boardTheme={embergard1BoardTheme}
         />
       </>
     );
@@ -119,10 +101,9 @@ export default function App() {
   return (
     <>
       <CommitBadge />
-      <PracticeBattlefieldApp
+      <GameView
         warband={selectedWarband}
         deck={deckSelection.deck}
-        game={setupGame}
         boardTheme={embergard1BoardTheme}
       />
     </>

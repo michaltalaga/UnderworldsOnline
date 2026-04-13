@@ -267,7 +267,7 @@ body {
   min-height: 0;
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: center;
 }
 
@@ -289,7 +289,7 @@ body {
 /* --- Status bar (normal flow, above the map inside map-center) --- */
 
 .status-bar {
-  flex: 0 0 auto;
+  flex: 0 0 32px;
   width: 100%;
   display: flex;
   align-items: center;
@@ -298,9 +298,10 @@ body {
   padding: 4px 16px;
   background: rgba(253, 249, 242, 0.92);
   border-bottom: 1px solid rgba(85, 66, 40, 0.1);
-  min-height: 32px;
+  height: 32px;
   box-sizing: border-box;
   font-size: 0.75rem;
+  overflow: hidden;
 }
 
 .status-bar-step {
@@ -352,15 +353,20 @@ body {
 /* --- Map + actions column --- */
 
 .battlefield-map-and-actions {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
 .battlefield-quick-actions {
+  flex: 0 0 auto;
   display: flex;
   gap: 8px;
   padding: 6px 0;
+  min-height: 36px;
 }
 
 .battlefield-quick-action {
@@ -619,27 +625,38 @@ body {
 }
 
 .battlefield-side-rail > .setup-phase-panel,
-.setup-side-panel > .setup-phase-panel {
+.setup-roster-rail > .setup-phase-panel {
   flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  padding: 12px;
 }
 
-.battlefield-side-rail > .dice-tray,
-.setup-side-panel > .dice-tray {
+.battlefield-side-rail > .dice-tray {
   flex: 0 0 auto;
 }
 
-.setup-side-panel {
-  flex: 0 0 340px;
+/* Setup phase content inside the roster rail: compact text for 210px width */
+.setup-roster-rail {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  overflow-y: auto;
-  min-height: 0;
-  background: rgba(253, 249, 242, 0.6);
-  border-left: 1px solid rgba(85, 66, 40, 0.1);
+}
+
+.setup-roster-rail .setup-hero h1 {
+  font-size: clamp(1rem, 2vw, 1.35rem);
+}
+
+.setup-roster-rail .setup-hero p {
+  font-size: 0.85rem;
+}
+
+.setup-roster-rail .setup-deploy-sidebar h3 {
+  font-size: 0.9rem;
+}
+
+.setup-roster-rail .setup-deploy-fighter {
+  font-size: 0.8rem;
+  padding: 8px 10px;
 }
 
 .battlefield-side-rail-empty {
@@ -663,7 +680,8 @@ body {
   padding: 22px;
 }
 
-.battlefield-side-rail > .setup-phase-panel {
+.battlefield-side-rail > .setup-phase-panel,
+.setup-roster-rail > .setup-phase-panel {
   overflow-y: auto;
   min-height: 0;
   padding: 16px 18px;
@@ -1093,8 +1111,9 @@ body {
    overlays (status badge, quick actions, power overlay, flash) plus the
    centered map scaler. */
 .battlefield-board-frame {
+  flex: 1 1 0;
+  min-height: 0;
   width: 100%;
-  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import "./PracticeBattlefieldApp.css";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import "./GameView.css";
+import "./setup/SetupApp.css";
 import PlayerHandDockShell from "./PlayerHandDockShell";
 import { DockActionOverlay, type DockInteraction } from "./PlayerHandDock";
 import { getLocalPlayer, LOCAL_PLAYER_ID } from "./localPlayer";
@@ -7,7 +8,8 @@ import {
   CombatActionService,
   CombatAutoResolver,
   ConfirmCombatAction,
-  createCombatReadySetupPracticeGame,
+  createSetupPracticeGame,
+  DeployFighterAction,
   deterministicFirstPlayerRollOff,
   DumbAiController,
   FocusAction,
@@ -16,15 +18,23 @@ import {
   LocalPlayerController,
   CardZone,
   EndActionStepAction,
+  Phase,
+  PlaceFeatureTokenAction,
+  ResolveMulliganAction,
+  SetupActionService,
+  SetupAutoResolver,
   TurnStep,
   type CardId,
   type CombatController,
   type FeatureToken,
+  type Fighter,
   type FighterId,
   type Game,
   type DeckDefinition,
   type HexId,
   type PlayerId,
+  type Player,
+  type SetupAction,
   type WarbandDefinition,
 } from "./domain";
 import { projectBoard } from "./board/projectBoard";
@@ -54,6 +64,7 @@ import {
   getPowerOverlayOptionByKey,
 } from "./board/battlefieldOverlays";
 import {
+  createEmptyActionLens,
   getArmedPathModel,
   getAttackActionForTarget,
   getAttackPreviewByTarget,
@@ -76,56 +87,40 @@ import {
   getSelectedChargeKeyForPair,
   toggleFocusCardId,
 } from "./board/fighterActionLens";
+import TerritoryRollOffScreen from "./setup/TerritoryRollOffScreen";
+import TerritoryChoiceScreen from "./setup/TerritoryChoiceScreen";
 
+// Stateless singletons — reused across renders.
 const combatActionService = new CombatActionService();
-const demoEngine = new GameEngine(
+const setupActionService = new SetupActionService();
+const gameEngine = new GameEngine(
   undefined, undefined, undefined, undefined, undefined, undefined,
   new Set([LOCAL_PLAYER_ID]),
 );
 
-type PracticeBattlefieldAppProps = {
-  warband?: WarbandDefinition;
+type GameViewProps = {
+  warband: WarbandDefinition;
   deck?: DeckDefinition | null;
-  game?: Game;
   boardTheme?: BoardTheme | null;
 };
 
-export default function PracticeBattlefieldApp({
+export default function GameView({
   warband,
   deck = null,
-  game: providedGame,
   boardTheme = null,
-}: PracticeBattlefieldAppProps = {}) {
-  const [game, setGame] = useState<Game>(
-    () => providedGame ?? createActionStepPracticeGame(warband, deck),
-  );
+}: GameViewProps) {
+  // --- Core game state (owned for the entire lifecycle) ---
+  const [game] = useState<Game>(() => createSetupPracticeGame(undefined, warband, deck));
   const [refreshTick, setRefreshTick] = useState(0);
+
+  // --- Setup state ---
+  const setupAutoResolver = useMemo(() => new SetupAutoResolver(LOCAL_PLAYER_ID), []);
+  const combatStartedRef = useRef(false);
+
+  // --- Combat interaction state ---
   const [resultFlash, setResultFlash] = useState<BattlefieldResultFlash | null>(null);
   const [lastResolvedAction, setLastResolvedAction] = useState<BattlefieldResultFlash | null>(null);
-  const boardProjection = projectBoard(game.board);
-  const recentEvents = [...game.eventLog].slice(-10).reverse();
-  const localPlayer = getLocalPlayer(game);
-  const opponentPlayer = game.players.find((p) => p.id !== LOCAL_PLAYER_ID) ?? null;
-  const activePlayer = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
-  const legalActions = activePlayer === null ? [] : combatActionService.getLegalActions(game, activePlayer.id);
   const [selectedFighterId, setSelectedFighterId] = useState<FighterId | null>(null);
-  const selectedFighter =
-    selectedFighterId === null || activePlayer === null
-      ? null
-      : activePlayer.getFighter(selectedFighterId) ?? null;
-  const selectedFighterHex =
-    selectedFighter?.currentHexId === null || selectedFighter?.currentHexId === undefined
-      ? null
-      : game.board.getHex(selectedFighter.currentHexId) ?? null;
-  const selectedFeatureToken =
-    selectedFighterHex?.featureTokenId === null || selectedFighterHex?.featureTokenId === undefined
-      ? null
-      : game.board.getFeatureToken(selectedFighterHex.featureTokenId) ?? null;
-  const actionLens = getFighterActionLens(game, activePlayer, selectedFighterId, legalActions);
-  const powerOverlay = getPowerOverlayModel(game, activePlayer, legalActions);
-  const handPowerPlayable = buildHandPowerPlayableMap(powerOverlay);
-  const moveOptions = getMoveOptions(actionLens);
-  const chargeOptions = getChargeOptions(game, actionLens);
   const [selectedMoveHexId, setSelectedMoveHexId] = useState<HexId | null>(null);
   const [selectedChargeKey, setSelectedChargeKey] = useState<string | null>(null);
   const [pendingMoveHexId, setPendingMoveHexId] = useState<HexId | null>(null);
@@ -143,6 +138,39 @@ export default function PracticeBattlefieldApp({
   const [selectedAttackKeysByTarget, setSelectedAttackKeysByTarget] = useState<Record<string, string>>({});
   const [selectedChargeKeysByPair, setSelectedChargeKeysByPair] = useState<Record<string, string>>({});
   const [activeActionMode, setActiveActionMode] = useState<ActiveActionMode>(null);
+  const [hoveredChargeTargetId, setHoveredChargeTargetId] = useState<FighterId | null>(null);
+
+  // --- Derived state ---
+  const isSetup = game.phase === Phase.Setup;
+  const localPlayer = getLocalPlayer(game);
+  const opponentPlayer = game.players.find((p) => p.id !== LOCAL_PLAYER_ID) ?? null;
+  const activePlayer = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
+  const boardProjection = projectBoard(game.board);
+  const diceTrayModel = getDiceTrayModel(game);
+
+  // Combat-derived state (safe to compute during setup — returns empty results)
+  const legalActions = activePlayer === null || isSetup ? [] : combatActionService.getLegalActions(game, activePlayer.id);
+  const selectedFighter =
+    selectedFighterId === null || activePlayer === null
+      ? null
+      : activePlayer.getFighter(selectedFighterId) ?? null;
+  const selectedFighterHex =
+    selectedFighter?.currentHexId === null || selectedFighter?.currentHexId === undefined
+      ? null
+      : game.board.getHex(selectedFighter.currentHexId) ?? null;
+  const selectedFeatureToken =
+    selectedFighterHex?.featureTokenId === null || selectedFighterHex?.featureTokenId === undefined
+      ? null
+      : game.board.getFeatureToken(selectedFighterHex.featureTokenId) ?? null;
+  const actionLens = isSetup
+    ? createEmptyActionLens(null, null)
+    : getFighterActionLens(game, activePlayer, selectedFighterId, legalActions);
+  const powerOverlay = isSetup
+    ? { ploys: [], upgrades: [], warscrollAbilities: [], hasAnyOptions: false }
+    : getPowerOverlayModel(game, activePlayer, legalActions);
+  const handPowerPlayable = buildHandPowerPlayableMap(powerOverlay);
+  const moveOptions = getMoveOptions(actionLens);
+  const chargeOptions = getChargeOptions(game, actionLens);
   const selectedMoveOption = moveOptions.find((option) => option.hexId === selectedMoveHexId) ?? moveOptions[0] ?? null;
   const selectedChargeOption = chargeOptions.find((option) => option.key === selectedChargeKey) ?? chargeOptions[0] ?? null;
   const pendingPowerOption =
@@ -186,7 +214,6 @@ export default function PracticeBattlefieldApp({
       ? "Discard nothing and draw 1 additional power card."
       : `Discard ${selectedFocusObjectiveIds.length} objective card${selectedFocusObjectiveIds.length === 1 ? "" : "s"} and ${selectedFocusPowerIds.length} power card${selectedFocusPowerIds.length === 1 ? "" : "s"}, then draw ${selectedFocusObjectiveIds.length} objective card${selectedFocusObjectiveIds.length === 1 ? "" : "s"} and ${selectedFocusPowerIds.length + 1} power card${selectedFocusPowerIds.length + 1 === 1 ? "" : "s"}.`;
   const latestCombat = game.getLatestRecord(GameRecordKind.Combat);
-  const diceTrayModel = getDiceTrayModel(game);
   const scorableObjectives = localPlayer === null ? [] : localPlayer.objectiveHand
     .filter((card) => card.getLegalTargets(game).length > 0)
     .map((card) => ({ cardId: card.id, cardName: card.name, gloryValue: card.gloryValue }));
@@ -199,6 +226,33 @@ export default function PracticeBattlefieldApp({
   const recentCombatTargetId = recentCombat?.context.targetFighterId ?? null;
   const recentCombatTargetName =
     recentCombatTargetId === null ? null : getFighterName(game, recentCombatTargetId);
+  const recentEvents = [...game.eventLog].slice(-10).reverse();
+
+  // --- Setup-specific derived state ---
+  const { legalHexIds: setupLegalHexIds, onHexClick: setupOnHexClick } = isSetup
+    ? getSetupMapWiring(game, activePlayer, applySetupAction)
+    : { legalHexIds: new Set<HexId>(), onHexClick: undefined };
+
+  // --- Combat controllers ---
+  const combatControllers = useMemo<ReadonlyMap<PlayerId, CombatController>>(() => {
+    const map = new Map<PlayerId, CombatController>();
+    map.set(LOCAL_PLAYER_ID, new LocalPlayerController());
+    for (const player of game.players) {
+      if (player.id !== LOCAL_PLAYER_ID) {
+        map.set(player.id, new DumbAiController());
+      }
+    }
+    return map;
+  }, [game]);
+
+  const combatAutoResolver = useMemo(
+    () => new CombatAutoResolver(combatControllers, LOCAL_PLAYER_ID, gameEngine),
+    [combatControllers],
+  );
+
+  const isHumanTurn = isSetup || combatAutoResolver.isHumanTurn(game);
+
+  // --- Prompt text ---
   const powerPrompt =
     pendingDelveFeatureTokenId !== null && selectedFeatureToken?.id === pendingDelveFeatureTokenId
       ? `${selectedFighterName} has ${getFeatureTokenBadge(selectedFeatureToken)} armed for delve. Click the same feature chip or Delve button again to confirm, or press Escape to cancel.`
@@ -227,23 +281,36 @@ export default function PracticeBattlefieldApp({
             ? `Move to ${pendingMoveHexId} selected. Click the same teal hex again to confirm, press Escape to cancel, or choose another teal hex.`
             : "Select a fighter, then click a teal hex to move, click a gold hex and then a red target to charge, click an amber charge target to auto-arm a charge, or use Focus to cycle cards."
       : powerPrompt;
-  const boardTurnHeader = getBoardTurnHeaderModel({
-    activePlayerName: activePlayer?.name ?? "No active player",
-    game,
-    pendingAttackBadgeLabel,
-    pendingAttackTargetName,
-    pendingChargeBadgeLabel,
-    pendingChargeHexId,
-    pendingChargeTargetName,
-    pendingDelveFeatureTokenId,
-    pendingFocus,
-    pendingGuardFighterId,
-    pendingMoveHexId,
-    pendingPassPower,
-    pendingPowerOption,
-    selectedFighterName,
-    selectedFeatureToken,
-  });
+
+  // --- Board scene ---
+  const boardTurnHeader = isSetup
+    ? {
+        activePlayerName: activePlayer?.name ?? "Setup",
+        interactionLabel: getSetupBannerText(game),
+        isArmed: false,
+        tone: "neutral" as const,
+        stepLabel: "Setup",
+        roundLabel: null,
+        scores: null,
+      }
+    : getBoardTurnHeaderModel({
+        activePlayerName: activePlayer?.name ?? "No active player",
+        game,
+        pendingAttackBadgeLabel,
+        pendingAttackTargetName,
+        pendingChargeBadgeLabel,
+        pendingChargeHexId,
+        pendingChargeTargetName,
+        pendingDelveFeatureTokenId,
+        pendingFocus,
+        pendingGuardFighterId,
+        pendingMoveHexId,
+        pendingPassPower,
+        pendingPowerOption,
+        selectedFighterName,
+        selectedFeatureToken,
+      });
+
   const armedPath = getArmedPathModel(
     actionLens,
     pendingMoveHexId,
@@ -251,45 +318,6 @@ export default function PracticeBattlefieldApp({
     pendingChargeTargetId,
     selectedChargeKeysByPair,
   );
-
-  // Hover state is kept in the parent so that `projectBoardScene` can bake
-  // the hover-derived highlight flags into the scene. Keeping it here (and
-  // not inside BoardMap) means any alternate renderer can consume the
-  // same scene without reimplementing hover tracking.
-  const [hoveredChargeTargetId, setHoveredChargeTargetId] = useState<FighterId | null>(null);
-  useEffect(() => {
-    if (pendingChargeHexId !== null) {
-      setHoveredChargeTargetId(null);
-      return;
-    }
-    if (hoveredChargeTargetId !== null && !actionLens.chargeTargetIds.has(hoveredChargeTargetId)) {
-      setHoveredChargeTargetId(null);
-    }
-  }, [actionLens.chargeTargetIds, hoveredChargeTargetId, pendingChargeHexId]);
-
-  // Controller map: every player seat is driven by one `CombatController`.
-  // Local player is human (the UI); every other player is currently a
-  // `DumbAiController`. Swapping a seat's controller is all it takes to
-  // plug in a smarter AI, a remote player, or restore hot-seat play —
-  // the rest of the app (scene projection, UI gating, action handlers)
-  // reads from this single source of truth via `combatAutoResolver`.
-  const combatControllers = useMemo<ReadonlyMap<PlayerId, CombatController>>(() => {
-    const map = new Map<PlayerId, CombatController>();
-    map.set(LOCAL_PLAYER_ID, new LocalPlayerController());
-    for (const player of game.players) {
-      if (player.id !== LOCAL_PLAYER_ID) {
-        map.set(player.id, new DumbAiController());
-      }
-    }
-    return map;
-  }, [game]);
-
-  const combatAutoResolver = useMemo(
-    () => new CombatAutoResolver(combatControllers, LOCAL_PLAYER_ID, demoEngine),
-    [combatControllers],
-  );
-
-  const isHumanTurn = combatAutoResolver.isHumanTurn(game);
 
   const boardScene = projectBoardScene({
     game,
@@ -317,8 +345,8 @@ export default function PracticeBattlefieldApp({
     lastResolvedAction,
     resultFlash,
     powerOverlay,
-    setupLegalHexIds: undefined,
-    isSetupClickEnabled: false,
+    setupLegalHexIds: isSetup ? setupLegalHexIds : undefined,
+    isSetupClickEnabled: isSetup && setupOnHexClick !== undefined,
     hoveredChargeTargetId,
     isInteractionEnabled: isHumanTurn,
     activeActionMode,
@@ -326,69 +354,132 @@ export default function PracticeBattlefieldApp({
     territoryIndicator: "labels",
   });
 
-  // Map hex click intents (returned by the scene) into the existing
-  // combat action handlers. The renderer doesn't know about these
-  // functions — it just forwards the intent.
-  function handleHexClickIntent(intent: BoardSceneHexClickIntent): void {
-    switch (intent.kind) {
-      case "none":
-        return;
-      case "select-fighter":
-        selectFighter(intent.fighterId);
-        return;
-      case "deselect-fighter":
-        selectFighter(null);
-        return;
-      case "cancel-charge":
-        cancelPendingCharge();
-        return;
-      case "attack-target":
-        attackTarget(intent.fighterId);
-        return;
-      case "start-charge-against-target":
-        startChargeAgainstTarget(intent.fighterId);
-        return;
-      case "complete-charge-against-target":
-        completeChargeAgainstTarget(intent.fighterId);
-        return;
-      case "start-charge-to-hex":
-        startChargeToHex(intent.hexId);
-        return;
-      case "move-to-hex":
-        moveToHex(intent.hexId);
-        return;
-      case "setup-hex":
-        // Not reachable in combat mode — setupLegalHexIds is undefined.
-        return;
+  // ===== Effects =====
+
+  // Setup: auto-advance trivial states and opponent actions.
+  useEffect(() => {
+    if (!isSetup) return;
+    if (setupAutoResolver.resolveAutomaticStep(game)) {
+      refreshGame();
     }
+  }, [game, game.state.kind, game.activePlayerId, setupAutoResolver, isSetup]);
+
+  // Setup → Combat transition: when setup reaches combatReady, start combat.
+  useEffect(() => {
+    if (game.state.kind !== "combatReady" || combatStartedRef.current) return;
+    combatStartedRef.current = true;
+    setupAutoResolver.startCombat(game);
+    refreshGame();
+  }, [game, game.state.kind, setupAutoResolver]);
+
+  // Combat: auto-resolve opponent turns with a small delay.
+  useEffect(() => {
+    if (isSetup) return;
+    const handle = window.setTimeout(() => {
+      if (combatAutoResolver.resolveAutomaticStep(game)) {
+        refreshGame();
+      }
+    }, 450);
+    return () => window.clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTick, combatAutoResolver, isSetup]);
+
+  // Charge hover cleanup.
+  useEffect(() => {
+    if (pendingChargeHexId !== null) {
+      setHoveredChargeTargetId(null);
+      return;
+    }
+    if (hoveredChargeTargetId !== null && !actionLens.chargeTargetIds.has(hoveredChargeTargetId)) {
+      setHoveredChargeTargetId(null);
+    }
+  }, [actionLens.chargeTargetIds, hoveredChargeTargetId, pendingChargeHexId]);
+
+  // Stale pending play card cleanup.
+  useEffect(() => {
+    if (pendingPlayCardId === null) return;
+    const options = handPowerPlayable.get(pendingPlayCardId);
+    if (options === undefined || options.length === 0) {
+      setPendingPlayCardId(null);
+    }
+  }, [pendingPlayCardId, handPowerPlayable]);
+
+  // Escape key handler.
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.key === "Escape") {
+        if (activeActionMode !== null) {
+          clearPendingInteractions();
+          setActiveActionMode(null);
+        } else {
+          dismissSelection(null);
+        }
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeActionMode]);
+
+  // Result flash auto-clear.
+  useEffect(() => {
+    if (resultFlash === null) return;
+    const timeoutId = window.setTimeout(() => {
+      setResultFlash((current) => (current?.id === resultFlash.id ? null : current));
+    }, 5000);
+    return () => window.clearTimeout(timeoutId);
+  }, [resultFlash]);
+
+  // ===== Action handlers =====
+
+  function refreshGame(): void {
+    setRefreshTick((value) => value + 1);
   }
 
-  function handleQuickAction(action: BoardSceneQuickAction): void {
-    switch (action.key) {
-      case "focus":
-        focusHand();
-        return;
-      case "delve":
-        delveSelectedFighter();
-        return;
-      case "guard":
-        guardSelectedFighter();
-        return;
-      case "pass-power":
-        passTurn();
-        return;
-      case "end-action-step":
-        endActionStep();
-        return;
-      case "confirm-combat":
-        confirmCombat();
-        return;
-    }
+  function clearPendingInteractions(): void {
+    setPendingMoveHexId(null);
+    setPendingDelveFeatureTokenId(null);
+    setPendingFocus(false);
+    setPendingGuardFighterId(null);
+    setPendingPassPower(false);
+    setPendingPowerOptionKey(null);
+    setPendingPlayCardId(null);
+    setPendingChargeHexId(null);
+    setPendingChargeTargetId(null);
+    setPendingAttackTargetId(null);
+    setSelectedFocusObjectiveIds([]);
+    setSelectedFocusPowerIds([]);
   }
 
-  function confirmCombat(): void {
-    if (activePlayer === null || game.pendingCombat === null) return;
-    applyAction(new ConfirmCombatAction(activePlayer.id));
+  // --- Setup actions ---
+
+  function applySetupAction(action: SetupAction): void {
+    setupAutoResolver.applyAction(game, action);
+    refreshGame();
+  }
+
+  function autoSetupToBattle(): void {
+    setupAutoResolver.drainToBattle(game);
+    refreshGame();
+  }
+
+  // --- Combat actions ---
+
+  function applyAction(action: BattlefieldAppAction): void {
+    const previousActivePlayerId = game.activePlayerId;
+    const previousSelectedFighterId = selectedFighterId;
+    gameEngine.applyGameAction(game, action);
+    const nextResolvedAction = buildBattlefieldResultFlash(game, action);
+    setResultFlash(nextResolvedAction);
+    setLastResolvedAction(nextResolvedAction);
+    setSelectedMoveHexId(null);
+    setSelectedChargeKey(null);
+    clearPendingInteractions();
+    setActiveActionMode(null);
+    setSelectedAttackKeysByTarget({});
+    setSelectedChargeKeysByPair({});
+    setSelectedFighterId(getNextSelectedFighterId(game, previousActivePlayerId, previousSelectedFighterId));
+    refreshGame();
   }
 
   function selectFighter(fighterId: FighterId | null): void {
@@ -433,55 +524,9 @@ export default function PracticeBattlefieldApp({
     selectFighter(null);
   }
 
-  function refreshGame(): void {
-    setRefreshTick((value) => value + 1);
-  }
-
-  // After every state change, ask the auto-resolver for one more step.
-  // A small delay lets the user see each AI move instead of flashing
-  // through the whole opponent turn in a single frame. The effect
-  // cancels its pending timer on unmount / re-schedule, so rapid state
-  // changes don't queue stale steps.
-  useEffect(() => {
-    const handle = window.setTimeout(() => {
-      if (combatAutoResolver.resolveAutomaticStep(game)) {
-        refreshGame();
-      }
-    }, 450);
-    return () => window.clearTimeout(handle);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshTick, combatAutoResolver]);
-
-  function clearPendingInteractions(): void {
-    setPendingMoveHexId(null);
-    setPendingDelveFeatureTokenId(null);
-    setPendingFocus(false);
-    setPendingGuardFighterId(null);
-    setPendingPassPower(false);
-    setPendingPowerOptionKey(null);
-    setPendingPlayCardId(null);
-    setPendingChargeHexId(null);
-    setPendingChargeTargetId(null);
-    setPendingAttackTargetId(null);
-    setSelectedFocusObjectiveIds([]);
-    setSelectedFocusPowerIds([]);
-  }
-
-  function applyAction(action: BattlefieldAppAction): void {
-    const previousActivePlayerId = game.activePlayerId;
-    const previousSelectedFighterId = selectedFighterId;
-    demoEngine.applyGameAction(game, action);
-    const nextResolvedAction = buildBattlefieldResultFlash(game, action);
-    setResultFlash(nextResolvedAction);
-    setLastResolvedAction(nextResolvedAction);
-    setSelectedMoveHexId(null);
-    setSelectedChargeKey(null);
-    clearPendingInteractions();
-    setActiveActionMode(null);
-    setSelectedAttackKeysByTarget({});
-    setSelectedChargeKeysByPair({});
-    setSelectedFighterId(getNextSelectedFighterId(game, previousActivePlayerId, previousSelectedFighterId));
-    refreshGame();
+  function confirmCombat(): void {
+    if (activePlayer === null || game.pendingCombat === null) return;
+    applyAction(new ConfirmCombatAction(activePlayer.id));
   }
 
   function endActionStep(): void {
@@ -493,7 +538,6 @@ export default function PracticeBattlefieldApp({
     if (localPlayer === null) return;
     const card = localPlayer.getCard(cardId);
     if (card === undefined) return;
-    // Manually score: move from hand to scored pile, add glory
     const handIndex = localPlayer.objectiveHand.findIndex((c) => c.id === cardId);
     if (handIndex === -1) return;
     localPlayer.objectiveHand.splice(handIndex, 1);
@@ -523,7 +567,6 @@ export default function PracticeBattlefieldApp({
       setPendingMoveHexId(hexId);
       return;
     }
-
     const moveAction = getMoveActionForHex(actionLens, hexId);
     if (moveAction !== null) {
       applyAction(moveAction);
@@ -532,26 +575,18 @@ export default function PracticeBattlefieldApp({
 
   function startChargeToHex(hexId: HexId): void {
     const chargeActions = getChargeActionsForHex(actionLens, hexId);
-    if (chargeActions.length === 0) {
-      return;
-    }
-
+    if (chargeActions.length === 0) return;
     clearPendingInteractions();
     setPendingChargeHexId(hexId);
   }
 
   function startChargeAgainstTarget(targetId: FighterId): void {
-    // If the player already armed a move hex, prefer that hex as the
-    // charge destination so the fighter goes where the player intended.
     const validDestsForTarget = getChargeDestinationHexIdsForTarget(actionLens, targetId);
     const destinationHexId =
       pendingMoveHexId !== null && validDestsForTarget.has(pendingMoveHexId)
         ? pendingMoveHexId
         : getPreferredChargeDestinationForTarget(actionLens, targetId);
-    if (destinationHexId === null) {
-      return;
-    }
-
+    if (destinationHexId === null) return;
     clearPendingInteractions();
     setPendingChargeHexId(destinationHexId);
     setPendingChargeTargetId(targetId);
@@ -563,12 +598,11 @@ export default function PracticeBattlefieldApp({
       setPendingAttackTargetId(null);
       return;
     }
-
-    const selectedChargeKey =
+    const chargeKey =
       pendingChargeHexId === null
         ? null
         : getSelectedChargeKeyForPair(selectedChargeKeysByPair, pendingChargeHexId, targetId);
-    const selectedChargeAction = getChargeActionForTarget(actionLens, pendingChargeHexId, targetId, selectedChargeKey);
+    const selectedChargeAction = getChargeActionForTarget(actionLens, pendingChargeHexId, targetId, chargeKey);
     if (selectedChargeAction !== null) {
       applyAction(selectedChargeAction);
     }
@@ -579,30 +613,22 @@ export default function PracticeBattlefieldApp({
   }
 
   function delveSelectedFighter(): void {
-    if (actionLens.delveAction === null || selectedFeatureToken === null) {
-      return;
-    }
-
+    if (actionLens.delveAction === null || selectedFeatureToken === null) return;
     if (pendingDelveFeatureTokenId !== selectedFeatureToken.id) {
       clearPendingInteractions();
       setPendingDelveFeatureTokenId(selectedFeatureToken.id);
       return;
     }
-
     applyAction(actionLens.delveAction);
   }
 
   function focusHand(): void {
-    if (actionLens.focusAction === null) {
-      return;
-    }
-
+    if (actionLens.focusAction === null) return;
     if (!pendingFocus) {
       clearPendingInteractions();
       setPendingFocus(true);
       return;
     }
-
     applyAction(
       new FocusAction(
         actionLens.focusAction.playerId,
@@ -621,35 +647,26 @@ export default function PracticeBattlefieldApp({
   }
 
   function guardSelectedFighter(): void {
-    if (actionLens.guardAction === null || selectedFighterId === null) {
-      return;
-    }
-
+    if (actionLens.guardAction === null || selectedFighterId === null) return;
     if (pendingGuardFighterId !== selectedFighterId) {
       clearPendingInteractions();
       setPendingGuardFighterId(selectedFighterId);
       return;
     }
-
     applyAction(actionLens.guardAction);
   }
 
   function passTurn(): void {
-    if (actionLens.passAction === null) {
-      return;
-    }
-
+    if (actionLens.passAction === null) return;
     if (game.turnStep !== TurnStep.Power) {
       applyAction(actionLens.passAction);
       return;
     }
-
     if (!pendingPassPower) {
       clearPendingInteractions();
       setPendingPassPower(true);
       return;
     }
-
     applyAction(actionLens.passAction);
   }
 
@@ -659,7 +676,6 @@ export default function PracticeBattlefieldApp({
       setPendingAttackTargetId(targetId);
       return;
     }
-
     const attackAction = getAttackActionForTarget(
       actionLens,
       targetId,
@@ -678,10 +694,7 @@ export default function PracticeBattlefieldApp({
   }
 
   function selectChargeProfile(targetId: FighterId, chargeKey: string): void {
-    if (pendingChargeHexId === null) {
-      return;
-    }
-
+    if (pendingChargeHexId === null) return;
     setSelectedChargeKeysByPair((current) => ({
       ...current,
       [getChargePairKey(pendingChargeHexId, targetId)]: chargeKey,
@@ -698,19 +711,12 @@ export default function PracticeBattlefieldApp({
       }
       return;
     }
-
     applyAction(option.action);
   }
 
-  // The dock hands back a card id; we either arm the single legal option
-  // directly (reusing selectPowerOption for the arm→confirm flow) or stash
-  // the card id so the dock can show its inline target picker for the
-  // multi-target case.
   function handleDockSelectCard(cardId: CardId): void {
     const options = handPowerPlayable.get(cardId) ?? [];
-    if (options.length === 0) {
-      return;
-    }
+    if (options.length === 0) return;
     if (options.length === 1) {
       selectPowerOption(options[0]);
       return;
@@ -719,79 +725,92 @@ export default function PracticeBattlefieldApp({
     setPendingPlayCardId(cardId);
   }
 
-  // Defensive: if the armed card's options disappear (e.g., target died
-  // mid-turn, or the power overlay regenerated without it), drop the
-  // armed card id so the UI doesn't latch on a stale value.
-  useEffect(() => {
-    if (pendingPlayCardId === null) {
-      return;
+  // --- Hex click routing ---
+
+  function handleHexClickIntent(intent: BoardSceneHexClickIntent): void {
+    switch (intent.kind) {
+      case "none":
+        return;
+      case "setup-hex":
+        if (setupOnHexClick !== undefined) setupOnHexClick(intent.hexId);
+        return;
+      case "select-fighter":
+        selectFighter(intent.fighterId);
+        return;
+      case "deselect-fighter":
+        selectFighter(null);
+        return;
+      case "cancel-charge":
+        cancelPendingCharge();
+        return;
+      case "attack-target":
+        attackTarget(intent.fighterId);
+        return;
+      case "start-charge-against-target":
+        startChargeAgainstTarget(intent.fighterId);
+        return;
+      case "complete-charge-against-target":
+        completeChargeAgainstTarget(intent.fighterId);
+        return;
+      case "start-charge-to-hex":
+        startChargeToHex(intent.hexId);
+        return;
+      case "move-to-hex":
+        moveToHex(intent.hexId);
+        return;
     }
-    const options = handPowerPlayable.get(pendingPlayCardId);
-    if (options === undefined || options.length === 0) {
-      setPendingPlayCardId(null);
-    }
-  }, [pendingPlayCardId, handPowerPlayable]);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent): void {
-      if (event.key === "Escape") {
-        if (activeActionMode !== null) {
-          // Step back to context menu first.
-          clearPendingInteractions();
-          setActiveActionMode(null);
-        } else {
-          dismissSelection(null);
-        }
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeActionMode]);
-
-  useEffect(() => {
-    if (resultFlash === null) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setResultFlash((current) => (current?.id === resultFlash.id ? null : current));
-    }, 5000);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [resultFlash]);
-
-  function resetBattlefield(): void {
-    const nextGame = createActionStepPracticeGame(warband, deck);
-    setGame(nextGame);
-    setResultFlash(null);
-    setLastResolvedAction(null);
-    setSelectedFighterId(null);
-    setSelectedMoveHexId(null);
-    setSelectedChargeKey(null);
-    clearPendingInteractions();
-    setSelectedAttackKeysByTarget({});
-    setSelectedChargeKeysByPair({});
   }
 
-  // Dock always shows the local player's hand. In the previous
-  // hot-seat mode this was `activePlayer`, but now that the opponent
-  // can be an AI (see `combatControllers`) we don't ever want to
-  // display the AI's private hand — the user is Player One and should
-  // see their own cards regardless of whose turn it is.
+  function handleQuickAction(action: BoardSceneQuickAction): void {
+    switch (action.key) {
+      case "focus":
+        focusHand();
+        return;
+      case "delve":
+        delveSelectedFighter();
+        return;
+      case "guard":
+        guardSelectedFighter();
+        return;
+      case "pass-power":
+        passTurn();
+        return;
+      case "end-action-step":
+        endActionStep();
+        return;
+      case "confirm-combat":
+        confirmCombat();
+        return;
+    }
+  }
+
+  // --- Dock interaction ---
+
   const dockPlayer = localPlayer;
 
-  // Project all the interactive state down to a single union the dock can
-  // consume. The dock never reads `game` directly — everything it needs
-  // flows through `interaction`.
   const dockInteraction: DockInteraction = (() => {
-    // During AI turns the dock is strictly read-only; we neither show
-    // focus toggles nor power-card play targets because both would let
-    // the user hijack the opponent's decisions.
+    // Setup mulligan
+    if (
+      isSetup &&
+      localPlayer !== null &&
+      game.state.kind === "setupMulligan" &&
+      game.activePlayerId === LOCAL_PLAYER_ID
+    ) {
+      return {
+        kind: "mulligan",
+        onResolve: (redrawObjectives: boolean, redrawPower: boolean) =>
+          applySetupAction(
+            new ResolveMulliganAction(localPlayer.id, redrawObjectives, redrawPower),
+          ),
+      };
+    }
+
+    // During AI turns the dock is read-only.
     if (!isHumanTurn) {
       return { kind: "readonly" };
     }
+
+    // Combat focus mode
     if (game.turnStep === TurnStep.Action && pendingFocus) {
       return {
         kind: "focus",
@@ -804,6 +823,8 @@ export default function PracticeBattlefieldApp({
         summary: focusSelectionSummary,
       };
     }
+
+    // Combat power card play
     if (handPowerPlayable.size > 0) {
       return {
         kind: "play",
@@ -815,8 +836,11 @@ export default function PracticeBattlefieldApp({
         onCancel: clearPendingInteractions,
       };
     }
+
     return { kind: "readonly" };
   })();
+
+  // ===== Render =====
 
   return (
     <>
@@ -830,7 +854,7 @@ export default function PracticeBattlefieldApp({
                 <PlayerPanel
                   activePlayerId={activePlayer?.id ?? null}
                   game={game}
-                  onSelectFighter={selectFighter}
+                  onSelectFighter={isSetup ? noop : selectFighter}
                   player={localPlayer}
                   selectedFighterId={selectedFighterId}
                 />
@@ -847,30 +871,36 @@ export default function PracticeBattlefieldApp({
                 onContextMenuAction={handleContextMenuAction}
                 onDismissContextMenu={dismissContextMenu}
               />
-              {boardScene.quickActions.length > 0 && (
-                <div className="battlefield-quick-actions">
-                  {boardScene.quickActions.map((action) => (
-                    <button
-                      key={action.key}
-                      type="button"
-                      className={`battlefield-quick-action${action.armed ? " battlefield-quick-action-armed" : ""}`}
-                      onClick={() => handleQuickAction(action)}
-                    >
-                      {action.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="battlefield-quick-actions">
+                {boardScene.quickActions.map((action) => (
+                  <button
+                    key={action.key}
+                    type="button"
+                    className={`battlefield-quick-action${action.armed ? " battlefield-quick-action-armed" : ""}`}
+                    onClick={() => handleQuickAction(action)}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="battlefield-roster-rail battlefield-roster-rail-right">
-              {opponentPlayer !== null && (
-                <PlayerPanel
-                  activePlayerId={activePlayer?.id ?? null}
-                  game={game}
-                  onSelectFighter={() => {}}
-                  player={opponentPlayer}
-                  selectedFighterId={null}
-                />
+              {isSetup ? (
+                <div className="setup-roster-rail">
+                  <section className="battlefield-panel setup-phase-panel">
+                    {renderSetupPhaseContent(game, activePlayer, applySetupAction)}
+                  </section>
+                </div>
+              ) : (
+                opponentPlayer !== null && (
+                  <PlayerPanel
+                    activePlayerId={activePlayer?.id ?? null}
+                    game={game}
+                    onSelectFighter={noop}
+                    player={opponentPlayer}
+                    selectedFighterId={null}
+                  />
+                )
               )}
             </div>
           </div>
@@ -892,6 +922,18 @@ export default function PracticeBattlefieldApp({
         />
       )}
     </main>
+
+    {isSetup && (
+      <button
+        type="button"
+        className="setup-skip-button"
+        onClick={autoSetupToBattle}
+        title="Auto-resolve all remaining setup actions and jump straight into combat."
+      >
+        Skip to battle
+      </button>
+    )}
+
     <DebugPanel>
         <div className="battlefield-side-stack">
           <section className="battlefield-panel">
@@ -1097,56 +1139,7 @@ export default function PracticeBattlefieldApp({
                     ? pendingPassPower ? "Confirm Pass Power" : "Pass Power"
                     : "Pass"}
                 </button>
-                <button type="button" onClick={resetBattlefield}>Reset</button>
               </div>
-            </div>
-            <div className="battlefield-action-notes">
-              <p>
-                <strong>Attack:</strong> click a crimson target to arm it, then click that same crimson target again to confirm.
-              </p>
-              <p>
-                <strong>Attack profiles:</strong> click a profile on a target card to make the map use it for that target.
-              </p>
-              <p>
-                <strong>Move:</strong> click a teal hex to arm it, then click the same teal hex again to confirm.
-              </p>
-              <p>
-                <strong>Charge:</strong> click a gold destination, then click a red target to arm it, then click that same red target again to confirm. Click the armed gold hex again or press Escape to cancel.
-              </p>
-              <p>
-                <strong>Charge profiles:</strong> after you arm a gold destination, pick a target profile card to control which charge attack the map uses.
-              </p>
-              <p>
-                <strong>Focus:</strong> click Focus once to open the hand overlay, toggle any objective and power cards you want to discard, then click Focus again to confirm, or press Escape to cancel.
-              </p>
-              <p>
-                <strong>Guard:</strong> the selected fighter gets a white ring when guard is legal. Click Guard once to arm it, click Guard again to confirm, or press Escape to cancel.
-              </p>
-              <p>
-                <strong>Board buttons:</strong> guard appears on the map during action step, and pass power appears on the map during power step. Both now arm on the first click and confirm on the second.
-              </p>
-              <p>
-                <strong>Power step cue:</strong> the active player&apos;s fighters glow teal during power step response windows.
-              </p>
-              <p>
-                <strong>Power overlay:</strong> legal ploys, upgrades, and warscroll abilities appear on the map during power step. Click once to arm a power play, click the same option again to confirm, or press Escape to cancel.
-              </p>
-              <p>
-                <strong>Delve:</strong> if the selected fighter is standing on a revealed feature token during power step, the feature chip and board button both become delve controls. Click once to arm, click the same control again to confirm, or press Escape to cancel.
-              </p>
-              <p>
-                <strong>Attack targets:</strong>{" "}
-                {attackTargetNames.length === 0 ? "none" : attackTargetNames.join(", ")}
-              </p>
-              <p>
-                <strong>Charge targets:</strong>{" "}
-                {chargeTargetNames.length === 0 ? "none" : chargeTargetNames.join(", ")}
-              </p>
-              {recentCombatTargetName === null ? null : (
-                <p>
-                  <strong>Recent combat target:</strong> {recentCombatTargetName}
-                </p>
-              )}
             </div>
           </section>
 
@@ -1253,12 +1246,8 @@ export default function PracticeBattlefieldApp({
 
         <section className="battlefield-hero">
           <div>
-            <p className="battlefield-eyebrow">Practice Battlefield</p>
-            <h1>Combat-ready map from the real board state.</h1>
-            <p className="battlefield-copy">
-              The browser now renders the actual centered battlefield, including deployed
-              fighters, territory ownership, starting hexes, edge hexes, and feature tokens.
-            </p>
+            <p className="battlefield-eyebrow">Game State</p>
+            <h1>Battlefield</h1>
           </div>
           <dl className="battlefield-hero-stats">
             <div>
@@ -1301,20 +1290,188 @@ export default function PracticeBattlefieldApp({
   );
 }
 
+// ===== Setup helpers =====
 
+function noop(): void {}
 
-function createActionStepPracticeGame(
-  warband?: WarbandDefinition,
-  deck: DeckDefinition | null = null,
-): Game {
-  const game = createCombatReadySetupPracticeGame(
-    "game:setup-practice:map-action-step",
-    warband,
-    deck,
+function getSetupMapWiring(
+  game: Game,
+  activePlayer: Player | null,
+  applySetupAction: (action: SetupAction) => void,
+): { legalHexIds: ReadonlySet<HexId>; onHexClick: ((hexId: HexId) => void) | undefined } {
+  if (activePlayer === null) {
+    return { legalHexIds: new Set(), onHexClick: undefined };
+  }
+
+  if (game.state.kind === "setupPlaceFeatureTokens") {
+    const legalActions = setupActionService.getLegalActions(game);
+    const legalHexIds = new Set<HexId>(
+      legalActions
+        .filter((action): action is PlaceFeatureTokenAction => action instanceof PlaceFeatureTokenAction)
+        .map((action) => action.hexId),
+    );
+    return {
+      legalHexIds,
+      onHexClick: (hexId) => applySetupAction(new PlaceFeatureTokenAction(activePlayer.id, hexId)),
+    };
+  }
+
+  if (game.state.kind === "setupDeployFighters") {
+    const nextFighter = activePlayer.getUndeployedFighters()[0] ?? null;
+    if (nextFighter === null) {
+      return { legalHexIds: new Set(), onHexClick: undefined };
+    }
+    const legalActions = setupActionService.getLegalActions(game);
+    const legalHexIds = new Set<HexId>(
+      legalActions
+        .filter((action): action is DeployFighterAction => action instanceof DeployFighterAction)
+        .filter((action) => action.fighterId === nextFighter.id)
+        .map((action) => action.hexId),
+    );
+    return {
+      legalHexIds,
+      onHexClick: (hexId) =>
+        applySetupAction(new DeployFighterAction(activePlayer.id, nextFighter.id, hexId)),
+    };
+  }
+
+  return { legalHexIds: new Set(), onHexClick: undefined };
+}
+
+function getSetupBannerText(game: Game): string {
+  switch (game.state.kind) {
+    case "setupMusterWarbands":
+    case "setupDrawStartingHands":
+      return "Preparing the battlefield...";
+    case "setupMulligan":
+      return "Mulligan — use the hand dock below.";
+    case "setupDetermineTerritoriesRollOff":
+      return "Roll for first pick.";
+    case "setupDetermineTerritoriesChoice":
+      return "Pick a territory.";
+    case "setupPlaceFeatureTokens":
+      return `Place feature token ${game.board.featureTokens.length + 1} of 5.`;
+    case "setupDeployFighters":
+      return "Deploy fighters to starting hexes.";
+    case "combatReady":
+      return "Combat ready.";
+    default:
+      return "Setup";
+  }
+}
+
+function renderSetupPhaseContent(
+  game: Game,
+  activePlayer: Player | null,
+  applySetupAction: (action: SetupAction) => void,
+): ReactNode {
+  if (
+    game.state.kind === "setupMusterWarbands" ||
+    game.state.kind === "setupDrawStartingHands" ||
+    game.state.kind === "combatReady"
+  ) {
+    return (
+      <header className="setup-hero">
+        <h1>Preparing the battlefield...</h1>
+        <p>Resolving setup actions.</p>
+      </header>
+    );
+  }
+
+  if (game.state.kind === "setupMulligan") {
+    return (
+      <header className="setup-hero">
+        <span className="setup-active-player">Mulligan</span>
+        <h1>Keep or redraw?</h1>
+        <p>
+          Set any of your starting hands aside and draw replacements. You only get one
+          mulligan. Use the buttons in the hand dock below.
+        </p>
+      </header>
+    );
+  }
+
+  if (game.state.kind === "setupDetermineTerritoriesRollOff") {
+    return <TerritoryRollOffScreen game={game} onResolve={applySetupAction} />;
+  }
+
+  if (game.state.kind === "setupDetermineTerritoriesChoice") {
+    if (activePlayer === null) {
+      return null;
+    }
+    return <TerritoryChoiceScreen game={game} player={activePlayer} onChoose={applySetupAction} />;
+  }
+
+  if (game.state.kind === "setupPlaceFeatureTokens") {
+    const placementNumber = game.board.featureTokens.length + 1;
+    return (
+      <header className="setup-hero">
+        <span className="setup-active-player">{activePlayer?.name ?? "Setup"} placing</span>
+        <h1>Place feature token {placementNumber} of 5</h1>
+        <p>
+          Pick an empty neutral hex on the map. Tokens cannot sit on starting, blocked,
+          stagger, or edge hexes, and must be at least 2 hexes from another token.
+        </p>
+      </header>
+    );
+  }
+
+  if (game.state.kind === "setupDeployFighters") {
+    return <DeploymentPanel game={game} player={activePlayer} />;
+  }
+
+  return null;
+}
+
+function DeploymentPanel({
+  game,
+  player,
+}: {
+  game: Game;
+  player: Player | null;
+}) {
+  if (player === null) {
+    return null;
+  }
+  const undeployedFighters = player.getUndeployedFighters();
+  const nextFighter: Fighter | null = undeployedFighters[0] ?? null;
+  const nextFighterName =
+    nextFighter === null
+      ? null
+      : player.getFighterDefinition(nextFighter.id)?.name ?? nextFighter.id;
+
+  return (
+    <>
+      <header className="setup-hero">
+        <span className="setup-active-player">{player.name} deploying</span>
+        <h1>
+          {nextFighterName === null ? "Deployment complete" : `Deploy ${nextFighterName}`}
+        </h1>
+        <p>
+          Place each fighter on a green starting hex inside your territory. Players
+          alternate until every fighter is on the board.
+        </p>
+      </header>
+      <aside className="setup-deploy-sidebar">
+        <h3>{player.name}&apos;s warband</h3>
+        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 6 }}>
+          {player.fighters.map((fighter) => {
+            const isDeployed = fighter.currentHexId !== null;
+            const isActive = !isDeployed && fighter.id === nextFighter?.id;
+            const className = `setup-deploy-fighter${isActive ? " setup-deploy-fighter-active" : ""}`;
+            const definition = player.getFighterDefinition(fighter.id);
+            return (
+              <li key={fighter.id} className={className}>
+                <span>{definition?.name ?? fighter.id}</span>
+                <span className="setup-card-meta">
+                  {isDeployed ? "Deployed" : isActive ? "Next" : "Waiting"}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </aside>
+      {void game}
+    </>
   );
-  const engine = new GameEngine();
-
-  engine.startCombatRound(game, [deterministicFirstPlayerRollOff], LOCAL_PLAYER_ID);
-
-  return game;
 }
