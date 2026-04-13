@@ -1,5 +1,6 @@
 import { AttackAction } from "../actions/AttackAction";
 import { ChargeAction } from "../actions/ChargeAction";
+import { ConfirmCombatAction } from "../actions/ConfirmCombatAction";
 import { DelveAction } from "../actions/DelveAction";
 import { FocusAction } from "../actions/FocusAction";
 import { GameAction } from "../actions/GameAction";
@@ -51,6 +52,14 @@ export class CombatActionService extends LegalActionService {
     const player = game.getPlayer(playerId);
     if (player === undefined) {
       return [];
+    }
+
+    // Pending combat: dice rolled, waiting for reactions or confirm.
+    if (game.pendingCombat !== null && game.pendingCombat.attackerPlayerId === playerId) {
+      return [
+        ...this.getLegalPlayPloyActions(game, player),
+        new ConfirmCombatAction(playerId),
+      ];
     }
 
     if (game.turnStep === TurnStep.Power) {

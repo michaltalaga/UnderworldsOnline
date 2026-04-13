@@ -173,19 +173,17 @@ export default function SetupApp({ warband, deck, onSetupComplete, boardTheme = 
   return (
     <>
       <main className="battlefield-app-shell">
-        <section className="battlefield-layout">
-          <section className="battlefield-panel battlefield-board-panel">
+        <section className="battlefield-main">
+          <div className="battlefield-map-center">
             <BoardMap
               scene={boardScene}
               onHoverChargeTarget={noop}
               onHexClickIntent={handleSetupHexClickIntent}
-              onQuickAction={noop}
-              onApplyPowerOption={noop}
               onDelveInlineFeature={noop}
             />
-          </section>
+          </div>
 
-          <aside className="battlefield-side-rail">
+          <aside className="setup-side-panel">
             <DiceTray model={diceTrayModel} />
             <section className="battlefield-panel setup-phase-panel">
               {renderPhaseContent(game, activePlayer, applySetupAction)}

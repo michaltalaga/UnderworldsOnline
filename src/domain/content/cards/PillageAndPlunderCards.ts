@@ -14,6 +14,7 @@ import {
 import type { WeaponDefinition } from "../../definitions/WeaponDefinition";
 import { giveGuard, giveStagger, heal, dealDamage, pushFighter } from "../../cards/effects";
 import { CombatOutcome } from "../../values/enums";
+import { rollAttackDie } from "../../rules/Dice";
 import { getMyLatestCombat, getTerritoryOwner, isInEnemyTerritory, isOnTreasureToken, isOnStaggerHex } from "../../cards/scoring";
 
 // Source: Warhammer Underworlds — Pillage and Plunder Rivals deck.
@@ -272,17 +273,18 @@ export class PridefulDuellist extends PloyCard {
   }
 
   protected override canPlay(game: Game): boolean {
-    const combat = getMyLatestCombat(game, this.owner.id);
-    if (combat === null) return false;
-    const attacker = this.owner.getFighter(combat.data.context.attackerFighterId);
+    const pending = game.pendingCombat;
+    if (pending === null || pending.phase !== "resolved") return false;
+    if (pending.attackerPlayerId !== this.owner.id) return false;
+    const attacker = this.owner.getFighter(pending.attackerFighterId);
     if (attacker === undefined || attacker.isSlain) return false;
     return isInEnemyTerritory(game, attacker, this.owner.id);
   }
 
   protected override onPlay(game: Game, _target: Target | null): string[] {
-    const combat = getMyLatestCombat(game, this.owner.id);
-    if (combat === null) return [];
-    const attacker = this.owner.getFighter(combat.data.context.attackerFighterId);
+    const pending = game.pendingCombat;
+    if (pending === null) return [];
+    const attacker = this.owner.getFighter(pending.attackerFighterId);
     if (attacker === undefined || attacker.isSlain) return [];
     return heal(attacker);
   }
@@ -360,21 +362,24 @@ export class BrashScout extends PloyCard {
   }
 
   protected override canPlay(game: Game): boolean {
-    const combat = getMyLatestCombat(game, this.owner.id);
-    if (combat === null || combat.data.outcome !== CombatOutcome.Success) return false;
-    const attacker = this.owner.getFighter(combat.data.context.attackerFighterId);
+    const pending = game.pendingCombat;
+    if (pending === null || pending.phase !== "attack-rolled") return false;
+    if (pending.attackerPlayerId !== this.owner.id) return false;
+    const attacker = this.owner.getFighter(pending.attackerFighterId);
     if (attacker === undefined || attacker.isSlain) return false;
     return isInEnemyTerritory(game, attacker, this.owner.id);
   }
 
   protected override onPlay(game: Game, _target: Target | null): string[] {
-    const combat = getMyLatestCombat(game, this.owner.id);
-    if (combat === null) return [];
-    const target = game.getFighter(combat.data.context.targetFighterId);
-    if (target === undefined || target.isSlain) return [];
-    // Retroactive re-roll advantage: deal 1 extra damage
-    target.damage += 1;
-    return [`Brash Scout: dealt 1 extra damage to ${target.id}`];
+    const pending = game.pendingCombat;
+    if (pending === null || pending.attackRoll.length === 0) return [];
+    // Re-roll the worst attack die.
+    const worstIndex = pending.attackRoll.indexOf(
+      pending.attackRoll.reduce((worst, face) => face < worst ? face : worst),
+    );
+    const oldFace = pending.attackRoll[worstIndex];
+    pending.attackRoll[worstIndex] = rollAttackDie();
+    return [`Brash Scout: re-rolled ${oldFace} → ${pending.attackRoll[worstIndex]}`];
   }
 }
 

@@ -22,6 +22,7 @@ import { getFighterName } from "./battlefieldFormatters";
 
 export type DiceTrayFace = {
   short: string;
+  icon: string | null;
   full: string;
   isSuccess: boolean;
   isCritical: boolean;
@@ -109,7 +110,9 @@ function DiceTrayRollSection({ roll }: { roll: DiceTrayRoll }) {
               title={face.full}
               style={{ animationDelay: `${index * 70}ms` }}
             >
-              {face.short}
+              {face.icon !== null
+                ? <img src={face.icon} alt={face.full} className="dice-tray-face-icon" />
+                : face.short}
             </li>
           ))}
         </ul>
@@ -238,38 +241,38 @@ function getPlayerDisplayName(game: Game, playerId: PlayerId): string {
 function renderAttackFace(face: AttackDieFace): DiceTrayFace {
   switch (face) {
     case AttackDieFace.Critical:
-      return { short: "Crit", full: "Critical", isSuccess: true, isCritical: true };
+      return { short: "Crit", icon: "/assets/crit.png", full: "Critical", isSuccess: true, isCritical: true };
     case AttackDieFace.Hammer:
-      return { short: "Ham", full: "Hammer", isSuccess: true, isCritical: false };
+      return { short: "Ham", icon: "/assets/hammer.png", full: "Hammer", isSuccess: true, isCritical: false };
     case AttackDieFace.Sword:
-      return { short: "Swd", full: "Sword", isSuccess: true, isCritical: false };
+      return { short: "Swd", icon: "/assets/swords.png", full: "Sword", isSuccess: true, isCritical: false };
     case AttackDieFace.Support:
-      return { short: "Sup", full: "Support", isSuccess: false, isCritical: false };
+      return { short: "Sup", icon: null, full: "Support", isSuccess: false, isCritical: false };
     case AttackDieFace.DoubleSupport:
-      return { short: "2×Sup", full: "Double Support", isSuccess: false, isCritical: false };
+      return { short: "2×S", icon: null, full: "Double Support", isSuccess: false, isCritical: false };
     case AttackDieFace.Blank:
-      return { short: "—", full: "Blank", isSuccess: false, isCritical: false };
+      return { short: "—", icon: null, full: "Blank", isSuccess: false, isCritical: false };
     default:
-      return { short: face, full: face, isSuccess: false, isCritical: false };
+      return { short: face, icon: null, full: face, isSuccess: false, isCritical: false };
   }
 }
 
 function renderSaveFace(face: SaveDieFace): DiceTrayFace {
   switch (face) {
     case SaveDieFace.Critical:
-      return { short: "Crit", full: "Critical", isSuccess: true, isCritical: true };
+      return { short: "Crit", icon: "/assets/crit.png", full: "Critical", isSuccess: true, isCritical: true };
     case SaveDieFace.Shield:
-      return { short: "Shd", full: "Shield", isSuccess: true, isCritical: false };
+      return { short: "Shd", icon: "/assets/shield.png", full: "Shield", isSuccess: true, isCritical: false };
     case SaveDieFace.Dodge:
-      return { short: "Ddg", full: "Dodge", isSuccess: true, isCritical: false };
+      return { short: "Ddg", icon: "/assets/dodge.png", full: "Dodge", isSuccess: true, isCritical: false };
     case SaveDieFace.Support:
-      return { short: "Sup", full: "Support", isSuccess: false, isCritical: false };
+      return { short: "Sup", icon: null, full: "Support", isSuccess: false, isCritical: false };
     case SaveDieFace.DoubleSupport:
-      return { short: "2×Sup", full: "Double Support", isSuccess: false, isCritical: false };
+      return { short: "2×S", icon: null, full: "Double Support", isSuccess: false, isCritical: false };
     case SaveDieFace.Blank:
-      return { short: "—", full: "Blank", isSuccess: false, isCritical: false };
+      return { short: "—", icon: null, full: "Blank", isSuccess: false, isCritical: false };
     default:
-      return { short: face, full: face, isSuccess: false, isCritical: false };
+      return { short: face, icon: null, full: face, isSuccess: false, isCritical: false };
   }
 }
 

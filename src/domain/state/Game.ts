@@ -2,8 +2,8 @@ import type { Card } from "../cards/Card";
 import type { FeatureToken } from "./FeatureToken";
 import type { HexCell } from "./HexCell";
 import type { Territory } from "./Territory";
-import type { FeatureTokenId, FighterId, GameId, HexId, PlayerId, TerritoryId } from "../values/ids";
-import { EndPhaseStep, Phase, SetupStep, TurnStep } from "../values/enums";
+import type { FeatureTokenId, FighterId, GameId, HexId, PlayerId, TerritoryId, WeaponDefinitionId } from "../values/ids";
+import { type AttackDieFace, EndPhaseStep, type GameActionKind, Phase, type SaveDieFace, SetupStep, TurnStep, type WeaponAbilityKind } from "../values/enums";
 import { Board } from "./Board";
 import { Fighter } from "./Fighter";
 import { GameEventLog } from "./GameEventLog";
@@ -20,6 +20,34 @@ import {
 } from "./GameState";
 import { Player } from "./Player";
 
+/**
+ * Combat sequence phases (mirrors the rulebook):
+ *  1. weapon-picked  — attacker declared, weapon + ability chosen
+ *  2. attack-rolled  — attack dice rolled, reaction window (Brash Scout, Twist the Knife, Determined Effort)
+ *  3. save-rolled    — save dice rolled, reaction window
+ *  4. resolved       — outcome determined, reaction window (PridefulDuellist)
+ *
+ * ConfirmCombatAction advances to the next phase.  If no reactions are
+ * available the auto-resolver advances automatically.
+ */
+export type CombatPhase = "weapon-picked" | "attack-rolled" | "save-rolled" | "resolved";
+
+export type PendingCombat = {
+  phase: CombatPhase;
+  attackerPlayerId: PlayerId;
+  defenderPlayerId: PlayerId;
+  attackerFighterId: FighterId;
+  targetFighterId: FighterId;
+  weaponId: WeaponDefinitionId;
+  selectedAbility: WeaponAbilityKind | null;
+  actionKind: GameActionKind;
+  attackRoll: AttackDieFace[];
+  saveRoll: SaveDieFace[];
+  /** Filled after "resolved" phase. */
+  outcome: "success" | "draw" | "failure" | null;
+  damageInflicted: number;
+};
+
 export class Game {
   public readonly id: GameId;
   public board: Board;
@@ -30,6 +58,7 @@ export class Game {
   public winnerPlayerId: PlayerId | null;
   public records: GameRecord[];
   public eventLog: string[];
+  public pendingCombat: PendingCombat | null = null;
   private flowState: GameState;
 
   public constructor(

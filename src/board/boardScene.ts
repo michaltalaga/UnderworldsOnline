@@ -2,10 +2,12 @@ import {
   FeatureTokenSide,
   HexKind,
   TurnStep,
+  type AttackDieFace,
   type FeatureToken,
   type FighterId,
   type Game,
   type HexId,
+  type SaveDieFace,
 } from "../domain";
 import { LOCAL_PLAYER_ID } from "../localPlayer";
 import type { BoardTheme } from "./boardTheme";
@@ -204,7 +206,8 @@ export type BoardSceneQuickAction =
       selectedFighterName: string;
     }
   | { key: "pass-power"; armed: boolean; label: string }
-  | { key: "end-action-step"; armed: boolean; label: string };
+  | { key: "end-action-step"; armed: boolean; label: string }
+  | { key: "confirm-combat"; armed: boolean; label: string };
 
 export type BoardSceneViewport = {
   width: number;
@@ -228,6 +231,10 @@ export type BoardSceneModel = {
   pendingPowerOptionKey: string | null;
   armedPathTone: "move" | "charge" | null;
   contextMenu: FighterContextMenuModel;
+  pendingCombatRolls: {
+    attackRoll: readonly AttackDieFace[];
+    saveRoll: readonly SaveDieFace[];
+  } | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -639,7 +646,19 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
         featureTokenId: selectedFeatureToken.id,
       });
     }
-    if (isActionStep) {
+    if (game.pendingCombat !== null) {
+      const phaseLabels: Record<string, string> = {
+        "attack-rolled": "Roll Save Dice",
+        "save-rolled": "Determine Outcome",
+        "resolved": "Apply Damage",
+      };
+      quickActions.push({
+        key: "confirm-combat",
+        armed: false,
+        label: phaseLabels[game.pendingCombat.phase] ?? "Continue",
+      });
+    }
+    if (isActionStep && game.pendingCombat === null) {
       quickActions.push({
         key: "end-action-step",
         armed: false,
@@ -750,6 +769,10 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
     pendingPowerOptionKey,
     armedPathTone: armedPath?.tone ?? null,
     contextMenu,
+    pendingCombatRolls: game.pendingCombat !== null ? {
+      attackRoll: game.pendingCombat.attackRoll,
+      saveRoll: game.pendingCombat.saveRoll,
+    } : null,
   };
 }
 

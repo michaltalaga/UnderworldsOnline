@@ -1,54 +1,38 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { FeatureTokenSide, HexKind } from "../domain";
-import type { PowerOverlayOption } from "./battlefieldModels";
 import type {
   ActiveActionMode,
   BoardSceneHex,
   BoardSceneHexClickIntent,
   BoardSceneHexVisual,
   BoardSceneModel,
-  BoardSceneQuickAction,
 } from "./boardScene";
 import FighterContextMenu from "./FighterContextMenu";
 
 // -----------------------------------------------------------------------
 // BoardMap (DOM renderer)
 // -----------------------------------------------------------------------
-// This component is now a pure renderer: it takes a `BoardSceneModel` and
-// a set of intent callbacks and produces DOM. It knows nothing about
-// `Game`, `GameEngine`, `TurnStep`, actions, or any other domain type.
-//
-// To add an alternate renderer (SVG, canvas), write a sibling component
-// that accepts the same `BoardMapProps` shape and renders differently.
-// Both renderers consume the identical scene produced by
-// `projectBoardScene` in `boardScene.ts`.
+// Pure hex-grid renderer. Takes a `BoardSceneModel` and intent callbacks
+// and renders the hex map, territory indicators, context menu, and
+// tooltips. All chrome (status bar, dice tray, roster rails) lives in the
+// parent layout.
 
 export type BoardMapProps = {
   scene: BoardSceneModel;
-  // Hover reporting — the scene includes hover-derived flags because the
-  // parent owns the hover state and re-projects on each change.
   onHoverChargeTarget: (fighterId: string | null) => void;
   onHexClickIntent: (intent: BoardSceneHexClickIntent) => void;
-  onQuickAction: (action: BoardSceneQuickAction) => void;
-  onApplyPowerOption: (option: PowerOverlayOption) => void;
   onDelveInlineFeature: () => void;
   onContextMenuAction?: (mode: ActiveActionMode) => void;
   onDismissContextMenu?: () => void;
-  leftPanel?: React.ReactNode;
-  rightPanel?: React.ReactNode;
 };
 
 export default function BoardMap({
   scene,
   onHoverChargeTarget,
   onHexClickIntent,
-  onQuickAction,
-  onApplyPowerOption,
   onDelveInlineFeature,
   onContextMenuAction,
   onDismissContextMenu,
-  leftPanel,
-  rightPanel,
 }: BoardMapProps) {
   const [actionTooltip, setActionTooltip] = useState<{
     label: string;
@@ -95,121 +79,18 @@ export default function BoardMap({
     return () => observer.disconnect();
   }, [scene.viewport.width, scene.viewport.height, mapScale]);
 
-  const {
-    hexes,
-    statusBadge,
-    lastResolvedAction,
-    resultFlash,
-    quickActions,
-    showWarscrollOverlay,
-    powerOverlay,
-    pendingPowerOptionKey,
-    armedPathTone,
-  } = scene;
+  const { hexes, armedPathTone } = scene;
 
   return (
     <div ref={frameRef} className="battlefield-board-frame">
-      <section
-        className={`battlefield-board-status battlefield-board-status-${statusBadge.tone}`}
+      <div
+        ref={mapWrapperRef}
+        className="battlefield-board-map-scaler"
+        style={{
+          width: `${scene.viewport.width * mapScale}px`,
+          height: `${scene.viewport.height * mapScale}px`,
+        }}
       >
-        <div className="battlefield-board-status-header">
-          <span
-            className={`battlefield-board-status-step battlefield-board-status-step-${statusBadge.tone}`}
-          >
-            {statusBadge.stepLabel}
-          </span>
-          {statusBadge.roundLabel === null ? null : (
-            <span className="battlefield-board-status-round">
-              {statusBadge.roundLabel}
-            </span>
-          )}
-          <span className="battlefield-board-status-mode">
-            {statusBadge.isArmed ? "armed" : "ready"}
-          </span>
-        </div>
-        <strong className="battlefield-board-status-player">
-          {statusBadge.activePlayerName}
-        </strong>
-        <p className="battlefield-board-status-copy">{statusBadge.interactionLabel}</p>
-        {statusBadge.scores !== null && statusBadge.scores.length > 0 ? (
-          <div className="battlefield-board-status-scores">
-            {statusBadge.scores.map((s) => (
-              <span key={s.name} className="battlefield-board-status-score">
-                {s.name}: <strong>{s.glory}</strong>
-              </span>
-            ))}
-          </div>
-        ) : null}
-      </section>
-
-      {lastResolvedAction === null ? null : (
-        <section
-          className={`battlefield-board-last-action battlefield-board-last-action-${lastResolvedAction.tone}`}
-          aria-live="polite"
-        >
-          <p className="battlefield-board-last-action-eyebrow">Last Resolved</p>
-          <strong className="battlefield-board-last-action-title">
-            {lastResolvedAction.title}
-          </strong>
-          <p className="battlefield-board-last-action-detail">{lastResolvedAction.detail}</p>
-        </section>
-      )}
-
-      {quickActions.length > 0 ? (
-        <div className="battlefield-board-quick-actions">
-          {quickActions.map((action) => (
-            <QuickActionButton
-              key={action.key}
-              action={action}
-              onClick={() => onQuickAction(action)}
-            />
-          ))}
-        </div>
-      ) : null}
-
-      {showWarscrollOverlay ? (
-        <section className="battlefield-power-overlay">
-          <div className="battlefield-power-overlay-header">
-            <p className="battlefield-power-overlay-eyebrow">Warscroll</p>
-            <strong>Warscroll abilities</strong>
-          </div>
-          <div className="battlefield-power-overlay-section">
-            <div className="battlefield-power-option-list">
-              {powerOverlay.warscrollAbilities.map((option) => (
-                <PowerOverlayOptionButton
-                  key={option.key}
-                  option={option}
-                  isPending={pendingPowerOptionKey === option.key}
-                  onSelect={onApplyPowerOption}
-                  toneClassName="battlefield-power-option-warscroll"
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      {resultFlash === null ? null : (
-        <div
-          key={resultFlash.id}
-          className={`battlefield-board-flash battlefield-board-flash-${resultFlash.tone}`}
-          aria-live="polite"
-        >
-          <p className="battlefield-board-flash-title">{resultFlash.title}</p>
-          <p className="battlefield-board-flash-detail">{resultFlash.detail}</p>
-        </div>
-      )}
-
-      <div className="battlefield-board-map-area">
-        {leftPanel && <div className="battlefield-roster-rail battlefield-roster-rail-left">{leftPanel}</div>}
-        <div
-          ref={mapWrapperRef}
-          className="battlefield-board-map-scaler"
-          style={{
-            width: `${scene.viewport.width * mapScale}px`,
-            height: `${scene.viewport.height * mapScale}px`,
-          }}
-        >
         <div
           className="battlefield-board-map"
           data-territory-indicator={scene.territoryIndicator}
@@ -273,7 +154,6 @@ export default function BoardMap({
               onSelectAction={onContextMenuAction}
               onDismiss={onDismissContextMenu}
               onConfirmGuard={() => {
-                // Second call to guard triggers confirm.
                 onContextMenuAction("guard");
               }}
             />
@@ -290,8 +170,6 @@ export default function BoardMap({
             </div>
           )}
         </div>
-      </div>
-      {rightPanel && <div className="battlefield-roster-rail battlefield-roster-rail-right">{rightPanel}</div>}
       </div>
     </div>
   );
@@ -313,125 +191,6 @@ export function LegendItem({
       <span className={swatchClassName} aria-hidden="true" />
       <span>{label}</span>
     </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Quick action button (focus / delve / guard / pass power)
-// ---------------------------------------------------------------------------
-
-function QuickActionButton({
-  action,
-  onClick,
-}: {
-  action: BoardSceneQuickAction;
-  onClick: () => void;
-}) {
-  if (action.key === "focus") {
-    return (
-      <button
-        type="button"
-        className={[
-          "battlefield-board-action",
-          "battlefield-board-action-focus",
-          action.armed ? "battlefield-board-action-focus-armed" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-        onClick={onClick}
-      >
-        {action.label}
-      </button>
-    );
-  }
-  if (action.key === "delve") {
-    return (
-      <button
-        type="button"
-        className={[
-          "battlefield-board-action",
-          "battlefield-board-action-delve",
-          action.armed ? "battlefield-board-action-delve-armed" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-        onClick={onClick}
-      >
-        {action.label} {action.featureTokenBadge}
-      </button>
-    );
-  }
-  if (action.key === "guard") {
-    return (
-      <button
-        type="button"
-        className={[
-          "battlefield-board-action",
-          "battlefield-board-action-guard",
-          action.armed ? "battlefield-board-action-guard-armed" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-        onClick={onClick}
-      >
-        {action.label} {action.selectedFighterName}
-      </button>
-    );
-  }
-  return (
-    <button
-      type="button"
-      className={[
-        "battlefield-board-action",
-        "battlefield-board-action-pass",
-        action.armed ? "battlefield-board-action-pass-armed" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      onClick={onClick}
-    >
-      {action.label}
-    </button>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Power overlay option button
-// ---------------------------------------------------------------------------
-
-function PowerOverlayOptionButton({
-  isPending,
-  onSelect,
-  option,
-  toneClassName,
-}: {
-  isPending: boolean;
-  onSelect: (option: PowerOverlayOption) => void;
-  option: PowerOverlayOption;
-  toneClassName: string;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={isPending}
-      className={[
-        "battlefield-power-option",
-        toneClassName,
-        isPending ? "battlefield-power-option-armed" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      onClick={() => onSelect(option)}
-    >
-      <span className="battlefield-power-option-title-row">
-        <strong>{option.title}</strong>
-        {isPending ? <span className="battlefield-power-option-chip">confirm</span> : null}
-      </span>
-      <span>{option.detail}</span>
-      {isPending ? (
-        <span className="battlefield-power-option-confirm-copy">Click again to confirm.</span>
-      ) : null}
-    </button>
   );
 }
 

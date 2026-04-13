@@ -10,6 +10,7 @@ import { UpgradeCard } from "../../cards/UpgradeCard";
 import type { WeaponDefinition } from "../../definitions/WeaponDefinition";
 import { friendlyFightersOnBoard } from "../../cards/targeting";
 import { giveGuard, heal, dealDamage, removeMovementToken, pushFighter } from "../../cards/effects";
+import { rollAttackDie } from "../../rules/Dice";
 import { getMyLatestCombat, getTerritoryOwner, isMeleeWeapon } from "../../cards/scoring";
 
 // ─── Objectives ─────────────────────────────────────────────────────────────
@@ -220,21 +221,22 @@ export class DeterminedEffort extends PloyCard {
   }
 
   protected override canPlay(game: Game): boolean {
-    const combat = getMyLatestCombat(game, this.owner.id);
-    return combat !== null && combat.data.outcome === CombatOutcome.Success;
+    const pending = game.pendingCombat;
+    if (pending === null || pending.phase !== "attack-rolled") return false;
+    return pending.attackerPlayerId === this.owner.id;
   }
 
   protected override onPlay(game: Game, _target: Target | null): string[] {
-    const combat = getMyLatestCombat(game, this.owner.id);
-    if (combat === null) return [];
-    const target = game.getFighter(combat.data.context.targetFighterId);
-    if (target === undefined || target.isSlain) return [];
-    // Retroactive bonus damage (simulating the extra dice advantage)
+    const pending = game.pendingCombat;
+    if (pending === null) return [];
+    // Add extra attack dice to the pending roll.
     const opponent = game.getOpponent(this.owner.id);
     const isUnderdog = opponent !== undefined && this.owner.glory < opponent.glory;
-    const bonus = isUnderdog ? 2 : 1;
-    target.damage += bonus;
-    return [`Determined Effort: dealt ${bonus} extra damage to ${target.id}`];
+    const extraDice = isUnderdog ? 2 : 1;
+    for (let i = 0; i < extraDice; i++) {
+      pending.attackRoll.push(rollAttackDie());
+    }
+    return [`Determined Effort: added ${extraDice} attack dice`];
   }
 }
 
@@ -245,26 +247,22 @@ export class TwistTheKnife extends PloyCard {
   }
 
   protected override canPlay(game: Game): boolean {
-    const combat = getMyLatestCombat(game, this.owner.id);
-    if (combat === null || combat.data.outcome !== CombatOutcome.Success) return false;
-    // Check the weapon was melee
+    const pending = game.pendingCombat;
+    if (pending === null || pending.phase !== "attack-rolled") return false;
+    if (pending.attackerPlayerId !== this.owner.id) return false;
+    // Check the weapon is melee
     const player = game.getPlayer(this.owner.id);
     if (player === undefined) return false;
-    const weapon = player.getFighterWeaponDefinition(
-      combat.data.context.attackerFighterId,
-      combat.data.context.weaponId,
-    );
+    const weapon = player.getFighterWeaponDefinition(pending.attackerFighterId, pending.weaponId);
     return weapon !== undefined && isMeleeWeapon(weapon);
   }
 
   protected override onPlay(game: Game, _target: Target | null): string[] {
-    const combat = getMyLatestCombat(game, this.owner.id);
-    if (combat === null) return [];
-    const target = game.getFighter(combat.data.context.targetFighterId);
-    if (target === undefined || target.isSlain) return [];
-    // Retroactive Grievous: +1 damage
-    target.damage += 1;
-    return [`Twist the Knife: dealt 1 extra damage to ${target.id}`];
+    const pending = game.pendingCombat;
+    if (pending === null) return [];
+    // Grant Grievous for this attack (overwrite selected ability).
+    pending.selectedAbility = "grievous" as typeof pending.selectedAbility;
+    return [`Twist the Knife: weapon gained Grievous`];
   }
 }
 

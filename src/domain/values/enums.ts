@@ -191,6 +191,7 @@ export const GameActionKind = {
   Delve: "delve",
   Pass: "pass",
   EndActionStep: "endActionStep",
+  ConfirmCombat: "confirmCombat",
 } as const;
 
 export type GameActionKind = (typeof GameActionKind)[keyof typeof GameActionKind];

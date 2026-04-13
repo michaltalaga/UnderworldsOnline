@@ -1,3 +1,4 @@
+import { ConfirmCombatAction } from "../actions/ConfirmCombatAction";
 import { EndPhaseActionService } from "../endPhase/EndPhaseActionService";
 import { GameEngine } from "../engine/GameEngine";
 import { deterministicFirstPlayerRollOff } from "../rules/Dice";
@@ -96,6 +97,20 @@ export class CombatAutoResolver {
 
     const controller = this.controllers.get(game.activePlayerId);
     if (controller === undefined || controller.kind === "local") {
+      // Auto-confirm pending combat for local player when no reaction
+      // cards are playable — skip straight to resolution.
+      if (game.pendingCombat !== null) {
+        const player = game.getPlayer(game.activePlayerId);
+        if (player !== undefined) {
+          const hasPlayableReactions = player.powerHand.some(
+            (card) => card.getLegalTargets(game).length > 0,
+          );
+          if (!hasPlayableReactions) {
+            this.engine.applyGameAction(game, new ConfirmCombatAction(game.activePlayerId));
+            return true;
+          }
+        }
+      }
       return false;
     }
 

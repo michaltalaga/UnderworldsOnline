@@ -6,6 +6,7 @@ import { getLocalPlayer, LOCAL_PLAYER_ID } from "./localPlayer";
 import {
   CombatActionService,
   CombatAutoResolver,
+  ConfirmCombatAction,
   createCombatReadySetupPracticeGame,
   deterministicFirstPlayerRollOff,
   DumbAiController,
@@ -38,9 +39,10 @@ import {
   getFighterName,
 } from "./board/battlefieldFormatters";
 import BoardMap from "./board/BoardMap";
+import StatusBar from "./board/StatusBar";
 import type { BoardTheme } from "./board/boardTheme";
 import { projectBoardScene, type ActiveActionMode, type BoardSceneHexClickIntent, type BoardSceneQuickAction } from "./board/boardScene";
-// import DiceTray, { getDiceTrayModel } from "./board/DiceTray";
+import DiceTray, { getDiceTrayModel } from "./board/DiceTray";
 import DebugPanel from "./DebugPanel";
 import PlayerPanel from "./board/PlayerPanel";
 import { buildBattlefieldResultFlash } from "./board/battlefieldResultFlash";
@@ -184,7 +186,7 @@ export default function PracticeBattlefieldApp({
       ? "Discard nothing and draw 1 additional power card."
       : `Discard ${selectedFocusObjectiveIds.length} objective card${selectedFocusObjectiveIds.length === 1 ? "" : "s"} and ${selectedFocusPowerIds.length} power card${selectedFocusPowerIds.length === 1 ? "" : "s"}, then draw ${selectedFocusObjectiveIds.length} objective card${selectedFocusObjectiveIds.length === 1 ? "" : "s"} and ${selectedFocusPowerIds.length + 1} power card${selectedFocusPowerIds.length + 1 === 1 ? "" : "s"}.`;
   const latestCombat = game.getLatestRecord(GameRecordKind.Combat);
-  // const diceTrayModel = getDiceTrayModel(game);
+  const diceTrayModel = getDiceTrayModel(game);
   const scorableObjectives = localPlayer === null ? [] : localPlayer.objectiveHand
     .filter((card) => card.getLegalTargets(game).length > 0)
     .map((card) => ({ cardId: card.id, cardName: card.name, gloryValue: card.gloryValue }));
@@ -378,7 +380,15 @@ export default function PracticeBattlefieldApp({
       case "end-action-step":
         endActionStep();
         return;
+      case "confirm-combat":
+        confirmCombat();
+        return;
     }
+  }
+
+  function confirmCombat(): void {
+    if (activePlayer === null || game.pendingCombat === null) return;
+    applyAction(new ConfirmCombatAction(activePlayer.id));
   }
 
   function selectFighter(fighterId: FighterId | null): void {
@@ -402,7 +412,7 @@ export default function PracticeBattlefieldApp({
       const target = event.target as HTMLElement;
       if (target.closest(".battlefield-map-hex") !== null) return;
       if (target.closest(".player-hand-dock-shell") !== null) return;
-      if (target.closest(".battlefield-board-quick-actions") !== null) return;
+      if (target.closest(".status-bar-actions") !== null) return;
       if (target.closest(".battlefield-roster-rail") !== null) return;
       if (target.closest(".battlefield-context-menu") !== null) return;
     }
@@ -794,7 +804,7 @@ export default function PracticeBattlefieldApp({
         summary: focusSelectionSummary,
       };
     }
-    if (game.turnStep === TurnStep.Power && handPowerPlayable.size > 0) {
+    if (handPowerPlayable.size > 0) {
       return {
         kind: "play",
         playableByCardId: handPowerPlayable,
@@ -811,40 +821,67 @@ export default function PracticeBattlefieldApp({
   return (
     <>
     <main className="battlefield-app-shell" onClick={dismissSelection}>
-      <section className="battlefield-layout">
-        <section className="battlefield-panel battlefield-board-panel">
-          <BoardMap
-            scene={boardScene}
-            onHoverChargeTarget={(fighterId) =>
-              setHoveredChargeTargetId(fighterId as FighterId | null)
-            }
-            onHexClickIntent={handleHexClickIntent}
-            onQuickAction={handleQuickAction}
-            onApplyPowerOption={selectPowerOption}
-            onDelveInlineFeature={delveSelectedFighter}
-            onContextMenuAction={handleContextMenuAction}
-            onDismissContextMenu={dismissContextMenu}
-            leftPanel={localPlayer !== null ? (
-              <PlayerPanel
-                activePlayerId={activePlayer?.id ?? null}
-                game={game}
-                onSelectFighter={selectFighter}
-                player={localPlayer}
-                selectedFighterId={selectedFighterId}
+      <section className="battlefield-main">
+        <div className="battlefield-map-center">
+          <StatusBar badge={boardScene.statusBadge} />
+          <div className="battlefield-board-row">
+            <div className="battlefield-roster-rail battlefield-roster-rail-left">
+              {localPlayer !== null && (
+                <PlayerPanel
+                  activePlayerId={activePlayer?.id ?? null}
+                  game={game}
+                  onSelectFighter={selectFighter}
+                  player={localPlayer}
+                  selectedFighterId={selectedFighterId}
+                />
+              )}
+            </div>
+            <div className="battlefield-map-wrapper">
+              <BoardMap
+                scene={boardScene}
+                onHoverChargeTarget={(fighterId) =>
+                  setHoveredChargeTargetId(fighterId as FighterId | null)
+                }
+                onHexClickIntent={handleHexClickIntent}
+                onDelveInlineFeature={delveSelectedFighter}
+                onContextMenuAction={handleContextMenuAction}
+                onDismissContextMenu={dismissContextMenu}
               />
-            ) : undefined}
-            rightPanel={opponentPlayer !== null ? (
-              <PlayerPanel
-                activePlayerId={activePlayer?.id ?? null}
-                game={game}
-                onSelectFighter={() => {}}
-                player={opponentPlayer}
-                selectedFighterId={null}
-              />
-            ) : undefined}
-          />
-        </section>
+              {boardScene.quickActions.length > 0 && (
+                <div className="battlefield-quick-actions">
+                  {boardScene.quickActions.map((action) => (
+                    <button
+                      key={action.key}
+                      type="button"
+                      className={`battlefield-quick-action${action.armed ? " battlefield-quick-action-armed" : ""}`}
+                      onClick={() => handleQuickAction(action)}
+                    >
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="battlefield-roster-rail battlefield-roster-rail-right">
+              {opponentPlayer !== null && (
+                <PlayerPanel
+                  activePlayerId={activePlayer?.id ?? null}
+                  game={game}
+                  onSelectFighter={() => {}}
+                  player={opponentPlayer}
+                  selectedFighterId={null}
+                />
+              )}
+            </div>
+          </div>
+        </div>
       </section>
+
+      {diceTrayModel !== null && (
+        <div className="battlefield-dice-corner">
+          <DiceTray model={diceTrayModel} />
+        </div>
+      )}
 
       {dockPlayer === null ? null : (
         <PlayerHandDockShell
@@ -1158,11 +1195,57 @@ export default function PracticeBattlefieldApp({
           <section className="battlefield-panel">
             <div className="battlefield-heading">
               <p className="battlefield-eyebrow">Match Log</p>
-              <h2>Recent setup events</h2>
+              <h2>Recent events</h2>
             </div>
             <ol className="battlefield-event-list">
               {recentEvents.map((event, index) => (
                 <li key={`${index}-${event}`}>{event}</li>
+              ))}
+            </ol>
+          </section>
+
+          <section className="battlefield-panel">
+            <div className="battlefield-heading">
+              <p className="battlefield-eyebrow">Debug</p>
+              <h2>Game Records</h2>
+            </div>
+            {game.pendingCombat !== null && (
+              <div style={{ background: "#2a1a00", border: "1px solid #c90", padding: "6px 8px", marginBottom: 8, fontSize: 11, fontFamily: "monospace", color: "#ffd" }}>
+                <strong>pendingCombat:</strong> phase={game.pendingCombat.phase},
+                attacker={game.pendingCombat.attackerFighterId},
+                target={game.pendingCombat.targetFighterId},
+                weapon={game.pendingCombat.weaponId},
+                ability={String(game.pendingCombat.selectedAbility)},
+                attackRoll=[{game.pendingCombat.attackRoll.join(",")}],
+                saveRoll=[{game.pendingCombat.saveRoll.join(",")}],
+                outcome={String(game.pendingCombat.outcome)},
+                dmg={game.pendingCombat.damageInflicted}
+              </div>
+            )}
+            {localPlayer !== null && (
+              <div style={{ background: "#1a1a2a", border: "1px solid #669", padding: "6px 8px", marginBottom: 8, fontSize: 11, fontFamily: "monospace", color: "#ddf" }}>
+                <strong>Power Hand ({localPlayer.powerHand.length} cards):</strong>
+                {localPlayer.powerHand.map((card) => {
+                  const targets = card.getLegalTargets(game);
+                  return (
+                    <div key={card.id} style={{ color: targets.length > 0 ? "#0f0" : "#666", paddingLeft: 8 }}>
+                      {card.name} [{card.kind}] zone={card.zone} targets={targets.length}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <ol style={{ fontSize: 11, fontFamily: "monospace", listStyle: "none", padding: 0, margin: 0, maxHeight: 300, overflowY: "auto" }}>
+              {[...game.records].reverse().slice(0, 30).map((record, index) => (
+                <li key={index} style={{ padding: "2px 4px", borderBottom: "1px solid #333", color: "#ccc" }}>
+                  <strong style={{ color: "#8cf" }}>{record.kind}</strong>
+                  {record.invokedByPlayerId && <span> by={record.invokedByPlayerId}</span>}
+                  {record.invokedByFighterId && <span> fighter={record.invokedByFighterId}</span>}
+                  {record.invokedByCardId && <span> card={record.invokedByCardId}</span>}
+                  {record.actionKind && <span> action={record.actionKind}</span>}
+                  <span style={{ color: "#999" }}> r{record.roundNumber}</span>
+                  <div style={{ color: "#aaa", paddingLeft: 8 }}>{JSON.stringify(record.data, null, 0).slice(0, 200)}</div>
+                </li>
               ))}
             </ol>
           </section>

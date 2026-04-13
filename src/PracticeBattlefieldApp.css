@@ -29,7 +29,7 @@ body {
   overflow: hidden;
 }
 
-.battlefield-app-shell > .battlefield-layout {
+.battlefield-app-shell > .battlefield-main {
   flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
@@ -242,21 +242,156 @@ body {
   font-weight: 700;
 }
 
-.battlefield-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
-  align-items: stretch;
-  padding: 12px;
-  box-sizing: border-box;
-  height: 100%;
+.battlefield-main {
+  flex: 1 1 0;
   min-height: 0;
-  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
   overflow: hidden;
 }
 
-.battlefield-layout:has(.battlefield-side-rail) {
-  grid-template-columns: minmax(0, 1fr);
+.battlefield-map-center {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+}
+
+.battlefield-board-row {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+}
+
+/* Dice tray: small corner overlay, bottom-right */
+.battlefield-dice-corner {
+  position: fixed;
+  bottom: calc(28vh + 12px);
+  right: 12px;
+  width: 280px;
+  max-height: 40vh;
+  overflow-y: auto;
+  z-index: 20;
+  pointer-events: none;
+}
+.battlefield-dice-corner > * {
+  pointer-events: auto;
+}
+
+/* --- Status bar (normal flow, above the map inside map-center) --- */
+
+.status-bar {
+  flex: 0 0 auto;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 4px 16px;
+  background: rgba(253, 249, 242, 0.92);
+  border-bottom: 1px solid rgba(85, 66, 40, 0.1);
+  min-height: 32px;
+  box-sizing: border-box;
+  font-size: 0.75rem;
+}
+
+.status-bar-step {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.status-bar-step-action {
+  background: rgba(141, 92, 13, 0.14);
+  color: #6e4513;
+}
+
+.status-bar-step-power {
+  background: rgba(68, 118, 124, 0.14);
+  color: #2e5a5f;
+}
+
+.status-bar-step-neutral {
+  background: rgba(112, 91, 66, 0.12);
+  color: #5a4a38;
+}
+
+.status-bar-round {
+  font-weight: 700;
+  color: #7a6650;
+}
+
+.status-bar-player {
+  font-weight: 800;
+  color: #3a2e24;
+}
+
+.status-bar-scores {
+  display: flex;
+  gap: 12px;
+  color: #7a6650;
+}
+
+.status-bar-score strong {
+  color: #3a2e24;
+}
+
+/* --- Quick actions: small overlay at bottom-center of the map --- */
+
+.battlefield-map-wrapper {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.battlefield-quick-actions {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 12;
+}
+
+.battlefield-quick-action {
+  border: 1px solid rgba(84, 63, 45, 0.2);
+  border-radius: 999px;
+  padding: 6px 16px;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: rgba(255, 251, 245, 0.95);
+  color: #3a2e24;
+  box-shadow: 0 4px 12px rgba(35, 24, 18, 0.15);
+  white-space: nowrap;
+}
+
+.battlefield-quick-action:hover {
+  background: rgba(245, 238, 225, 1);
+}
+
+.battlefield-quick-action-armed {
+  background: rgba(141, 92, 13, 0.2);
+  border-color: rgba(141, 92, 13, 0.35);
 }
 
 /* --- Roster panel (fighter cards sidebar) --- */
@@ -477,69 +612,42 @@ body {
 /* Board panel: the left column of the layout. Contains the map flanked
    by roster panels. Stripped of chrome so the map fills the available
    space — no padding, border, background, or shadow. */
-.battlefield-board-panel {
-  padding: 0;
-  overflow: hidden;
-  min-height: 0;
-  border-radius: 0;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  backdrop-filter: none;
-}
-
-.battlefield-board-map-area {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  justify-content: center;
-  flex: 1 1 0;
-  min-height: 0;
-}
-
 .battlefield-roster-rail {
   flex: 0 0 210px;
   overflow-y: auto;
   min-height: 0;
+  background: rgba(253, 249, 242, 0.5);
+  border-right: 1px solid rgba(85, 66, 40, 0.06);
 }
 
-.battlefield-board-panel > .battlefield-board-frame {
-  flex: 1 1 0;
-  min-height: 0;
+.battlefield-roster-rail-right {
+  border-right: none;
+  border-left: 1px solid rgba(85, 66, 40, 0.06);
+}
 }
 
-.battlefield-board-map-area > .battlefield-board-map-scaler {
-  flex: 0 1 auto;
-}
-
-/* Side rail: fixed-width right column in both setup and combat. Holds the
-   dice tray (always present) and, during setup, the phase panel below it. */
-.battlefield-side-rail {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  bottom: 12px;
-  width: 320px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 0;
-  min-width: 0;
-  overflow: hidden;
-  z-index: 15;
-}
-
-.battlefield-side-rail > .setup-phase-panel {
+.battlefield-side-rail > .setup-phase-panel,
+.setup-side-panel > .setup-phase-panel {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
 }
 
-.battlefield-side-rail > .dice-tray {
+.battlefield-side-rail > .dice-tray,
+.setup-side-panel > .dice-tray {
   flex: 0 0 auto;
+}
+
+.setup-side-panel {
+  flex: 0 0 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  overflow-y: auto;
+  min-height: 0;
+  background: rgba(253, 249, 242, 0.6);
+  border-left: 1px solid rgba(85, 66, 40, 0.1);
 }
 
 .battlefield-side-rail-empty {
@@ -975,6 +1083,13 @@ body {
     0 8px 18px rgba(168, 58, 30, 0.32);
 }
 
+.dice-tray-face-icon,
+.dice-face-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+}
+
 .dice-tray-face-save.dice-tray-face-success {
   border-color: rgba(41, 95, 150, 0.6);
   background: linear-gradient(180deg, rgba(206, 226, 248, 0.98), rgba(122, 165, 214, 0.98));
@@ -986,19 +1101,12 @@ body {
    overlays (status badge, quick actions, power overlay, flash) plus the
    centered map scaler. */
 .battlefield-board-frame {
-  position: relative;
-  overflow: hidden;
-  padding: 0;
-  border-radius: 0;
-  background: transparent;
-  border: none;
+  width: 100%;
   height: 100%;
-  min-height: 0;
-  box-sizing: border-box;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 .battlefield-board-map-scaler {
@@ -1007,14 +1115,16 @@ body {
   align-self: center;
 }
 
+/* Legacy: .battlefield-board-status rules preserved for SetupApp compatibility.
+   The combat view now uses StatusBar instead. */
 .battlefield-board-status {
   position: absolute;
   top: 16px;
-  right: 16px;
+  left: 16px;
   z-index: 12;
   display: grid;
   gap: 6px;
-  width: min(320px, calc(100% - 32px));
+  width: min(280px, calc(100% - 32px));
   padding: 10px 12px;
   border-radius: 18px;
   background: rgba(255, 251, 245, 0.96);
@@ -1198,14 +1308,70 @@ body {
   background: rgba(200, 180, 140, 0.3);
 }
 
+/* --- Pending combat dice rolls --- */
+
+.battlefield-board-pending-rolls {
+  position: absolute;
+  top: 120px;
+  left: 16px;
+  z-index: 12;
+  width: min(280px, calc(100% - 32px));
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 248, 235, 0.97);
+  border: 1px solid rgba(180, 140, 60, 0.3);
+  box-shadow: 0 12px 24px rgba(35, 24, 18, 0.16);
+  display: grid;
+  gap: 6px;
+}
+
+.battlefield-board-pending-rolls-label {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7a6650;
+}
+
+.battlefield-board-pending-dice {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.battlefield-board-die {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: capitalize;
+  border: 1px solid rgba(100, 80, 55, 0.2);
+}
+
+.battlefield-board-die-attack {
+  background: linear-gradient(180deg, rgba(250, 235, 215, 0.98), rgba(240, 215, 175, 0.98));
+  color: #6e4513;
+}
+
+.battlefield-board-die-save {
+  background: linear-gradient(180deg, rgba(225, 235, 245, 0.98), rgba(200, 215, 232, 0.98));
+  color: #2a4a6a;
+}
+
 .battlefield-board-last-action {
   position: absolute;
   top: 126px;
-  right: 16px;
+  left: 16px;
   z-index: 12;
   display: grid;
   gap: 4px;
-  width: min(320px, calc(100% - 32px));
+  width: min(280px, calc(100% - 32px));
   padding: 10px 12px;
   border-radius: 18px;
   background: rgba(255, 251, 245, 0.96);
@@ -1648,8 +1814,8 @@ body {
 
 .battlefield-board-flash {
   position: absolute;
-  top: 224px;
-  right: 16px;
+  bottom: 16px;
+  left: 16px;
   z-index: 12;
   width: min(280px, calc(100% - 32px));
   padding: 12px 14px;

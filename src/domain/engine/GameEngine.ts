@@ -1,6 +1,8 @@
 import { Card } from "../cards/Card";
 import { type CardPlayContext } from "../cards/types";
-import { getEffectiveHealth } from "../cards/upgradeEffects";
+import { getEffectiveAttackDice, getEffectiveHealth, getEffectiveSaveDice } from "../cards/upgradeEffects";
+import { ConfirmCombatAction } from "../actions/ConfirmCombatAction";
+import { rollAttackDie, rollSaveDie } from "../rules/Dice";
 import { WeaponAbilityDefinition } from "../definitions/WeaponAbilityDefinition";
 import {
   CleanupResolution,
@@ -239,6 +241,12 @@ export class GameEngine {
 
     if (action instanceof UseWarscrollAbilityAction) {
       this.applyUseWarscrollAbilityAction(game, action);
+      this.resolveAutoPlayableCards(game, this.createImmediateTriggerContext(action.kind));
+      return game;
+    }
+
+    if (action instanceof ConfirmCombatAction) {
+      this.applyConfirmCombatAction(game, action);
       this.resolveAutoPlayableCards(game, this.createImmediateTriggerContext(action.kind));
       return game;
     }
@@ -660,46 +668,29 @@ export class GameEngine {
       throw new Error(`Fighter ${attacker.id} does not have weapon ${action.weaponId}.`);
     }
 
-    const { combatResult, targetSlain } = this.resolveCombatAction(
-      game,
-      attackerPlayer,
-      defenderPlayer,
-      attacker,
-      attackerDefinition,
-      target,
-      targetDefinition,
-      weapon.id,
-      weapon.name,
-      action.selectedAbility,
-      action.attackRoll,
-      action.saveRoll,
-      action.kind,
-    );
+    // Roll attack dice and store as pending. Save dice are rolled on the
+    // next ConfirmCombatAction advance (mirrors the rulebook sequence).
+    const attackDiceCount = getEffectiveAttackDice(weapon, attackerPlayer, attacker);
+    const attackRoll = action.attackRoll ?? Array.from({ length: attackDiceCount }, () => rollAttackDie());
+
+    game.pendingCombat = {
+      phase: "attack-rolled",
+      attackerPlayerId: attackerPlayer.id,
+      defenderPlayerId: defenderPlayer.id,
+      attackerFighterId: attacker.id,
+      targetFighterId: target.id,
+      weaponId: weapon.id,
+      selectedAbility: action.selectedAbility,
+      actionKind: action.kind,
+      attackRoll: [...attackRoll],
+      saveRoll: [],
+      outcome: null,
+      damageInflicted: 0,
+    };
 
     game.consecutivePasses = 0;
-
-    const damageText = combatResult.damageInflicted === 0
-      ? "dealt no damage"
-      : `dealt ${combatResult.damageInflicted} damage`;
-    const abilitySuffix =
-      action.selectedAbility === null
-        ? ""
-        : ` using ${WeaponAbilityDefinition.formatName(
-          action.selectedAbility,
-          combatResult.selectedAbilityRequiresCritical,
-        )}`;
-    const effectText = [
-      action.selectedAbility !== null &&
-      combatResult.selectedAbilityRequiresCritical &&
-      !combatResult.selectedAbilityTriggered
-        ? `did not trigger ${WeaponAbilityDefinition.formatName(action.selectedAbility, true)}`
-        : null,
-      combatResult.staggerApplied ? `staggered fighter ${target.id}` : null,
-      targetSlain ? `slew fighter ${target.id} for ${targetDefinition.bounty} glory` : null,
-    ].filter((text): text is string => text !== null);
-    const effectSuffix = effectText.length === 0 ? "" : ` and ${effectText.join(" and ")}`;
     game.eventLog.push(
-      `${attackerPlayer.name} attacked fighter ${target.id} with ${weapon.name}${abilitySuffix} and ${damageText}${effectSuffix}.`,
+      `${attackerPlayer.name} rolled attack dice against ${targetDefinition.name} with ${weapon.name}.`,
     );
   }
 
@@ -770,49 +761,139 @@ export class GameEngine {
       },
     );
 
-    const { combatResult, targetSlain } = this.resolveCombatAction(
-      game,
-      attackerPlayer,
-      defenderPlayer,
-      attacker,
-      attackerDefinition,
-      target,
-      targetDefinition,
-      weapon.id,
-      weapon.name,
-      action.selectedAbility,
-      action.attackRoll,
-      action.saveRoll,
-      action.kind,
-    );
+    const attackDiceCount = getEffectiveAttackDice(weapon, attackerPlayer, attacker);
+    const attackRoll = action.attackRoll ?? Array.from({ length: attackDiceCount }, () => rollAttackDie());
 
     attacker.hasChargeToken = true;
 
-    game.consecutivePasses = 0;
+    game.pendingCombat = {
+      phase: "attack-rolled",
+      attackerPlayerId: attackerPlayer.id,
+      defenderPlayerId: defenderPlayer.id,
+      attackerFighterId: attacker.id,
+      targetFighterId: target.id,
+      weaponId: weapon.id,
+      selectedAbility: action.selectedAbility,
+      actionKind: action.kind,
+      attackRoll: [...attackRoll],
+      saveRoll: [],
+      outcome: null,
+      damageInflicted: 0,
+    };
 
-    const damageText = combatResult.damageInflicted === 0
-      ? "dealt no damage"
-      : `dealt ${combatResult.damageInflicted} damage`;
-    const abilitySuffix =
-      action.selectedAbility === null
-        ? ""
-        : ` using ${WeaponAbilityDefinition.formatName(
-          action.selectedAbility,
-          combatResult.selectedAbilityRequiresCritical,
-        )}`;
-    const effectText = [
-      action.selectedAbility !== null &&
-      combatResult.selectedAbilityRequiresCritical &&
-      !combatResult.selectedAbilityTriggered
-        ? `did not trigger ${WeaponAbilityDefinition.formatName(action.selectedAbility, true)}`
-        : null,
-      combatResult.staggerApplied ? `staggered fighter ${target.id}` : null,
-      targetSlain ? `slew fighter ${target.id} for ${targetDefinition.bounty} glory` : null,
-    ].filter((text): text is string => text !== null);
-    const effectSuffix = effectText.length === 0 ? "" : ` and ${effectText.join(" and ")}`;
+    game.consecutivePasses = 0;
     game.eventLog.push(
-      `${attackerPlayer.name} charged fighter ${attacker.id} to ${destinationHex.id} and attacked fighter ${target.id} with ${weapon.name}${abilitySuffix} and ${damageText}${effectSuffix}.`,
+      `${attackerPlayer.name} charged ${attackerDefinition.name} to ${destinationHex.id} and rolled attack dice against ${targetDefinition.name}.`,
     );
+  }
+
+  /**
+   * Advances the pending combat to the next phase.
+   *
+   *   attack-rolled  →  save-rolled   (roll save dice)
+   *   save-rolled    →  resolved      (compute outcome)
+   *   resolved       →  (done)        (apply damage, clear pending)
+   */
+  private applyConfirmCombatAction(game: Game, _action: ConfirmCombatAction): void {
+    const pending = game.pendingCombat;
+    if (pending === null) {
+      throw new Error("No pending combat to confirm.");
+    }
+
+    const attackerPlayer = this.requirePlayer(game, pending.attackerPlayerId);
+    const defenderPlayer = this.requireOpponent(game, attackerPlayer.id);
+    const target = defenderPlayer.getFighter(pending.targetFighterId);
+    const targetDefinition = defenderPlayer.getFighterDefinition(pending.targetFighterId);
+
+    // --- Phase: attack-rolled → save-rolled ---
+    if (pending.phase === "attack-rolled") {
+      if (target === undefined || targetDefinition === undefined) {
+        game.pendingCombat = null;
+        return;
+      }
+      const saveDiceCount = getEffectiveSaveDice(targetDefinition, defenderPlayer, target);
+      pending.saveRoll = Array.from({ length: saveDiceCount }, () => rollSaveDie());
+      pending.phase = "save-rolled";
+      game.eventLog.push(`Save dice rolled for ${targetDefinition.name}.`);
+      return;
+    }
+
+    // --- Phase: save-rolled → resolved ---
+    if (pending.phase === "save-rolled") {
+      const attacker = attackerPlayer.getFighter(pending.attackerFighterId);
+      const attackerDef = attackerPlayer.getFighterDefinition(pending.attackerFighterId);
+      if (
+        attacker === undefined || attackerDef === undefined ||
+        target === undefined || targetDefinition === undefined
+      ) {
+        game.pendingCombat = null;
+        return;
+      }
+      const weapon = attackerPlayer.getFighterWeaponDefinition(attacker.id, pending.weaponId);
+      if (weapon === undefined) { game.pendingCombat = null; return; }
+
+      // Resolve via the combat resolver with the stored rolls.
+      const combatResult = this.combatResolver.resolve(
+        game,
+        new CombatContext(
+          pending.attackerPlayerId,
+          pending.defenderPlayerId,
+          pending.attackerFighterId,
+          pending.targetFighterId,
+          pending.weaponId,
+          pending.selectedAbility,
+        ),
+        pending.attackRoll,
+        pending.saveRoll,
+      );
+
+      pending.outcome = combatResult.outcome;
+      pending.damageInflicted = combatResult.damageInflicted;
+      pending.phase = "resolved";
+      game.eventLog.push(
+        `Outcome: ${combatResult.outcome} — ${combatResult.damageInflicted} damage.`,
+      );
+      return;
+    }
+
+    // --- Phase: resolved → apply damage and finish ---
+    if (pending.phase === "resolved") {
+      const attacker = this.requireOwnedDeployedFighter(attackerPlayer, pending.attackerFighterId);
+      const attackerDefinition = attackerPlayer.getFighterDefinition(attacker.id);
+      if (
+        attackerDefinition === undefined ||
+        target === undefined || targetDefinition === undefined ||
+        target.currentHexId === null || target.isSlain
+      ) {
+        game.pendingCombat = null;
+        return;
+      }
+      const weapon = attackerPlayer.getFighterWeaponDefinition(attacker.id, pending.weaponId);
+      if (weapon === undefined) { game.pendingCombat = null; return; }
+
+      const attackRoll = pending.attackRoll;
+      const saveRoll = pending.saveRoll;
+      const selectedAbility = pending.selectedAbility;
+      const actionKind = pending.actionKind;
+      game.pendingCombat = null;
+
+      const { combatResult, targetSlain } = this.resolveCombatAction(
+        game, attackerPlayer, defenderPlayer,
+        attacker, attackerDefinition, target, targetDefinition,
+        weapon.id, weapon.name, selectedAbility,
+        attackRoll, saveRoll, actionKind,
+      );
+
+      const damageText = combatResult.damageInflicted === 0
+        ? "dealt no damage"
+        : `dealt ${combatResult.damageInflicted} damage`;
+      const effectText = [
+        combatResult.staggerApplied ? `staggered ${targetDefinition.name}` : null,
+        targetSlain ? `slew ${targetDefinition.name}` : null,
+      ].filter((text): text is string => text !== null);
+      const effectSuffix = effectText.length === 0 ? "" : `, ${effectText.join(", ")}`;
+      game.eventLog.push(`Combat resolved: ${damageText}${effectSuffix}.`);
+    }
   }
 
   private applyGuardAction(game: Game, action: GuardAction): void {
@@ -1014,7 +1095,11 @@ export class GameEngine {
   }
 
   private applyPlayPloyAction(game: Game, action: PlayPloyAction): void {
-    this.assertCombatTurnStep(game, TurnStep.Power);
+    // Reaction ploys are playable during the action step while pending
+    // combat is active (the card itself gates timing via canPlay).
+    if (game.pendingCombat === null) {
+      this.assertCombatTurnStep(game, TurnStep.Power);
+    }
     if (!this.combatActionService.isLegalPlayPloyAction(game, action)) {
       throw new Error(`Ploy play is not legal for card ${action.cardId}.`);
     }
