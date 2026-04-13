@@ -127,19 +127,29 @@ When adding a new warband, deck, or card set:
 - Derive display state from domain state in the component or a thin formatting layer (`src/board/formatter.ts`). Never store derived UI state that duplicates domain state.
 - Interactive elements must clearly indicate **what is clickable** and **what the click will do** (highlight legal moves, dim illegal targets).
 
+## Codebase Reality vs. Target Architecture
+
+This document describes the **target architecture** — not necessarily the current state of the code. The codebase is actively being shaped toward these patterns, and parts of it may not yet conform. When you encounter existing code that violates principles in this document:
+
+- **New code you write** must follow this document, not the existing deviation.
+- **When modifying existing code**, refactor toward the target architecture as part of the change. If a method you're editing has game rules in a React component, move those rules to the domain layer as part of your work.
+- **Do not propagate existing anti-patterns.** If existing code uses raw strings where branded IDs should be used, do not add more raw strings — use branded IDs and fix the immediate surroundings where practical.
+- **Do not "big bang" refactor.** Only refactor code you are already touching or that directly blocks the task. Mention in your response if you noticed broader debt worth addressing later.
+- **When in doubt, this document wins.** If the code does something one way and this document says another, follow this document.
+
 ## Working Practices
 
 ### Before Writing Code
 
-1. **Read the relevant domain files** to understand existing patterns.
+1. **Read the relevant domain files** to understand what exists — but evaluate it against this document's architecture, not as gospel.
 2. **Read `Rules/rules.txt`** if implementing or modifying a game mechanic.
 3. **Identify which layer** the change belongs to: domain logic, presentation, or content.
-4. **Check for existing abstractions** before creating new ones.
+4. **Check for existing abstractions** before creating new ones — but if the existing abstraction is poorly designed, improve it rather than building on a weak foundation.
 
 ### While Writing Code
 
-- Follow existing patterns. If the codebase solves a similar problem, solve yours the same way.
-- Keep the domain layer and presentation layer strictly separated. If a `.tsx` file needs to import from `domain/`, it should only import types, state classes, and action classes — never resolution logic or engine internals.
+- Follow the patterns described in this document. If the codebase solves a similar problem in a way that aligns with this document, follow that. If the existing solution deviates, follow this document instead.
+- Keep the domain layer and presentation layer strictly separated. If a `.tsx` file needs to import from `domain/`, it should only import types, state classes, and action classes — never resolution logic or engine internals. If existing `.tsx` files violate this, do not use them as precedent.
 - When implementing a card: write `getLegalTargets()` first, then `applyEffect()`. The targeting logic defines the card's identity.
 - When implementing an ability: define what tokens/state it checks, what events it emits, and what state it modifies — in that order.
 - Write code that is **correct first, then clean**. But do not leave it unclean.
