@@ -104,7 +104,7 @@ export default function GameView({ warband, deck = null, boardTheme = null }: Ga
             onHoverChargeTarget={(fighterId) => e.setHoveredChargeTargetId(fighterId as FighterId | null)}
             onHexClickIntent={e.handleHexClickIntent} onDelveInlineFeature={e.delveSelectedFighter}
             onContextMenuAction={e.handleContextMenuAction} onDismissContextMenu={e.dismissContextMenu} />
-          <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-2 py-1.5 pointer-events-none [&>*]:pointer-events-auto">
+          <div data-quick-actions className="absolute bottom-0 left-0 right-0 flex justify-center gap-2 py-1.5 pointer-events-none [&>*]:pointer-events-auto">
             {boardScene.quickActions.map((action) => (
               <button key={action.key} type="button"
                 className={`border border-[rgba(84,63,45,0.2)] rounded-pill py-1.5 px-4 font-[inherit] text-[0.75rem] font-bold cursor-pointer bg-[rgba(255,251,245,0.95)] text-[#3a2e24] shadow-button whitespace-nowrap hover:bg-[rgba(245,238,225,1)]${action.armed ? " bg-[rgba(141,92,13,0.2)] border-[rgba(141,92,13,0.35)]" : ""}`}

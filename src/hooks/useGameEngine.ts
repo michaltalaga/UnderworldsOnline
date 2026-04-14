@@ -410,6 +410,7 @@ export function useGameEngine({ warband, deck = null }: UseGameEngineOptions) {
       if (target.closest(".status-bar-actions") !== null) return;
       if (target.closest("[data-roster-rail]") !== null) return;
       if (target.closest("[data-context-menu]") !== null) return;
+      if (target.closest("[data-quick-actions]") !== null) return;
     }
     selectFighter(null);
   }
