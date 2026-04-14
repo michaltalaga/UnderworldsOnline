@@ -2,7 +2,7 @@ import type { Card } from "../cards/Card";
 import type { FeatureToken } from "./FeatureToken";
 import type { HexCell } from "./HexCell";
 import type { Territory } from "./Territory";
-import type { FeatureTokenId, FighterId, GameId, HexId, PlayerId, TerritoryId } from "../values/ids";
+import type { FighterId, GameId, PlayerId } from "../values/ids";
 import { EndPhaseStep, Phase, SetupStep, TurnStep } from "../values/enums";
 import { Board } from "./Board";
 import { Fighter } from "./Fighter";
@@ -167,10 +167,6 @@ export class Game {
 
   // --- Board delegation (eliminate game.board.* chains) ---
 
-  public getHex(hexId: HexId): HexCell | undefined {
-    return this.board.getHex(hexId);
-  }
-
   public getFighterHex(fighter: Fighter): HexCell | undefined {
     return fighter.currentHex ?? undefined;
   }
@@ -185,14 +181,6 @@ export class Game {
 
   public areAdjacent(a: HexCell, b: HexCell): boolean {
     return this.board.areAdjacent(a, b);
-  }
-
-  public getTerritory(territoryId: TerritoryId): Territory | undefined {
-    return this.board.getTerritory(territoryId);
-  }
-
-  public getFeatureToken(tokenId: FeatureTokenId): FeatureToken | undefined {
-    return this.board.getFeatureToken(tokenId);
   }
 
   public get featureTokens(): readonly FeatureToken[] {

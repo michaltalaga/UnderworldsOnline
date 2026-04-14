@@ -253,7 +253,7 @@ function buildRollOffDiceModel(
 }
 
 function getPlayerDisplayName(game: Game, playerId: PlayerId): string {
-  return game.getPlayer(playerId)?.name ?? playerId;
+  return game.players.find((p) => p.id === playerId)?.name ?? playerId;
 }
 
 // --- Face formatting -----------------------------------------------------

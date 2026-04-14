@@ -1,13 +1,11 @@
 import type {
   FighterId,
   PlayerId,
-  WeaponDefinitionId,
 } from "../values/ids";
 import { DeckKind } from "../values/enums";
 import type { Card, Target } from "../cards/Card";
 import { FighterDefinition } from "../definitions/FighterDefinition";
 import { WarscrollDefinition } from "../definitions/WarscrollDefinition";
-import { WeaponDefinition } from "../definitions/WeaponDefinition";
 import { WarbandDefinition } from "../definitions/WarbandDefinition";
 import type { Game } from "./Game";
 import { Deck } from "./Deck";
@@ -82,13 +80,6 @@ export class Player {
     return this.getFighter(fighterId)?.definition;
   }
 
-  public getFighterWeaponDefinition(
-    fighterId: FighterId,
-    weaponId: WeaponDefinitionId | null,
-  ): WeaponDefinition | undefined {
-    return this.getFighterDefinition(fighterId)?.getWeapon(weaponId) ?? undefined;
-  }
-
   public getWarscrollDefinition(): WarscrollDefinition | undefined {
     return this.warscrollState.definition;
   }
@@ -102,12 +93,6 @@ export class Player {
 
   public getWarscrollTokenCount(tokenName: string): number {
     return this.warscrollState.tokens[tokenName] ?? 0;
-  }
-
-  // Find a card by ID — for debugging/engine compatibility only.
-  // Prefer holding object references instead of looking up by ID.
-  public getCard(cardId: string): Card | undefined {
-    return this.getAllCards().find((card) => card.id === cardId);
   }
 
   public getAllCards(): Card[] {

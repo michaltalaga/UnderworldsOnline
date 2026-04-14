@@ -872,14 +872,14 @@ function getPlayerName(game: Game, playerId: string | null): string {
     return "None";
   }
 
-  return game.getPlayer(playerId)?.name ?? playerId;
+  return game.players.find((p) => p.id === playerId)?.name ?? playerId;
 }
 
 function getFighterName(game: Game, fighterId: string): string {
   for (const player of game.players) {
-    const fighterDefinition = player.getFighterDefinition(fighterId);
-    if (fighterDefinition !== undefined) {
-      return fighterDefinition.name;
+    const fighter = player.fighters.find((f) => f.id === fighterId);
+    if (fighter !== undefined) {
+      return fighter.definition.name;
     }
   }
 
@@ -888,8 +888,9 @@ function getFighterName(game: Game, fighterId: string): string {
 
 function getWeaponName(game: Game, fighterId: string, weaponId: string): string {
   for (const player of game.players) {
-    const weapon = player.getFighterWeaponDefinition(fighterId, weaponId);
-    if (weapon !== undefined) {
+    const fighter = player.fighters.find((f) => f.id === fighterId);
+    const weapon = fighter?.definition.getWeapon(weaponId);
+    if (weapon !== undefined && weapon !== null) {
       return weapon.name;
     }
   }

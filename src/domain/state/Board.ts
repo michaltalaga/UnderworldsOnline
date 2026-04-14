@@ -1,4 +1,4 @@
-import type { FeatureTokenId, HexId, TerritoryId } from "../values/ids";
+import type { HexId } from "../values/ids";
 import { BoardSide } from "../values/enums";
 import { FeatureToken } from "./FeatureToken";
 import { HexCell } from "./HexCell";
@@ -76,18 +76,6 @@ export class Board {
     }
 
     this.side = side;
-  }
-
-  public getHex(hexId: HexId): HexCell | undefined {
-    return this.hexes.find((hex) => hex.id === hexId);
-  }
-
-  public getTerritory(territoryId: TerritoryId): Territory | undefined {
-    return this.territories.find((territory) => territory.id === territoryId);
-  }
-
-  public getFeatureToken(featureTokenId: FeatureTokenId): FeatureToken | undefined {
-    return this.featureTokens.find((token) => token.id === featureTokenId);
   }
 
   // Returns the hexes directly adjacent to `hex` on the currently active

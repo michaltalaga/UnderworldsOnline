@@ -434,7 +434,8 @@ export function useGameEngine({ warband, deck = null }: UseGameEngineOptions) {
 
   function scoreObjective(cardId: CardId): void {
     if (localPlayer === null) return;
-    const card = localPlayer.getCard(cardId);
+    const card = localPlayer.objectiveHand.find((c) => c.id === cardId)
+      ?? localPlayer.powerHand.find((c) => c.id === cardId);
     if (card === undefined) return;
     const handIndex = localPlayer.objectiveHand.indexOf(card);
     if (handIndex === -1) return;
