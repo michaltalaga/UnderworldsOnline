@@ -99,7 +99,7 @@ describe("ChargeAction resolution", () => {
 
     // Fighter moved to the charge destination.
     const fighter = game.getFighter(charge.fighter.id);
-    expect(fighter?.currentHexId).toBe(destinationHexId);
+    expect(fighter?.currentHex?.id).toBe(destinationHexId);
     expect(fighter?.hasChargeToken).toBe(true);
 
     // Exactly one movement event was emitted by the charge.

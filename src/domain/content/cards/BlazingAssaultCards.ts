@@ -96,7 +96,7 @@ export class GetStuckIn extends ObjectiveCard {
       const slainEvent = getLatestSlainEvent(game);
       targetHexId = slainEvent?.slainHexId ?? null;
     } else {
-      targetHexId = combat.target.currentHexId;
+      targetHexId = combat.target.currentHex?.id ?? null;
     }
     if (targetHexId === null) return false;
     const owner = getTerritoryOwner(game, targetHexId);
@@ -193,8 +193,8 @@ export class Denial extends ObjectiveCard {
     const opponent = game.getOpponent(this.owner.id);
     if (opponent === undefined) return false;
     for (const fighter of opponent.fighters) {
-      if (fighter.isSlain || fighter.currentHexId === null) continue;
-      if (getTerritoryOwner(game, fighter.currentHexId) === this.owner.id) return false;
+      if (fighter.isSlain || fighter.currentHex === null) continue;
+      if (fighter.currentHex.territory?.owner === this.owner) return false;
     }
     return true;
   }
@@ -376,13 +376,12 @@ export class LureOfBattle extends PloyCard {
     const friendlies = friendlyFightersOnBoard(this);
     const opponent = game.getOpponent(this.owner.id);
     const allFighters = [
-      ...this.owner.fighters.filter(f => !f.isSlain && f.currentHexId !== null),
-      ...(opponent ? opponent.fighters.filter(f => !f.isSlain && f.currentHexId !== null) : []),
+      ...this.owner.fighters.filter(f => !f.isSlain && f.currentHex !== null),
+      ...(opponent ? opponent.fighters.filter(f => !f.isSlain && f.currentHex !== null) : []),
     ];
     return friendlies.filter(f => {
-      if (f.currentHexId === null) return false;
-      const hex = game.getHex(f.currentHexId);
-      if (hex === undefined) return false;
+      const hex = f.currentHex;
+      if (hex === null) return false;
       const neighbors = game.getNeighbors(hex);
       const ring2HexIds = new Set([hex.id, ...neighbors.map(n => n.id)]);
       for (const n of neighbors) {
@@ -390,7 +389,7 @@ export class LureOfBattle extends PloyCard {
           ring2HexIds.add(n2.id);
         }
       }
-      return allFighters.some(other => other.id !== f.id && other.currentHexId !== null && ring2HexIds.has(other.currentHexId));
+      return allFighters.some(other => other !== f && other.currentHex !== null && ring2HexIds.has(other.currentHex.id));
     });
   }
 
@@ -408,7 +407,7 @@ export class CommandingStride extends PloyCard {
 
   protected override getTargets(): Target[] {
     return this.owner.fighters.filter(f => {
-      if (f.isSlain || f.currentHexId === null) return false;
+      if (f.isSlain || f.currentHex === null) return false;
       const def = this.owner.getFighterDefinition(f.id);
       return def?.isLeader === true;
     });

@@ -72,9 +72,7 @@ export function getTerritoryOwner(
   hexId: HexId,
 ): PlayerId | null {
   const hex = game.getHex(hexId);
-  if (hex?.territoryId == null) return null;
-  const territory = game.getTerritory(hex.territoryId);
-  return territory?.ownerPlayerId ?? null;
+  return hex?.territory?.owner?.id ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -83,40 +81,31 @@ export function getTerritoryOwner(
 // ---------------------------------------------------------------------------
 
 /** Is the fighter in enemy territory? */
-export function isInEnemyTerritory(game: Game, fighter: Fighter, ownerId: PlayerId): boolean {
-  if (fighter.currentHexId === null) return false;
-  const owner = getTerritoryOwner(game, fighter.currentHexId);
-  return owner !== null && owner !== ownerId;
+export function isInEnemyTerritory(_game: Game, fighter: Fighter, ownerId: PlayerId): boolean {
+  const territoryOwner = fighter.currentHex?.territory?.owner ?? null;
+  return territoryOwner !== null && territoryOwner.id !== ownerId;
 }
 
 /** Is the fighter in friendly territory? */
-export function isInFriendlyTerritory(game: Game, fighter: Fighter, ownerId: PlayerId): boolean {
-  if (fighter.currentHexId === null) return false;
-  const owner = getTerritoryOwner(game, fighter.currentHexId);
-  return owner === ownerId;
+export function isInFriendlyTerritory(_game: Game, fighter: Fighter, ownerId: PlayerId): boolean {
+  const territoryOwner = fighter.currentHex?.territory?.owner ?? null;
+  return territoryOwner !== null && territoryOwner.id === ownerId;
 }
 
 /** Is the fighter standing on a treasure token? */
-export function isOnTreasureToken(game: Game, fighter: Fighter): boolean {
-  if (fighter.currentHexId === null) return false;
-  const hex = game.getHex(fighter.currentHexId);
-  if (hex === undefined || hex.featureTokenId === null) return false;
-  const token = game.getFeatureToken(hex.featureTokenId);
-  return token !== undefined && token.side === FeatureTokenSide.Treasure;
+export function isOnTreasureToken(_game: Game, fighter: Fighter): boolean {
+  const token = fighter.currentHex?.featureToken ?? null;
+  return token !== null && token.side === FeatureTokenSide.Treasure;
 }
 
 /** Is the fighter standing on a feature token (any side)? */
-export function isOnFeatureToken(game: Game, fighter: Fighter): boolean {
-  if (fighter.currentHexId === null) return false;
-  const hex = game.getHex(fighter.currentHexId);
-  return hex !== undefined && hex.featureTokenId !== null;
+export function isOnFeatureToken(_game: Game, fighter: Fighter): boolean {
+  return fighter.currentHex?.featureToken != null;
 }
 
 /** Is the fighter on a stagger hex? */
-export function isOnStaggerHex(game: Game, fighter: Fighter): boolean {
-  if (fighter.currentHexId === null) return false;
-  const hex = game.getHex(fighter.currentHexId);
-  return hex !== undefined && hex.kind === HexKind.Stagger;
+export function isOnStaggerHex(_game: Game, fighter: Fighter): boolean {
+  return fighter.currentHex?.kind === HexKind.Stagger;
 }
 
 /** Is the weapon melee (range <= 1)? */

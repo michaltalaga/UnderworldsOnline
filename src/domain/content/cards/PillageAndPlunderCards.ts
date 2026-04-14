@@ -78,14 +78,14 @@ export class LostInTheDepths extends ObjectiveCard {
 
   protected override canScore(game: Game): boolean {
     if (game.phase !== "end") return false;
-    const aliveFighters = this.owner.fighters.filter((f) => !f.isSlain && f.currentHexId !== null);
+    const aliveFighters = this.owner.fighters.filter((f) => !f.isSlain && f.currentHex !== null);
     if (aliveFighters.length === 0) return false;
     // Check no two alive friendly fighters are adjacent
     for (let i = 0; i < aliveFighters.length; i++) {
       for (let j = i + 1; j < aliveFighters.length; j++) {
-        const hexA = game.getHex(aliveFighters[i].currentHexId!);
-        const hexB = game.getHex(aliveFighters[j].currentHexId!);
-        if (hexA !== undefined && hexB !== undefined && game.areAdjacent(hexA, hexB)) {
+        const hexA = aliveFighters[i].currentHex!;
+        const hexB = aliveFighters[j].currentHex!;
+        if (game.areAdjacent(hexA, hexB)) {
           return false;
         }
       }
@@ -158,9 +158,9 @@ export class AggressiveClaimant extends ObjectiveCard {
   protected override canScore(game: Game): boolean {
     const combat = getMyLatestCombatEvent(game, this.owner);
     if (combat === null || combat.damageInflicted === 0) return false;
-    if (combat.target.currentHexId === null) return false;
+    if (combat.target.currentHex === null) return false;
     // Neutral territory: no owner
-    return getTerritoryOwner(game, combat.target.currentHexId) === null;
+    return combat.target.currentHex.territory?.owner == null;
   }
 }
 
@@ -209,9 +209,8 @@ export class ShareTheLoad extends ObjectiveCard {
     if (latestMove === null) return false;
     // Check how many friendly fighters are on feature tokens
     const friendlyOnFeatureTokens = this.owner.fighters.filter((f) => {
-      if (f.isSlain || f.currentHexId === null) return false;
-      const hex = game.getHex(f.currentHexId);
-      return hex?.featureTokenId !== null && hex?.featureTokenId !== undefined;
+      if (f.isSlain || f.currentHex === null) return false;
+      return f.currentHex.featureToken !== null;
     });
     return friendlyOnFeatureTokens.length >= 2;
   }
@@ -246,8 +245,8 @@ export class CarefulSurvey extends ObjectiveCard {
     if (territories.length === 0) return false;
     for (const territory of territories) {
       const hasFriendlyFighter = this.owner.fighters.some((f) => {
-        if (f.isSlain || f.currentHexId === null) return false;
-        return territory.hexIds.includes(f.currentHexId);
+        if (f.isSlain || f.currentHex === null) return false;
+        return f.currentHex.territory === territory;
       });
       if (!hasFriendlyFighter) return false;
     }
@@ -304,7 +303,7 @@ export class PillageCommandingStride extends PloyCard {
 
   protected override getTargets(): Target[] {
     return this.owner.fighters.filter(f => {
-      if (f.isSlain || f.currentHexId === null) return false;
+      if (f.isSlain || f.currentHex === null) return false;
       const def = this.owner.getFighterDefinition(f.id);
       return def?.isLeader === true;
     });
@@ -351,7 +350,7 @@ export class WaryDelver extends PloyCard {
 
   protected override getTargets(): Target[] {
     return this.owner.fighters.filter(
-      (f) => !f.isSlain && f.currentHexId !== null && f.hasChargeToken,
+      (f) => !f.isSlain && f.currentHex !== null && f.hasChargeToken,
     );
   }
 
@@ -411,13 +410,11 @@ export class SuddenBlast extends PloyCard {
     const enemies = enemyFightersOnBoard(this, game);
     // Only target enemies adjacent to at least one friendly
     return enemies.filter((enemy) => {
-      if (enemy.currentHexId === null) return false;
-      const enemyHex = game.getHex(enemy.currentHexId);
-      if (enemyHex === undefined) return false;
+      const enemyHex = enemy.currentHex;
+      if (enemyHex === null) return false;
       return friendlies.some((friendly) => {
-        if (friendly.currentHexId === null) return false;
-        const friendlyHex = game.getHex(friendly.currentHexId);
-        return friendlyHex !== undefined && game.areAdjacent(enemyHex, friendlyHex);
+        const friendlyHex = friendly.currentHex;
+        return friendlyHex !== null && game.areAdjacent(enemyHex, friendlyHex);
       });
     });
   }
@@ -436,7 +433,7 @@ export class TunnellingTerror extends PloyCard {
 
   protected override getTargets(): Target[] {
     return this.owner.fighters.filter(
-      (f) => !f.isSlain && f.currentHexId !== null && !f.hasMoveToken && !f.hasChargeToken,
+      (f) => !f.isSlain && f.currentHex !== null && !f.hasMoveToken && !f.hasChargeToken,
     );
   }
 
@@ -460,9 +457,8 @@ export class TrappedCache extends PloyCard {
     const enemies = enemyFightersOnBoard(this, game);
     return enemies.filter((enemy) => {
       if (enemy.damage > 0) return false;
-      if (enemy.currentHexId === null) return false;
-      const enemyHex = game.getHex(enemy.currentHexId);
-      if (enemyHex === undefined) return false;
+      const enemyHex = enemy.currentHex;
+      if (enemyHex === null) return false;
       // Check if any treasure token is within 1 hex
       const neighbors = game.getNeighbors(enemyHex);
       const nearbyHexIds = [enemyHex.id, ...neighbors.map((h) => h.id)];

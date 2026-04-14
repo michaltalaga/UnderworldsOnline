@@ -160,7 +160,7 @@ export class Game {
   }
 
   public getFighterHex(fighter: Fighter): HexCell | undefined {
-    return fighter.currentHexId === null ? undefined : this.board.getHex(fighter.currentHexId);
+    return fighter.currentHex ?? undefined;
   }
 
   public getNeighbors(hex: HexCell): HexCell[] {

@@ -60,12 +60,12 @@ export function getFighterName(game: Game, fighterId: string): string {
     return fighterId;
   }
 
-  const player = game.getPlayer(fighter.ownerPlayerId);
+  const player = game.getPlayer(fighter.owner.id);
   return player?.getFighterDefinition(fighter.id)?.name ?? fighter.id;
 }
 
 export function getFighterMapLabel(game: Game, fighter: Fighter): string {
-  const player = game.getPlayer(fighter.ownerPlayerId);
+  const player = game.getPlayer(fighter.owner.id);
   const fighterName = player?.getFighterDefinition(fighter.id)?.name ?? fighter.id;
   const numericSuffix = fighterName.match(/(\d+)$/);
   if (numericSuffix !== null) {
@@ -98,8 +98,8 @@ export function getFighterStatusTags(fighter: Fighter): string[] {
     tags.push("stagger");
   }
 
-  if (fighter.upgradeCardIds.length > 0) {
-    tags.push(`upgrades ${fighter.upgradeCardIds.length}`);
+  if (fighter.upgrades.length > 0) {
+    tags.push(`upgrades ${fighter.upgrades.length}`);
   }
 
   if (fighter.isInspired) {

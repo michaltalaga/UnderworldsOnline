@@ -86,7 +86,7 @@ function DeploymentPanel({
         <h3 className="m-0 font-heading text-[1.05rem]">{player.name}&apos;s warband</h3>
         <ul className="list-none m-0 p-0 grid gap-1.5">
           {player.fighters.map((fighter) => {
-            const isDeployed = fighter.currentHexId !== null;
+            const isDeployed = fighter.currentHex !== null;
             const isActive = !isDeployed && fighter.id === nextFighter?.id;
             const baseClass = "flex justify-between gap-3 py-2.5 px-3.5 rounded-[12px] bg-[rgba(244,236,220,0.5)] text-[0.92rem]";
             const activeClass = isActive ? " bg-[rgba(20,136,140,0.18)] border border-[rgba(20,136,140,0.55)]" : "";

@@ -358,10 +358,10 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
         ? null
         : {
             id: fighterState.id,
-            ownerPlayerId: fighterState.ownerPlayerId,
+            ownerPlayerId: fighterState.owner.id,
             label: getFighterMapLabel(game, fighterState),
             name: getFighterName(game, fighterState.id),
-            toneClass: getPlayerToneClass(fighterState.ownerPlayerId),
+            toneClass: getPlayerToneClass(fighterState.owner.id),
             statusTags: getFighterStatusTags(fighterState),
           };
 

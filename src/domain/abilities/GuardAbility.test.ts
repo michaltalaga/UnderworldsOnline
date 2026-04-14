@@ -39,7 +39,7 @@ describe("GuardAbility eligibility", () => {
     for (const action of actions) {
       const fighter = player.getFighter(action.fighter.id)!;
       expect(fighter.isSlain).toBe(false);
-      expect(fighter.currentHexId).not.toBeNull();
+      expect(fighter.currentHex).not.toBeNull();
       expect(fighter.hasMoveToken).toBe(false);
       expect(fighter.hasChargeToken).toBe(false);
       expect(fighter.hasGuardToken).toBe(false);
@@ -51,7 +51,7 @@ describe("GuardAbility eligibility", () => {
     const ability = new GuardAbility();
     const player = game.getPlayer("player:one")!;
     const fighter = player.fighters.find(
-      (f) => !f.isSlain && f.currentHexId !== null,
+      (f) => !f.isSlain && f.currentHex !== null,
     )!;
     fighter.hasGuardToken = true;
 

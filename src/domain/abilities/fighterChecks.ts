@@ -1,19 +1,18 @@
 import type { Fighter } from "../state/Fighter";
 import type { HexCell } from "../state/HexCell";
 import { HexKind } from "../values/enums";
-import type { HexId } from "../values/ids";
 
-/** Fighter is alive and on the board. Narrows currentHexId to non-null. */
+/** Fighter is alive and on the board. Narrows currentHex to non-null. */
 export function canFighterAct(
   fighter: Fighter,
-): fighter is Fighter & { currentHexId: HexId } {
-  return !fighter.isSlain && fighter.currentHexId !== null;
+): fighter is Fighter & { currentHex: HexCell } {
+  return !fighter.isSlain && fighter.currentHex !== null;
 }
 
 /** Fighter can move or charge (no move/charge tokens). */
 export function canFighterMove(
   fighter: Fighter,
-): fighter is Fighter & { currentHexId: HexId } {
+): fighter is Fighter & { currentHex: HexCell } {
   return canFighterAct(fighter) && !fighter.hasMoveToken && !fighter.hasChargeToken;
 }
 
@@ -25,7 +24,7 @@ export function canFighterGuard(fighter: Fighter): boolean {
 /** Fighter can attack (alive, on board, no charge token). */
 export function canFighterAttack(
   fighter: Fighter,
-): fighter is Fighter & { currentHexId: HexId } {
+): fighter is Fighter & { currentHex: HexCell } {
   return canFighterAct(fighter) && !fighter.hasChargeToken;
 }
 

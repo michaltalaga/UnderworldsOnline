@@ -630,12 +630,11 @@ export class GameEngine {
       throw new Error(`Could not find fighter definition for ${fighter.id}.`);
     }
 
-    const currentHexId = fighter.currentHexId;
-    if (currentHexId === null) {
+    const currentHex = fighter.currentHex;
+    if (currentHex === null) {
       throw new Error(`Fighter ${fighter.id} is not deployed on the board.`);
     }
 
-    const currentHex = this.requireHex(game, currentHexId);
     const destinationHexId = action.path[action.path.length - 1];
     if (destinationHexId === undefined) {
       throw new Error(`Move action for fighter ${fighter.id} requires a destination hex.`);
@@ -691,7 +690,7 @@ export class GameEngine {
       attackerDefinition === undefined ||
       target === undefined ||
       targetDefinition === undefined ||
-      target.currentHexId === null ||
+      target.currentHex === null ||
       target.isSlain
     ) {
       throw new Error(`Attack target ${action.target.id} is not available.`);
@@ -743,7 +742,7 @@ export class GameEngine {
       attackerDefinition === undefined ||
       target === undefined ||
       targetDefinition === undefined ||
-      target.currentHexId === null ||
+      target.currentHex === null ||
       target.isSlain
     ) {
       throw new Error(`Charge target ${action.target.id} is not available.`);
@@ -754,8 +753,8 @@ export class GameEngine {
       throw new Error(`Fighter ${attacker.id} does not have weapon ${action.weapon.id}.`);
     }
 
-    const currentHexId = attacker.currentHexId;
-    if (currentHexId === null) {
+    const currentHex = attacker.currentHex;
+    if (currentHex === null) {
       throw new Error(`Fighter ${attacker.id} is not deployed on the board.`);
     }
 
@@ -764,7 +763,6 @@ export class GameEngine {
       throw new Error(`Charge action for fighter ${attacker.id} requires a destination hex.`);
     }
 
-    const currentHex = this.requireHex(game, currentHexId);
     const destinationHex = this.requireHex(game, destinationHexId);
     currentHex.occupantFighter = null;
     this.syncFeatureTokenHolderAtHex(game, currentHex.id);
@@ -911,7 +909,7 @@ export class GameEngine {
       if (
         attackerDefinition === undefined ||
         targetDefinition === undefined ||
-        target.currentHexId === null || target.isSlain
+        target.currentHex === null || target.isSlain
       ) {
         return;
       }
@@ -988,12 +986,11 @@ export class GameEngine {
       throw new Error(`Could not find fighter definition for ${fighter.id}.`);
     }
 
-    const fighterHexId = fighter.currentHexId;
-    if (fighterHexId === null) {
+    const fighterHex = fighter.currentHex;
+    if (fighterHex === null) {
       throw new Error(`Fighter ${fighter.id} is not on the board to delve.`);
     }
 
-    const fighterHex = this.requireHex(game, fighterHexId);
     if (fighterHex.featureTokenId !== action.featureToken.id) {
       throw new Error(
         `Fighter ${fighter.id} is not on feature token ${action.featureToken.id}.`,
@@ -2626,7 +2623,7 @@ export class GameEngine {
 
   private getUndeployedFighters(player: Player): Fighter[] {
     return player.fighters.filter(
-      (fighter) => fighter.currentHexId === null && !fighter.isSlain,
+      (fighter) => fighter.currentHex === null && !fighter.isSlain,
     );
   }
 
@@ -2636,7 +2633,7 @@ export class GameEngine {
       throw new Error(`Player ${player.name} does not control fighter ${fighterId}.`);
     }
 
-    if (fighter.currentHexId !== null) {
+    if (fighter.currentHex !== null) {
       throw new Error(`Fighter ${fighter.id} has already been deployed.`);
     }
 
@@ -2649,7 +2646,7 @@ export class GameEngine {
       throw new Error(`Player ${player.name} does not control fighter ${fighterId}.`);
     }
 
-    if (fighter.currentHexId === null || fighter.isSlain) {
+    if (fighter.currentHex === null || fighter.isSlain) {
       throw new Error(`Fighter ${fighter.id} is not deployed on the board.`);
     }
 
@@ -2888,12 +2885,11 @@ export class GameEngine {
 
     const targetSlain = combatResult.targetSlain || target.damage >= getEffectiveHealth(targetDefinition, defenderPlayer, target);
     if (targetSlain) {
-      const targetHexId = target.currentHexId;
-      if (targetHexId === null) {
+      const targetHex = target.currentHex;
+      if (targetHex === null) {
         throw new Error(`Target fighter ${target.id} is not on the board to be slain.`);
       }
 
-      const targetHex = this.requireHex(game, targetHexId);
       targetHex.occupantFighter = null;
       this.syncFeatureTokenHolderAtHex(game, targetHex.id);
       target.currentHex = null;

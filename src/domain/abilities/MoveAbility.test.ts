@@ -39,7 +39,7 @@ describe("MoveAbility eligibility", () => {
     const fighterIds = new Set(actions.map((a) => a.fighter.id));
     const expectedFighterIds = new Set(
       player.fighters
-        .filter((f) => !f.isSlain && f.currentHexId !== null)
+        .filter((f) => !f.isSlain && f.currentHex !== null)
         .map((f) => f.id),
     );
     // Every fighter that appears in moves is alive and on board.
@@ -56,7 +56,7 @@ describe("MoveAbility eligibility", () => {
     const actions = ability.getLegalActions(game, player) as MoveAction[];
     for (const action of actions) {
       const fighter = player.getFighter(action.fighter.id)!;
-      const startHexId = fighter.currentHexId!;
+      const startHexId = fighter.currentHex!.id;
       let currentHex = game.getHex(startHexId)!;
       for (const nextHexId of action.path) {
         const nextHex = game.getHex(nextHexId)!;
@@ -72,7 +72,7 @@ describe("MoveAbility eligibility", () => {
     const player = game.getPlayer("player:one")!;
 
     const fighter = player.fighters.find(
-      (f) => !f.isSlain && f.currentHexId !== null,
+      (f) => !f.isSlain && f.currentHex !== null,
     )!;
     fighter.hasMoveToken = true;
 

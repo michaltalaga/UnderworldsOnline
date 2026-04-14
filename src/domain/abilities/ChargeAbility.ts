@@ -30,7 +30,7 @@ export class ChargeAbility extends Ability {
 
       return definition.weapons.flatMap((weapon) =>
         opponent.fighters.flatMap((target) => {
-          if (target.isSlain || target.currentHexId === null) return [];
+          if (target.isSlain || target.currentHex === null) return [];
           const targetHex = game.getFighterHex(target);
           if (targetHex === undefined || game.getDistance(destinationHex, targetHex) > weapon.range) return [];
 
@@ -54,7 +54,7 @@ export class ChargeAbility extends Ability {
     if (!this.moveAbility.isLegalAction(game, moveAction) || action.path.length === 0) return false;
 
     const target = action.target;
-    if (target.isSlain || target.currentHexId === null) return false;
+    if (target.isSlain || target.currentHex === null) return false;
 
     const weapon = action.weapon;
     // The weapon must actually belong to the attacker's fighter definition.

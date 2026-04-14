@@ -22,7 +22,7 @@ export class AttackAbility extends Ability {
 
       return definition.weapons.flatMap((weapon) =>
         opponent.fighters.flatMap((target) => {
-          if (target.isSlain || target.currentHexId === null) return [];
+          if (target.isSlain || target.currentHex === null) return [];
           const targetHex = game.getFighterHex(target);
           if (targetHex === undefined || game.getDistance(attackerHex, targetHex) > weapon.range) return [];
 
@@ -45,7 +45,7 @@ export class AttackAbility extends Ability {
     if (!canFighterAttack(attacker)) return false;
 
     const target = action.target;
-    if (target.isSlain || target.currentHexId === null) return false;
+    if (target.isSlain || target.currentHex === null) return false;
 
     const weapon = action.weapon;
     // Verify weapon belongs to attacker.

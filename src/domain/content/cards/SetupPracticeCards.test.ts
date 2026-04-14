@@ -89,9 +89,9 @@ describe("GiveGuardPloy — ploy card exemplar", () => {
     expect(targets.length).toBeGreaterThan(0);
     // Every target is a fighter owned by player:one without a guard token.
     for (const target of targets) {
-      expect("fighterId" in target || "definitionId" in target).toBe(true);
-      const fighter = target as { ownerPlayerId: string; hasGuardToken: boolean };
-      expect(fighter.ownerPlayerId).toBe("player:one");
+      expect("id" in target && "definition" in target).toBe(true);
+      const fighter = target as { owner: { id: string }; hasGuardToken: boolean };
+      expect(fighter.owner.id).toBe("player:one");
       expect(fighter.hasGuardToken).toBe(false);
     }
   });
@@ -129,8 +129,8 @@ describe("GiveGuardPloy — ploy card exemplar", () => {
     const targets = ploy.getLegalTargets(game);
     expect(targets.length).toBeGreaterThan(0);
     for (const target of targets) {
-      const fighter = target as { ownerPlayerId: string; hasStaggerToken: boolean };
-      expect(fighter.ownerPlayerId).toBe("player:two");
+      const fighter = target as { owner: { id: string }; hasStaggerToken: boolean };
+      expect(fighter.owner.id).toBe("player:two");
       expect(fighter.hasStaggerToken).toBe(false);
     }
   });
@@ -176,8 +176,8 @@ describe("PracticeUpgrade — upgrade card exemplar", () => {
     const targets = upgrade.getLegalTargets(game);
     expect(targets.length).toBeGreaterThan(0);
     for (const target of targets) {
-      const fighter = target as { ownerPlayerId: string; isSlain: boolean };
-      expect(fighter.ownerPlayerId).toBe("player:one");
+      const fighter = target as { owner: { id: string }; isSlain: boolean };
+      expect(fighter.owner.id).toBe("player:one");
       expect(fighter.isSlain).toBe(false);
     }
   });

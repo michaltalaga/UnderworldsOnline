@@ -45,7 +45,7 @@ export function removeMovementToken(fighter: Fighter): string[] {
 
 /** Push a fighter one hex in a random valid direction. */
 export function pushOneHex(game: Game, fighter: Fighter): string[] {
-  if (fighter.currentHexId === null) {
+  if (fighter.currentHex === null) {
     return [`${fighter.id} is not on the board`];
   }
   const originHex = game.getFighterHex(fighter);

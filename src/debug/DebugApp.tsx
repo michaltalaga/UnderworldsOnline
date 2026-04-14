@@ -758,7 +758,7 @@ function DebugApp() {
                 <article className="bg-surface-controls border border-[rgba(149,112,71,0.2)] rounded-card p-4" key={reactKey(fighter)}>
                   <p className="m-0 mb-1.5 uppercase tracking-[0.14em] text-[0.72rem] text-accent">{player.name}</p>
                   <h3 className="m-0 font-heading text-[1.15rem]">{getFighterName(debugGame, fighter.id)}</h3>
-                  <p className="mt-1.5 text-ink-soft">{fighter.currentHexId ?? "slain / off-board"}</p>
+                  <p className="mt-1.5 text-ink-soft">{fighter.currentHex?.id ?? "slain / off-board"}</p>
                   <p className="mt-1.5 text-ink-soft">Damage: {fighter.damage}</p>
                   <p className="mt-1.5 text-ink-soft">Tokens: {formatFighterTokens(fighter)}</p>
                 </article>
@@ -1382,7 +1382,7 @@ function formatLatestUpgradeResult(
 
   const playerOne = upgradeDebugSnapshot.game.getPlayer(resolution.playerId);
   const fighter = playerOne?.getFighter(resolution.fighterId);
-  const attachedCount = fighter?.upgradeCardIds.length ?? 0;
+  const attachedCount = fighter?.upgrades.length ?? 0;
   return `Glory ${upgradeDebugSnapshot.gloryBeforeUpgrades} to ${upgradeDebugSnapshot.gloryAfterUpgrades}. ${resolution.fighterName} now has ${attachedCount} attached upgrade${attachedCount === 1 ? "" : "s"}.`;
 }
 

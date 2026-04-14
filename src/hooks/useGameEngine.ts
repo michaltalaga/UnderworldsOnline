@@ -129,10 +129,7 @@ export function useGameEngine({ warband, deck = null }: UseGameEngineOptions) {
     selectedFighterId === null || activePlayer === null
       ? null
       : activePlayer.getFighter(selectedFighterId) ?? null;
-  const selectedFighterHex =
-    selectedFighter?.currentHexId === null || selectedFighter?.currentHexId === undefined
-      ? null
-      : game.board.getHex(selectedFighter.currentHexId) ?? null;
+  const selectedFighterHex = selectedFighter?.currentHex ?? null;
   const selectedFeatureToken =
     selectedFighterHex?.featureTokenId === null || selectedFighterHex?.featureTokenId === undefined
       ? null

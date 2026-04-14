@@ -207,7 +207,7 @@ describe("BlazingAssault ploys — power-step friendly targeting", () => {
     const ploy = new WingsOfWar("wow-test", owner, CardZone.PowerHand);
     const targets = ploy.getLegalTargets(game);
     expect(targets.length).toBeGreaterThan(0);
-    for (const t of targets) expect((t as { ownerPlayerId: string }).ownerPlayerId).toBe("player:one");
+    for (const t of targets) expect((t as { owner: { id: string } }).owner.id).toBe("player:one");
   });
 
   it("Sidestep targets friendly on-board fighters in power step", () => {
@@ -267,7 +267,7 @@ describe("BlazingAssault ploys — power-step friendly targeting", () => {
     // Ring-2 covers much of the board on Embergard1; at least one should qualify.
     const targets = ploy.getLegalTargets(game);
     for (const t of targets) {
-      expect((t as { ownerPlayerId: string }).ownerPlayerId).toBe("player:one");
+      expect((t as { owner: { id: string } }).owner.id).toBe("player:one");
     }
     // Targets array may legitimately be empty on very spread-out boards,
     // so we only assert the shape, not a lower bound.

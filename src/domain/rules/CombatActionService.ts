@@ -120,11 +120,11 @@ export class CombatActionService extends LegalActionService {
     }
 
     const fighter = player.getFighter(action.fighter.id);
-    if (fighter === undefined || fighter.isSlain || fighter.currentHexId === null) {
+    if (fighter === undefined || fighter.isSlain || fighter.currentHex === null) {
       return false;
     }
 
-    const fighterHex = game.getHex(fighter.currentHexId);
+    const fighterHex = fighter.currentHex;
     const featureToken = game.getFeatureToken(action.featureToken.id);
     if (fighterHex === undefined || featureToken === undefined) {
       return false;

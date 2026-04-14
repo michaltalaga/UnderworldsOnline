@@ -592,14 +592,9 @@ function applyDebugDefenderFeatureToken(
   defenderState: CombatDebugDefenderState,
 ): void {
   const defender = game.getFighter(defenderId);
-  const defenderHexId = defender?.currentHexId;
-  if (defender === undefined || defenderHexId === null || defenderHexId === undefined) {
+  const defenderHex = defender?.currentHex ?? null;
+  if (defender === undefined || defenderHex === null) {
     throw new Error(`Could not place debug feature token state for defender ${defenderId}.`);
-  }
-
-  const defenderHex = game.board.getHex(defenderHexId);
-  if (defenderHex === undefined) {
-    throw new Error(`Could not find debug defender hex ${defenderHexId}.`);
   }
 
   const existingFeatureToken = defenderHex.featureToken;
@@ -636,14 +631,9 @@ function getDefenderFeatureTokenSnapshot(
   defenderId: string,
 ): CombatDebugFeatureTokenSnapshot {
   const defender = game.getFighter(defenderId);
-  const fighterHexId = defender?.currentHexId;
-  if (defender === undefined || fighterHexId === null || fighterHexId === undefined) {
+  const fighterHex = defender?.currentHex ?? null;
+  if (defender === undefined || fighterHex === null) {
     throw new Error(`Could not capture feature token snapshot for defender ${defenderId}.`);
-  }
-
-  const fighterHex = game.board.getHex(fighterHexId);
-  if (fighterHex === undefined) {
-    throw new Error(`Could not find defender hex ${fighterHexId} for feature token snapshot.`);
   }
 
   if (fighterHex.featureTokenId === null) {

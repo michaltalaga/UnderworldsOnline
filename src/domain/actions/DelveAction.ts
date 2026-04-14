@@ -23,11 +23,10 @@ export const DelveActionProvider: LegalActionProvider = {
     if (player.hasDelvedThisPowerStep) return [];
 
     return player.fighters.flatMap((fighter) => {
-      if (fighter.isSlain || fighter.currentHexId === null) return [];
-      const fighterHex = game.getFighterHex(fighter);
-      if (fighterHex?.featureTokenId === null || fighterHex?.featureTokenId === undefined) return [];
-      const featureToken = game.getFeatureToken(fighterHex.featureTokenId);
-      if (featureToken === undefined || featureToken.hexId !== fighterHex.id || featureToken.side === FeatureTokenSide.Hidden) {
+      if (fighter.isSlain || fighter.currentHex === null) return [];
+      const fighterHex = fighter.currentHex;
+      const featureToken = fighterHex.featureToken;
+      if (featureToken === null || featureToken.hex !== fighterHex || featureToken.side === FeatureTokenSide.Hidden) {
         return [];
       }
       return [new DelveAction(player, fighter, featureToken)];

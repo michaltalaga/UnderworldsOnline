@@ -73,7 +73,7 @@ describe("AttackAction eligibility", () => {
       expect(attack.player.id).toBe("player:one");
       const target = game.getFighter(attack.target.id)!;
       expect(target.isSlain).toBe(false);
-      expect(target.ownerPlayerId).toBe("player:two");
+      expect(target.owner.id).toBe("player:two");
     }
   });
 });

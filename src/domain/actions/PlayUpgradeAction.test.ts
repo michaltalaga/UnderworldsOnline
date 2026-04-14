@@ -56,7 +56,7 @@ describe("PlayUpgradeAction eligibility", () => {
     expect(plays.length).toBeGreaterThan(0);
     for (const play of plays) {
       const fighter = game.getFighter(play.fighter.id);
-      expect(fighter?.ownerPlayerId).toBe("player:one");
+      expect(fighter?.owner.id).toBe("player:one");
       expect(fighter?.isSlain).toBe(false);
     }
   });

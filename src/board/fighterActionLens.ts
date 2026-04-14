@@ -41,9 +41,9 @@ function collectCurrentHexIds(game: Game, fighterIds: Iterable<FighterId>): Set<
   return new Set(
     [...fighterIds].flatMap((fighterId) => {
       const target = game.getFighter(fighterId);
-      return target === undefined || target.currentHexId === null
+      return target === undefined || target.currentHex === null
         ? []
-        : [target.currentHexId];
+        : [target.currentHex.id];
     }),
   );
 }
@@ -667,7 +667,7 @@ export function getDefaultSelectableFighterId(game: Game): FighterId | null {
   }
 
   const activePlayer = game.getPlayer(activePlayerId);
-  return activePlayer?.fighters.find((fighter) => !fighter.isSlain && fighter.currentHexId !== null)?.id ?? null;
+  return activePlayer?.fighters.find((fighter) => !fighter.isSlain && fighter.currentHex !== null)?.id ?? null;
 }
 
 export function getNextSelectedFighterId(
@@ -682,7 +682,7 @@ export function getNextSelectedFighterId(
   ) {
     const activePlayer = game.getPlayer(game.activePlayerId);
     const fighter = activePlayer?.getFighter(previousSelectedFighterId);
-    if (fighter !== undefined && !fighter.isSlain && fighter.currentHexId !== null) {
+    if (fighter !== undefined && !fighter.isSlain && fighter.currentHex !== null) {
       return fighter.id;
     }
   }

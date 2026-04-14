@@ -57,7 +57,7 @@ describe("PlayPloyAction eligibility", () => {
     for (const play of playsForPloy) {
       expect(play.targetFighter?.id).not.toBeNull();
       const fighter = game.getFighter(play.targetFighter?.id!);
-      expect(fighter?.ownerPlayerId).toBe("player:one");
+      expect(fighter?.owner.id).toBe("player:one");
     }
   });
 
@@ -128,7 +128,7 @@ describe("PlayPloyAction resolution", () => {
     expect(plays.length).toBeGreaterThan(0);
     for (const play of plays) {
       const target = game.getFighter(play.targetFighter?.id!);
-      expect(target?.ownerPlayerId).toBe("player:two");
+      expect(target?.owner.id).toBe("player:two");
       expect(target?.hasStaggerToken).toBe(false);
     }
   });

@@ -38,7 +38,7 @@ export class UpgradeCard extends Card {
   /** Which fighters can receive this upgrade? Default: alive on-board friendly fighters. */
   protected getTargets(_game: Game): Target[] {
     return this.owner.fighters.filter(
-      (f) => !f.isSlain && f.currentHexId !== null,
+      (f) => !f.isSlain && f.currentHex !== null,
     );
   }
 

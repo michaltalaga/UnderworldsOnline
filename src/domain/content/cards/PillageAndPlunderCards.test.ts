@@ -210,7 +210,7 @@ describe("PillageAndPlunder ploys — power step", () => {
     expect(ploy.getLegalTargets(game)).toEqual([]);
 
     // Give one fighter a charge token and re-check.
-    const f = owner.fighters.find((x) => !x.isSlain && x.currentHexId !== null)!;
+    const f = owner.fighters.find((x) => !x.isSlain && x.currentHex !== null)!;
     f.hasChargeToken = true;
     expect(ploy.getLegalTargets(game)).toContain(f);
   });

@@ -61,7 +61,7 @@ export class MoveAbility extends Ability {
     const moveDistance = getEffectiveMove(definition, action.player, fighter);
     if (action.path.length === 0 || action.path.length > moveDistance) return false;
 
-    const visited = new Set<HexId>([fighter.currentHexId]);
+    const visited = new Set<HexId>([fighter.currentHex.id]);
     let currentHex = game.getFighterHex(fighter);
     if (currentHex === undefined) return false;
 

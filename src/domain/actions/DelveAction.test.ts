@@ -35,7 +35,7 @@ function revealFeatureTokenAndPlaceFriendly(
   // Find a friendly fighter that's alive and on the board — warp them
   // onto the feature-token hex so delve becomes legal.
   const fighter = player.fighters.find(
-    (f) => !f.isSlain && f.currentHexId !== null,
+    (f) => !f.isSlain && f.currentHex !== null,
   );
   if (fighter === undefined) return null;
 
