@@ -1,4 +1,3 @@
-import type { PlayerId, WarscrollDefinitionId } from "../values/ids";
 import type { WarscrollDefinition } from "../definitions/WarscrollDefinition";
 import type { Player } from "./Player";
 
@@ -15,13 +14,5 @@ export class Warscroll {
     this.owner = owner;
     this.definition = definition;
     this.tokens = tokens;
-  }
-
-  public get ownerPlayerId(): PlayerId {
-    return this.owner.id;
-  }
-
-  public get definitionId(): WarscrollDefinitionId {
-    return this.definition.id;
   }
 }

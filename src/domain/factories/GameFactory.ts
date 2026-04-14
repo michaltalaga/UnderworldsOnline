@@ -126,14 +126,14 @@ export class GameFactory {
   }
 
   private createBoard(board: Board): Board {
-    const frontHexes = this.createSideHexes(board.getHexesForSide(BoardSide.Front));
-    const frontTerritories = this.createSideTerritories(board.getTerritoriesForSide(BoardSide.Front));
-    const backHexes = board.getAvailableSides().includes(BoardSide.Back)
-      ? this.createSideHexes(board.getHexesForSide(BoardSide.Back))
-      : [];
-    const backTerritories = board.getAvailableSides().includes(BoardSide.Back)
-      ? this.createSideTerritories(board.getTerritoriesForSide(BoardSide.Back))
-      : [];
+    const { hexes: frontHexes, territories: frontTerritories } = this.createSide(
+      board.getHexesForSide(BoardSide.Front),
+      board.getTerritoriesForSide(BoardSide.Front),
+    );
+    const hasBack = board.getAvailableSides().includes(BoardSide.Back);
+    const { hexes: backHexes, territories: backTerritories } = hasBack
+      ? this.createSide(board.getHexesForSide(BoardSide.Back), board.getTerritoriesForSide(BoardSide.Back))
+      : { hexes: [], territories: [] };
 
     return new Board(
       board.layoutId,
@@ -144,6 +144,41 @@ export class GameFactory {
       backHexes,
       backTerritories,
     );
+  }
+
+  // Fresh hexes and territories are wired up together: new hexes point at
+  // new territories (not the originals), and each new territory's `hexes`
+  // array contains the new hex refs.
+  private createSide(
+    sourceHexes: readonly HexCell[],
+    sourceTerritories: readonly Territory[],
+  ): { hexes: HexCell[]; territories: Territory[] } {
+    const territories = sourceTerritories.map(
+      (territory) => new Territory(territory.id, territory.name, null, []),
+    );
+    const territoryByOriginal = new Map<Territory, Territory>();
+    sourceTerritories.forEach((source, index) => territoryByOriginal.set(source, territories[index]));
+
+    const hexes = sourceHexes.map(
+      (hex) =>
+        new HexCell(
+          hex.id,
+          hex.q,
+          hex.r,
+          hex.kind,
+          hex.isStartingHex,
+          hex.isEdgeHex,
+          hex.territory === null ? null : territoryByOriginal.get(hex.territory) ?? null,
+          null,
+          null,
+        ),
+    );
+
+    for (const territory of territories) {
+      territory.hexes = hexes.filter((hex) => hex.territory === territory);
+    }
+
+    return { hexes, territories };
   }
 
   private validatePlayers(players: readonly GameFactoryPlayerConfig[]): void {
@@ -191,30 +226,6 @@ export class GameFactory {
     if (new Set(values).size !== values.length) {
       throw new Error(`Expected unique ${label}.`);
     }
-  }
-
-  private createSideHexes(hexes: readonly HexCell[]): HexCell[] {
-    return hexes.map(
-      (hex) =>
-        new HexCell(
-          hex.id,
-          hex.q,
-          hex.r,
-          hex.kind,
-          hex.isStartingHex,
-          hex.isEdgeHex,
-          hex.territory,
-          null,
-          null,
-        ),
-    );
-  }
-
-  private createSideTerritories(territories: readonly Territory[]): Territory[] {
-    return territories.map(
-      (territory) =>
-        new Territory(territory.id, territory.name, null, [...territory.hexes]),
-    );
   }
 
   private validateBoardSide(

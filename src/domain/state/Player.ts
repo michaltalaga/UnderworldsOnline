@@ -1,7 +1,6 @@
 import type {
   FighterId,
   PlayerId,
-  TerritoryId,
   WeaponDefinitionId,
 } from "../values/ids";
 import { DeckKind } from "../values/enums";
@@ -73,11 +72,6 @@ export class Player {
     this.scoredObjectives = scoredObjectives;
     this.equippedUpgrades = equippedUpgrades;
     this.warscrollState = warscrollState ?? new Warscroll(this, warband.warscroll);
-  }
-
-  /** Legacy id-shaped getter — derived from `territory`. */
-  public get territoryId(): TerritoryId | null {
-    return this.territory?.id ?? null;
   }
 
   public getFighter(fighterId: FighterId): Fighter | undefined {

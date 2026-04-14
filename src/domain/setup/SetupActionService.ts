@@ -84,7 +84,7 @@ export class SetupActionService {
 
   private getLegalDeployActions(game: Game): SetupAction[] {
     const player = this.getActivePlayer(game);
-    if (player === null || player.territoryId === null) {
+    if (player === null || player.territory === null) {
       return [];
     }
 
@@ -120,15 +120,15 @@ export class SetupActionService {
   }
 
   private getLegalDeploymentHexes(game: Game, player: Player): HexCell[] {
-    const territoryId = player.territoryId;
-    if (territoryId === null) {
+    const territory = player.territory;
+    if (territory === null) {
       return [];
     }
 
     return game.board.hexes.filter(
       (hex) =>
         hex.isStartingHex &&
-        hex.territory?.id === territoryId &&
+        hex.territory === territory &&
         hex.occupantFighter === null,
     );
   }
@@ -182,7 +182,7 @@ export class SetupActionService {
     }
 
     return game.players.every(
-      (player) => player.territoryId !== null && occupiedTerritories.has(player.territoryId),
+      (player) => player.territory !== null && occupiedTerritories.has(player.territory.id),
     );
   }
 

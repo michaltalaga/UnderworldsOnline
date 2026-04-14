@@ -2588,7 +2588,7 @@ export class GameEngine {
     }
 
     return game.players.every(
-      (player) => player.territoryId !== null && occupiedTerritories.has(player.territoryId),
+      (player) => player.territory !== null && occupiedTerritories.has(player.territory.id),
     );
   }
 
@@ -2651,11 +2651,11 @@ export class GameEngine {
   }
 
   private requirePlayerTerritory(player: Player): TerritoryId {
-    if (player.territoryId === null) {
+    if (player.territory === null) {
       throw new Error(`Player ${player.name} does not have an assigned territory.`);
     }
 
-    return player.territoryId;
+    return player.territory.id;
   }
 
   private requirePlayer(game: Game, playerId: PlayerId | null): Player {
