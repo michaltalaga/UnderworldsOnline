@@ -1,12 +1,12 @@
-import type { PlayerId } from "../values/ids";
+import type { Player } from "../state/Player";
 import { GameActionKind } from "../values/enums";
 
 export abstract class GameAction {
   public readonly kind: GameActionKind;
-  public readonly playerId: PlayerId;
+  public readonly player: Player;
 
-  protected constructor(kind: GameActionKind, playerId: PlayerId) {
+  protected constructor(kind: GameActionKind, player: Player) {
     this.kind = kind;
-    this.playerId = playerId;
+    this.player = player;
   }
 }

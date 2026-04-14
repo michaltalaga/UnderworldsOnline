@@ -51,7 +51,7 @@ describe("AttackAction eligibility", () => {
     // PassAction does NOT count as a core ability — it transitions to
     // the power step, after which all attacks disappear because they
     // require the action step.
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
 
     const attacksAfter = getLegalActionsOfType(
       service,
@@ -70,8 +70,8 @@ describe("AttackAction eligibility", () => {
     // If none are legal from the deployed start position, the guarantee
     // below is vacuous — still verify the shape of any that exist.
     for (const attack of attacks) {
-      expect(attack.playerId).toBe("player:one");
-      const target = game.getFighter(attack.targetId)!;
+      expect(attack.player.id).toBe("player:one");
+      const target = game.getFighter(attack.target.id)!;
       expect(target.isSlain).toBe(false);
       expect(target.ownerPlayerId).toBe("player:two");
     }
@@ -81,12 +81,16 @@ describe("AttackAction eligibility", () => {
 describe("AttackAction resolution", () => {
   it("rejects an attack from the wrong player", () => {
     const { game, engine } = createGameInActionStep("player:one");
+    const service = new CombatActionService();
+    const attacks = getLegalActionsOfType(service, game, "player:one", AttackAction);
+    if (attacks.length === 0) return; // vacuous when no attacks legal here
 
+    // Same attack but attributed to the non-active player.
     const illegalAttack = new AttackAction(
-      "player:two",
-      "fighter:fake",
-      "fighter:also-fake",
-      "weapon-def:setup-practice:1",
+      game.getPlayer("player:two")!,
+      attacks[0].attacker,
+      attacks[0].target,
+      attacks[0].weapon,
     );
     expect(() => engine.applyGameAction(game, illegalAttack)).toThrow();
   });
@@ -98,11 +102,13 @@ describe("AttackAction resolution", () => {
     const attacks = getLegalActionsOfType(service, game, "player:one", AttackAction);
     if (attacks.length === 0) return; // vacuous when no attacks legal here
 
+    const template = attacks[0];
+    const fakeWeapon = { ...template.weapon, id: "weapon-def:not-a-real-weapon" as never };
     const bogus = new AttackAction(
-      attacks[0].playerId,
-      attacks[0].attackerId,
-      attacks[0].targetId,
-      "weapon-def:not-a-real-weapon",
+      template.player,
+      template.attacker,
+      template.target,
+      fakeWeapon as unknown as typeof template.weapon,
     );
     expect(() => engine.applyGameAction(game, bogus)).toThrow();
   });
@@ -117,16 +123,16 @@ describe("AttackAction resolution", () => {
     const template = attacks[0];
     const weapon = game
       .getPlayer("player:one")!
-      .getFighterWeaponDefinition(template.attackerId, template.weaponId)!;
-    const scriptedRoll = attackBlanks(weapon.attackDice);
+      .getFighterWeaponDefinition(template.attacker.id, template.weapon.id)!;
+    const scriptedRoll = attackBlanks(weapon.dice);
 
     engine.applyGameAction(
       game,
       new AttackAction(
-        template.playerId,
-        template.attackerId,
-        template.targetId,
-        template.weaponId,
+        template.player,
+        template.attacker,
+        template.target,
+        template.weapon,
         null,
         scriptedRoll,
         null,
@@ -149,24 +155,24 @@ describe("AttackAction resolution", () => {
     const template = attacks[0];
     const weapon = game
       .getPlayer("player:one")!
-      .getFighterWeaponDefinition(template.attackerId, template.weaponId)!;
+      .getFighterWeaponDefinition(template.attacker.id, template.weapon.id)!;
 
     engine.applyGameAction(
       game,
       new AttackAction(
-        template.playerId,
-        template.attackerId,
-        template.targetId,
-        template.weaponId,
+        template.player,
+        template.attacker,
+        template.target,
+        template.weapon,
         null,
-        attackBlanks(weapon.attackDice),
+        attackBlanks(weapon.dice),
         null,
       ),
     );
 
-    engine.applyGameAction(game, new ConfirmCombatAction("player:one"));
-    engine.applyGameAction(game, new ConfirmCombatAction("player:one"));
-    engine.applyGameAction(game, new ConfirmCombatAction("player:one"));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
 
     const combatRecords = game.getEventHistory(GameRecordKind.Combat);
     expect(combatRecords).toHaveLength(1);
@@ -174,7 +180,7 @@ describe("AttackAction resolution", () => {
     const resolved = findEvents(game, CombatResolvedEvent);
     expect(resolved).toHaveLength(1);
 
-    const target = game.getFighter(template.targetId)!;
+    const target = game.getFighter(template.target.id)!;
     expect(target.damage).toBe(0);
     expect(target.isSlain).toBe(false);
   });

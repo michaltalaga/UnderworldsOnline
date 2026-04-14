@@ -28,8 +28,8 @@ describe("GuardAction eligibility", () => {
 
     expect(guards.length).toBeGreaterThan(0);
     for (const guard of guards) {
-      expect(guard.playerId).toBe("player:one");
-      const fighter = game.getFighter(guard.fighterId)!;
+      expect(guard.player.id).toBe("player:one");
+      const fighter = game.getFighter(guard.fighter.id)!;
       expect(fighter.hasGuardToken).toBe(false);
     }
   });
@@ -61,19 +61,19 @@ describe("GuardAction eligibility", () => {
 
     // Manually set the guard token on the first eligible fighter and
     // re-query: the guard for that fighter should have dropped.
-    game.getFighter(first.fighterId)!.hasGuardToken = true;
+    game.getFighter(first.fighter.id)!.hasGuardToken = true;
 
     const afterIds = getLegalActionsOfType(
       service,
       game,
       "player:one",
       GuardAction,
-    ).map((g) => g.fighterId);
+    ).map((g) => g.fighter.id);
 
-    expect(afterIds).not.toContain(first.fighterId);
+    expect(afterIds).not.toContain(first.fighter.id);
     // Other fighters still have legal guards.
     for (const other of rest) {
-      expect(afterIds).toContain(other.fighterId);
+      expect(afterIds).toContain(other.fighter.id);
     }
   });
 });
@@ -86,7 +86,7 @@ describe("GuardAction resolution", () => {
 
     engine.applyGameAction(game, guard);
 
-    const fighter = game.getFighter(guard.fighterId)!;
+    const fighter = game.getFighter(guard.fighter.id)!;
     expect(fighter.hasGuardToken).toBe(true);
 
     const guarded = findLatestEvent(game, FighterGuardedEvent);
@@ -105,7 +105,7 @@ describe("GuardAction resolution", () => {
     const records = game.getEventHistory(GameRecordKind.Guard);
     expect(records).toHaveLength(1);
     expect(records[0].invokedByPlayerId).toBe("player:one");
-    expect(records[0].invokedByFighterId).toBe(guard.fighterId);
+    expect(records[0].invokedByFighterId).toBe(guard.fighter.id);
   });
 
   it("consumes the action step — no further moves are legal afterwards", () => {
@@ -130,7 +130,7 @@ describe("GuardAction resolution", () => {
     const service = new CombatActionService();
     const guard = expectFirstLegalActionOfType(service, game, "player:one", GuardAction);
 
-    const illegal = new GuardAction("player:two", guard.fighterId);
+    const illegal = new GuardAction(game.getPlayer("player:two")!, guard.fighter);
     expect(() => engine.applyGameAction(game, illegal)).toThrow();
   });
 });

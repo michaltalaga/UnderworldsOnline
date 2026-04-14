@@ -1,18 +1,18 @@
-import type { FighterId, PlayerId } from "../values/ids";
 import { GameActionKind } from "../values/enums";
 import { GameAction } from "./GameAction";
 import type { LegalActionProvider } from "./LegalActionProvider";
 import type { Game } from "../state/Game";
 import type { Player } from "../state/Player";
+import type { Fighter } from "../state/Fighter";
 import { GuardAbility } from "../abilities/GuardAbility";
 import { hasUsedCoreAbilityThisActionStep } from "../rules/actionStepQueries";
 
 export class GuardAction extends GameAction {
-  public readonly fighterId: FighterId;
+  public readonly fighter: Fighter;
 
-  public constructor(playerId: PlayerId, fighterId: FighterId) {
-    super(GameActionKind.Guard, playerId);
-    this.fighterId = fighterId;
+  public constructor(player: Player, fighter: Fighter) {
+    super(GameActionKind.Guard, player);
+    this.fighter = fighter;
   }
 }
 

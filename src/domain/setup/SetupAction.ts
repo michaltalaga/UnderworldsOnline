@@ -1,12 +1,12 @@
+import type { Player } from "../state/Player";
 import type { SetupActionKind } from "../values/enums";
-import type { PlayerId } from "../values/ids";
 
 export abstract class SetupAction {
   public readonly kind: SetupActionKind;
-  public readonly playerId: PlayerId | null;
+  public readonly player: Player | null;
 
-  protected constructor(kind: SetupActionKind, playerId: PlayerId | null = null) {
+  protected constructor(kind: SetupActionKind, player: Player | null = null) {
     this.kind = kind;
-    this.playerId = playerId;
+    this.player = player;
   }
 }

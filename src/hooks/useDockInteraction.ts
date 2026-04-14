@@ -61,7 +61,7 @@ export function useDockInteraction({
       kind: "mulligan",
       onResolve: (redrawObjectives: boolean, redrawPower: boolean) =>
         applySetupAction(
-          new ResolveMulliganAction(localPlayer.id, redrawObjectives, redrawPower),
+          new ResolveMulliganAction(localPlayer, redrawObjectives, redrawPower),
         ),
     };
   }

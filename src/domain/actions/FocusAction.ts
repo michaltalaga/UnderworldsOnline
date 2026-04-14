@@ -1,20 +1,24 @@
-import type { CardId, PlayerId } from "../values/ids";
 import { GameActionKind } from "../values/enums";
 import { GameAction } from "./GameAction";
 import type { LegalActionProvider } from "./LegalActionProvider";
 import type { Game } from "../state/Game";
 import type { Player } from "../state/Player";
+import type { Card } from "../cards/Card";
 import { FocusAbility } from "../abilities/FocusAbility";
 import { hasUsedCoreAbilityThisActionStep } from "../rules/actionStepQueries";
 
 export class FocusAction extends GameAction {
-  public readonly objectiveCardIds: CardId[];
-  public readonly powerCardIds: CardId[];
+  public readonly objectiveCards: Card[];
+  public readonly powerCards: Card[];
 
-  public constructor(playerId: PlayerId, objectiveCardIds: CardId[] = [], powerCardIds: CardId[] = []) {
-    super(GameActionKind.Focus, playerId);
-    this.objectiveCardIds = objectiveCardIds;
-    this.powerCardIds = powerCardIds;
+  public constructor(
+    player: Player,
+    objectiveCards: Card[] = [],
+    powerCards: Card[] = [],
+  ) {
+    super(GameActionKind.Focus, player);
+    this.objectiveCards = objectiveCards;
+    this.powerCards = powerCards;
   }
 }
 

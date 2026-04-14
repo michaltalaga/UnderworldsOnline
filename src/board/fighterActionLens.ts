@@ -50,14 +50,14 @@ function collectCurrentHexIds(game: Game, fighterIds: Iterable<FighterId>): Set<
 
 // Buckets actions by their target fighter so profile builders can walk the
 // groups without re-implementing the grouping inline.
-function groupByTargetId<T extends { readonly targetId: FighterId }>(
+function groupByTargetId<T extends { readonly target: { readonly id: FighterId } }>(
   actions: readonly T[],
 ): Map<FighterId, T[]> {
   const byTarget = new Map<FighterId, T[]>();
   for (const action of actions) {
-    const existing = byTarget.get(action.targetId);
+    const existing = byTarget.get(action.target.id);
     if (existing === undefined) {
-      byTarget.set(action.targetId, [action]);
+      byTarget.set(action.target.id, [action]);
     } else {
       existing.push(action);
     }
@@ -118,22 +118,22 @@ export function getFighterActionLens(
   }
 
   const attackActions = legalActions.filter(
-    (action): action is AttackAction => action instanceof AttackAction && action.attackerId === selectedFighterId,
+    (action): action is AttackAction => action instanceof AttackAction && action.attacker.id === selectedFighterId,
   );
   const moveActions = legalActions.filter(
-    (action): action is MoveAction => action instanceof MoveAction && action.fighterId === selectedFighterId,
+    (action): action is MoveAction => action instanceof MoveAction && action.fighter.id === selectedFighterId,
   );
   const chargeActions = legalActions.filter(
-    (action): action is ChargeAction => action instanceof ChargeAction && action.fighterId === selectedFighterId,
+    (action): action is ChargeAction => action instanceof ChargeAction && action.fighter.id === selectedFighterId,
   );
   const delveAction = legalActions.find(
-    (action): action is DelveAction => action instanceof DelveAction && action.fighterId === selectedFighterId,
+    (action): action is DelveAction => action instanceof DelveAction && action.fighter.id === selectedFighterId,
   ) ?? null;
   const guardAction = legalActions.find(
-    (action): action is GuardAction => action instanceof GuardAction && action.fighterId === selectedFighterId,
+    (action): action is GuardAction => action instanceof GuardAction && action.fighter.id === selectedFighterId,
   ) ?? null;
 
-  const attackTargetIds = new Set<FighterId>(attackActions.map((action) => action.targetId));
+  const attackTargetIds = new Set<FighterId>(attackActions.map((action) => action.target.id));
   const attackTargetHexIds = collectCurrentHexIds(game, attackTargetIds);
   const moveHexIds = new Set<HexId>(
     moveActions.flatMap((action) => {
@@ -147,12 +147,12 @@ export function getFighterActionLens(
       return destinationHexId === undefined ? [] : [destinationHexId];
     }),
   );
-  const chargeTargetIds = new Set<FighterId>(chargeActions.map((action) => action.targetId));
+  const chargeTargetIds = new Set<FighterId>(chargeActions.map((action) => action.target.id));
   const chargeTargetHexIds = collectCurrentHexIds(game, chargeTargetIds);
   const uniqueChargeOptions = new Set(
     chargeActions.flatMap((action) => {
       const destinationHexId = getDestinationHexId(action);
-      return destinationHexId === undefined ? [] : [`${destinationHexId}:${action.targetId}`];
+      return destinationHexId === undefined ? [] : [`${destinationHexId}:${action.target.id}`];
     }),
   );
 
@@ -264,7 +264,7 @@ export function getChargeTargetIdsForHex(
     return actionLens.chargeTargetIds;
   }
 
-  return new Set(getChargeActionsForHex(actionLens, hexId).map((action) => action.targetId));
+  return new Set(getChargeActionsForHex(actionLens, hexId).map((action) => action.target.id));
 }
 
 export function getChargeTargetHexIdsForHex(
@@ -285,7 +285,7 @@ export function getChargeDestinationHexIdsForTarget(
 
   return new Set(
     actionLens.chargeActions.flatMap((action) => {
-      if (action.targetId !== targetId) {
+      if (action.target.id !== targetId) {
         return [];
       }
 
@@ -300,7 +300,7 @@ export function getPreferredChargeDestinationForTarget(
   targetId: FighterId,
 ): HexId | null {
   const candidates = actionLens.chargeActions.filter(
-    (action) => action.targetId === targetId && getDestinationHexId(action) !== undefined,
+    (action) => action.target.id === targetId && getDestinationHexId(action) !== undefined,
   );
 
   const bestAction = pickBestBy(candidates, (candidate, current) => {
@@ -334,7 +334,7 @@ export function getChargeActionForTarget(
   }
 
   const candidates = getChargeActionsForHex(actionLens, hexId).filter(
-    (action) => action.targetId === targetId,
+    (action) => action.target.id === targetId,
   );
 
   if (preferredChargeKey !== null) {
@@ -351,7 +351,7 @@ export function getChargeActionForTarget(
 
 export function getChargeActionKey(action: ChargeAction): string {
   const destinationHexId = getDestinationHexId(action) ?? "unknown";
-  return `${action.fighterId}:${destinationHexId}:${action.targetId}:${action.weaponId}:${action.selectedAbility ?? "base"}`;
+  return `${action.fighter.id}:${destinationHexId}:${action.target.id}:${action.weapon.id}:${action.selectedAbility ?? "base"}`;
 }
 
 export function getChargePairKey(
@@ -375,7 +375,7 @@ export function getAttackActionForTarget(
   preferredAttackKey: string | null = null,
 ): AttackAction | null {
   const candidates = actionLens.attackActions.filter(
-    (action) => action.targetId === targetId,
+    (action) => action.target.id === targetId,
   );
 
   if (preferredAttackKey !== null) {
@@ -391,7 +391,7 @@ export function getAttackActionForTarget(
 }
 
 export function getAttackActionKey(action: AttackAction): string {
-  return `${action.attackerId}:${action.targetId}:${action.weaponId}:${action.selectedAbility ?? "base"}`;
+  return `${action.attacker.id}:${action.target.id}:${action.weapon.id}:${action.selectedAbility ?? "base"}`;
 }
 
 export function getSelectedAttackKeyForTarget(
@@ -465,11 +465,11 @@ export function getChargePreviewByTarget(
 
   for (const action of actionLens.chargeActions) {
     const label = formatProfilePreviewLabel(
-      describeWeaponProfile(activePlayer, action.fighterId, action.weaponId, action.selectedAbility).label,
+      describeWeaponProfile(activePlayer, action.fighter.id, action.weapon.id, action.selectedAbility).label,
     );
-    const existingLabels = labelsByTarget.get(action.targetId);
+    const existingLabels = labelsByTarget.get(action.target.id);
     if (existingLabels === undefined) {
-      labelsByTarget.set(action.targetId, new Set([label]));
+      labelsByTarget.set(action.target.id, new Set([label]));
     } else {
       existingLabels.add(label);
     }
@@ -571,7 +571,7 @@ export function getChargeProfiles(
       defaultKey: getChargeActionKey(defaultAction),
       selectedKey: getChargeActionKey(selectedAction),
       options: actions.map((action) => {
-        const description = describeWeaponProfile(activePlayer, action.fighterId, action.weaponId, action.selectedAbility);
+        const description = describeWeaponProfile(activePlayer, action.fighter.id, action.weapon.id, action.selectedAbility);
         return {
           key: getChargeActionKey(action),
           label: description.label,
@@ -590,7 +590,7 @@ function describeAttackAction(
   label: string;
   stats: string;
 } {
-  return describeWeaponProfile(player, action.attackerId, action.weaponId, action.selectedAbility);
+  return describeWeaponProfile(player, action.attacker.id, action.weapon.id, action.selectedAbility);
 }
 
 function describeWeaponProfile(
@@ -633,7 +633,7 @@ export function getChargeOptions(
       continue;
     }
 
-    const key = `${destinationHexId}:${action.targetId}`;
+    const key = `${destinationHexId}:${action.target.id}`;
     const existingAction = byKey.get(key);
     if (existingAction === undefined || prefersBaseAbility(action, existingAction)) {
       byKey.set(key, action);
@@ -643,7 +643,7 @@ export function getChargeOptions(
   return [...byKey.entries()]
     .map(([key, action]) => {
       const destinationHexId = getDestinationHexId(action);
-      const targetName = getFighterName(game, action.targetId);
+      const targetName = getFighterName(game, action.target.id);
       return destinationHexId === undefined
         ? null
         : {

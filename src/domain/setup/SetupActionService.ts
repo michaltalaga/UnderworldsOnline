@@ -51,10 +51,10 @@ export class SetupActionService {
     }
 
     return [
-      new ResolveMulliganAction(player.id, false, false),
-      new ResolveMulliganAction(player.id, true, false),
-      new ResolveMulliganAction(player.id, false, true),
-      new ResolveMulliganAction(player.id, true, true),
+      new ResolveMulliganAction(player, false, false),
+      new ResolveMulliganAction(player, true, false),
+      new ResolveMulliganAction(player, false, true),
+      new ResolveMulliganAction(player, true, true),
     ];
   }
 
@@ -66,7 +66,7 @@ export class SetupActionService {
 
     return this.getBoardSides(game).flatMap((boardSide) =>
       game.board.getTerritoriesForSide(boardSide).map(
-        (territory) => new ChooseTerritoryAction(player.id, boardSide, territory.id),
+        (territory) => new ChooseTerritoryAction(player, boardSide, territory),
       ),
     );
   }
@@ -78,7 +78,7 @@ export class SetupActionService {
     }
 
     return this.getLegalFeaturePlacementHexes(game).map(
-      (hex) => new PlaceFeatureTokenAction(player.id, hex.id),
+      (hex) => new PlaceFeatureTokenAction(player, hex),
     );
   }
 
@@ -90,7 +90,7 @@ export class SetupActionService {
 
     const legalHexes = this.getLegalDeploymentHexes(game, player);
     return player.getUndeployedFighters().flatMap((fighter) =>
-      legalHexes.map((hex) => new DeployFighterAction(player.id, fighter.id, hex.id)),
+      legalHexes.map((hex) => new DeployFighterAction(player, fighter, hex)),
     );
   }
 

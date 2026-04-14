@@ -52,10 +52,10 @@ describe("AttackAbility eligibility", () => {
 
     const legalAttack = legal[0];
     const illegalAttack = new AttackAction(
-      "player:two",
-      legalAttack.attackerId,
-      legalAttack.targetId,
-      legalAttack.weaponId,
+      game.getPlayer("player:two")!,
+      legalAttack.attacker,
+      legalAttack.target,
+      legalAttack.weapon,
     );
 
     expect(ability.isLegalAction(game, illegalAttack)).toBe(false);
@@ -70,7 +70,7 @@ describe("AttackAbility eligibility", () => {
     if (legal.length === 0) return;
 
     const attack = legal[0];
-    const target = game.getFighter(attack.targetId)!;
+    const target = game.getFighter(attack.target.id)!;
     target.isSlain = true;
 
     expect(ability.isLegalAction(game, attack)).toBe(false);
@@ -85,11 +85,12 @@ describe("AttackAbility eligibility", () => {
     if (legal.length === 0) return;
 
     const template = legal[0];
+    const fakeWeapon = { ...template.weapon, id: "weapon-def:nonexistent" as never };
     const bogusWeaponAttack = new AttackAction(
-      template.playerId,
-      template.attackerId,
-      template.targetId,
-      "weapon-def:nonexistent",
+      template.player,
+      template.attacker,
+      template.target,
+      fakeWeapon as unknown as typeof template.weapon,
     );
 
     expect(ability.isLegalAction(game, bogusWeaponAttack)).toBe(false);
@@ -107,18 +108,18 @@ describe("AttackAbility fighter checks", () => {
     engine.applyGameAction(
       game,
       new ChargeAction(
-        charge.playerId,
-        charge.fighterId,
-        charge.path,
-        charge.targetId,
-        charge.weaponId,
+        charge.player,
+      charge.fighter,
+      charge.path,
+      charge.target,
+      charge.weapon,
         charge.selectedAbility,
         attackBlanks(2),
         null,
       ),
     );
 
-    const attacker = game.getFighter(charge.fighterId)!;
+    const attacker = game.getFighter(charge.fighter.id)!;
     expect(attacker.hasChargeToken).toBe(true);
     expect(canFighterAttack(attacker)).toBe(false);
   });
@@ -130,7 +131,7 @@ describe("AttackAbility fighter checks", () => {
     const guard = expectFirstLegalActionOfType(service, game, "player:one", GuardAction);
     engine.applyGameAction(game, guard);
 
-    const fighter = game.getFighter(guard.fighterId)!;
+    const fighter = game.getFighter(guard.fighter.id)!;
     expect(fighter.hasGuardToken).toBe(true);
     // Guard doesn't give a charge token, so attacking is still mechanically
     // allowed (even though the action step was consumed at a higher level).
@@ -145,7 +146,7 @@ describe("AttackAbility integration with CombatActionService", () => {
 
     // Use Pass as a neutral way to burn the action step, then verify the
     // aggregate service no longer surfaces AttackActions for player one.
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
 
     const attacks = getLegalActionsOfType(service, game, "player:one", AttackAction);
     expect(attacks).toEqual([]);

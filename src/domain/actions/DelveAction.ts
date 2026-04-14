@@ -1,18 +1,19 @@
-import type { FeatureTokenId, FighterId, PlayerId } from "../values/ids";
 import { FeatureTokenSide, GameActionKind } from "../values/enums";
 import { GameAction } from "./GameAction";
 import type { LegalActionProvider } from "./LegalActionProvider";
 import type { Game } from "../state/Game";
 import type { Player } from "../state/Player";
+import type { Fighter } from "../state/Fighter";
+import type { FeatureToken } from "../state/FeatureToken";
 
 export class DelveAction extends GameAction {
-  public readonly fighterId: FighterId;
-  public readonly featureTokenId: FeatureTokenId;
+  public readonly fighter: Fighter;
+  public readonly featureToken: FeatureToken;
 
-  public constructor(playerId: PlayerId, fighterId: FighterId, featureTokenId: FeatureTokenId) {
-    super(GameActionKind.Delve, playerId);
-    this.fighterId = fighterId;
-    this.featureTokenId = featureTokenId;
+  public constructor(player: Player, fighter: Fighter, featureToken: FeatureToken) {
+    super(GameActionKind.Delve, player);
+    this.fighter = fighter;
+    this.featureToken = featureToken;
   }
 }
 
@@ -29,7 +30,7 @@ export const DelveActionProvider: LegalActionProvider = {
       if (featureToken === undefined || featureToken.hexId !== fighterHex.id || featureToken.side === FeatureTokenSide.Hidden) {
         return [];
       }
-      return [new DelveAction(player.id, fighter.id, featureToken.id)];
+      return [new DelveAction(player, fighter, featureToken)];
     });
   },
 };

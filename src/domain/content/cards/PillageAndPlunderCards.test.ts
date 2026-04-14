@@ -3,6 +3,7 @@ import {
   CardZone,
   FeatureTokenSide,
   PassAction,
+  UpgradeCard,
   WeaponAbilityKind,
 } from "../../index";
 import {
@@ -159,7 +160,7 @@ describe("PillageAndPlunder objectives — reaction", () => {
 describe("PillageAndPlunder ploys — power step", () => {
   it("PillageSidestep targets friendly on-board fighters", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new PillageSidestep("pss-test", owner, CardZone.PowerHand);
     expect(ploy.getLegalTargets(game).length).toBeGreaterThan(0);
@@ -167,7 +168,7 @@ describe("PillageAndPlunder ploys — power step", () => {
 
   it("PridefulDuellist is not playable without a resolved combat", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new PridefulDuellist("pd-test", owner, CardZone.PowerHand);
     expect(ploy.getLegalTargets(game)).toEqual([]);
@@ -175,7 +176,7 @@ describe("PillageAndPlunder ploys — power step", () => {
 
   it("PillageCommandingStride targets only the leader", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new PillageCommandingStride("pcs-test", owner, CardZone.PowerHand);
     const targets = ploy.getLegalTargets(game);
@@ -186,7 +187,7 @@ describe("PillageAndPlunder ploys — power step", () => {
 
   it("CrumblingMine targets nothing (feature tokens not currently targetable)", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new CrumblingMine("cm-test", owner, CardZone.PowerHand);
     expect(ploy.getLegalTargets(game)).toEqual([]);
@@ -194,7 +195,7 @@ describe("PillageAndPlunder ploys — power step", () => {
 
   it("ExplosiveCharges targets nothing (domain effect not currently playable)", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new ExplosiveCharges("ec-test", owner, CardZone.PowerHand);
     expect(ploy.getLegalTargets(game)).toEqual([]);
@@ -202,7 +203,7 @@ describe("PillageAndPlunder ploys — power step", () => {
 
   it("WaryDelver targets only friendly fighters with a charge token", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new WaryDelver("wd-test", owner, CardZone.PowerHand);
     // With no charge tokens in the warband, no targets.
@@ -216,7 +217,7 @@ describe("PillageAndPlunder ploys — power step", () => {
 
   it("BrashScout is not playable without an AttackDiceRolledEvent", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new BrashScout("bs-test", owner, CardZone.PowerHand);
     expect(ploy.getLegalTargets(game)).toEqual([]);
@@ -224,7 +225,7 @@ describe("PillageAndPlunder ploys — power step", () => {
 
   it("SuddenBlast targets enemies adjacent to a friendly fighter (none on fresh board)", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new SuddenBlast("sb-test", owner, CardZone.PowerHand);
     // Fresh deployment: players start far apart, no enemies are adjacent.
@@ -233,7 +234,7 @@ describe("PillageAndPlunder ploys — power step", () => {
 
   it("TunnellingTerror targets friendlies without move/charge tokens", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new TunnellingTerror("tt-test", owner, CardZone.PowerHand);
     const targets = ploy.getLegalTargets(game);
@@ -247,7 +248,7 @@ describe("PillageAndPlunder ploys — power step", () => {
 
   it("TrappedCache targets only undamaged enemies (empty when no treasures exist)", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     // Hide all feature tokens so there are no treasures anywhere.
     for (const token of game.featureTokens) token.side = FeatureTokenSide.Hidden;
@@ -312,7 +313,7 @@ describe("PillageAndPlunder upgrades", () => {
   it("Linebreaker grants Brutal to any weapon", () => {
     const { game } = createGameInActionStep("player:one");
     const owner = game.getPlayer("player:one")!;
-    const upg = new Linebreaker("lb-test", owner, CardZone.PowerHand);
+    const upg: UpgradeCard = new Linebreaker("lb-test", owner, CardZone.PowerHand);
     const weapon = owner.warband.fighters[0].weapons[0];
     expect(upg.getGrantedWeaponAbility(weapon, 1)).toBe(WeaponAbilityKind.Brutal);
     void game;

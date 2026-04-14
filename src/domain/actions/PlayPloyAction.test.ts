@@ -42,7 +42,7 @@ describe("PlayPloyAction eligibility", () => {
 
     const plays = getLegalActionsOfType(service, game, "player:one", PlayPloyAction);
     // None of the plays reference the seeded ploy.
-    expect(plays.find((p) => p.cardId === ploy.id)).toBeUndefined();
+    expect(plays.find((p) => p.card === ploy)).toBeUndefined();
   });
 
   it("is legal in the power step with a friendly fighter as target", () => {
@@ -51,12 +51,12 @@ describe("PlayPloyAction eligibility", () => {
     const ploy = seedGuardPloy(game);
 
     const plays = getLegalActionsOfType(service, game, "player:one", PlayPloyAction);
-    const playsForPloy = plays.filter((p) => p.cardId === ploy.id);
+    const playsForPloy = plays.filter((p) => p.card === ploy);
     expect(playsForPloy.length).toBeGreaterThan(0);
     // Every play of GiveGuardPloy targets a friendly fighter by id.
     for (const play of playsForPloy) {
-      expect(play.targetFighterId).not.toBeNull();
-      const fighter = game.getFighter(play.targetFighterId!);
+      expect(play.targetFighter?.id).not.toBeNull();
+      const fighter = game.getFighter(play.targetFighter?.id!);
       expect(fighter?.ownerPlayerId).toBe("player:one");
     }
   });
@@ -73,7 +73,7 @@ describe("PlayPloyAction eligibility", () => {
       PlayPloyAction,
     );
     // player:two is not the active player in power step; nothing targets our ploy.
-    expect(opponentPlays.find((p) => p.cardId === ploy.id)).toBeUndefined();
+    expect(opponentPlays.find((p) => p.card === ploy)).toBeUndefined();
   });
 });
 
@@ -84,11 +84,11 @@ describe("PlayPloyAction resolution", () => {
     const service = new CombatActionService();
 
     const plays = getLegalActionsOfType(service, game, "player:one", PlayPloyAction)
-      .filter((p) => p.cardId === ploy.id);
+      .filter((p) => p.card === ploy);
     expect(plays.length).toBeGreaterThan(0);
 
     const play = plays[0];
-    const target = game.getFighter(play.targetFighterId!)!;
+    const target = game.getFighter(play.targetFighter?.id!)!;
     expect(target.hasGuardToken).toBe(false);
 
     engine.applyGameAction(game, play);
@@ -96,7 +96,7 @@ describe("PlayPloyAction resolution", () => {
     expect(target.hasGuardToken).toBe(true);
     expect(ploy.zone).toBe(CardZone.PowerDiscard);
     const owner = game.getPlayer("player:one")!;
-    expect(owner.powerHand.find((c) => c.id === ploy.id)).toBeUndefined();
+    expect(owner.powerHand.includes(ploy)).toBe(false);
   });
 
   it("emits CardPlayedEvent and PloyPlayedEvent, records a Ploy resolution", () => {
@@ -105,7 +105,7 @@ describe("PlayPloyAction resolution", () => {
     const service = new CombatActionService();
 
     const play = getLegalActionsOfType(service, game, "player:one", PlayPloyAction)
-      .filter((p) => p.cardId === ploy.id)[0];
+      .filter((p) => p.card === ploy)[0];
     engine.applyGameAction(game, play);
 
     expect(findLatestEvent(game, CardPlayedEvent)).not.toBeNull();
@@ -124,10 +124,10 @@ describe("PlayPloyAction resolution", () => {
     const service = new CombatActionService();
 
     const plays = getLegalActionsOfType(service, game, "player:one", PlayPloyAction)
-      .filter((p) => p.cardId === ploy.id);
+      .filter((p) => p.card === ploy);
     expect(plays.length).toBeGreaterThan(0);
     for (const play of plays) {
-      const target = game.getFighter(play.targetFighterId!);
+      const target = game.getFighter(play.targetFighter?.id!);
       expect(target?.ownerPlayerId).toBe("player:two");
       expect(target?.hasStaggerToken).toBe(false);
     }
@@ -139,7 +139,7 @@ describe("PlayPloyAction resolution", () => {
     expect(() =>
       engine.applyGameAction(
         game,
-        new PlayPloyAction("player:one", "not-a-real-card" as never, null),
+        new PlayPloyAction(game.getPlayer("player:one")!, "not-a-real-card" as never, null),
       ),
     ).toThrow();
   });

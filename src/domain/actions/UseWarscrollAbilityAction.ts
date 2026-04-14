@@ -1,4 +1,3 @@
-import type { PlayerId } from "../values/ids";
 import { GameActionKind, TurnStep } from "../values/enums";
 import { GameAction } from "./GameAction";
 import type { LegalActionProvider } from "./LegalActionProvider";
@@ -9,8 +8,8 @@ import { DefaultWarscrollEffectResolver } from "../rules/DefaultWarscrollEffectR
 export class UseWarscrollAbilityAction extends GameAction {
   public readonly abilityIndex: number;
 
-  public constructor(playerId: PlayerId, abilityIndex: number) {
-    super(GameActionKind.UseWarscrollAbility, playerId);
+  public constructor(player: Player, abilityIndex: number) {
+    super(GameActionKind.UseWarscrollAbility, player);
     this.abilityIndex = abilityIndex;
   }
 }
@@ -30,7 +29,7 @@ export const UseWarscrollAbilityActionProvider: LegalActionProvider = {
       );
       if (!hasTokens) return [];
       if (!warscrollEffectResolver.canResolve(game, player, ability)) return [];
-      return [new UseWarscrollAbilityAction(player.id, abilityIndex)];
+      return [new UseWarscrollAbilityAction(player, abilityIndex)];
     });
   },
 };

@@ -16,7 +16,7 @@ import { UpgradeCard } from "./UpgradeCard";
 export function getFighterUpgrades(player: Player, fighter: Fighter): UpgradeCard[] {
   return player.equippedUpgrades.filter(
     (card): card is UpgradeCard =>
-      card instanceof UpgradeCard && card.attachedToFighter?.id === fighter.id,
+      card instanceof UpgradeCard && card.attachedToFighter === fighter,
   );
 }
 

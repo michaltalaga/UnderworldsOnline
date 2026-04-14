@@ -1,19 +1,20 @@
-import type { FighterId, HexId, PlayerId } from "../values/ids";
+import type { HexId } from "../values/ids";
 import { GameActionKind } from "../values/enums";
 import { GameAction } from "./GameAction";
 import type { LegalActionProvider } from "./LegalActionProvider";
 import type { Game } from "../state/Game";
 import type { Player } from "../state/Player";
+import type { Fighter } from "../state/Fighter";
 import { MoveAbility } from "../abilities/MoveAbility";
 import { hasUsedCoreAbilityThisActionStep } from "../rules/actionStepQueries";
 
 export class MoveAction extends GameAction {
-  public readonly fighterId: FighterId;
+  public readonly fighter: Fighter;
   public readonly path: HexId[];
 
-  public constructor(playerId: PlayerId, fighterId: FighterId, path: HexId[]) {
-    super(GameActionKind.Move, playerId);
-    this.fighterId = fighterId;
+  public constructor(player: Player, fighter: Fighter, path: HexId[]) {
+    super(GameActionKind.Move, player);
+    this.fighter = fighter;
     this.path = path;
   }
 }

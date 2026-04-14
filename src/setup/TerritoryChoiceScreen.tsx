@@ -43,7 +43,7 @@ export default function TerritoryChoiceScreen({
           <li key={`${boardSide}:${territory.id}`}>
             <PanelButton
               className="!rounded-[22px] !p-[22px] !gap-3.5"
-              onClick={() => onChoose(new ChooseTerritoryAction(player.id, boardSide, territory.id))}
+              onClick={() => onChoose(new ChooseTerritoryAction(player, boardSide, territory))}
             >
               <h2 className="m-0 font-heading text-[1.35rem]">{territory.name}</h2>
               <p className="m-0 text-ink-muted text-[0.92rem] italic">

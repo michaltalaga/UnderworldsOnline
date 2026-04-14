@@ -53,7 +53,7 @@ describe("EndActionStepAction eligibility", () => {
       EndActionStepAction,
     );
     expect(ends).toHaveLength(1);
-    expect(ends[0].playerId).toBe("player:one");
+    expect(ends[0].player.id).toBe("player:one");
   });
 
   it("is not legal for the inactive player", () => {
@@ -137,7 +137,7 @@ describe("EndActionStepAction resolution", () => {
     engine.applyGameAction(game, guard);
 
     expect(() =>
-      engine.applyGameAction(game, new EndActionStepAction("player:two")),
+      engine.applyGameAction(game, new EndActionStepAction(game.getPlayer("player:two")!)),
     ).toThrow();
   });
 });

@@ -18,6 +18,7 @@ import {
   SetupActionService,
   SetupAutoResolver,
   TurnStep,
+  type Card,
   type CardId,
   type CombatController,
   type FeatureToken,
@@ -429,19 +430,19 @@ export function useGameEngine({ warband, deck = null }: UseGameEngineOptions) {
 
   function confirmCombat(): void {
     if (activePlayer === null || getActiveCombatState(game) === null) return;
-    applyAction(new ConfirmCombatAction(activePlayer.id));
+    applyAction(new ConfirmCombatAction(activePlayer));
   }
 
   function endActionStep(): void {
     if (activePlayer === null) return;
-    applyAction(new EndActionStepAction(activePlayer.id));
+    applyAction(new EndActionStepAction(activePlayer));
   }
 
   function scoreObjective(cardId: CardId): void {
     if (localPlayer === null) return;
     const card = localPlayer.getCard(cardId);
     if (card === undefined) return;
-    const handIndex = localPlayer.objectiveHand.findIndex((c) => c.id === cardId);
+    const handIndex = localPlayer.objectiveHand.indexOf(card);
     if (handIndex === -1) return;
     localPlayer.objectiveHand.splice(handIndex, 1);
     card.zone = CardZone.ScoredObjectives;
@@ -532,13 +533,14 @@ export function useGameEngine({ warband, deck = null }: UseGameEngineOptions) {
       setPendingFocus(true);
       return;
     }
-    applyAction(
-      new FocusAction(
-        actionLens.focusAction.playerId,
-        selectedFocusObjectiveIds,
-        selectedFocusPowerIds,
-      ),
-    );
+    const focusPlayer = actionLens.focusAction.player;
+    const objectiveCards = selectedFocusObjectiveIds
+      .map((cardId) => focusPlayer.objectiveHand.find((c) => c.id === cardId))
+      .filter((c): c is Card => c !== undefined);
+    const powerCards = selectedFocusPowerIds
+      .map((cardId) => focusPlayer.powerHand.find((c) => c.id === cardId))
+      .filter((c): c is Card => c !== undefined);
+    applyAction(new FocusAction(focusPlayer, objectiveCards, powerCards));
   }
 
   function toggleFocusObjectiveCard(cardId: CardId): void {
@@ -810,11 +812,15 @@ function getSetupMapWiring(
     const legalHexIds = new Set<HexId>(
       legalActions
         .filter((action): action is PlaceFeatureTokenAction => action instanceof PlaceFeatureTokenAction)
-        .map((action) => action.hexId),
+        .map((action) => action.hex.id),
     );
     return {
       legalHexIds,
-      onHexClick: (hexId) => applySetupAction(new PlaceFeatureTokenAction(activePlayer.id, hexId)),
+      onHexClick: (hexId) => {
+        const hex = game.getHex(hexId);
+        if (hex === undefined) return;
+        applySetupAction(new PlaceFeatureTokenAction(activePlayer, hex));
+      },
     };
   }
 
@@ -827,13 +833,16 @@ function getSetupMapWiring(
     const legalHexIds = new Set<HexId>(
       legalActions
         .filter((action): action is DeployFighterAction => action instanceof DeployFighterAction)
-        .filter((action) => action.fighterId === nextFighter.id)
-        .map((action) => action.hexId),
+        .filter((action) => action.fighter.id === nextFighter.id)
+        .map((action) => action.hex.id),
     );
     return {
       legalHexIds,
-      onHexClick: (hexId) =>
-        applySetupAction(new DeployFighterAction(activePlayer.id, nextFighter.id, hexId)),
+      onHexClick: (hexId) => {
+        const hex = game.getHex(hexId);
+        if (hex === undefined) return;
+        applySetupAction(new DeployFighterAction(activePlayer, nextFighter, hex));
+      },
     };
   }
 

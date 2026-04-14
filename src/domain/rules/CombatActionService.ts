@@ -110,22 +110,22 @@ export class CombatActionService extends LegalActionService {
   }
 
   public isLegalDelveAction(game: Game, action: DelveAction): boolean {
-    if (!game.isCombatPowerStep(action.playerId)) {
+    if (!game.isCombatPowerStep(action.player.id)) {
       return false;
     }
 
-    const player = game.getPlayer(action.playerId);
+    const player = game.getPlayer(action.player.id);
     if (player === undefined || player.hasDelvedThisPowerStep) {
       return false;
     }
 
-    const fighter = player.getFighter(action.fighterId);
+    const fighter = player.getFighter(action.fighter.id);
     if (fighter === undefined || fighter.isSlain || fighter.currentHexId === null) {
       return false;
     }
 
     const fighterHex = game.getHex(fighter.currentHexId);
-    const featureToken = game.getFeatureToken(action.featureTokenId);
+    const featureToken = game.getFeatureToken(action.featureToken.id);
     if (fighterHex === undefined || featureToken === undefined) {
       return false;
     }
@@ -138,49 +138,45 @@ export class CombatActionService extends LegalActionService {
   }
 
   public isLegalPlayUpgradeAction(game: Game, action: PlayUpgradeAction): boolean {
-    if (!game.isCombatPowerStep(action.playerId)) {
+    if (!game.isCombatPowerStep(action.player.id)) {
       return false;
     }
 
-    const player = game.getPlayer(action.playerId);
+    const player = game.getPlayer(action.player.id);
     if (player === undefined) return false;
 
-    const card = player.getCard(action.cardId);
-    const fighter = player.getFighter(action.fighterId);
+    const card = player.getCard(action.card.id);
+    const fighter = player.getFighter(action.fighter.id);
     if (card === undefined || card.kind !== CardKind.Upgrade || fighter === undefined) {
       return false;
     }
 
     const targets = card.getLegalTargets(game);
-    return targets.some((target) =>
-      target instanceof Fighter && target.id === fighter.id,
-    );
+    return targets.some((target) => target === fighter);
   }
 
   public isLegalPlayPloyAction(game: Game, action: PlayPloyAction): boolean {
-    const player = game.getPlayer(action.playerId);
+    const player = game.getPlayer(action.player.id);
     if (player === undefined) return false;
 
-    const card = player.getCard(action.cardId);
+    const card = player.getCard(action.card.id);
     if (card === undefined || card.kind !== CardKind.Ploy) return false;
 
     // The card itself decides when it's playable via getLegalTargets.
     const targets = card.getLegalTargets(game);
-    if (action.targetFighterId === null) {
+    if (action.targetFighter === null) {
       return targets.some((target) => !(target instanceof Fighter));
     }
 
-    return targets.some((target) =>
-      target instanceof Fighter && target.id === action.targetFighterId,
-    );
+    return targets.some((target) => target === action.targetFighter);
   }
 
   public isLegalUseWarscrollAbilityAction(game: Game, action: UseWarscrollAbilityAction): boolean {
-    if (!game.isCombatPowerStep(action.playerId)) {
+    if (!game.isCombatPowerStep(action.player.id)) {
       return false;
     }
 
-    const player = game.getPlayer(action.playerId);
+    const player = game.getPlayer(action.player.id);
     const warscrollDefinition = player?.getWarscrollDefinition();
     const ability = warscrollDefinition?.getAbility(action.abilityIndex);
     if (player === undefined || warscrollDefinition === undefined || ability === undefined) {

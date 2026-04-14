@@ -36,7 +36,7 @@ describe("MoveAbility eligibility", () => {
     const actions = ability.getLegalActions(game, player) as MoveAction[];
     expect(actions.length).toBeGreaterThan(0);
 
-    const fighterIds = new Set(actions.map((a) => a.fighterId));
+    const fighterIds = new Set(actions.map((a) => a.fighter.id));
     const expectedFighterIds = new Set(
       player.fighters
         .filter((f) => !f.isSlain && f.currentHexId !== null)
@@ -55,7 +55,7 @@ describe("MoveAbility eligibility", () => {
 
     const actions = ability.getLegalActions(game, player) as MoveAction[];
     for (const action of actions) {
-      const fighter = player.getFighter(action.fighterId)!;
+      const fighter = player.getFighter(action.fighter.id)!;
       const startHexId = fighter.currentHexId!;
       let currentHex = game.getHex(startHexId)!;
       for (const nextHexId of action.path) {
@@ -77,7 +77,7 @@ describe("MoveAbility eligibility", () => {
     fighter.hasMoveToken = true;
 
     const actions = ability.getLegalActions(game, player) as MoveAction[];
-    const moves = actions.filter((a) => a.fighterId === fighter.id);
+    const moves = actions.filter((a) => a.fighter === fighter);
     expect(moves).toEqual([]);
   });
 });
@@ -98,7 +98,7 @@ describe("MoveAbility.isLegalAction", () => {
     const ability = new MoveAbility();
 
     const move = expectFirstLegalActionOfType(service, game, "player:one", MoveAction);
-    const emptyPathMove = new MoveAction(move.playerId, move.fighterId, []);
+    const emptyPathMove = new MoveAction(move.player, move.fighter, []);
     expect(ability.isLegalAction(game, emptyPathMove)).toBe(false);
   });
 
@@ -108,7 +108,7 @@ describe("MoveAbility.isLegalAction", () => {
     const ability = new MoveAbility();
 
     const move = expectFirstLegalActionOfType(service, game, "player:one", MoveAction);
-    const badMove = new MoveAction(move.playerId, move.fighterId, [
+    const badMove = new MoveAction(move.player, move.fighter, [
       "hex:not-a-real-hex" as never,
     ]);
     expect(ability.isLegalAction(game, badMove)).toBe(false);
@@ -120,7 +120,7 @@ describe("MoveAbility.isLegalAction", () => {
     const ability = new MoveAbility();
 
     const move = expectFirstLegalActionOfType(service, game, "player:one", MoveAction);
-    const wrongPlayerMove = new MoveAction("player:two", move.fighterId, move.path);
+    const wrongPlayerMove = new MoveAction(game.getPlayer("player:two")!, move.fighter, move.path);
     expect(ability.isLegalAction(game, wrongPlayerMove)).toBe(false);
   });
 });

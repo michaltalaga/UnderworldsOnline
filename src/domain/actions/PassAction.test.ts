@@ -29,7 +29,7 @@ describe("PassAction eligibility", () => {
     const service = new CombatActionService();
 
     // End action step to transition to power step (without using a core ability -- just pass first)
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     expect(game.turnStep).toBe(TurnStep.Power);
 
     const actions = service.getLegalActions(game, "player:one");
@@ -43,7 +43,7 @@ describe("PassAction eligibility", () => {
     const service = new CombatActionService();
 
     // Pass action step → transitions to power step for same player
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
 
     expect(game.turnStep).toBe(TurnStep.Power);
     expect(game.activePlayerId).toBe("player:one");
@@ -58,11 +58,11 @@ describe("PassAction eligibility", () => {
     const { game, engine } = createGameInActionStep("player:one");
 
     // Pass action → power step
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     expect(game.turnStep).toBe(TurnStep.Power);
 
     // Pass power step → next player's turn starts
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
 
     // After passing power step: turn passes to the other player
     expect(game.activePlayerId).toBe("player:two");
@@ -86,11 +86,11 @@ describe("PassAction eligibility", () => {
     engine.applyGameAction(
       game,
       new ChargeAction(
-        firstCharge.playerId,
-        firstCharge.fighterId,
+        firstCharge.player,
+        firstCharge.fighter,
         firstCharge.path,
-        firstCharge.targetId,
-        firstCharge.weaponId,
+        firstCharge.target,
+        firstCharge.weapon,
         firstCharge.selectedAbility,
         [AttackDieFace.Blank, AttackDieFace.Blank],
         [SaveDieFace.Shield],
@@ -99,9 +99,9 @@ describe("PassAction eligibility", () => {
 
     // Walk through all three confirm-combat phases
     expect(getActiveCombatState(game), "combat active after charge").not.toBeNull();
-    engine.applyGameAction(game, new ConfirmCombatAction("player:one"));
-    engine.applyGameAction(game, new ConfirmCombatAction("player:one"));
-    engine.applyGameAction(game, new ConfirmCombatAction("player:one"));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
     expect(getActiveCombatState(game), "combat finished").toBeNull();
 
     // End action step → power step (EndActionStepAction is what's legal after using a core ability)

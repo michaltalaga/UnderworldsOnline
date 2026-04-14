@@ -34,7 +34,7 @@ export default function PlayerPanel({
         const isSelected = fighter.id === selectedFighterId;
         const isSelectable = isActivePlayer && !fighter.isSlain && fighter.currentHexId !== null;
         const upgrades = player.equippedUpgrades
-          .filter((c) => c.attachedToFighter?.id === fighter.id)
+          .filter((c) => c.attachedToFighter === fighter)
           .map((c) => c.name);
 
         return (

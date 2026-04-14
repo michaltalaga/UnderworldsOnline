@@ -60,7 +60,7 @@ export function createCombatReadySetupPracticeGame(
   engine.applySetupAction(game, new DrawStartingHandsAction());
 
   for (const player of game.players) {
-    engine.applySetupAction(game, new ResolveMulliganAction(player.id, false, false));
+    engine.applySetupAction(game, new ResolveMulliganAction(player, false, false));
   }
 
   engine.applySetupAction(
@@ -69,9 +69,17 @@ export function createCombatReadySetupPracticeGame(
   );
 
   const territoryChooserId = requirePlayerId(game.activePlayerId, "territory chooser");
+  const territoryChooser = game.getPlayer(territoryChooserId);
+  if (territoryChooser === undefined) {
+    throw new Error("Territory chooser not found.");
+  }
+  const northTerritory = game.board.getTerritory(northTerritoryId);
+  if (northTerritory === undefined) {
+    throw new Error("North territory not found.");
+  }
   engine.applySetupAction(
     game,
-    new ChooseTerritoryAction(territoryChooserId, BoardSide.Front, northTerritoryId),
+    new ChooseTerritoryAction(territoryChooser, BoardSide.Front, northTerritory),
   );
 
   while (game.state.kind === "setupPlaceFeatureTokens") {
@@ -116,8 +124,7 @@ function chooseFeaturePlacementAction(
 
   for (const territoryId of preferredTerritories) {
     const preferredPlacement = featurePlacements.find((action) => {
-      const hex = game.board.getHex(action.hexId);
-      return hex?.territoryId === territoryId;
+      return action.hex.territoryId === territoryId;
     });
 
     if (preferredPlacement !== undefined) {

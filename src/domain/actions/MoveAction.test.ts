@@ -31,7 +31,7 @@ describe("MoveAction eligibility", () => {
 
     expect(moves.length).toBeGreaterThan(0);
     for (const move of moves) {
-      expect(move.playerId).toBe("player:one");
+      expect(move.player.id).toBe("player:one");
       expect(move.path.length).toBeGreaterThan(0);
     }
   });
@@ -42,7 +42,7 @@ describe("MoveAction eligibility", () => {
 
     // Pass burns the action step without using a core ability, but the
     // next step is Power — so MoveAction should also disappear.
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
 
     const movesAfter = getLegalActionsOfType(service, game, "player:one", MoveAction);
     expect(movesAfter).toEqual([]);
@@ -64,11 +64,11 @@ describe("MoveAction resolution", () => {
 
     const move = expectFirstLegalActionOfType(service, game, "player:one", MoveAction);
     const destinationHexId = move.path[move.path.length - 1];
-    const fromHexId = game.getFighter(move.fighterId)!.currentHexId;
+    const fromHexId = game.getFighter(move.fighter.id)!.currentHexId;
 
     engine.applyGameAction(game, move);
 
-    const fighter = game.getFighter(move.fighterId);
+    const fighter = game.getFighter(move.fighter.id);
     expect(fighter?.currentHexId).toBe(destinationHexId);
     expect(fighter?.hasMoveToken).toBe(true);
 
@@ -92,7 +92,7 @@ describe("MoveAction resolution", () => {
     const records = game.getEventHistory(GameRecordKind.Move);
     expect(records).toHaveLength(1);
     expect(records[0].invokedByPlayerId).toBe("player:one");
-    expect(records[0].invokedByFighterId).toBe(move.fighterId);
+    expect(records[0].invokedByFighterId).toBe(move.fighter.id);
   });
 
   it("rejects a move with a non-adjacent path", () => {
@@ -103,7 +103,7 @@ describe("MoveAction resolution", () => {
     // Replace the path with a single random hex id that isn't adjacent
     // to the fighter's current position.  Use a clearly non-existent id
     // to force the legality check to fail.
-    const illegalMove = new MoveAction(move.playerId, move.fighterId, ["hex:not-a-real-hex"]);
+    const illegalMove = new MoveAction(move.player, move.fighter, ["hex:not-a-real-hex" as never]);
 
     expect(() => engine.applyGameAction(game, illegalMove)).toThrow();
   });
@@ -113,7 +113,7 @@ describe("MoveAction resolution", () => {
     const service = new CombatActionService();
     const move = expectFirstLegalActionOfType(service, game, "player:one", MoveAction);
 
-    const illegalMove = new MoveAction("player:two", move.fighterId, move.path);
+    const illegalMove = new MoveAction(game.getPlayer("player:two")!, move.fighter, move.path);
     expect(() => engine.applyGameAction(game, illegalMove)).toThrow();
   });
 });

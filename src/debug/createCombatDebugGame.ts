@@ -212,19 +212,30 @@ export function createCombatDebugSnapshot(
     "player:one",
   );
 
-  engine.applyGameAction(
-    game,
-    new MoveAction("player:one", debugDefenderId, defenderMovePath),
-  );
-  engine.applyGameAction(game, new PassAction("player:one"));
+  const playerOneRef = game.getPlayer("player:one");
+  const playerTwoRef = game.getPlayer("player:two");
+  if (playerOneRef === undefined || playerTwoRef === undefined) {
+    throw new Error("Could not find both players for combat debug setup.");
+  }
+  const debugDefender = game.getFighter(debugDefenderId);
+  const attackerFighter = game.getFighter(playerTwoFighterOneId);
+  if (debugDefender === undefined || attackerFighter === undefined) {
+    throw new Error("Could not find debug fighters.");
+  }
 
   engine.applyGameAction(
     game,
-    new MoveAction("player:two", playerTwoFighterOneId, attackerMovePath),
+    new MoveAction(playerOneRef, debugDefender, defenderMovePath),
   );
-  engine.applyGameAction(game, new PassAction("player:two"));
+  engine.applyGameAction(game, new PassAction(playerOneRef));
 
-  engine.applyGameAction(game, new PassAction("player:one"));
+  engine.applyGameAction(
+    game,
+    new MoveAction(playerTwoRef, attackerFighter, attackerMovePath),
+  );
+  engine.applyGameAction(game, new PassAction(playerTwoRef));
+
+  engine.applyGameAction(game, new PassAction(playerOneRef));
   const warscrollPlayer = game.getPlayer("player:one");
   const playerWarscroll = warscrollPlayer?.getWarscrollWithDefinition();
   if (warscrollPlayer === undefined || playerWarscroll === undefined) {
@@ -249,7 +260,7 @@ export function createCombatDebugSnapshot(
     try {
       engine.applyGameAction(
         game,
-        new UseWarscrollAbilityAction(warscrollPlayer.id, selectedWarscrollAbilityIndex),
+        new UseWarscrollAbilityAction(warscrollPlayer, selectedWarscrollAbilityIndex),
       );
     } catch (error) {
       warscrollAbilityError = error instanceof Error ? error.message : String(error);
@@ -260,7 +271,7 @@ export function createCombatDebugSnapshot(
   const powerHandAfterWarscroll = warscrollPlayer.powerHand.length;
   const warscrollTokensAfter = { ...warscrollPlayer.warscrollState.tokens };
 
-  engine.applyGameAction(game, new PassAction("player:one"));
+  engine.applyGameAction(game, new PassAction(playerOneRef));
 
   const defender = game.getFighter(debugDefenderId);
   if (defender === undefined) {
@@ -300,10 +311,10 @@ export function createCombatDebugSnapshot(
     engine.applyGameAction(
       game,
       new AttackAction(
-        "player:two",
-        playerTwoFighterOneId,
-        debugDefenderId,
-        practiceBladeWeaponId,
+        playerTwoRef,
+        attackerFighter,
+        defender,
+        attackerWeapon,
         selectedAbility,
         [...scenario.attackRoll],
         [...scenario.saveRoll],
@@ -366,11 +377,13 @@ export function createEndPhaseDebugSnapshot(
     throw new Error("Could not find a fighter to guard during end-phase debug setup.");
   }
 
-  engine.applyGameAction(game, new GuardAction(playerOne.id, guardedFighterId));
-  engine.applyGameAction(game, new PassAction(playerOne.id));
+  const guardedFighter = playerOne.fighters[0]!;
+  engine.applyGameAction(game, new GuardAction(playerOne, guardedFighter));
+  engine.applyGameAction(game, new PassAction(playerOne));
 
   while (game.state.kind === "combatTurn") {
-    engine.applyGameAction(game, new PassAction(game.activePlayerId!));
+    const activePlayer = game.getPlayer(game.activePlayerId!)!;
+    engine.applyGameAction(game, new PassAction(activePlayer));
   }
 
   seedEndPhaseDebugDelves(game, playerOne);
@@ -398,13 +411,19 @@ export function createDelveDebugSnapshot(): DelveDebugSnapshot {
     [deterministicFirstPlayerRollOff],
     "player:one",
   );
+  const delvePlayerOne = game.getPlayer("player:one");
+  const delveFighter = game.getFighter(playerOneFighterThreeId);
+  const delveToken = game.board.getFeatureToken("feature:2" as never);
+  if (delvePlayerOne === undefined || delveFighter === undefined || delveToken === undefined) {
+    throw new Error("Could not find delve debug refs.");
+  }
   engine.applyGameAction(
     game,
-    new MoveAction("player:one", playerOneFighterThreeId, ["hex:r1:c2"]),
+    new MoveAction(delvePlayerOne, delveFighter, ["hex:r1:c2"]),
   );
   engine.applyGameAction(
     game,
-    new DelveAction("player:one", playerOneFighterThreeId, "feature:2"),
+    new DelveAction(delvePlayerOne, delveFighter, delveToken),
   );
 
   return { game };
@@ -422,13 +441,12 @@ export function createPloyDebugSnapshot(
     [deterministicFirstPlayerRollOff],
     "player:one",
   );
-  engine.applyGameAction(game, new PassAction("player:one"));
-
   const playerOne = game.getPlayer("player:one");
   const playerTwo = game.getPlayer("player:two");
   if (playerOne === undefined || playerTwo === undefined) {
     throw new Error("Could not find both players for ploy debug setup.");
   }
+  engine.applyGameAction(game, new PassAction(playerOne));
 
   const friendlyTargetedPloy = playerOne.powerDeck.drawPile.find(
     (card) => card.name === "Practice Ploy 09",
@@ -500,12 +518,11 @@ export function createUpgradeDebugSnapshot(
     [deterministicFirstPlayerRollOff],
     "player:one",
   );
-  engine.applyGameAction(game, new PassAction("player:one"));
-
   const playerOne = game.getPlayer("player:one");
   if (playerOne === undefined) {
     throw new Error("Could not find Player One for upgrade debug setup.");
   }
+  engine.applyGameAction(game, new PassAction(playerOne));
 
   playerOne.glory = 2;
   game.eventLog.push("Debug setup granted Player One 2 glory for upgrade replay.");
@@ -728,12 +745,12 @@ function createPloyDebugOption(
   action: PlayPloyAction,
 ): PloyDebugOption {
   const player = game.getPlayer(playerId);
-  const card = player?.getCard(action.cardId);
+  const card = player?.getCard(action.card.id);
   if (player === undefined || card === undefined) {
-    throw new Error(`Could not build ploy debug option for card ${action.cardId}.`);
+    throw new Error(`Could not build ploy debug option for card ${action.card.id}.`);
   }
 
-  const targetDetails = getPloyDebugTargetDetails(game, action.targetFighterId);
+  const targetDetails = getPloyDebugTargetDetails(game, action.targetFighter?.id ?? null);
 
   return {
     actionKey: getPloyDebugActionKey(action),
@@ -745,7 +762,7 @@ function createPloyDebugOption(
 }
 
 function getPloyDebugActionKey(action: PlayPloyAction): string {
-  return `${action.cardId}:${action.targetFighterId ?? "none"}`;
+  return `${action.card.id}:${action.targetFighter?.id ?? "none"}`;
 }
 
 function getPloyDebugTargetDetails(
@@ -784,14 +801,14 @@ function createUpgradeDebugOption(
   action: PlayUpgradeAction,
 ): UpgradeDebugOption {
   const player = game.getPlayer(playerId);
-  const card = player?.getCard(action.cardId);
-  const fighterDefinition = player?.getFighterDefinition(action.fighterId);
+  const card = player?.getCard(action.card.id);
+  const fighterDefinition = player?.getFighterDefinition(action.fighter.id);
   if (
     player === undefined ||
     card === undefined ||
     fighterDefinition === undefined
   ) {
-    throw new Error(`Could not build upgrade debug option for card ${action.cardId}.`);
+    throw new Error(`Could not build upgrade debug option for card ${action.card.id}.`);
   }
 
   return {
@@ -804,7 +821,7 @@ function createUpgradeDebugOption(
 }
 
 function getUpgradeDebugActionKey(action: PlayUpgradeAction): string {
-  return `${action.cardId}:${action.fighterId}`;
+  return `${action.card.id}:${action.fighter.id}`;
 }
 
 function movePowerCardFromDrawPileToHand(

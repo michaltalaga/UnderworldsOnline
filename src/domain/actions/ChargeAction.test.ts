@@ -48,7 +48,7 @@ describe("ChargeAction eligibility", () => {
     // standard embergard1 board.
     expect(charges.length).toBeGreaterThan(0);
     for (const charge of charges) {
-      expect(charge.playerId).toBe("player:one");
+      expect(charge.player.id).toBe("player:one");
       expect(charge.path.length).toBeGreaterThan(0);
     }
   });
@@ -84,11 +84,11 @@ describe("ChargeAction resolution", () => {
     // Use all-blank attack dice — combat outcome is Failure regardless of
     // defender save dice. Weapon has 2 attack dice.
     const deterministicCharge = new ChargeAction(
-      charge.playerId,
-      charge.fighterId,
+      charge.player,
+      charge.fighter,
       charge.path,
-      charge.targetId,
-      charge.weaponId,
+      charge.target,
+      charge.weapon,
       charge.selectedAbility,
       attackBlanks(2),
       null,
@@ -98,7 +98,7 @@ describe("ChargeAction resolution", () => {
     engine.applyGameAction(game, deterministicCharge);
 
     // Fighter moved to the charge destination.
-    const fighter = game.getFighter(charge.fighterId);
+    const fighter = game.getFighter(charge.fighter.id);
     expect(fighter?.currentHexId).toBe(destinationHexId);
     expect(fighter?.hasChargeToken).toBe(true);
 
@@ -118,11 +118,11 @@ describe("ChargeAction resolution", () => {
     engine.applyGameAction(
       game,
       new ChargeAction(
-        charge.playerId,
-        charge.fighterId,
-        charge.path,
-        charge.targetId,
-        charge.weaponId,
+        charge.player,
+      charge.fighter,
+      charge.path,
+      charge.target,
+      charge.weapon,
         charge.selectedAbility,
         scriptedRoll,
         null,
@@ -143,11 +143,11 @@ describe("ChargeAction resolution", () => {
     engine.applyGameAction(
       game,
       new ChargeAction(
-        charge.playerId,
-        charge.fighterId,
-        charge.path,
-        charge.targetId,
-        charge.weaponId,
+        charge.player,
+      charge.fighter,
+      charge.path,
+      charge.target,
+      charge.weapon,
         charge.selectedAbility,
         attackBlanks(2),
         null,
@@ -155,15 +155,15 @@ describe("ChargeAction resolution", () => {
     );
 
     // Three confirm actions: attack-rolled → save-rolled → resolved → apply.
-    engine.applyGameAction(game, new ConfirmCombatAction("player:one"));
-    engine.applyGameAction(game, new ConfirmCombatAction("player:one"));
-    engine.applyGameAction(game, new ConfirmCombatAction("player:one"));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
 
     const combatRecords = game.getEventHistory(GameRecordKind.Combat);
     expect(combatRecords).toHaveLength(1);
 
     // With a guaranteed miss, the target should be undamaged.
-    const target = game.getFighter(charge.targetId);
+    const target = game.getFighter(charge.target.id);
     expect(target?.damage).toBe(0);
     expect(target?.isSlain).toBe(false);
   });
@@ -175,11 +175,11 @@ describe("ChargeAction resolution", () => {
 
     // Same charge params, but attributed to the non-active player.
     const illegalCharge = new ChargeAction(
-      "player:two",
-      charge.fighterId,
+      game.getPlayer("player:two")!,
+      charge.fighter,
       charge.path,
-      charge.targetId,
-      charge.weaponId,
+      charge.target,
+      charge.weapon,
     );
 
     expect(() => engine.applyGameAction(game, illegalCharge)).toThrow();
@@ -193,21 +193,21 @@ describe("ChargeAction resolution", () => {
     engine.applyGameAction(
       game,
       new ChargeAction(
-        charge.playerId,
-        charge.fighterId,
-        charge.path,
-        charge.targetId,
-        charge.weaponId,
+        charge.player,
+      charge.fighter,
+      charge.path,
+      charge.target,
+      charge.weapon,
         charge.selectedAbility,
         attackBlanks(2),
         null,
       ),
     );
-    engine.applyGameAction(game, new ConfirmCombatAction("player:one"));
-    engine.applyGameAction(game, new ConfirmCombatAction("player:one"));
-    engine.applyGameAction(game, new ConfirmCombatAction("player:one"));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
 
-    const fighter = game.getFighter(charge.fighterId);
+    const fighter = game.getFighter(charge.fighter.id);
     expect(fighter?.hasChargeToken).toBe(true);
 
     // Charge uses up the action step — pass should NOT be legal here; the

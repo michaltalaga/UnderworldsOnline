@@ -30,14 +30,14 @@ describe("GuardAbility eligibility", () => {
     const player = game.getPlayer("player:one")!;
 
     const actions = ability.getLegalActions(game, player) as GuardAction[];
-    const fighterIds = actions.map((a) => a.fighterId);
+    const fighterIds = actions.map((a) => a.fighter.id);
     const uniqueFighterIds = new Set(fighterIds);
     // No duplicates: one action per fighter.
     expect(uniqueFighterIds.size).toBe(fighterIds.length);
 
     // Every fighter in the set is alive, on board, and has no conflicting tokens.
     for (const action of actions) {
-      const fighter = player.getFighter(action.fighterId)!;
+      const fighter = player.getFighter(action.fighter.id)!;
       expect(fighter.isSlain).toBe(false);
       expect(fighter.currentHexId).not.toBeNull();
       expect(fighter.hasMoveToken).toBe(false);
@@ -56,7 +56,7 @@ describe("GuardAbility eligibility", () => {
     fighter.hasGuardToken = true;
 
     const actions = ability.getLegalActions(game, player) as GuardAction[];
-    expect(actions.find((a) => a.fighterId === fighter.id)).toBeUndefined();
+    expect(actions.find((a) => a.fighter === fighter)).toBeUndefined();
   });
 });
 
@@ -76,7 +76,7 @@ describe("GuardAbility.isLegalAction", () => {
     const ability = new GuardAbility();
 
     const guard = expectFirstLegalActionOfType(service, game, "player:one", GuardAction);
-    game.getFighter(guard.fighterId)!.hasGuardToken = true;
+    game.getFighter(guard.fighter.id)!.hasGuardToken = true;
     expect(ability.isLegalAction(game, guard)).toBe(false);
   });
 
@@ -86,7 +86,7 @@ describe("GuardAbility.isLegalAction", () => {
     const ability = new GuardAbility();
 
     const guard = expectFirstLegalActionOfType(service, game, "player:one", GuardAction);
-    const illegal = new GuardAction("player:two", guard.fighterId);
+    const illegal = new GuardAction(game.getPlayer("player:two")!, guard.fighter);
     expect(ability.isLegalAction(game, illegal)).toBe(false);
   });
 });

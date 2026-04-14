@@ -41,7 +41,7 @@ describe("GameEngine turn-step flow", () => {
     expect(game.turnStep).toBe(TurnStep.Action);
     expect(game.activePlayerId).toBe("player:one");
 
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
 
     expect(game.turnStep).toBe(TurnStep.Power);
     expect(game.activePlayerId).toBe("player:one");
@@ -56,9 +56,9 @@ describe("GameEngine turn-step flow", () => {
     const { game, engine } = createGameInActionStep("player:one");
 
     // action → power for player one
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     // power → opponent's action
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
 
     expect(game.activePlayerId).toBe("player:two");
     expect(game.turnStep).toBe(TurnStep.Action);
@@ -68,15 +68,15 @@ describe("GameEngine turn-step flow", () => {
     const { game, engine } = createGameInActionStep("player:one");
 
     // Player one: action pass, power pass = 1 turn completed.
-    engine.applyGameAction(game, new PassAction("player:one"));
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
 
     const playerOne = game.getPlayer("player:one")!;
     expect(playerOne.turnsTakenThisRound).toBe(1);
 
     // Player two: same → 1 turn.
-    engine.applyGameAction(game, new PassAction("player:two"));
-    engine.applyGameAction(game, new PassAction("player:two"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:two")!));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:two")!));
     const playerTwo = game.getPlayer("player:two")!;
     expect(playerTwo.turnsTakenThisRound).toBe(1);
   });
@@ -89,7 +89,8 @@ describe("GameEngine round-end → end-phase entry", () => {
     // A round requires each player to take 4 turns (8 total,
     // alternating).  One turn = pass-action + pass-power.
     for (let t = 0; t < 8; t += 1) {
-      const active = game.activePlayerId!;
+      const activeId = game.activePlayerId!;
+      const active = game.getPlayer(activeId)!;
       engine.applyGameAction(game, new PassAction(active));
       engine.applyGameAction(game, new PassAction(active));
     }
@@ -112,7 +113,8 @@ describe("GameEngine round-2 setup after cleanup", () => {
 
     // Drain round 1 into the end phase.
     for (let t = 0; t < 8; t += 1) {
-      const active = game.activePlayerId!;
+      const activeId = game.activePlayerId!;
+      const active = game.getPlayer(activeId)!;
       engine.applyGameAction(game, new PassAction(active));
       engine.applyGameAction(game, new PassAction(active));
     }
@@ -140,7 +142,8 @@ describe("GameEngine round-2 setup after cleanup", () => {
 
     // Drive round 1 to completion.
     for (let t = 0; t < 8; t += 1) {
-      const active = game.activePlayerId!;
+      const activeId = game.activePlayerId!;
+      const active = game.getPlayer(activeId)!;
       engine.applyGameAction(game, new PassAction(active));
       engine.applyGameAction(game, new PassAction(active));
     }

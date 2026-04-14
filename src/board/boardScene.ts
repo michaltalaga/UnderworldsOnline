@@ -455,7 +455,7 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
       isPowerStep &&
       featureTokenState !== null &&
       actionLens.delveAction !== null &&
-      actionLens.delveAction.featureTokenId === featureTokenState.id &&
+      actionLens.delveAction.featureToken.id === featureTokenState.id &&
       occupant !== null &&
       occupant.id === selectedFighterId;
 

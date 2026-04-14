@@ -172,7 +172,7 @@ describe("DumbAiController", () => {
     const ai = new DumbAiController();
 
     // Any single-element list — the AI should echo it back.
-    const pass = new PassAction("player:one");
+    const pass = new PassAction(game.getPlayer("player:one")!);
     expect(ai.chooseAction(game, [pass])).toBe(pass);
   });
 });

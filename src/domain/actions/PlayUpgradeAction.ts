@@ -1,19 +1,19 @@
-import type { CardId, FighterId, PlayerId } from "../values/ids";
 import { CardKind, GameActionKind } from "../values/enums";
 import { GameAction } from "./GameAction";
 import type { LegalActionProvider } from "./LegalActionProvider";
 import type { Game } from "../state/Game";
 import type { Player } from "../state/Player";
+import type { Card } from "../cards/Card";
 import { Fighter } from "../state/Fighter";
 
 export class PlayUpgradeAction extends GameAction {
-  public readonly cardId: CardId;
-  public readonly fighterId: FighterId;
+  public readonly card: Card;
+  public readonly fighter: Fighter;
 
-  public constructor(playerId: PlayerId, cardId: CardId, fighterId: FighterId) {
-    super(GameActionKind.PlayUpgrade, playerId);
-    this.cardId = cardId;
-    this.fighterId = fighterId;
+  public constructor(player: Player, card: Card, fighter: Fighter) {
+    super(GameActionKind.PlayUpgrade, player);
+    this.card = card;
+    this.fighter = fighter;
   }
 }
 
@@ -26,7 +26,7 @@ export const PlayUpgradeActionProvider: LegalActionProvider = {
       const targets = card.getLegalTargets(game);
       return targets.flatMap((target) =>
         target instanceof Fighter
-          ? [new PlayUpgradeAction(player.id, card.id, target.id)]
+          ? [new PlayUpgradeAction(player, card, target)]
           : [],
       );
     });

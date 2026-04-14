@@ -43,7 +43,7 @@ describe("PlayUpgradeAction eligibility", () => {
     owner.powerHand.push(upgrade);
 
     const plays = getLegalActionsOfType(service, game, "player:one", PlayUpgradeAction);
-    expect(plays.find((p) => p.cardId === upgrade.id)).toBeUndefined();
+    expect(plays.find((p) => p.card === upgrade)).toBeUndefined();
   });
 
   it("is legal in the power step with enough glory, targeting every friendly fighter", () => {
@@ -52,10 +52,10 @@ describe("PlayUpgradeAction eligibility", () => {
     const service = new CombatActionService();
 
     const plays = getLegalActionsOfType(service, game, "player:one", PlayUpgradeAction)
-      .filter((p) => p.cardId === upgrade.id);
+      .filter((p) => p.card === upgrade);
     expect(plays.length).toBeGreaterThan(0);
     for (const play of plays) {
-      const fighter = game.getFighter(play.fighterId);
+      const fighter = game.getFighter(play.fighter.id);
       expect(fighter?.ownerPlayerId).toBe("player:one");
       expect(fighter?.isSlain).toBe(false);
     }
@@ -70,7 +70,7 @@ describe("PlayUpgradeAction eligibility", () => {
     const service = new CombatActionService();
 
     const plays = getLegalActionsOfType(service, game, "player:one", PlayUpgradeAction)
-      .filter((p) => p.cardId === upgrade.id);
+      .filter((p) => p.card === upgrade);
     expect(plays).toEqual([]);
   });
 });
@@ -82,8 +82,8 @@ describe("PlayUpgradeAction resolution", () => {
     const service = new CombatActionService();
 
     const play = getLegalActionsOfType(service, game, "player:one", PlayUpgradeAction)
-      .filter((p) => p.cardId === upgrade.id)[0];
-    const fighterBefore = game.getFighter(play.fighterId)!;
+      .filter((p) => p.card === upgrade)[0];
+    const fighterBefore = game.getFighter(play.fighter.id)!;
     const gloryBefore = game.getPlayer("player:one")!.glory;
 
     engine.applyGameAction(game, play);
@@ -92,8 +92,8 @@ describe("PlayUpgradeAction resolution", () => {
     expect(upgrade.attachedToFighter).toBe(fighterBefore);
 
     const owner = game.getPlayer("player:one")!;
-    expect(owner.equippedUpgrades.find((c) => c.id === upgrade.id)).toBeDefined();
-    expect(owner.powerHand.find((c) => c.id === upgrade.id)).toBeUndefined();
+    expect(owner.equippedUpgrades.includes(upgrade)).toBe(true);
+    expect(owner.powerHand.includes(upgrade)).toBe(false);
     expect(owner.glory).toBe(gloryBefore - upgrade.gloryValue);
   });
 
@@ -102,7 +102,7 @@ describe("PlayUpgradeAction resolution", () => {
     const upgrade = seedPracticeUpgrade(game);
     const service = new CombatActionService();
     const play = getLegalActionsOfType(service, game, "player:one", PlayUpgradeAction)
-      .filter((p) => p.cardId === upgrade.id)[0];
+      .filter((p) => p.card === upgrade)[0];
 
     engine.applyGameAction(game, play);
 
@@ -116,14 +116,21 @@ describe("PlayUpgradeAction resolution", () => {
 
   it("rejects playing an upgrade the player doesn't hold", () => {
     const { game, engine } = createGameInPowerStep("player:one");
+    const owner = game.getPlayer("player:one")!;
+    const fighter = owner.fighters[0]!;
+    // Construct a fake card that the player doesn't hold.
+    const fakeCard = {
+      ...owner.powerDeck.drawPile[0],
+      id: "not-a-real-card" as never,
+    };
 
     expect(() =>
       engine.applyGameAction(
         game,
         new PlayUpgradeAction(
-          "player:one",
-          "not-a-real-card" as never,
-          "not-a-real-fighter" as never,
+          owner,
+          fakeCard as unknown as typeof owner.powerDeck.drawPile[0],
+          fighter,
         ),
       ),
     ).toThrow();

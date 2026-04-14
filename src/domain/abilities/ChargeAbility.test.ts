@@ -39,9 +39,9 @@ describe("ChargeAbility eligibility", () => {
     for (const action of actions) {
       const destHexId = action.path[action.path.length - 1];
       const destHex = game.getHex(destHexId)!;
-      const target = game.getFighter(action.targetId)!;
+      const target = game.getFighter(action.target.id)!;
       const targetHex = game.getFighterHex(target)!;
-      const weapon = player.getFighterWeaponDefinition(action.fighterId, action.weaponId)!;
+      const weapon = player.getFighterWeaponDefinition(action.fighter.id, action.weapon.id)!;
       expect(game.getDistance(destHex, targetHex)).toBeLessThanOrEqual(weapon.range);
     }
   });
@@ -81,11 +81,11 @@ describe("ChargeAbility.isLegalAction", () => {
 
     const charge = expectFirstLegalActionOfType(service, game, "player:one", ChargeAction);
     const illegal = new ChargeAction(
-      "player:two",
-      charge.fighterId,
+      game.getPlayer("player:two")!,
+      charge.fighter,
       charge.path,
-      charge.targetId,
-      charge.weaponId,
+      charge.target,
+      charge.weapon,
     );
     expect(ability.isLegalAction(game, illegal)).toBe(false);
   });
@@ -96,7 +96,7 @@ describe("ChargeAbility.isLegalAction", () => {
     const ability = new ChargeAbility();
 
     const charge = expectFirstLegalActionOfType(service, game, "player:one", ChargeAction);
-    const target = game.getFighter(charge.targetId)!;
+    const target = game.getFighter(charge.target.id)!;
     target.isSlain = true;
     expect(ability.isLegalAction(game, charge)).toBe(false);
   });
@@ -107,12 +107,13 @@ describe("ChargeAbility.isLegalAction", () => {
     const ability = new ChargeAbility();
 
     const charge = expectFirstLegalActionOfType(service, game, "player:one", ChargeAction);
+    const fakeWeapon = { ...charge.weapon, id: "weapon-def:not-a-real-weapon" as never };
     const illegal = new ChargeAction(
-      charge.playerId,
-      charge.fighterId,
+      charge.player,
+      charge.fighter,
       charge.path,
-      charge.targetId,
-      "weapon-def:not-a-real-weapon" as never,
+      charge.target,
+      fakeWeapon as unknown as typeof charge.weapon,
     );
     expect(ability.isLegalAction(game, illegal)).toBe(false);
   });
@@ -124,11 +125,11 @@ describe("ChargeAbility.isLegalAction", () => {
 
     const charge = expectFirstLegalActionOfType(service, game, "player:one", ChargeAction);
     const emptyPath = new ChargeAction(
-      charge.playerId,
-      charge.fighterId,
+      charge.player,
+      charge.fighter,
       [],
-      charge.targetId,
-      charge.weaponId,
+      charge.target,
+      charge.weapon,
     );
     expect(ability.isLegalAction(game, emptyPath)).toBe(false);
   });

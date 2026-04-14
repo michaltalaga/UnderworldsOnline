@@ -1,4 +1,3 @@
-import type { FighterId, PlayerId, WeaponDefinitionId } from "../values/ids";
 import {
   AttackDieFace,
   GameActionKind,
@@ -9,30 +8,32 @@ import { GameAction } from "./GameAction";
 import type { LegalActionProvider } from "./LegalActionProvider";
 import type { Game } from "../state/Game";
 import type { Player } from "../state/Player";
+import type { Fighter } from "../state/Fighter";
+import type { WeaponDefinition } from "../definitions/WeaponDefinition";
 import { AttackAbility } from "../abilities/AttackAbility";
 import { hasUsedCoreAbilityThisActionStep } from "../rules/actionStepQueries";
 
 export class AttackAction extends GameAction {
-  public readonly attackerId: FighterId;
-  public readonly targetId: FighterId;
-  public readonly weaponId: WeaponDefinitionId;
+  public readonly attacker: Fighter;
+  public readonly target: Fighter;
+  public readonly weapon: WeaponDefinition;
   public readonly selectedAbility: WeaponAbilityKind | null;
   public readonly attackRoll: AttackDieFace[] | null;
   public readonly saveRoll: SaveDieFace[] | null;
 
   public constructor(
-    playerId: PlayerId,
-    attackerId: FighterId,
-    targetId: FighterId,
-    weaponId: WeaponDefinitionId,
+    player: Player,
+    attacker: Fighter,
+    target: Fighter,
+    weapon: WeaponDefinition,
     selectedAbility: WeaponAbilityKind | null = null,
     attackRoll: AttackDieFace[] | null = null,
     saveRoll: SaveDieFace[] | null = null,
   ) {
-    super(GameActionKind.Attack, playerId);
-    this.attackerId = attackerId;
-    this.targetId = targetId;
-    this.weaponId = weaponId;
+    super(GameActionKind.Attack, player);
+    this.attacker = attacker;
+    this.target = target;
+    this.weapon = weapon;
     this.selectedAbility = selectedAbility;
     this.attackRoll = attackRoll;
     this.saveRoll = saveRoll;

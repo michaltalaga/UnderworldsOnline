@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   CardZone,
   PassAction,
+  UpgradeCard,
   WeaponAbilityKind,
 } from "../../index";
 import {
@@ -181,7 +182,7 @@ describe("BlazingAssault objectives — end-phase", () => {
 describe("BlazingAssault ploys — reaction", () => {
   it("DeterminedEffort is not playable without an AttackDiceRolledEvent", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new DeterminedEffort("de-test", owner, CardZone.PowerHand);
     expect(ploy.getLegalTargets(game)).toEqual([]);
@@ -189,7 +190,7 @@ describe("BlazingAssault ploys — reaction", () => {
 
   it("TwistTheKnife is not playable without an AttackDiceRolledEvent", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new TwistTheKnife("ttk-test", owner, CardZone.PowerHand);
     expect(ploy.getLegalTargets(game)).toEqual([]);
@@ -201,7 +202,7 @@ describe("BlazingAssault ploys — reaction", () => {
 describe("BlazingAssault ploys — power-step friendly targeting", () => {
   it("WingsOfWar targets friendly on-board fighters in power step", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new WingsOfWar("wow-test", owner, CardZone.PowerHand);
     const targets = ploy.getLegalTargets(game);
@@ -211,7 +212,7 @@ describe("BlazingAssault ploys — power-step friendly targeting", () => {
 
   it("Sidestep targets friendly on-board fighters in power step", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new Sidestep("sstep-test", owner, CardZone.PowerHand);
     expect(ploy.getLegalTargets(game).length).toBeGreaterThan(0);
@@ -219,7 +220,7 @@ describe("BlazingAssault ploys — power-step friendly targeting", () => {
 
   it("ShieldsUp targets friendly fighters; onPlay gives guard", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new ShieldsUp("su-test", owner, CardZone.PowerHand);
     const target = ploy.getLegalTargets(game)[0] as { hasGuardToken: boolean; id: string };
@@ -239,7 +240,7 @@ describe("BlazingAssault ploys — power-step friendly targeting", () => {
 
   it("HealingPotion targets friendly fighters in power step", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new HealingPotion("hp-test", owner, CardZone.PowerHand);
     expect(ploy.getLegalTargets(game).length).toBeGreaterThan(0);
@@ -247,7 +248,7 @@ describe("BlazingAssault ploys — power-step friendly targeting", () => {
 
   it("ScreamOfAnger onPlay deals 2 damage and removes a movement token", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new ScreamOfAnger("soa-test", owner, CardZone.PowerHand);
     const target = ploy.getLegalTargets(game)[0] as { damage: number; hasMoveToken: boolean; id: string };
@@ -260,7 +261,7 @@ describe("BlazingAssault ploys — power-step friendly targeting", () => {
 
   it("LureOfBattle targets a friendly fighter within 2 hexes of any other fighter", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new LureOfBattle("lob-test", owner, CardZone.PowerHand);
     // Ring-2 covers much of the board on Embergard1; at least one should qualify.
@@ -274,7 +275,7 @@ describe("BlazingAssault ploys — power-step friendly targeting", () => {
 
   it("CommandingStride targets only the friendly leader", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new CommandingStride("cs-test", owner, CardZone.PowerHand);
     const targets = ploy.getLegalTargets(game);
@@ -286,7 +287,7 @@ describe("BlazingAssault ploys — power-step friendly targeting", () => {
 
   it("IllusoryFighter targets friendly on-board fighters", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     const ploy = new IllusoryFighter("if-test", owner, CardZone.PowerHand);
     expect(ploy.getLegalTargets(game).length).toBeGreaterThan(0);
@@ -312,7 +313,7 @@ describe("BlazingAssault upgrades", () => {
 
   it("HiddenAid has no passive hooks but is targetable in power step with glory", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     const owner = game.getPlayer("player:one")!;
     owner.glory = 5;
     const upg = new HiddenAid("ha-test", owner, CardZone.PowerHand);
@@ -330,7 +331,7 @@ describe("BlazingAssault upgrades", () => {
   it("GreatStrength grants Grievous to melee weapons only", () => {
     const { game } = createGameInActionStep("player:one");
     const owner = game.getPlayer("player:one")!;
-    const upg = new GreatStrength("gs-test", owner, CardZone.PowerHand);
+    const upg: UpgradeCard = new GreatStrength("gs-test", owner, CardZone.PowerHand);
 
     const meleeWeapon = owner.warband.fighters[0].weapons[0]; // Practice Blade (range 1)
     const rangedWeapon = owner.warband.fighters[2].weapons[0]; // Practice Bow (range 3)
@@ -342,7 +343,7 @@ describe("BlazingAssault upgrades", () => {
   it("DeadlyAim grants Ensnare to any weapon", () => {
     const { game } = createGameInActionStep("player:one");
     const owner = game.getPlayer("player:one")!;
-    const upg = new DeadlyAim("da-test", owner, CardZone.PowerHand);
+    const upg: UpgradeCard = new DeadlyAim("da-test", owner, CardZone.PowerHand);
     const weapon = owner.warband.fighters[2].weapons[0];
     expect(upg.getGrantedWeaponAbility(weapon, 1)).toBe(WeaponAbilityKind.Ensnare);
     void game;
@@ -351,7 +352,7 @@ describe("BlazingAssault upgrades", () => {
   it("SharpenedPoints grants Cleave to any weapon", () => {
     const { game } = createGameInActionStep("player:one");
     const owner = game.getPlayer("player:one")!;
-    const upg = new SharpenedPoints("sp-test", owner, CardZone.PowerHand);
+    const upg: UpgradeCard = new SharpenedPoints("sp-test", owner, CardZone.PowerHand);
     const weapon = owner.warband.fighters[0].weapons[0];
     expect(upg.getGrantedWeaponAbility(weapon, 1)).toBe(WeaponAbilityKind.Cleave);
     void game;

@@ -24,7 +24,7 @@ import {
 function revealFeatureTokenAndPlaceFriendly(
   game: ReturnType<typeof createGameInPowerStep>["game"],
   playerId: "player:one" | "player:two",
-): { tokenId: string; fighterId: string } | null {
+): { tokenId: string; fighter: import("../state/Fighter").Fighter } | null {
   const player = game.getPlayer(playerId)!;
 
   // Pick the first feature token and reveal it as Treasure.
@@ -49,7 +49,7 @@ function revealFeatureTokenAndPlaceFriendly(
   newHex.occupantFighterId = fighter.id;
   fighter.currentHexId = newHex.id;
 
-  return { tokenId: token.id, fighterId: fighter.id };
+  return { tokenId: token.id, fighter };
 }
 
 describe("DelveAction eligibility", () => {
@@ -70,7 +70,7 @@ describe("DelveAction eligibility", () => {
 
     const delves = getLegalActionsOfType(service, game, "player:one", DelveAction);
     expect(delves.length).toBeGreaterThan(0);
-    expect(delves.some((d) => d.fighterId === setup.fighterId)).toBe(true);
+    expect(delves.some((d) => d.fighter.id === setup.fighter.id)).toBe(true);
   });
 
   it("is not legal once the player has already delved this power step", () => {
@@ -81,7 +81,7 @@ describe("DelveAction eligibility", () => {
     if (setup === null) return; // vacuous
 
     const delve = getLegalActionsOfType(service, game, "player:one", DelveAction)
-      .find((d) => d.fighterId === setup.fighterId)!;
+      .find((d) => d.fighter.id === setup.fighter.id)!;
     engine.applyGameAction(game, delve);
 
     expect(game.getPlayer("player:one")!.hasDelvedThisPowerStep).toBe(true);
@@ -101,7 +101,7 @@ describe("DelveAction eligibility", () => {
     token.side = FeatureTokenSide.Hidden;
 
     const delves = getLegalActionsOfType(service, game, "player:one", DelveAction);
-    expect(delves.find((d) => d.fighterId === setup.fighterId)).toBeUndefined();
+    expect(delves.find((d) => d.fighter.id === setup.fighter.id)).toBeUndefined();
   });
 });
 
@@ -114,11 +114,11 @@ describe("DelveAction resolution", () => {
     if (setup === null) return; // vacuous
 
     const delve = getLegalActionsOfType(service, game, "player:one", DelveAction)
-      .find((d) => d.fighterId === setup.fighterId)!;
+      .find((d) => d.fighter.id === setup.fighter.id)!;
 
     engine.applyGameAction(game, delve);
 
-    const fighter = game.getFighter(setup.fighterId as never)!;
+    const fighter = game.getFighter(setup.fighter.id as never)!;
     expect(fighter.hasStaggerToken).toBe(true);
 
     const token = game.getFeatureToken(setup.tokenId as never)!;
@@ -139,24 +139,23 @@ describe("DelveAction resolution", () => {
     if (setup === null) return; // vacuous
 
     const delve = getLegalActionsOfType(service, game, "player:one", DelveAction)
-      .find((d) => d.fighterId === setup.fighterId)!;
+      .find((d) => d.fighter.id === setup.fighter.id)!;
     engine.applyGameAction(game, delve);
 
     const records = game.getEventHistory(GameRecordKind.Delve);
     expect(records).toHaveLength(1);
     expect(records[0].invokedByPlayerId).toBe("player:one");
-    expect(records[0].invokedByFighterId).toBe(setup.fighterId);
+    expect(records[0].invokedByFighterId).toBe(setup.fighter.id);
   });
 
   it("rejects delve for the wrong player", () => {
     const { game, engine } = createGameInPowerStep("player:one");
+    const playerTwo = game.getPlayer("player:two")!;
+    const opponentFighter = playerTwo.fighters[0]!;
+    const anyToken = game.featureTokens[0]!;
 
     // Player two is not the active player — any delve they submit must throw.
-    const illegal = new DelveAction(
-      "player:two",
-      "fighter:fake" as never,
-      "token:fake" as never,
-    );
+    const illegal = new DelveAction(playerTwo, opponentFighter, anyToken);
     expect(() => engine.applyGameAction(game, illegal)).toThrow();
   });
 });

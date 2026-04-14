@@ -56,9 +56,9 @@ export function getPowerOverlayModel(
     }
 
     for (const target of targets) {
-      const targetFighterId = target instanceof Fighter ? target.id : null;
-      const action = new PlayPloyAction(activePlayer.id, card.id, targetFighterId);
-      const key = `ploy:${action.cardId}:${action.targetFighterId ?? "none"}`;
+      const targetFighter = target instanceof Fighter ? target : null;
+      const action = new PlayPloyAction(activePlayer, card, targetFighter);
+      const key = `ploy:${action.card.id}:${action.targetFighter?.id ?? "none"}`;
       if (ployOptions.has(key)) {
         continue;
       }
@@ -67,9 +67,9 @@ export function getPowerOverlayModel(
         key,
         title: card.name,
         detail:
-          targetFighterId === null
+          targetFighter === null
             ? card.text || "Play this ploy."
-            : `Target ${getFighterName(game, targetFighterId)}`,
+            : `Target ${getFighterName(game, targetFighter.id)}`,
         action,
       });
     }
@@ -88,9 +88,9 @@ export function getPowerOverlayModel(
         continue;
       }
 
-      const action = new PlayUpgradeAction(activePlayer.id, card.id, target.id);
+      const action = new PlayUpgradeAction(activePlayer, card, target);
       upgrades.push({
-        key: `upgrade:${action.cardId}:${action.fighterId}`,
+        key: `upgrade:${action.card.id}:${action.fighter.id}`,
         title: card.name,
         detail: `Attach to ${getFighterName(game, target.id)} • ${card.gloryValue} glory`,
         action,
@@ -168,10 +168,10 @@ export function buildHandPowerPlayableMap(
 // card with the engine's armed power option.
 export function getCardIdFromPowerOption(option: PowerOverlayOption): CardId | null {
   if (option.action instanceof PlayPloyAction) {
-    return option.action.cardId;
+    return option.action.card.id;
   }
   if (option.action instanceof PlayUpgradeAction) {
-    return option.action.cardId;
+    return option.action.card.id;
   }
   return null;
 }

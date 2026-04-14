@@ -1,4 +1,4 @@
-import type { FighterId, HexId, PlayerId, WeaponDefinitionId } from "../values/ids";
+import type { HexId } from "../values/ids";
 import {
   AttackDieFace,
   GameActionKind,
@@ -9,33 +9,35 @@ import { GameAction } from "./GameAction";
 import type { LegalActionProvider } from "./LegalActionProvider";
 import type { Game } from "../state/Game";
 import type { Player } from "../state/Player";
+import type { Fighter } from "../state/Fighter";
+import type { WeaponDefinition } from "../definitions/WeaponDefinition";
 import { ChargeAbility } from "../abilities/ChargeAbility";
 import { hasUsedCoreAbilityThisActionStep } from "../rules/actionStepQueries";
 
 export class ChargeAction extends GameAction {
-  public readonly fighterId: FighterId;
+  public readonly fighter: Fighter;
   public readonly path: HexId[];
-  public readonly targetId: FighterId;
-  public readonly weaponId: WeaponDefinitionId;
+  public readonly target: Fighter;
+  public readonly weapon: WeaponDefinition;
   public readonly selectedAbility: WeaponAbilityKind | null;
   public readonly attackRoll: AttackDieFace[] | null;
   public readonly saveRoll: SaveDieFace[] | null;
 
   public constructor(
-    playerId: PlayerId,
-    fighterId: FighterId,
+    player: Player,
+    fighter: Fighter,
     path: HexId[],
-    targetId: FighterId,
-    weaponId: WeaponDefinitionId,
+    target: Fighter,
+    weapon: WeaponDefinition,
     selectedAbility: WeaponAbilityKind | null = null,
     attackRoll: AttackDieFace[] | null = null,
     saveRoll: SaveDieFace[] | null = null,
   ) {
-    super(GameActionKind.Charge, playerId);
-    this.fighterId = fighterId;
+    super(GameActionKind.Charge, player);
+    this.fighter = fighter;
     this.path = path;
-    this.targetId = targetId;
-    this.weaponId = weaponId;
+    this.target = target;
+    this.weapon = weapon;
     this.selectedAbility = selectedAbility;
     this.attackRoll = attackRoll;
     this.saveRoll = saveRoll;

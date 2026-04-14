@@ -27,9 +27,9 @@ export class AttackAbility extends Ability {
           if (targetHex === undefined || game.getDistance(attackerHex, targetHex) > weapon.range) return [];
 
           return [
-            new AttackAction(player.id, fighter.id, target.id, weapon.id),
+            new AttackAction(player, fighter, target, weapon),
             ...weapon.abilities.map(
-              (ability) => new AttackAction(player.id, fighter.id, target.id, weapon.id, ability.kind),
+              (ability) => new AttackAction(player, fighter, target, weapon, ability.kind),
             ),
           ];
         }),
@@ -39,20 +39,18 @@ export class AttackAbility extends Ability {
 
   isLegalAction(game: Game, action: GameAction): boolean {
     if (!(action instanceof AttackAction)) return false;
-    if (!game.isCombatActionStep(action.playerId)) return false;
+    if (!game.isCombatActionStep(action.player.id)) return false;
 
-    const player = game.getPlayer(action.playerId);
-    const opponent = game.getOpponent(action.playerId);
-    if (player === undefined || opponent === undefined) return false;
+    const attacker = action.attacker;
+    if (!canFighterAttack(attacker)) return false;
 
-    const attacker = player.getFighter(action.attackerId);
-    if (attacker === undefined || !canFighterAttack(attacker)) return false;
+    const target = action.target;
+    if (target.isSlain || target.currentHexId === null) return false;
 
-    const target = opponent.getFighter(action.targetId);
-    if (target === undefined || target.isSlain || target.currentHexId === null) return false;
-
-    const weapon = player.getFighterWeaponDefinition(action.attackerId, action.weaponId);
-    if (weapon === undefined) return false;
+    const weapon = action.weapon;
+    // Verify weapon belongs to attacker.
+    const attackerDef = action.player.getFighterDefinition(attacker.id);
+    if (attackerDef === undefined || !attackerDef.weapons.includes(weapon)) return false;
     if (action.selectedAbility !== null && !weapon.hasAbility(action.selectedAbility)) return false;
 
     const attackerHex = game.getFighterHex(attacker);

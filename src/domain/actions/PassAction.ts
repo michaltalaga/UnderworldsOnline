@@ -1,4 +1,3 @@
-import type { PlayerId } from "../values/ids";
 import { GameActionKind } from "../values/enums";
 import { GameAction } from "./GameAction";
 import type { LegalActionProvider } from "./LegalActionProvider";
@@ -8,8 +7,8 @@ import { getActiveCombatState } from "../rules/CombatStateProjection";
 import { hasUsedCoreAbilityThisActionStep } from "../rules/actionStepQueries";
 
 export class PassAction extends GameAction {
-  public constructor(playerId: PlayerId) {
-    super(GameActionKind.Pass, playerId);
+  public constructor(player: Player) {
+    super(GameActionKind.Pass, player);
   }
 }
 
@@ -21,6 +20,6 @@ export const PassActionProvider: LegalActionProvider = {
     const isPowerStep = game.isCombatPowerStep(player.id);
     if (!isActionStep && !isPowerStep) return [];
     if (isActionStep && hasUsedCoreAbilityThisActionStep(game, player)) return [];
-    return [new PassAction(player.id)];
+    return [new PassAction(player)];
   },
 };

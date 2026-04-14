@@ -24,7 +24,8 @@ export class ChargeAbility extends Ability {
       const destinationHex = game.getHex(destinationHexId);
       if (destinationHex === undefined) return [];
 
-      const definition = player.getFighterDefinition(moveAction.fighterId);
+      const fighter = moveAction.fighter;
+      const definition = player.getFighterDefinition(fighter.id);
       if (definition === undefined) return [];
 
       return definition.weapons.flatMap((weapon) =>
@@ -34,9 +35,10 @@ export class ChargeAbility extends Ability {
           if (targetHex === undefined || game.getDistance(destinationHex, targetHex) > weapon.range) return [];
 
           return [
-            new ChargeAction(player.id, moveAction.fighterId, moveAction.path, target.id, weapon.id),
+            new ChargeAction(player, fighter, moveAction.path, target, weapon),
             ...weapon.abilities.map(
-              (ability) => new ChargeAction(player.id, moveAction.fighterId, moveAction.path, target.id, weapon.id, ability.kind),
+              (ability) =>
+                new ChargeAction(player, fighter, moveAction.path, target, weapon, ability.kind),
             ),
           ];
         }),
@@ -46,20 +48,18 @@ export class ChargeAbility extends Ability {
 
   isLegalAction(game: Game, action: GameAction): boolean {
     if (!(action instanceof ChargeAction)) return false;
-    if (!game.isCombatActionStep(action.playerId)) return false;
+    if (!game.isCombatActionStep(action.player.id)) return false;
 
-    const moveAction = new MoveAction(action.playerId, action.fighterId, action.path);
+    const moveAction = new MoveAction(action.player, action.fighter, action.path);
     if (!this.moveAbility.isLegalAction(game, moveAction) || action.path.length === 0) return false;
 
-    const player = game.getPlayer(action.playerId);
-    const opponent = game.getOpponent(action.playerId);
-    if (player === undefined || opponent === undefined) return false;
+    const target = action.target;
+    if (target.isSlain || target.currentHexId === null) return false;
 
-    const target = opponent.getFighter(action.targetId);
-    if (target === undefined || target.isSlain || target.currentHexId === null) return false;
-
-    const weapon = player.getFighterWeaponDefinition(action.fighterId, action.weaponId);
-    if (weapon === undefined) return false;
+    const weapon = action.weapon;
+    // The weapon must actually belong to the attacker's fighter definition.
+    const attackerDef = action.player.getFighterDefinition(action.fighter.id);
+    if (attackerDef === undefined || !attackerDef.weapons.includes(weapon)) return false;
     if (action.selectedAbility !== null && !weapon.hasAbility(action.selectedAbility)) return false;
 
     const destinationHexId = action.path[action.path.length - 1];

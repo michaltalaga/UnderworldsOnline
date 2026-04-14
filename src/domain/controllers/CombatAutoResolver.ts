@@ -107,7 +107,7 @@ export class CombatAutoResolver {
             (card) => card.getLegalTargets(game).length > 0,
           );
           if (!hasPlayableReactions) {
-            this.engine.applyGameAction(game, new ConfirmCombatAction(game.activePlayerId));
+            this.engine.applyGameAction(game, new ConfirmCombatAction(player));
             return true;
           }
         }

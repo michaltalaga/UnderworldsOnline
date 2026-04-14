@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   CardZone,
+  Fighter,
   PassAction,
   PlayPloyAction,
   PloyCard,
@@ -78,7 +79,7 @@ describe("GiveGuardPloy — ploy card exemplar", () => {
 
   it("targets only friendly fighters without a Guard token during the power step", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
     // Now in the power step.
 
     const owner = game.getPlayer("player:one")!;
@@ -97,7 +98,7 @@ describe("GiveGuardPloy — ploy card exemplar", () => {
 
   it("applies a guard token when played through the engine", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
 
     const owner = game.getPlayer("player:one")!;
     const ploy = new GiveGuardPloy("ploy-guard", owner, CardZone.PowerHand, "99");
@@ -105,22 +106,22 @@ describe("GiveGuardPloy — ploy card exemplar", () => {
 
     const [firstTarget] = ploy.getLegalTargets(game);
     expect(firstTarget).toBeDefined();
-    const targetFighter = firstTarget as { id: string; hasGuardToken: boolean };
+    const targetFighter = firstTarget as Fighter;
 
     engine.applyGameAction(
       game,
-      new PlayPloyAction("player:one", ploy.id, targetFighter.id),
+      new PlayPloyAction(game.getPlayer("player:one")!, ploy, targetFighter),
     );
 
     expect(targetFighter.hasGuardToken).toBe(true);
     // The ploy moved from hand to discard and zone updated.
     expect(ploy.zone).toBe(CardZone.PowerDiscard);
-    expect(owner.powerHand.find((c) => c.id === ploy.id)).toBeUndefined();
+    expect(owner.powerHand.includes(ploy)).toBe(false);
   });
 
   it("GiveStaggerPloy targets enemy fighters without stagger", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
 
     const owner = game.getPlayer("player:one")!;
     const ploy = new GiveStaggerPloy("ploy-stagger", owner, CardZone.PowerHand, "99");
@@ -161,7 +162,7 @@ describe("PracticeUpgrade — upgrade card exemplar", () => {
 
   it("is not playable while the owner lacks enough glory", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
 
     const owner = game.getPlayer("player:one")!;
     owner.glory = 0;

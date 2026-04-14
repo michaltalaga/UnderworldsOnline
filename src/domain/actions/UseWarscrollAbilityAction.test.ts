@@ -47,7 +47,7 @@ describe("UseWarscrollAbilityAction eligibility", () => {
     );
     expect(uses.length).toBeGreaterThan(0);
     for (const use of uses) {
-      expect(use.playerId).toBe("player:one");
+      expect(use.player.id).toBe("player:one");
       expect(use.abilityIndex).toBeGreaterThanOrEqual(0);
     }
   });
@@ -141,7 +141,7 @@ describe("UseWarscrollAbilityAction resolution", () => {
     game.getPlayer("player:one")!.warscrollState.tokens = { signal: 1 };
 
     expect(() =>
-      engine.applyGameAction(game, new UseWarscrollAbilityAction("player:two", 0)),
+      engine.applyGameAction(game, new UseWarscrollAbilityAction(game.getPlayer("player:two")!, 0)),
     ).toThrow();
   });
 });

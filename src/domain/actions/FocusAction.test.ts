@@ -24,14 +24,14 @@ describe("FocusAction eligibility", () => {
 
     const focuses = getLegalActionsOfType(service, game, "player:one", FocusAction);
     expect(focuses.length).toBeGreaterThan(0);
-    expect(focuses[0].playerId).toBe("player:one");
+    expect(focuses[0].player.id).toBe("player:one");
   });
 
   it("is not legal after another core ability has been used", () => {
     const { game, engine } = createGameInActionStep("player:one");
     const service = new CombatActionService();
 
-    engine.applyGameAction(game, new PassAction("player:one"));
+    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
 
     const focusesAfter = getLegalActionsOfType(service, game, "player:one", FocusAction);
     expect(focusesAfter).toEqual([]);

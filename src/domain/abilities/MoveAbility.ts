@@ -42,7 +42,7 @@ export class MoveAbility extends Ability {
 
           const nextPath = [...node.path, neighbor.id];
           shortestPathLengths.set(neighbor.id, nextLen);
-          actions.push(new MoveAction(player.id, fighter.id, nextPath));
+          actions.push(new MoveAction(player, fighter, nextPath));
           frontier.push({ hex: neighbor, path: nextPath });
         }
       }
@@ -53,15 +53,12 @@ export class MoveAbility extends Ability {
 
   isLegalAction(game: Game, action: GameAction): boolean {
     if (!(action instanceof MoveAction)) return false;
-    if (!game.isCombatActionStep(action.playerId)) return false;
+    if (!game.isCombatActionStep(action.player.id)) return false;
 
-    const player = game.getPlayer(action.playerId);
-    if (player === undefined) return false;
-
-    const fighter = player.getFighter(action.fighterId);
-    const definition = player.getFighterDefinition(action.fighterId);
-    if (fighter === undefined || definition === undefined || !canFighterMove(fighter)) return false;
-    const moveDistance = getEffectiveMove(definition, player, fighter);
+    const fighter = action.fighter;
+    const definition = action.player.getFighterDefinition(fighter.id);
+    if (definition === undefined || !canFighterMove(fighter)) return false;
+    const moveDistance = getEffectiveMove(definition, action.player, fighter);
     if (action.path.length === 0 || action.path.length > moveDistance) return false;
 
     const visited = new Set<HexId>([fighter.currentHexId]);
