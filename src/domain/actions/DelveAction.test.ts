@@ -24,8 +24,11 @@ import {
 function revealFeatureTokenAndPlaceFriendly(
   game: ReturnType<typeof createGameInPowerStep>["game"],
   playerId: "player:one" | "player:two",
-): { tokenId: string; fighter: import("../state/Fighter").Fighter } | null {
-  const player = game.getPlayer(playerId)!;
+): {
+  token: import("../state/FeatureToken").FeatureToken;
+  fighter: import("../state/Fighter").Fighter;
+} | null {
+  const player = playerId === "player:one" ? game.players[0] : game.players[1];
 
   // Pick the first feature token and reveal it as Treasure.
   const token = game.featureTokens[0];
@@ -40,7 +43,7 @@ function revealFeatureTokenAndPlaceFriendly(
   if (fighter === undefined) return null;
 
   // Vacate the fighter's current hex and the target hex before moving.
-  const oldHex = game.getFighterHex(fighter)!;
+  const oldHex = fighter.currentHex!;
   oldHex.occupantFighter = null;
 
   const newHex = token.hex;
@@ -49,7 +52,7 @@ function revealFeatureTokenAndPlaceFriendly(
   newHex.occupantFighter = fighter;
   fighter.currentHex = newHex;
 
-  return { tokenId: token.id, fighter };
+  return { token, fighter };
 }
 
 describe("DelveAction eligibility", () => {
@@ -97,7 +100,7 @@ describe("DelveAction eligibility", () => {
     if (setup === null) return; // vacuous
 
     // Re-hide the token; delve should drop out of the legal action list.
-    const token = game.getFeatureToken(setup.tokenId as never)!;
+    const token = setup.token;
     token.side = FeatureTokenSide.Hidden;
 
     const delves = getLegalActionsOfType(service, game, "player:one", DelveAction);
@@ -120,13 +123,13 @@ describe("DelveAction resolution", () => {
 
     expect(setup.fighter.hasStaggerToken).toBe(true);
 
-    const token = game.getFeatureToken(setup.tokenId as never)!;
+    const token = setup.token;
     // Treasure → Cover after delve.
     expect(token.side).toBe(FeatureTokenSide.Cover);
 
     const delved = findLatestEvent(game, FighterDelvedEvent);
     expect(delved).not.toBeNull();
-    expect(delved!.featureTokenId).toBe(setup.tokenId);
+    expect(delved!.featureTokenId).toBe(setup.token.id);
     expect(delved!.actionKind).toBe(GameActionKind.Delve);
   });
 
