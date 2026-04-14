@@ -37,7 +37,7 @@ describe("GuardAbility eligibility", () => {
 
     // Every fighter in the set is alive, on board, and has no conflicting tokens.
     for (const action of actions) {
-      const fighter = player.getFighter(action.fighter.id)!;
+      const fighter = action.fighter;
       expect(fighter.isSlain).toBe(false);
       expect(fighter.currentHex).not.toBeNull();
       expect(fighter.hasMoveToken).toBe(false);

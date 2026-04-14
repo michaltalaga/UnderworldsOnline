@@ -119,7 +119,7 @@ export class CombatActionService extends LegalActionService {
       return false;
     }
 
-    const fighter = player.getFighter(action.fighter.id);
+    const fighter = action.fighter;
     if (fighter === undefined || fighter.isSlain || fighter.currentHex === null) {
       return false;
     }
@@ -146,7 +146,7 @@ export class CombatActionService extends LegalActionService {
     if (player === undefined) return false;
 
     const card = player.getCard(action.card.id);
-    const fighter = player.getFighter(action.fighter.id);
+    const fighter = action.fighter;
     if (card === undefined || card.kind !== CardKind.Upgrade || fighter === undefined) {
       return false;
     }
