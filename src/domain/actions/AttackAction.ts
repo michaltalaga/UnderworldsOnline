@@ -6,6 +6,11 @@ import {
   WeaponAbilityKind,
 } from "../values/enums";
 import { GameAction } from "./GameAction";
+import type { LegalActionProvider } from "./LegalActionProvider";
+import type { Game } from "../state/Game";
+import type { Player } from "../state/Player";
+import { AttackAbility } from "../abilities/AttackAbility";
+import { hasUsedCoreAbilityThisActionStep } from "../rules/actionStepQueries";
 
 export class AttackAction extends GameAction {
   public readonly attackerId: FighterId;
@@ -33,3 +38,13 @@ export class AttackAction extends GameAction {
     this.saveRoll = saveRoll;
   }
 }
+
+const attackAbility = new AttackAbility();
+
+export const AttackActionProvider: LegalActionProvider = {
+  getLegalInstances(game: Game, player: Player): GameAction[] {
+    if (!game.isCombatActionStep(player.id)) return [];
+    if (hasUsedCoreAbilityThisActionStep(game, player)) return [];
+    return attackAbility.getLegalActions(game, player);
+  },
+};

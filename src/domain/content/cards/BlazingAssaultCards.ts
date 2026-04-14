@@ -14,8 +14,11 @@ import { getMyLatestCombatEvent, getLatestSlainEvent, getTerritoryOwner, isMelee
 import { CombatResolvedEvent } from "../../events/CombatResolvedEvent";
 import { FighterSlainEvent } from "../../events/FighterSlainEvent";
 import { AttackDiceRolledEvent } from "../../events/AttackDiceRolledEvent";
+import { AttackDiceModifiedEvent } from "../../events/AttackDiceModifiedEvent";
+import { WeaponAbilityModifiedEvent } from "../../events/WeaponAbilityModifiedEvent";
 import { SaveDiceRolledEvent } from "../../events/SaveDiceRolledEvent";
 import { CombatEndedEvent } from "../../events/CombatEndedEvent";
+import { getActiveCombatState } from "../../rules/CombatStateProjection";
 
 // ─── Objectives ─────────────────────────────────────────────────────────────
 
@@ -228,15 +231,26 @@ export class DeterminedEffort extends PloyCard {
   }
 
   protected override onPlay(game: Game, _target: Target | null): string[] {
-    const pending = game.pendingCombat;
-    if (pending === null) return [];
-    // Add extra attack dice to the pending roll.
+    const combatState = getActiveCombatState(game);
+    if (combatState === null) return [];
     const opponent = game.getOpponent(this.owner.id);
     const isUnderdog = opponent !== undefined && this.owner.glory < opponent.glory;
     const extraDice = isUnderdog ? 2 : 1;
+    const previousRoll = [...combatState.attackRoll];
+    const newRoll = [...previousRoll];
     for (let i = 0; i < extraDice; i++) {
-      pending.attackRoll.push(rollAttackDie());
+      newRoll.push(rollAttackDie());
     }
+    game.emitEvent(new AttackDiceModifiedEvent(
+      game.roundNumber,
+      combatState.attackerPlayer,
+      combatState.attacker,
+      this,
+      previousRoll,
+      newRoll,
+      `Determined Effort: added ${extraDice} attack dice`,
+      combatState.actionKind,
+    ));
     return [`Determined Effort: added ${extraDice} attack dice`];
   }
 }
@@ -255,10 +269,18 @@ export class TwistTheKnife extends PloyCard {
   }
 
   protected override onPlay(game: Game, _target: Target | null): string[] {
-    const pending = game.pendingCombat;
-    if (pending === null) return [];
-    // Grant Grievous for this attack (overwrite selected ability).
-    pending.selectedAbility = "grievous" as typeof pending.selectedAbility;
+    const combatState = getActiveCombatState(game);
+    if (combatState === null) return [];
+    game.emitEvent(new WeaponAbilityModifiedEvent(
+      game.roundNumber,
+      combatState.attackerPlayer,
+      combatState.attacker,
+      this,
+      combatState.selectedAbility,
+      WeaponAbilityKind.Grievous,
+      "Twist the Knife: weapon gained Grievous",
+      combatState.actionKind,
+    ));
     return [`Twist the Knife: weapon gained Grievous`];
   }
 }

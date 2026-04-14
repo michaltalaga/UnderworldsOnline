@@ -121,6 +121,7 @@ import { ResolveDrawPowerCardsAction } from "../endPhase/ResolveDrawPowerCardsAc
 import { ResolveEquipUpgradesAction } from "../endPhase/ResolveEquipUpgradesAction";
 import { ResolveScoreObjectivesAction } from "../endPhase/ResolveScoreObjectivesAction";
 import { CombatActionService } from "../rules/CombatActionService";
+import { getActiveCombatState } from "../rules/CombatStateProjection";
 import { CombatContext } from "../rules/CombatContext";
 import { CombatEndedResolution } from "../rules/CombatEndedResolution";
 import { CombatResolver } from "../rules/CombatResolver";
@@ -714,20 +715,6 @@ export class GameEngine {
     const attackDiceCount = getEffectiveAttackDice(weapon, attackerPlayer, attacker);
     const attackRoll = action.attackRoll ?? Array.from({ length: attackDiceCount }, () => rollAttackDie());
 
-    game.pendingCombat = {
-      phase: "attack-rolled",
-      attackerPlayerId: attackerPlayer.id,
-      defenderPlayerId: defenderPlayer.id,
-      attackerFighterId: attacker.id,
-      targetFighterId: target.id,
-      weaponId: weapon.id,
-      selectedAbility: action.selectedAbility,
-      actionKind: action.kind,
-      attackRoll: [...attackRoll],
-      saveRoll: [],
-      outcome: null,
-      damageInflicted: 0,
-    };
     game.emitEvent(new AttackDiceRolledEvent(
       game.roundNumber,
       attackerPlayer,
@@ -818,20 +805,6 @@ export class GameEngine {
 
     attacker.hasChargeToken = true;
 
-    game.pendingCombat = {
-      phase: "attack-rolled",
-      attackerPlayerId: attackerPlayer.id,
-      defenderPlayerId: defenderPlayer.id,
-      attackerFighterId: attacker.id,
-      targetFighterId: target.id,
-      weaponId: weapon.id,
-      selectedAbility: action.selectedAbility,
-      actionKind: action.kind,
-      attackRoll: [...attackRoll],
-      saveRoll: [],
-      outcome: null,
-      damageInflicted: 0,
-    };
     game.emitEvent(new AttackDiceRolledEvent(
       game.roundNumber,
       attackerPlayer,
@@ -858,79 +831,82 @@ export class GameEngine {
    *   resolved       →  (done)        (apply damage, clear pending)
    */
   private applyConfirmCombatAction(game: Game, _action: ConfirmCombatAction): void {
-    const pending = game.pendingCombat;
-    if (pending === null) {
-      throw new Error("No pending combat to confirm.");
+    const combatState = getActiveCombatState(game);
+    if (combatState === null) {
+      throw new Error("No active combat to confirm.");
     }
 
-    const attackerPlayer = this.requirePlayer(game, pending.attackerPlayerId);
-    const defenderPlayer = this.requireOpponent(game, attackerPlayer.id);
-    const target = defenderPlayer.getFighter(pending.targetFighterId);
-    const targetDefinition = defenderPlayer.getFighterDefinition(pending.targetFighterId);
+    const attackerPlayer = combatState.attackerPlayer;
+    const defenderPlayer = combatState.defenderPlayer;
+    const target = combatState.target;
+    const targetDefinition = defenderPlayer.getFighterDefinition(target.id);
 
     // --- Phase: attack-rolled → save-rolled ---
-    if (pending.phase === "attack-rolled") {
-      if (target === undefined || targetDefinition === undefined) {
-        game.pendingCombat = null;
-        return;
-      }
+    if (combatState.phase === "attack-rolled") {
+      if (targetDefinition === undefined) return;
       const saveDiceCount = getEffectiveSaveDice(targetDefinition, defenderPlayer, target);
-      pending.saveRoll = Array.from({ length: saveDiceCount }, () => rollSaveDie());
-      pending.phase = "save-rolled";
-      const saveRollAttacker = attackerPlayer.getFighter(pending.attackerFighterId);
-      const saveRollWeapon = saveRollAttacker !== undefined
-        ? attackerPlayer.getFighterWeaponDefinition(saveRollAttacker.id, pending.weaponId)
-        : undefined;
-      if (saveRollAttacker !== undefined && saveRollWeapon !== undefined) {
-        game.emitEvent(new SaveDiceRolledEvent(
-          game.roundNumber,
-          attackerPlayer,
-          defenderPlayer,
-          saveRollAttacker,
-          target,
-          saveRollWeapon,
-          pending.selectedAbility,
-          pending.attackRoll,
-          pending.saveRoll,
-          pending.actionKind,
-        ));
-      }
+      const saveRoll = Array.from({ length: saveDiceCount }, () => rollSaveDie());
+      game.emitEvent(new SaveDiceRolledEvent(
+        game.roundNumber,
+        attackerPlayer,
+        defenderPlayer,
+        combatState.attacker,
+        target,
+        combatState.weapon,
+        combatState.selectedAbility,
+        combatState.attackRoll,
+        saveRoll,
+        combatState.actionKind,
+      ));
       game.eventLog.push(`Save dice rolled for ${targetDefinition.name}.`);
       return;
     }
 
     // --- Phase: save-rolled → resolved ---
-    if (pending.phase === "save-rolled") {
-      const attacker = attackerPlayer.getFighter(pending.attackerFighterId);
-      const attackerDef = attackerPlayer.getFighterDefinition(pending.attackerFighterId);
-      if (
-        attacker === undefined || attackerDef === undefined ||
-        target === undefined || targetDefinition === undefined
-      ) {
-        game.pendingCombat = null;
-        return;
-      }
-      const weapon = attackerPlayer.getFighterWeaponDefinition(attacker.id, pending.weaponId);
-      if (weapon === undefined) { game.pendingCombat = null; return; }
+    if (combatState.phase === "save-rolled") {
+      const attacker = combatState.attacker;
+      const attackerDef = attackerPlayer.getFighterDefinition(attacker.id);
+      if (attackerDef === undefined || targetDefinition === undefined) return;
 
-      // Resolve via the combat resolver with the stored rolls.
       const combatResult = this.combatResolver.resolve(
         game,
         new CombatContext(
-          pending.attackerPlayerId,
-          pending.defenderPlayerId,
-          pending.attackerFighterId,
-          pending.targetFighterId,
-          pending.weaponId,
-          pending.selectedAbility,
+          attackerPlayer.id,
+          defenderPlayer.id,
+          attacker.id,
+          target.id,
+          combatState.weapon.id,
+          combatState.selectedAbility,
         ),
-        pending.attackRoll,
-        pending.saveRoll,
+        [...combatState.attackRoll],
+        [...combatState.saveRoll],
       );
 
-      pending.outcome = combatResult.outcome;
-      pending.damageInflicted = combatResult.damageInflicted;
-      pending.phase = "resolved";
+      // Emit a CombatResolvedEvent — this advances the phase to "resolved"
+      game.emitEvent(new CombatResolvedEvent(
+        game.roundNumber,
+        attackerPlayer,
+        defenderPlayer,
+        attacker,
+        target,
+        combatState.weapon,
+        combatState.selectedAbility,
+        combatResult.selectedAbilityRequiresCritical,
+        combatResult.selectedAbilityTriggered,
+        combatState.attackRoll,
+        combatState.saveRoll,
+        combatResult.outcome,
+        combatResult.attackSuccesses,
+        combatResult.saveSuccesses,
+        combatResult.attackCriticals,
+        combatResult.saveCriticals,
+        combatResult.damageInflicted,
+        false, // targetSlain — not known yet
+        false, // targetMoved
+        false, // attackerMoved
+        combatResult.staggerApplied,
+        combatState.actionKind,
+      ));
       game.eventLog.push(
         `Outcome: ${combatResult.outcome} — ${combatResult.damageInflicted} damage.`,
       );
@@ -938,31 +914,22 @@ export class GameEngine {
     }
 
     // --- Phase: resolved → apply damage and finish ---
-    if (pending.phase === "resolved") {
-      const attacker = this.requireOwnedDeployedFighter(attackerPlayer, pending.attackerFighterId);
+    if (combatState.phase === "resolved") {
+      const attacker = combatState.attacker;
       const attackerDefinition = attackerPlayer.getFighterDefinition(attacker.id);
       if (
         attackerDefinition === undefined ||
-        target === undefined || targetDefinition === undefined ||
+        targetDefinition === undefined ||
         target.currentHexId === null || target.isSlain
       ) {
-        game.pendingCombat = null;
         return;
       }
-      const weapon = attackerPlayer.getFighterWeaponDefinition(attacker.id, pending.weaponId);
-      if (weapon === undefined) { game.pendingCombat = null; return; }
-
-      const attackRoll = pending.attackRoll;
-      const saveRoll = pending.saveRoll;
-      const selectedAbility = pending.selectedAbility;
-      const actionKind = pending.actionKind;
-      game.pendingCombat = null;
 
       const { combatResult, targetSlain } = this.resolveCombatAction(
         game, attackerPlayer, defenderPlayer,
         attacker, attackerDefinition, target, targetDefinition,
-        weapon.id, weapon.name, selectedAbility,
-        attackRoll, saveRoll, actionKind,
+        combatState.weapon.id, combatState.weapon.name, combatState.selectedAbility,
+        [...combatState.attackRoll], [...combatState.saveRoll], combatState.actionKind,
       );
 
       const damageText = combatResult.damageInflicted === 0
@@ -1203,9 +1170,9 @@ export class GameEngine {
   }
 
   private applyPlayPloyAction(game: Game, action: PlayPloyAction): void {
-    // Reaction ploys are playable during the action step while pending
+    // Reaction ploys are playable during the action step while
     // combat is active (the card itself gates timing via canPlay).
-    if (game.pendingCombat === null) {
+    if (getActiveCombatState(game) === null) {
       this.assertCombatTurnStep(game, TurnStep.Power);
     }
     if (!this.combatActionService.isLegalPlayPloyAction(game, action)) {

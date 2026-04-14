@@ -3,6 +3,7 @@ import { EndPhaseActionService } from "../endPhase/EndPhaseActionService";
 import { GameEngine } from "../engine/GameEngine";
 import { deterministicFirstPlayerRollOff } from "../rules/Dice";
 import { CombatActionService } from "../rules/CombatActionService";
+import { getActiveCombatState } from "../rules/CombatStateProjection";
 import type { Game } from "../state/Game";
 import { Phase } from "../values/enums";
 import type { PlayerId } from "../values/ids";
@@ -97,9 +98,9 @@ export class CombatAutoResolver {
 
     const controller = this.controllers.get(game.activePlayerId);
     if (controller === undefined || controller.kind === "local") {
-      // Auto-confirm pending combat for local player when no reaction
+      // Auto-confirm active combat for local player when no reaction
       // cards are playable — skip straight to resolution.
-      if (game.pendingCombat !== null) {
+      if (getActiveCombatState(game) !== null) {
         const player = game.getPlayer(game.activePlayerId);
         if (player !== undefined) {
           const hasPlayableReactions = player.powerHand.some(

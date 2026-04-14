@@ -47,6 +47,7 @@ import {
   getPowerOverlayModel,
   getPowerOverlayOptionByKey,
 } from "../board/battlefieldOverlays";
+import { getActiveCombatState } from "../domain/rules/CombatStateProjection";
 import {
   createEmptyActionLens,
   getAttackActionForTarget,
@@ -428,7 +429,7 @@ export function useGameEngine({ warband, deck = null }: UseGameEngineOptions) {
   }
 
   function confirmCombat(): void {
-    if (activePlayer === null || game.pendingCombat === null) return;
+    if (activePlayer === null || getActiveCombatState(game) === null) return;
     applyAction(new ConfirmCombatAction(activePlayer.id));
   }
 

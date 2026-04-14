@@ -1,17 +1,14 @@
 import { AttackAction } from "../actions/AttackAction";
 import { ChargeAction } from "../actions/ChargeAction";
-import { ConfirmCombatAction } from "../actions/ConfirmCombatAction";
 import { DelveAction } from "../actions/DelveAction";
 import { FocusAction } from "../actions/FocusAction";
 import { GameAction } from "../actions/GameAction";
 import { GuardAction } from "../actions/GuardAction";
 import { MoveAction } from "../actions/MoveAction";
-import { EndActionStepAction } from "../actions/EndActionStepAction";
-import { PassAction } from "../actions/PassAction";
-import { GameRecordKind } from "../state/GameRecord";
 import { PlayPloyAction } from "../actions/PlayPloyAction";
 import { PlayUpgradeAction } from "../actions/PlayUpgradeAction";
 import { UseWarscrollAbilityAction } from "../actions/UseWarscrollAbilityAction";
+import type { LegalActionProvider } from "../actions/LegalActionProvider";
 import { Game } from "../state/Game";
 import { Fighter } from "../state/Fighter";
 import { Player } from "../state/Player";
@@ -27,6 +24,20 @@ import { ChargeAbility } from "../abilities/ChargeAbility";
 import { GuardAbility } from "../abilities/GuardAbility";
 import { FocusAbility } from "../abilities/FocusAbility";
 
+// Action providers (specification pattern)
+import { MoveActionProvider } from "../actions/MoveAction";
+import { AttackActionProvider } from "../actions/AttackAction";
+import { ChargeActionProvider } from "../actions/ChargeAction";
+import { GuardActionProvider } from "../actions/GuardAction";
+import { FocusActionProvider } from "../actions/FocusAction";
+import { PassActionProvider } from "../actions/PassAction";
+import { EndActionStepActionProvider } from "../actions/EndActionStepAction";
+import { ConfirmCombatActionProvider } from "../actions/ConfirmCombatAction";
+import { DelveActionProvider } from "../actions/DelveAction";
+import { PlayPloyActionProvider } from "../actions/PlayPloyAction";
+import { PlayUpgradeActionProvider } from "../actions/PlayUpgradeAction";
+import { UseWarscrollAbilityActionProvider } from "../actions/UseWarscrollAbilityAction";
+
 export class CombatActionService extends LegalActionService {
   private readonly warscrollEffectResolver: WarscrollEffectResolver;
   private readonly coreAbilities: readonly Ability[] = [
@@ -37,6 +48,22 @@ export class CombatActionService extends LegalActionService {
     new FocusAbility(),
   ];
 
+  /** All action providers — each knows when its actions are legal. */
+  private static readonly providers: readonly LegalActionProvider[] = [
+    MoveActionProvider,
+    AttackActionProvider,
+    ChargeActionProvider,
+    GuardActionProvider,
+    FocusActionProvider,
+    PassActionProvider,
+    EndActionStepActionProvider,
+    ConfirmCombatActionProvider,
+    DelveActionProvider,
+    PlayPloyActionProvider,
+    PlayUpgradeActionProvider,
+    UseWarscrollAbilityActionProvider,
+  ];
+
   public constructor(
     warscrollEffectResolver: WarscrollEffectResolver = new DefaultWarscrollEffectResolver(),
   ) {
@@ -44,6 +71,10 @@ export class CombatActionService extends LegalActionService {
     this.warscrollEffectResolver = warscrollEffectResolver;
   }
 
+  /**
+   * Thin aggregator — each provider independently decides what's legal.
+   * No central switch, no phase gating. This is the specification pattern.
+   */
   public getLegalActions(game: Game, playerId: PlayerId): GameAction[] {
     if (!game.isInCombatTurn() || game.activePlayerId !== playerId) {
       return [];
@@ -54,40 +85,10 @@ export class CombatActionService extends LegalActionService {
       return [];
     }
 
-    // Pending combat: dice rolled, waiting for reactions or confirm.
-    if (game.pendingCombat !== null && game.pendingCombat.attackerPlayerId === playerId) {
-      return [
-        ...this.getLegalPlayPloyActions(game, player),
-        new ConfirmCombatAction(playerId),
-      ];
-    }
-
-    if (game.turnStep === TurnStep.Power) {
-      return [
-        ...this.getLegalDelveActions(game, player),
-        ...this.getLegalPlayPloyActions(game, player),
-        ...this.getLegalPlayUpgradeActions(game, player),
-        ...this.getLegalUseWarscrollAbilityActions(game, player),
-        new PassAction(playerId),
-      ];
-    }
-
-    if (game.turnStep !== TurnStep.Action) {
-      return [];
-    }
-
-    if (this.hasUsedCoreAbilityThisActionStep(game, playerId)) {
-      return [new EndActionStepAction(playerId)];
-    }
-
-    return [
-      ...this.coreAbilities.flatMap((ability) => ability.getLegalActions(game, player)),
-      ...this.getLegalPlayPloyActions(game, player),
-      new PassAction(playerId),
-    ];
+    return CombatActionService.providers.flatMap(p => p.getLegalInstances(game, player));
   }
 
-  // --- Action step validation (delegates to ability classes) ---
+  // --- Validation methods (engine still calls these) ---
 
   public isLegalMoveAction(game: Game, action: MoveAction): boolean {
     return this.coreAbilities.some((a) => a.isLegalAction(game, action));
@@ -108,8 +109,6 @@ export class CombatActionService extends LegalActionService {
   public isLegalFocusAction(game: Game, action: FocusAction): boolean {
     return this.coreAbilities.some((a) => a.isLegalAction(game, action));
   }
-
-  // --- Power step validation (stays here — not core abilities) ---
 
   public isLegalDelveAction(game: Game, action: DelveAction): boolean {
     if (!game.isCombatPowerStep(action.playerId)) {
@@ -197,83 +196,6 @@ export class CombatActionService extends LegalActionService {
       ) &&
       this.warscrollEffectResolver.canResolve(game, player, ability)
     );
-  }
-
-  // --- Private helpers ---
-
-  private hasUsedCoreAbilityThisActionStep(game: Game, playerId: PlayerId): boolean {
-    const coreEventKinds: ReadonlySet<string> = new Set([
-      GameRecordKind.Move,
-      GameRecordKind.Combat,
-      GameRecordKind.Guard,
-      GameRecordKind.Focus,
-    ]);
-    for (let i = game.records.length - 1; i >= 0; i--) {
-      const record = game.records[i];
-      if (record.kind === GameRecordKind.ActionStepStarted) break;
-      if (coreEventKinds.has(record.kind) && record.invokedByPlayerId === playerId) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private getLegalDelveActions(game: Game, player: Player): DelveAction[] {
-    if (player.hasDelvedThisPowerStep || !game.isCombatPowerStep(player.id)) {
-      return [];
-    }
-
-    return player.fighters.flatMap((fighter) => {
-      if (fighter.isSlain || fighter.currentHexId === null) return [];
-      const fighterHex = game.getFighterHex(fighter);
-      if (fighterHex?.featureTokenId === null || fighterHex?.featureTokenId === undefined) return [];
-      const featureToken = game.getFeatureToken(fighterHex.featureTokenId);
-      if (featureToken === undefined || featureToken.hexId !== fighterHex.id || featureToken.side === FeatureTokenSide.Hidden) {
-        return [];
-      }
-      return [new DelveAction(player.id, fighter.id, featureToken.id)];
-    });
-  }
-
-  private getLegalPlayUpgradeActions(game: Game, player: Player): PlayUpgradeAction[] {
-    if (!game.isCombatPowerStep(player.id)) return [];
-
-    return player.powerHand.flatMap((card) => {
-      if (card.kind !== CardKind.Upgrade) return [];
-      const targets = card.getLegalTargets(game);
-      return targets.flatMap((target) =>
-        target instanceof Fighter
-          ? [new PlayUpgradeAction(player.id, card.id, target.id)]
-          : [],
-      );
-    });
-  }
-
-  private getLegalPlayPloyActions(game: Game, player: Player): PlayPloyAction[] {
-
-    const legalActions = new Map<string, PlayPloyAction>();
-    for (const card of player.powerHand) {
-      if (card.kind !== CardKind.Ploy) continue;
-      const targets = card.getLegalTargets(game);
-      for (const target of targets) {
-        const targetFighterId = target instanceof Fighter ? target.id : null;
-        const action = new PlayPloyAction(player.id, card.id, targetFighterId);
-        legalActions.set(`${action.cardId}:${action.targetFighterId ?? ""}`, action);
-      }
-    }
-    return [...legalActions.values()];
-  }
-
-  private getLegalUseWarscrollAbilityActions(game: Game, player: Player): UseWarscrollAbilityAction[] {
-    const warscrollDefinition = player.getWarscrollDefinition();
-    if (warscrollDefinition === undefined || !game.isCombatPowerStep(player.id)) {
-      return [];
-    }
-
-    return warscrollDefinition.abilities.flatMap((_, abilityIndex) => {
-      const action = new UseWarscrollAbilityAction(player.id, abilityIndex);
-      return this.isLegalUseWarscrollAbilityAction(game, action) ? [action] : [];
-    });
   }
 
 }

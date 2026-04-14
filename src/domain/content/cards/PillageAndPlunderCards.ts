@@ -27,8 +27,10 @@ import { CombatResolvedEvent } from "../../events/CombatResolvedEvent";
 import { FighterDelvedEvent } from "../../events/FighterDelvedEvent";
 import { FighterMovedEvent } from "../../events/FighterMovedEvent";
 import { AttackDiceRolledEvent } from "../../events/AttackDiceRolledEvent";
+import { AttackDiceModifiedEvent } from "../../events/AttackDiceModifiedEvent";
 import { SaveDiceRolledEvent } from "../../events/SaveDiceRolledEvent";
 import { CombatEndedEvent } from "../../events/CombatEndedEvent";
+import { getActiveCombatState } from "../../rules/CombatStateProjection";
 
 // Source: Warhammer Underworlds — Pillage and Plunder Rivals deck.
 
@@ -376,15 +378,27 @@ export class BrashScout extends PloyCard {
   }
 
   protected override onPlay(game: Game, _target: Target | null): string[] {
-    const pending = game.pendingCombat;
-    if (pending === null || pending.attackRoll.length === 0) return [];
+    const combatState = getActiveCombatState(game);
+    if (combatState === null || combatState.attackRoll.length === 0) return [];
+    const previousRoll = [...combatState.attackRoll];
+    const newRoll = [...previousRoll];
     // Re-roll the worst attack die.
-    const worstIndex = pending.attackRoll.indexOf(
-      pending.attackRoll.reduce((worst, face) => face < worst ? face : worst),
+    const worstIndex = newRoll.indexOf(
+      newRoll.reduce((worst, face) => face < worst ? face : worst),
     );
-    const oldFace = pending.attackRoll[worstIndex];
-    pending.attackRoll[worstIndex] = rollAttackDie();
-    return [`Brash Scout: re-rolled ${oldFace} → ${pending.attackRoll[worstIndex]}`];
+    const oldFace = newRoll[worstIndex];
+    newRoll[worstIndex] = rollAttackDie();
+    game.emitEvent(new AttackDiceModifiedEvent(
+      game.roundNumber,
+      combatState.attackerPlayer,
+      combatState.attacker,
+      this,
+      previousRoll,
+      newRoll,
+      `Brash Scout: re-rolled ${oldFace} → ${newRoll[worstIndex]}`,
+      combatState.actionKind,
+    ));
+    return [`Brash Scout: re-rolled ${oldFace} → ${newRoll[worstIndex]}`];
   }
 }
 

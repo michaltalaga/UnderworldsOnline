@@ -9,6 +9,7 @@ import {
   type HexId,
   type SaveDieFace,
 } from "../domain";
+import { getActiveCombatState } from "../domain/rules/CombatStateProjection";
 import { LOCAL_PLAYER_ID } from "../localPlayer";
 import type { BoardTheme } from "./boardTheme";
 import {
@@ -628,6 +629,7 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
   // opponent's behalf.
   // Guard is now in the context menu, not here.
   const quickActions: BoardSceneQuickAction[] = [];
+  const activeCombat = getActiveCombatState(game);
   if (isInteractionEnabled) {
     if (isActionStep && actionLens.focusAction !== null) {
       quickActions.push({
@@ -646,7 +648,7 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
         featureTokenId: selectedFeatureToken.id,
       });
     }
-    if (game.pendingCombat !== null) {
+    if (activeCombat !== null) {
       const phaseLabels: Record<string, string> = {
         "attack-rolled": "Roll Save Dice",
         "save-rolled": "Determine Outcome",
@@ -655,10 +657,10 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
       quickActions.push({
         key: "confirm-combat",
         armed: false,
-        label: phaseLabels[game.pendingCombat.phase] ?? "Continue",
+        label: phaseLabels[activeCombat.phase] ?? "Continue",
       });
     }
-    if (isActionStep && game.pendingCombat === null) {
+    if (isActionStep && activeCombat === null) {
       quickActions.push({
         key: "end-action-step",
         armed: false,
@@ -769,9 +771,9 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
     pendingPowerOptionKey,
     armedPathTone: armedPath?.tone ?? null,
     contextMenu,
-    pendingCombatRolls: game.pendingCombat !== null ? {
-      attackRoll: game.pendingCombat.attackRoll,
-      saveRoll: game.pendingCombat.saveRoll,
+    pendingCombatRolls: activeCombat !== null ? {
+      attackRoll: [...activeCombat.attackRoll],
+      saveRoll: [...activeCombat.saveRoll],
     } : null,
   };
 }

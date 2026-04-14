@@ -1,5 +1,6 @@
 import type { FighterId, Game, HexId, Player } from "./domain";
 import { TurnStep } from "./domain";
+import { getActiveCombatState } from "./domain/rules/CombatStateProjection";
 import type {
   AttackProfileSummary,
   ChargeProfileSummary,
@@ -344,19 +345,22 @@ export default function GameDebugContent({
             <p className="m-0 mb-2 uppercase tracking-[0.14em] text-[0.74rem] text-[#8a5630]">Debug</p>
             <h2 className="m-0 font-heading">Game Records</h2>
           </div>
-          {game.pendingCombat !== null && (
-            <div style={{ background: "#2a1a00", border: "1px solid #c90", padding: "6px 8px", marginBottom: 8, fontSize: 11, fontFamily: "monospace", color: "#ffd" }}>
-              <strong>pendingCombat:</strong> phase={game.pendingCombat.phase},
-              attacker={game.pendingCombat.attackerFighterId},
-              target={game.pendingCombat.targetFighterId},
-              weapon={game.pendingCombat.weaponId},
-              ability={String(game.pendingCombat.selectedAbility)},
-              attackRoll=[{game.pendingCombat.attackRoll.join(",")}],
-              saveRoll=[{game.pendingCombat.saveRoll.join(",")}],
-              outcome={String(game.pendingCombat.outcome)},
-              dmg={game.pendingCombat.damageInflicted}
-            </div>
-          )}
+          {(() => {
+            const combat = getActiveCombatState(game);
+            return combat !== null ? (
+              <div style={{ background: "#2a1a00", border: "1px solid #c90", padding: "6px 8px", marginBottom: 8, fontSize: 11, fontFamily: "monospace", color: "#ffd" }}>
+                <strong>activeCombat:</strong> phase={combat.phase},
+                attacker={combat.attacker.id},
+                target={combat.target.id},
+                weapon={combat.weapon.id},
+                ability={String(combat.selectedAbility)},
+                attackRoll=[{[...combat.attackRoll].join(",")}],
+                saveRoll=[{[...combat.saveRoll].join(",")}],
+                outcome={String(combat.outcome)},
+                dmg={combat.damageInflicted}
+              </div>
+            ) : null;
+          })()}
           {localPlayer !== null && (
             <div style={{ background: "#1a1a2a", border: "1px solid #669", padding: "6px 8px", marginBottom: 8, fontSize: 11, fontFamily: "monospace", color: "#ddf" }}>
               <strong>Power Hand ({localPlayer.powerHand.length} cards):</strong>

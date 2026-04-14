@@ -21,6 +21,7 @@ export { CombatStartedEvent } from "./CombatStartedEvent";
 export { AttackDiceRolledEvent } from "./AttackDiceRolledEvent";
 export { SaveDiceRolledEvent } from "./SaveDiceRolledEvent";
 export { AttackDiceModifiedEvent } from "./AttackDiceModifiedEvent";
+export { WeaponAbilityModifiedEvent } from "./WeaponAbilityModifiedEvent";
 export { CombatResolvedEvent } from "./CombatResolvedEvent";
 export { CombatEndedEvent } from "./CombatEndedEvent";
 
