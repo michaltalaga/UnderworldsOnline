@@ -1,5 +1,6 @@
 import type { WarbandDefinition, WarbandDefinitionId } from "./domain";
 import { PanelButton } from "./ui";
+import { reactKey } from "./react/reactKey";
 
 type WarbandSelectScreenProps = {
   warbands: readonly WarbandDefinition[];
@@ -21,7 +22,7 @@ export default function WarbandSelectScreen({ warbands, onSelect }: WarbandSelec
         {warbands.map((warband) => {
           const leader = warband.fighters.find((fighter) => fighter.isLeader);
           return (
-            <li key={warband.id}>
+            <li key={reactKey(warband)}>
               <PanelButton onClick={() => onSelect(warband.id)}>
                 <h2 className="m-0 font-heading text-[1.55rem]">{warband.name}</h2>
                 {leader !== undefined && (
@@ -44,7 +45,7 @@ export default function WarbandSelectScreen({ warbands, onSelect }: WarbandSelec
                 <ul className="list-none m-0 p-0 grid gap-1.5">
                   {warband.fighters.map((fighter) => (
                     <li
-                      key={fighter.id}
+                      key={reactKey(fighter)}
                       className="flex justify-between gap-3 py-2 px-3 rounded-[10px] bg-[rgba(244,236,220,0.45)] text-[0.95rem]"
                     >
                       <span className="font-semibold">

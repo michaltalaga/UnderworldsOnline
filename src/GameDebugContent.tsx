@@ -1,6 +1,7 @@
 import type { FighterId, Game, HexId, Player } from "./domain";
 import { TurnStep } from "./domain";
 import { getActiveCombatState } from "./domain/rules/CombatStateProjection";
+import { reactKey } from "./react/reactKey";
 import type {
   AttackProfileSummary,
   ChargeProfileSummary,
@@ -290,7 +291,7 @@ export default function GameDebugContent({
           <div className="grid gap-3">
             {game.players.map((player) => (
               <PlayerPanel
-                key={player.id}
+                key={reactKey(player)}
                 activePlayerId={activePlayer?.id ?? null}
                 game={game}
                 player={player}
@@ -310,7 +311,7 @@ export default function GameDebugContent({
             {game.board.featureTokens.map((featureToken) => {
               const sideBg = featureToken.side === "hidden" ? "bg-[rgba(236,231,224,0.92)]" : featureToken.side === "treasure" ? "bg-[rgba(239,223,142,0.92)]" : "bg-[rgba(196,223,177,0.92)]";
               return (
-              <article key={featureToken.id} className="bg-[rgba(239,231,219,0.76)] border border-[rgba(117,92,64,0.18)] rounded-card p-3.5">
+              <article key={reactKey(featureToken)} className="bg-[rgba(239,231,219,0.76)] border border-[rgba(117,92,64,0.18)] rounded-card p-3.5">
                 <div className="flex justify-between gap-3 items-start">
                   <strong>{featureToken.id}</strong>
                   <span className={`py-[3px] px-2 rounded-pill text-[0.64rem] font-bold border border-[rgba(73,56,39,0.22)] text-[#2e241b] ${sideBg}`}>
@@ -366,7 +367,7 @@ export default function GameDebugContent({
               {localPlayer.powerHand.map((card) => {
                 const targets = card.getLegalTargets(game);
                 return (
-                  <div key={card.id} style={{ color: targets.length > 0 ? "#0f0" : "#666", paddingLeft: 8 }}>
+                  <div key={reactKey(card)} style={{ color: targets.length > 0 ? "#0f0" : "#666", paddingLeft: 8 }}>
                     {card.name} [{card.kind}] zone={card.zone} targets={targets.length}
                   </div>
                 );

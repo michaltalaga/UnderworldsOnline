@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { LOCAL_PLAYER_ID } from "../localPlayer";
+import { reactKey } from "../react/reactKey";
 import {
   GameRecordKind,
   WeaponAbilityDefinition,
@@ -754,7 +755,7 @@ function DebugApp() {
           <div className="grid gap-3">
             {debugGame.players.flatMap((player) =>
               player.fighters.map((fighter) => (
-                <article className="bg-surface-controls border border-[rgba(149,112,71,0.2)] rounded-card p-4" key={fighter.id}>
+                <article className="bg-surface-controls border border-[rgba(149,112,71,0.2)] rounded-card p-4" key={reactKey(fighter)}>
                   <p className="m-0 mb-1.5 uppercase tracking-[0.14em] text-[0.72rem] text-accent">{player.name}</p>
                   <h3 className="m-0 font-heading text-[1.15rem]">{getFighterName(debugGame, fighter.id)}</h3>
                   <p className="mt-1.5 text-ink-soft">{fighter.currentHexId ?? "slain / off-board"}</p>

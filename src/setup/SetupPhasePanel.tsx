@@ -3,6 +3,7 @@ import { SetupHero } from "../ui";
 import type { Fighter, Game, Player, SetupAction } from "../domain";
 import TerritoryRollOffScreen from "./TerritoryRollOffScreen";
 import TerritoryChoiceScreen from "./TerritoryChoiceScreen";
+import { reactKey } from "../react/reactKey";
 
 type SetupPhasePanelProps = {
   game: Game;
@@ -91,7 +92,7 @@ function DeploymentPanel({
             const activeClass = isActive ? " bg-[rgba(20,136,140,0.18)] border border-[rgba(20,136,140,0.55)]" : "";
             const definition = player.getFighterDefinition(fighter.id);
             return (
-              <li key={fighter.id} className={baseClass + activeClass}>
+              <li key={reactKey(fighter)} className={baseClass + activeClass}>
                 <span>{definition?.name ?? fighter.id}</span>
                 <span className="text-ink-muted text-[0.82rem]">
                   {isDeployed ? "Deployed" : isActive ? "Next" : "Waiting"}

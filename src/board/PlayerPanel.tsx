@@ -4,6 +4,7 @@ import {
   getFighterStatusTags,
   getPlayerToneClass,
 } from "./battlefieldFormatters";
+import { reactKey } from "../react/reactKey";
 
 export type PlayerPanelProps = {
   activePlayerId: Player["id"] | null;
@@ -39,7 +40,7 @@ export default function PlayerPanel({
 
         return (
           <FighterCard
-            key={fighter.id}
+            key={reactKey(fighter)}
             fighter={fighter}
             name={def?.name ?? fighter.id}
             isLeader={def?.isLeader ?? false}
@@ -124,7 +125,7 @@ function FighterCard({
       {weapons.length > 0 && (
         <div className="flex flex-col gap-px pt-0.5 border-t border-[rgba(100,80,55,0.1)]">
           {weapons.map((w) => (
-            <WeaponRow key={w.id} weapon={w} />
+            <WeaponRow key={reactKey(w)} weapon={w} />
           ))}
         </div>
       )}
