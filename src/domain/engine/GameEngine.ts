@@ -684,7 +684,7 @@ export class GameEngine {
     const attacker = action.attacker;
     const attackerDefinition = attacker.definition;
     const target = defenderPlayer.getFighter(action.target.id);
-    const targetDefinition = defenderPlayer.getFighterDefinition(action.target.id);
+    const targetDefinition = action.target.definition;
     if (
       attackerDefinition === undefined ||
       target === undefined ||
@@ -736,7 +736,7 @@ export class GameEngine {
     const attacker = action.fighter;
     const attackerDefinition = attacker.definition;
     const target = defenderPlayer.getFighter(action.target.id);
-    const targetDefinition = defenderPlayer.getFighterDefinition(action.target.id);
+    const targetDefinition = action.target.definition;
     if (
       attackerDefinition === undefined ||
       target === undefined ||

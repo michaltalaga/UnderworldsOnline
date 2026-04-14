@@ -38,8 +38,8 @@ export class PracticeObjective02 extends ObjectiveCard {
   protected override canScore(game: Game): boolean {
     const combat = getMyLatestCombatEvent(game, this.owner);
     if (combat === null || !combat.targetSlain) return false;
-    const attackerDef = combat.attackerPlayer.getFighterDefinition(combat.attacker.id);
-    const targetDef = combat.defenderPlayer.getFighterDefinition(combat.target.id);
+    const attackerDef = combat.attacker.definition;
+    const targetDef = combat.target.definition;
     if (attackerDef === undefined || targetDef === undefined) return false;
     return targetDef.isLeader || targetDef.health >= attackerDef.health;
   }

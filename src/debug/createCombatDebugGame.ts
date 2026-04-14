@@ -683,7 +683,7 @@ function seedEndPhaseDebugObjective(game: Game, player: Player): void {
 
 function seedEndPhaseDebugDelves(game: Game, player: Player): void {
   const fighter = player.fighters[0];
-  const fighterDefinition = fighter === undefined ? undefined : player.getFighterDefinition(fighter.id);
+  const fighterDefinition = fighter === undefined ? undefined : fighter.definition;
   if (fighter === undefined || fighterDefinition === undefined) {
     throw new Error("Could not find a fighter to seed end-phase delve history.");
   }
@@ -780,7 +780,7 @@ function createUpgradeDebugOption(
 ): UpgradeDebugOption {
   const player = game.getPlayer(playerId);
   const card = player?.getCard(action.card.id);
-  const fighterDefinition = player?.getFighterDefinition(action.fighter.id);
+  const fighterDefinition = action.fighter.definition;
   if (
     player === undefined ||
     card === undefined ||

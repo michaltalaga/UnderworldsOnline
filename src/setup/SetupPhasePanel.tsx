@@ -73,7 +73,7 @@ function DeploymentPanel({
   const nextFighterName =
     nextFighter === null
       ? null
-      : player.getFighterDefinition(nextFighter.id)?.name ?? nextFighter.id;
+      : nextFighter.definition?.name ?? nextFighter.id;
 
   return (
     <>
@@ -90,7 +90,7 @@ function DeploymentPanel({
             const isActive = !isDeployed && fighter.id === nextFighter?.id;
             const baseClass = "flex justify-between gap-3 py-2.5 px-3.5 rounded-[12px] bg-[rgba(244,236,220,0.5)] text-[0.92rem]";
             const activeClass = isActive ? " bg-[rgba(20,136,140,0.18)] border border-[rgba(20,136,140,0.55)]" : "";
-            const definition = player.getFighterDefinition(fighter.id);
+            const definition = fighter.definition;
             return (
               <li key={reactKey(fighter)} className={baseClass + activeClass}>
                 <span>{definition?.name ?? fighter.id}</span>

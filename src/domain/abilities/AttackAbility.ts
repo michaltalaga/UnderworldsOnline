@@ -14,7 +14,7 @@ export class AttackAbility extends Ability {
     if (opponent === undefined) return [];
 
     return player.fighters.flatMap((fighter) => {
-      const definition = player.getFighterDefinition(fighter.id);
+      const definition = fighter.definition;
       if (definition === undefined || !canFighterAttack(fighter)) return [];
 
       const attackerHex = game.getFighterHex(fighter);
@@ -49,7 +49,7 @@ export class AttackAbility extends Ability {
 
     const weapon = action.weapon;
     // Verify weapon belongs to attacker.
-    const attackerDef = action.player.getFighterDefinition(attacker.id);
+    const attackerDef = attacker.definition;
     if (attackerDef === undefined || !attackerDef.weapons.includes(weapon)) return false;
     if (action.selectedAbility !== null && !weapon.hasAbility(action.selectedAbility)) return false;
 

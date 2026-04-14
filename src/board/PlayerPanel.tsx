@@ -31,7 +31,7 @@ export default function PlayerPanel({
       </div>
 
       {player.fighters.map((fighter) => {
-        const def = player.getFighterDefinition(fighter.id);
+        const def = fighter.definition;
         const isSelected = fighter.id === selectedFighterId;
         const isSelectable = isActivePlayer && !fighter.isSlain && fighter.currentHex !== null;
         const upgrades = player.equippedUpgrades

@@ -25,7 +25,7 @@ export class ChargeAbility extends Ability {
       if (destinationHex === undefined) return [];
 
       const fighter = moveAction.fighter;
-      const definition = player.getFighterDefinition(fighter.id);
+      const definition = fighter.definition;
       if (definition === undefined) return [];
 
       return definition.weapons.flatMap((weapon) =>
@@ -58,7 +58,7 @@ export class ChargeAbility extends Ability {
 
     const weapon = action.weapon;
     // The weapon must actually belong to the attacker's fighter definition.
-    const attackerDef = action.player.getFighterDefinition(action.fighter.id);
+    const attackerDef = action.fighter.definition;
     if (attackerDef === undefined || !attackerDef.weapons.includes(weapon)) return false;
     if (action.selectedAbility !== null && !weapon.hasAbility(action.selectedAbility)) return false;
 

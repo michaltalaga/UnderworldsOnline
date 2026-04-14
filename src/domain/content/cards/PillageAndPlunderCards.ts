@@ -305,7 +305,7 @@ export class PillageCommandingStride extends PloyCard {
   protected override getTargets(): Target[] {
     return this.owner.fighters.filter(f => {
       if (f.isSlain || f.currentHex === null) return false;
-      const def = this.owner.getFighterDefinition(f.id);
+      const def = f.definition;
       return def?.isLeader === true;
     });
   }

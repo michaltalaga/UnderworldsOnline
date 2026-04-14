@@ -19,7 +19,7 @@ export class MoveAbility extends Ability {
   getLegalActions(game: Game, player: Player): GameAction[] {
     if (!game.isCombatActionStep(player.id)) return [];
     return player.fighters.flatMap((fighter) => {
-      const definition = player.getFighterDefinition(fighter.id);
+      const definition = fighter.definition;
       if (definition === undefined || !canFighterMove(fighter)) return [];
 
       const startHex = game.getFighterHex(fighter);
@@ -56,7 +56,7 @@ export class MoveAbility extends Ability {
     if (!game.isCombatActionStep(action.player.id)) return false;
 
     const fighter = action.fighter;
-    const definition = action.player.getFighterDefinition(fighter.id);
+    const definition = action.fighter.definition;
     if (definition === undefined || !canFighterMove(fighter)) return false;
     const moveDistance = getEffectiveMove(definition, action.player, fighter);
     if (action.path.length === 0 || action.path.length > moveDistance) return false;

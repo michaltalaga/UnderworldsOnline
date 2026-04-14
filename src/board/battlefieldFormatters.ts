@@ -55,13 +55,11 @@ export function getFighterName(game: Game, fighterId: string): string {
     return fighterId;
   }
 
-  const player = fighter.owner;
-  return player?.getFighterDefinition(fighter.id)?.name ?? fighter.id;
+  return fighter.definition?.name ?? fighter.id;
 }
 
 export function getFighterMapLabel(_game: Game, fighter: Fighter): string {
-  const player = fighter.owner;
-  const fighterName = player?.getFighterDefinition(fighter.id)?.name ?? fighter.id;
+  const fighterName = fighter.definition?.name ?? fighter.id;
   const numericSuffix = fighterName.match(/(\d+)$/);
   if (numericSuffix !== null) {
     return `F${numericSuffix[1]}`;
