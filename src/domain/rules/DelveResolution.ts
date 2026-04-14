@@ -1,45 +1,47 @@
 import type { FeatureTokenSide } from "../values/enums";
 import type { FeatureTokenId, FighterId, HexId, PlayerId } from "../values/ids";
+import type { FeatureToken } from "../state/FeatureToken";
+import type { Fighter } from "../state/Fighter";
+import type { Player } from "../state/Player";
 
 export class DelveResolution {
   public readonly roundNumber: number;
-  public readonly playerId: PlayerId;
-  public readonly playerName: string;
-  public readonly fighterId: FighterId;
-  public readonly fighterName: string;
-  public readonly featureTokenId: FeatureTokenId;
-  public readonly featureTokenHexId: HexId;
+  public readonly player: Player;
+  public readonly fighter: Fighter;
+  public readonly featureToken: FeatureToken;
   public readonly sideBeforeDelve: FeatureTokenSide;
   public readonly sideAfterDelve: FeatureTokenSide;
   public readonly staggerApplied: boolean;
-  public readonly holderAfterFighterId: FighterId | null;
-  public readonly holderAfterFighterName: string | null;
+  public readonly holderAfterFighter: Fighter | null;
 
   public constructor(
     roundNumber: number,
-    playerId: PlayerId,
-    playerName: string,
-    fighterId: FighterId,
-    fighterName: string,
-    featureTokenId: FeatureTokenId,
-    featureTokenHexId: HexId,
+    player: Player,
+    fighter: Fighter,
+    featureToken: FeatureToken,
     sideBeforeDelve: FeatureTokenSide,
     sideAfterDelve: FeatureTokenSide,
     staggerApplied: boolean,
-    holderAfterFighterId: FighterId | null,
-    holderAfterFighterName: string | null,
+    holderAfterFighter: Fighter | null,
   ) {
     this.roundNumber = roundNumber;
-    this.playerId = playerId;
-    this.playerName = playerName;
-    this.fighterId = fighterId;
-    this.fighterName = fighterName;
-    this.featureTokenId = featureTokenId;
-    this.featureTokenHexId = featureTokenHexId;
+    this.player = player;
+    this.fighter = fighter;
+    this.featureToken = featureToken;
     this.sideBeforeDelve = sideBeforeDelve;
     this.sideAfterDelve = sideAfterDelve;
     this.staggerApplied = staggerApplied;
-    this.holderAfterFighterId = holderAfterFighterId;
-    this.holderAfterFighterName = holderAfterFighterName;
+    this.holderAfterFighter = holderAfterFighter;
+  }
+
+  public get playerId(): PlayerId { return this.player.id; }
+  public get playerName(): string { return this.player.name; }
+  public get fighterId(): FighterId { return this.fighter.id; }
+  public get fighterName(): string { return this.fighter.definition.name; }
+  public get featureTokenId(): FeatureTokenId { return this.featureToken.id; }
+  public get featureTokenHexId(): HexId { return this.featureToken.hex.id; }
+  public get holderAfterFighterId(): FighterId | null { return this.holderAfterFighter?.id ?? null; }
+  public get holderAfterFighterName(): string | null {
+    return this.holderAfterFighter?.definition.name ?? null;
   }
 }

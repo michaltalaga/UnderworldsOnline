@@ -47,32 +47,20 @@ export class DefaultCombatResolver extends CombatResolver {
     attackRollInput: readonly AttackDieFace[] | null = null,
     saveRollInput: readonly SaveDieFace[] | null = null,
   ): CombatResult {
-    const attackerPlayer = game.getPlayer(context.attackerPlayerId);
-    if (attackerPlayer === undefined) {
-      throw new Error(`Unknown attacker player ${context.attackerPlayerId}.`);
+    const attackerPlayer = context.attackerPlayer;
+    const defenderPlayer = context.defenderPlayer;
+    const attacker = context.attacker;
+    if (attacker.currentHex === null) {
+      throw new Error(`Attacker ${attacker.id} is not ready to attack.`);
     }
 
-    const defenderPlayer = game.getPlayer(context.defenderPlayerId);
-    if (defenderPlayer === undefined) {
-      throw new Error(`Unknown defender player ${context.defenderPlayerId}.`);
+    const target = context.target;
+    const targetDefinition = target.definition;
+    if (target.currentHex === null) {
+      throw new Error(`Target ${target.id} is not available to defend.`);
     }
 
-    const attacker = attackerPlayer.getFighter(context.attackerFighterId);
-    const attackerDefinition = attackerPlayer.getFighterDefinition(context.attackerFighterId);
-    if (attacker === undefined || attackerDefinition === undefined || attacker.currentHexId === null) {
-      throw new Error(`Attacker ${context.attackerFighterId} is not ready to attack.`);
-    }
-
-    const target = defenderPlayer.getFighter(context.targetFighterId);
-    const targetDefinition = defenderPlayer.getFighterDefinition(context.targetFighterId);
-    if (target === undefined || targetDefinition === undefined || target.currentHexId === null) {
-      throw new Error(`Target ${context.targetFighterId} is not available to defend.`);
-    }
-
-    const weapon = attackerPlayer.getFighterWeaponDefinition(context.attackerFighterId, context.weaponId);
-    if (weapon === undefined) {
-      throw new Error(`Attacker ${attacker.id} does not have weapon ${context.weaponId}.`);
-    }
+    const weapon = context.weapon;
 
     const selectedAbilityDefinition = weapon.getAbility(context.selectedAbility);
 
@@ -105,7 +93,9 @@ export class DefaultCombatResolver extends CombatResolver {
 
     const defenderIsStaggered = target.hasStaggerToken;
     const defenderIsGuarded = target.hasGuardToken && !defenderIsStaggered;
-    const defenderIsOnCoverToken = this.isFighterOnCoverToken(game, target.currentHexId);
+    const defenderIsOnCoverToken = target.currentHex === null
+      ? false
+      : this.isFighterOnCoverToken(game, target.currentHex.id);
     const attackRoll = this.resolveRoll(
       effectiveAttackDice,
       attackRollInput,

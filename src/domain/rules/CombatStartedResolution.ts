@@ -1,42 +1,41 @@
 import type { WeaponAbilityKind } from "../values/enums";
 import type { FighterId, PlayerId, WeaponDefinitionId } from "../values/ids";
+import type { WeaponDefinition } from "../definitions/WeaponDefinition";
+import type { Fighter } from "../state/Fighter";
+import type { Player } from "../state/Player";
 
 export class CombatStartedResolution {
-  public readonly attackerPlayerId: PlayerId;
-  public readonly attackerPlayerName: string;
-  public readonly attackerFighterId: FighterId;
-  public readonly attackerFighterName: string;
-  public readonly defenderPlayerId: PlayerId;
-  public readonly defenderPlayerName: string;
-  public readonly targetFighterId: FighterId;
-  public readonly targetFighterName: string;
-  public readonly weaponId: WeaponDefinitionId;
-  public readonly weaponName: string;
+  public readonly attackerPlayer: Player;
+  public readonly attackerFighter: Fighter;
+  public readonly defenderPlayer: Player;
+  public readonly targetFighter: Fighter;
+  public readonly weapon: WeaponDefinition;
   public readonly selectedAbility: WeaponAbilityKind | null;
 
   public constructor(
-    attackerPlayerId: PlayerId,
-    attackerPlayerName: string,
-    attackerFighterId: FighterId,
-    attackerFighterName: string,
-    defenderPlayerId: PlayerId,
-    defenderPlayerName: string,
-    targetFighterId: FighterId,
-    targetFighterName: string,
-    weaponId: WeaponDefinitionId,
-    weaponName: string,
+    attackerPlayer: Player,
+    attackerFighter: Fighter,
+    defenderPlayer: Player,
+    targetFighter: Fighter,
+    weapon: WeaponDefinition,
     selectedAbility: WeaponAbilityKind | null,
   ) {
-    this.attackerPlayerId = attackerPlayerId;
-    this.attackerPlayerName = attackerPlayerName;
-    this.attackerFighterId = attackerFighterId;
-    this.attackerFighterName = attackerFighterName;
-    this.defenderPlayerId = defenderPlayerId;
-    this.defenderPlayerName = defenderPlayerName;
-    this.targetFighterId = targetFighterId;
-    this.targetFighterName = targetFighterName;
-    this.weaponId = weaponId;
-    this.weaponName = weaponName;
+    this.attackerPlayer = attackerPlayer;
+    this.attackerFighter = attackerFighter;
+    this.defenderPlayer = defenderPlayer;
+    this.targetFighter = targetFighter;
+    this.weapon = weapon;
     this.selectedAbility = selectedAbility;
   }
+
+  public get attackerPlayerId(): PlayerId { return this.attackerPlayer.id; }
+  public get attackerPlayerName(): string { return this.attackerPlayer.name; }
+  public get attackerFighterId(): FighterId { return this.attackerFighter.id; }
+  public get attackerFighterName(): string { return this.attackerFighter.definition.name; }
+  public get defenderPlayerId(): PlayerId { return this.defenderPlayer.id; }
+  public get defenderPlayerName(): string { return this.defenderPlayer.name; }
+  public get targetFighterId(): FighterId { return this.targetFighter.id; }
+  public get targetFighterName(): string { return this.targetFighter.definition.name; }
+  public get weaponId(): WeaponDefinitionId { return this.weapon.id; }
+  public get weaponName(): string { return this.weapon.name; }
 }

@@ -395,7 +395,7 @@ export class GameEngine {
     this.transitionToState(
       game,
       createCombatTurnGameState(firstPlayer.id, firstPlayer.id, TurnStep.Action),
-      { invokedByPlayerId: chooser.id },
+      { invokedByPlayer: chooser },
     );
     game.consecutivePasses = 0;
     game.eventLog.push(
@@ -481,7 +481,7 @@ export class GameEngine {
     );
 
     game.addRecord(GameRecordKind.RollOff, result, {
-      invokedByPlayerId: null,
+      invokedByPlayer: null,
       actionKind: action.kind,
     });
     game.emitEvent(new RollOffResolvedEvent(
@@ -656,16 +656,15 @@ export class GameEngine {
     this.recordMoveEvent(
       game,
       player,
-      fighter.id,
-      fighterDefinition.name,
-      currentHex.id,
-      destinationHex.id,
+      fighter,
+      currentHex,
+      destinationHex,
       action.path,
       destinationHex.kind,
       !hadStaggerTokenBeforeMove && fighter.hasStaggerToken,
       {
-        invokedByPlayerId: player.id,
-        invokedByFighterId: fighter.id,
+        invokedByPlayer: player,
+        invokedByFighter: fighter,
         actionKind: action.kind,
       },
     );
@@ -779,16 +778,15 @@ export class GameEngine {
     this.recordMoveEvent(
       game,
       attackerPlayer,
-      attacker.id,
-      attackerDefinition.name,
-      currentHex.id,
-      destinationHex.id,
+      attacker,
+      currentHex,
+      destinationHex,
       action.path,
       destinationHex.kind,
       !hadStaggerTokenBeforeMove && attacker.hasStaggerToken,
       {
-        invokedByPlayerId: attackerPlayer.id,
-        invokedByFighterId: attacker.id,
+        invokedByPlayer: attackerPlayer,
+        invokedByFighter: attacker,
         actionKind: action.kind,
       },
     );
@@ -864,11 +862,11 @@ export class GameEngine {
       const combatResult = this.combatResolver.resolve(
         game,
         new CombatContext(
-          attackerPlayer.id,
-          defenderPlayer.id,
-          attacker.id,
-          target.id,
-          combatState.weapon.id,
+          attackerPlayer,
+          defenderPlayer,
+          attacker,
+          target,
+          combatState.weapon,
           combatState.selectedAbility,
         ),
         [...combatState.attackRoll],
@@ -955,10 +953,10 @@ export class GameEngine {
     fighter.hasGuardToken = true;
     game.addRecord(
       GameRecordKind.Guard,
-      new GuardResolution(player.id, player.name, fighter.id, fighterDefinition.name),
+      new GuardResolution(player, fighter),
       {
-        invokedByPlayerId: player.id,
-        invokedByFighterId: fighter.id,
+        invokedByPlayer: player,
+        invokedByFighter: fighter,
         actionKind: action.kind,
       },
     );
@@ -1020,24 +1018,20 @@ export class GameEngine {
     this.syncFeatureTokenHolderAtHex(game, fighterHex.id);
     fighter.hasStaggerToken = true;
     player.hasDelvedThisPowerStep = true;
-    const holderAfterDelve = this.getPloyTargetDetails(game, featureToken.heldByFighterId);
+    const holderAfterDelve = featureToken.heldByFighter;
     const resolution = new DelveResolution(
       game.roundNumber,
-      player.id,
-      player.name,
-      fighter.id,
-      fighterDefinition.name,
-      featureToken.id,
-      fighterHex.id,
+      player,
+      fighter,
+      featureToken,
       sideBeforeDelve,
       featureToken.side,
       !hadStaggerTokenBeforeDelve && fighter.hasStaggerToken,
-      holderAfterDelve?.fighterId ?? null,
-      holderAfterDelve?.fighterName ?? null,
+      holderAfterDelve,
     );
     game.addRecord(GameRecordKind.Delve, resolution, {
-      invokedByPlayerId: player.id,
-      invokedByFighterId: fighter.id,
+      invokedByPlayer: player,
+      invokedByFighter: fighter,
       actionKind: action.kind,
     });
     game.emitEvent(new FighterDelvedEvent(
@@ -1049,7 +1043,7 @@ export class GameEngine {
       sideBeforeDelve,
       featureToken.side,
       !hadStaggerTokenBeforeDelve && fighter.hasStaggerToken,
-      holderAfterDelve ? (game.getFighter(holderAfterDelve.fighterId) ?? null) : null,
+      holderAfterDelve,
       action.kind,
     ));
     game.consecutivePasses = 0;
@@ -1112,15 +1106,14 @@ export class GameEngine {
     ];
 
     const resolution = new FocusResolution(
-      player.id,
-      player.name,
+      player,
       discardedObjectives,
       discardedPowerCards,
       drawnObjectives,
       drawnPowerCards,
     );
     game.addRecord(GameRecordKind.Focus, resolution, {
-      invokedByPlayerId: player.id,
+      invokedByPlayer: player,
       actionKind: action.kind,
     });
     game.emitEvent(new FighterFocusedEvent(
@@ -1155,7 +1148,7 @@ export class GameEngine {
       game,
       createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power),
       {
-        invokedByPlayerId: player.id,
+        invokedByPlayer: player,
         actionKind: action.kind,
       },
     );
@@ -1190,8 +1183,8 @@ export class GameEngine {
       player,
       card,
       {
-        invokedByPlayerId: player.id,
-        invokedByCardId: card.id,
+        invokedByPlayer: player,
+        invokedByCard: card,
         actionKind: action.kind,
       },
       { target: ployTarget },
@@ -1211,21 +1204,15 @@ export class GameEngine {
     player.powerDeck.discardPile.push(card);
 
     const resolution = new PloyResolution(
-      player.id,
-      player.name,
-      card.id,
-      card.name, // cardDefinitionId — Card IS the definition now, use name as identifier
-      card.name,
-      ployTarget?.fighterId ?? null,
-      ployTarget?.fighterName ?? null,
-      ployTarget?.ownerPlayerId ?? null,
-      ployTarget?.ownerPlayerName ?? null,
+      player,
+      card,
+      targetFighter,
       [], // ployEffects — no longer tracked on Card; will be migrated later
       effectDescriptions,
     );
     game.addRecord(GameRecordKind.Ploy, resolution, {
-      invokedByPlayerId: player.id,
-      invokedByCardId: card.id,
+      invokedByPlayer: player,
+      invokedByCard: card,
       actionKind: action.kind,
     });
     game.emitEvent(new PloyPlayedEvent(
@@ -1247,8 +1234,8 @@ export class GameEngine {
       effectDescriptions,
       0,
       {
-        invokedByPlayerId: player.id,
-        invokedByCardId: card.id,
+        invokedByPlayer: player,
+        invokedByCard: card,
         actionKind: action.kind,
       },
       { target: ployTarget },
@@ -1288,9 +1275,9 @@ export class GameEngine {
       player,
       card,
       {
-        invokedByPlayerId: player.id,
-        invokedByFighterId: fighter.id,
-        invokedByCardId: card.id,
+        invokedByPlayer: player,
+        invokedByFighter: fighter,
+        invokedByCard: card,
         actionKind: action.kind,
       },
       { target: upgradeTarget },
@@ -1312,19 +1299,15 @@ export class GameEngine {
     const effectDescriptions: string[] = [];
 
     const resolution = new UpgradeResolution(
-      player.id,
-      player.name,
-      card.id,
-      card.name, // cardDefinitionId — Card IS the definition now
-      card.name,
-      fighter.id,
-      fighterDefinition.name,
+      player,
+      card,
+      fighter,
       upgradeCost,
     );
     game.addRecord(GameRecordKind.Upgrade, resolution, {
-      invokedByPlayerId: player.id,
-      invokedByFighterId: fighter.id,
-      invokedByCardId: card.id,
+      invokedByPlayer: player,
+      invokedByFighter: fighter,
+      invokedByCard: card,
       actionKind: action.kind,
     });
     game.emitEvent(new UpgradeEquippedEvent(
@@ -1342,9 +1325,9 @@ export class GameEngine {
       [...effectDescriptions, `equipped to ${fighterDefinition.name}`, `paid ${upgradeCost} glory`],
       -upgradeCost,
       {
-        invokedByPlayerId: player.id,
-        invokedByFighterId: fighter.id,
-        invokedByCardId: card.id,
+        invokedByPlayer: player,
+        invokedByFighter: fighter,
+        invokedByCard: card,
         actionKind: action.kind,
       },
       { target: upgradeTarget },
@@ -1381,7 +1364,7 @@ export class GameEngine {
 
     const effectSummaries = this.warscrollEffectResolver.resolve(game, player, ability);
     const resolution = new WarscrollAbilityResolution(
-      player.id,
+      player,
       warscroll.definition.name,
       action.abilityIndex,
       ability.name,
@@ -1391,7 +1374,7 @@ export class GameEngine {
     );
 
     game.addRecord(GameRecordKind.WarscrollAbility, resolution, {
-      invokedByPlayerId: player.id,
+      invokedByPlayer: player,
       actionKind: action.kind,
     });
     game.emitEvent(new WarscrollAbilityUsedEvent(
@@ -1430,21 +1413,19 @@ export class GameEngine {
       game.addRecord(
         GameRecordKind.Pass,
         new PassResolution(
-          player.id,
-          player.name,
+          player,
           TurnStep.Action,
           nextState.phase,
           consecutivePassesBefore,
           game.consecutivePasses,
           turnsTakenBefore,
           player.turnsTakenThisRound,
-          player.id,
-          player.name,
+          player,
           nextState.turnStep,
           false,
         ),
         {
-          invokedByPlayerId: player.id,
+          invokedByPlayer: player,
           actionKind: action.kind,
         },
       );
@@ -1466,7 +1447,7 @@ export class GameEngine {
         game,
         nextState,
         {
-          invokedByPlayerId: player.id,
+          invokedByPlayer: player,
           actionKind: action.kind,
         },
       );
@@ -1486,8 +1467,7 @@ export class GameEngine {
         game.addRecord(
           GameRecordKind.Pass,
           new PassResolution(
-            player.id,
-            player.name,
+            player,
             TurnStep.Power,
             nextState.phase,
             consecutivePassesBefore,
@@ -1495,12 +1475,11 @@ export class GameEngine {
             turnsTakenBefore,
             player.turnsTakenThisRound,
             null,
-            null,
             nextState.turnStep,
             true,
           ),
           {
-            invokedByPlayerId: player.id,
+            invokedByPlayer: player,
             actionKind: action.kind,
           },
         );
@@ -1522,7 +1501,7 @@ export class GameEngine {
           game,
           nextState,
           {
-            invokedByPlayerId: player.id,
+            invokedByPlayer: player,
             actionKind: action.kind,
           },
         );
@@ -1538,21 +1517,19 @@ export class GameEngine {
       game.addRecord(
         GameRecordKind.Pass,
         new PassResolution(
-          player.id,
-          player.name,
+          player,
           TurnStep.Power,
           nextState.phase,
           consecutivePassesBefore,
           game.consecutivePasses,
           turnsTakenBefore,
           player.turnsTakenThisRound,
-          nextPlayer.id,
-          nextPlayer.name,
+          nextPlayer,
           nextState.turnStep,
           false,
         ),
         {
-          invokedByPlayerId: player.id,
+          invokedByPlayer: player,
           actionKind: action.kind,
         },
       );
@@ -1574,7 +1551,7 @@ export class GameEngine {
         game,
         nextState,
         {
-          invokedByPlayerId: player.id,
+          invokedByPlayer: player,
           actionKind: action.kind,
         },
       );
@@ -1807,6 +1784,9 @@ export class GameEngine {
 
       game.winnerPlayerId = outcome.winnerPlayerId;
       game.transitionTo(createFinishedGameState());
+      const outcomeWinner = outcome.winnerPlayerId !== null
+        ? game.getPlayer(outcome.winnerPlayerId) ?? null
+        : null;
       const resolution = new CleanupResolution(
         completedRoundNumber,
         consecutivePassesBeforeReset,
@@ -1814,7 +1794,7 @@ export class GameEngine {
         CleanupTransitionKind.Finished,
         null,
         outcome.kind,
-        outcome.winnerPlayerId,
+        outcomeWinner,
         outcome.reason,
       );
       game.addRecord(GameRecordKind.Cleanup, resolution, {
@@ -1864,14 +1844,14 @@ export class GameEngine {
       };
     });
 
+    const firstPlayer = this.requirePlayer(game, firstPlayerId);
     game.addRecord(
       GameRecordKind.RoundStart,
-      new RoundStartResolution(game.roundNumber, firstPlayerId, featureTokens),
+      new RoundStartResolution(game.roundNumber, firstPlayer, featureTokens),
       {
-        invokedByPlayerId: firstPlayerId,
+        invokedByPlayer: firstPlayer,
       },
     );
-    const firstPlayer = this.requirePlayer(game, firstPlayerId);
     game.emitEvent(new RoundStartedEvent(
       game.roundNumber,
       firstPlayer,
@@ -1936,6 +1916,12 @@ export class GameEngine {
       return;
     }
 
+    const fromActivePlayer = previousState.activePlayerId !== null
+      ? game.getPlayer(previousState.activePlayerId) ?? null
+      : null;
+    const toActivePlayer = currentState.activePlayerId !== null
+      ? game.getPlayer(currentState.activePlayerId) ?? null
+      : null;
     game.addRecord(
       GameRecordKind.TurnStepChanged,
       new TurnStepChangeResolution(
@@ -1945,8 +1931,8 @@ export class GameEngine {
         currentState.phase,
         previousState.turnStep,
         currentState.turnStep,
-        previousState.activePlayerId,
-        currentState.activePlayerId,
+        fromActivePlayer,
+        toActivePlayer,
       ),
       metadata,
     );
@@ -1979,10 +1965,9 @@ export class GameEngine {
   private recordMoveEvent(
     game: Game,
     player: Player,
-    fighterId: FighterId,
-    fighterName: string,
-    fromHexId: HexId,
-    toHexId: HexId,
+    fighter: Fighter,
+    fromHex: HexCell,
+    toHex: HexCell,
     path: readonly HexId[],
     destinationHexKind: HexKind,
     staggerApplied: boolean,
@@ -1991,32 +1976,27 @@ export class GameEngine {
     game.addRecord(
       GameRecordKind.Move,
       new MoveResolution(
-        player.id,
-        player.name,
-        fighterId,
-        fighterName,
-        fromHexId,
-        toHexId,
+        player,
+        fighter,
+        fromHex,
+        toHex,
         path,
         destinationHexKind,
         staggerApplied,
       ),
       metadata,
     );
-    const fighter = player.getFighter(fighterId);
-    if (fighter !== undefined) {
-      game.emitEvent(new FighterMovedEvent(
-        game.roundNumber,
-        player,
-        fighter,
-        fromHexId,
-        toHexId,
-        path,
-        destinationHexKind,
-        staggerApplied,
-        metadata.actionKind ?? null,
-      ));
-    }
+    game.emitEvent(new FighterMovedEvent(
+      game.roundNumber,
+      player,
+      fighter,
+      fromHex.id,
+      toHex.id,
+      path,
+      destinationHexKind,
+      staggerApplied,
+      metadata.actionKind ?? null,
+    ));
   }
 
   private recordCardPlayed(
@@ -2029,27 +2009,20 @@ export class GameEngine {
       target?: ReturnType<GameEngine["getPloyTargetDetails"]>;
     } = {},
   ): void {
+    const targetFighter = options.target?.fighterId !== undefined
+      ? game.getFighter(options.target.fighterId) ?? null
+      : null;
     game.addRecord(
       GameRecordKind.CardPlayed,
       new CardPlayedResolution(
-        player.id,
-        player.name,
-        card.id,
-        card.name, // cardDefinitionId — Card IS the definition now
-        card.kind,
-        card.name,
+        player,
+        card,
         card.zone,
-        options.target?.fighterId ?? null,
-        options.target?.fighterName ?? null,
-        options.target?.ownerPlayerId ?? null,
-        options.target?.ownerPlayerName ?? null,
+        targetFighter,
         options.timing ?? null,
       ),
       metadata,
     );
-    const targetFighter = options.target?.fighterId !== undefined
-      ? game.getFighter(options.target.fighterId) ?? null
-      : null;
     const targetOwnerPlayer = options.target?.ownerPlayerId !== undefined
       ? game.getPlayer(options.target.ownerPlayerId) ?? null
       : null;
@@ -2078,29 +2051,22 @@ export class GameEngine {
       target?: ReturnType<GameEngine["getPloyTargetDetails"]>;
     } = {},
   ): void {
+    const resolvedTargetFighter = options.target?.fighterId !== undefined
+      ? game.getFighter(options.target.fighterId) ?? null
+      : null;
     game.addRecord(
       GameRecordKind.CardResolved,
       new CardResolvedResolution(
-        player.id,
-        player.name,
-        card.id,
-        card.name, // cardDefinitionId — Card IS the definition now
-        card.kind,
-        card.name,
+        player,
+        card,
         card.zone,
-        options.target?.fighterId ?? null,
-        options.target?.fighterName ?? null,
-        options.target?.ownerPlayerId ?? null,
-        options.target?.ownerPlayerName ?? null,
+        resolvedTargetFighter,
         options.timing ?? null,
         gloryDelta,
         effectSummaries,
       ),
       metadata,
     );
-    const resolvedTargetFighter = options.target?.fighterId !== undefined
-      ? game.getFighter(options.target.fighterId) ?? null
-      : null;
     const resolvedTargetOwnerPlayer = options.target?.ownerPlayerId !== undefined
       ? game.getPlayer(options.target.ownerPlayerId) ?? null
       : null;
@@ -2132,8 +2098,7 @@ export class GameEngine {
       GameRecordKind.TurnStarted,
       new TurnStartedResolution(
         game.roundNumber,
-        player.id,
-        player.name,
+        player,
         player.turnsTakenThisRound + 1,
         roundTurnNumber,
         roundTurnNumber === 1,
@@ -2162,8 +2127,7 @@ export class GameEngine {
       GameRecordKind.ActionStepStarted,
       new ActionStepStartedResolution(
         game.roundNumber,
-        player.id,
-        player.name,
+        player,
         player.turnsTakenThisRound + 1,
         roundTurnNumber,
         roundTurnNumber === 1,
@@ -2194,15 +2158,13 @@ export class GameEngine {
       GameRecordKind.ActionStepEnded,
       new ActionStepEndedResolution(
         game.roundNumber,
-        player.id,
-        player.name,
+        player,
         player.turnsTakenThisRound + 1,
         roundTurnNumber,
         nextState.kind,
         nextState.phase,
         nextState.turnStep,
-        nextState.activePlayerId,
-        nextActivePlayer?.name ?? null,
+        nextActivePlayer ?? null,
       ),
       metadata,
     );
@@ -2235,15 +2197,13 @@ export class GameEngine {
       GameRecordKind.PowerStepEnded,
       new PowerStepEndedResolution(
         game.roundNumber,
-        player.id,
-        player.name,
+        player,
         player.turnsTakenThisRound,
         completedRoundTurnNumber,
         nextState.kind,
         nextState.phase,
         nextState.turnStep,
-        nextState.activePlayerId,
-        nextActivePlayer?.name ?? null,
+        nextActivePlayer ?? null,
         nextState.kind === "endPhase",
       ),
       metadata,
@@ -2278,15 +2238,13 @@ export class GameEngine {
       GameRecordKind.TurnEnded,
       new TurnEndedResolution(
         game.roundNumber,
-        player.id,
-        player.name,
+        player,
         player.turnsTakenThisRound,
         completedRoundTurnNumber,
         nextState.kind,
         nextState.phase,
         nextState.turnStep,
-        nextState.activePlayerId,
-        nextActivePlayer?.name ?? null,
+        nextActivePlayer ?? null,
         nextState.kind === "endPhase",
       ),
       metadata,
@@ -2443,8 +2401,8 @@ export class GameEngine {
         player,
         card,
         {
-          invokedByPlayerId: player.id,
-          invokedByCardId: card.id,
+          invokedByPlayer: player,
+          invokedByCard: card,
           actionKind: context.triggerActionKind ?? null,
         },
         { timing },
@@ -2475,8 +2433,8 @@ export class GameEngine {
         [`scored for ${scoredObjective.gloryValue} glory`],
         scoredObjective.gloryValue,
         {
-          invokedByPlayerId: player.id,
-          invokedByCardId: card.id,
+          invokedByPlayer: player,
+          invokedByCard: card,
           actionKind: context.triggerActionKind ?? null,
         },
         { timing },
@@ -2501,9 +2459,10 @@ export class GameEngine {
         GameRecordKind.ObjectiveScoring,
         new ObjectiveScoringResolution(game.roundNumber, [playerResolution]),
         {
-          invokedByPlayerId: player.id,
-          invokedByCardId:
-            scoredObjectives.length === 1 ? scoredObjectives[0].cardId : null,
+          invokedByPlayer: player,
+          invokedByCard: scoredObjectives.length === 1
+            ? player.scoredObjectives.find((c) => c.id === scoredObjectives[0].cardId) ?? null
+            : null,
           actionKind: context.triggerActionKind ?? null,
         },
       );
@@ -2827,35 +2786,33 @@ export class GameEngine {
     attackerPlayer: Player,
     defenderPlayer: Player,
     attacker: Fighter,
-    attackerDefinition: Player["warband"]["fighters"][number],
+    _attackerDefinition: Player["warband"]["fighters"][number],
     target: Fighter,
     targetDefinition: Player["warband"]["fighters"][number],
     weaponId: string,
-    weaponName: string,
+    _weaponName: string,
     selectedAbility: AttackAction["selectedAbility"],
     attackRoll: AttackAction["attackRoll"],
     saveRoll: AttackAction["saveRoll"],
     actionKind: GameEventInvokerKind,
   ): { combatResult: ReturnType<CombatResolver["resolve"]>; targetSlain: boolean } {
     const weapon = attackerPlayer.getFighterWeaponDefinition(attacker.id, weaponId);
+    if (weapon === undefined) {
+      throw new Error(`Weapon ${weaponId} not found on ${attacker.id}.`);
+    }
     game.addRecord(
       GameRecordKind.CombatStarted,
       new CombatStartedResolution(
-        attackerPlayer.id,
-        attackerPlayer.name,
-        attacker.id,
-        attackerDefinition.name,
-        defenderPlayer.id,
-        defenderPlayer.name,
-        target.id,
-        targetDefinition.name,
-        weaponId,
-        weaponName,
+        attackerPlayer,
+        attacker,
+        defenderPlayer,
+        target,
+        weapon,
         selectedAbility,
       ),
       {
-        invokedByPlayerId: attackerPlayer.id,
-        invokedByFighterId: attacker.id,
+        invokedByPlayer: attackerPlayer,
+        invokedByFighter: attacker,
         actionKind,
       },
     );
@@ -2872,14 +2829,17 @@ export class GameEngine {
       ));
     }
 
+    if (weapon === undefined) {
+      throw new Error(`Weapon ${weaponId} not found on ${attacker.id}.`);
+    }
     const combatResult = this.combatResolver.resolve(
       game,
       new CombatContext(
-        attackerPlayer.id,
-        defenderPlayer.id,
-        attacker.id,
-        target.id,
-        weaponId,
+        attackerPlayer,
+        defenderPlayer,
+        attacker,
+        target,
+        weapon,
         selectedAbility,
       ),
       attackRoll,
@@ -2891,8 +2851,8 @@ export class GameEngine {
     }
 
     game.addRecord(GameRecordKind.Combat, combatResult, {
-      invokedByPlayerId: attackerPlayer.id,
-      invokedByFighterId: attacker.id,
+      invokedByPlayer: attackerPlayer,
+      invokedByFighter: attacker,
       actionKind,
     });
     if (weapon !== undefined) {
@@ -2942,20 +2902,16 @@ export class GameEngine {
       game.addRecord(
         GameRecordKind.FighterSlain,
         new FighterSlainResolution(
-          attackerPlayer.id,
-          attackerPlayer.name,
-          attacker.id,
-          attackerDefinition.name,
-          defenderPlayer.id,
-          defenderPlayer.name,
-          target.id,
-          targetDefinition.name,
-          targetHex.id,
+          attackerPlayer,
+          attacker,
+          defenderPlayer,
+          target,
+          targetHex,
           targetDefinition.bounty,
         ),
         {
-          invokedByPlayerId: attackerPlayer.id,
-          invokedByFighterId: attacker.id,
+          invokedByPlayer: attackerPlayer,
+          invokedByFighter: attacker,
           actionKind,
         },
       );
@@ -2974,16 +2930,11 @@ export class GameEngine {
     game.addRecord(
       GameRecordKind.CombatEnded,
       new CombatEndedResolution(
-        attackerPlayer.id,
-        attackerPlayer.name,
-        attacker.id,
-        attackerDefinition.name,
-        defenderPlayer.id,
-        defenderPlayer.name,
-        target.id,
-        targetDefinition.name,
-        weaponId,
-        weaponName,
+        attackerPlayer,
+        attacker,
+        defenderPlayer,
+        target,
+        weapon,
         selectedAbility,
         combatResult.selectedAbilityRequiresCritical,
         combatResult.selectedAbilityTriggered,
@@ -2999,8 +2950,8 @@ export class GameEngine {
         combatResult.staggerApplied,
       ),
       {
-        invokedByPlayerId: attackerPlayer.id,
-        invokedByFighterId: attacker.id,
+        invokedByPlayer: attackerPlayer,
+        invokedByFighter: attacker,
         actionKind,
       },
     );

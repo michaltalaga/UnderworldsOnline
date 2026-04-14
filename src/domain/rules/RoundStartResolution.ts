@@ -5,6 +5,7 @@ import type {
   HexId,
   PlayerId,
 } from "../values/ids";
+import type { Player } from "../state/Player";
 
 export type RoundStartFeatureTokenResolution = {
   featureTokenId: FeatureTokenId;
@@ -17,16 +18,18 @@ export type RoundStartFeatureTokenResolution = {
 
 export class RoundStartResolution {
   public readonly roundNumber: number;
-  public readonly firstPlayerId: PlayerId;
+  public readonly firstPlayer: Player;
   public readonly featureTokens: readonly RoundStartFeatureTokenResolution[];
 
   public constructor(
     roundNumber: number,
-    firstPlayerId: PlayerId,
+    firstPlayer: Player,
     featureTokens: readonly RoundStartFeatureTokenResolution[],
   ) {
     this.roundNumber = roundNumber;
-    this.firstPlayerId = firstPlayerId;
+    this.firstPlayer = firstPlayer;
     this.featureTokens = featureTokens;
   }
+
+  public get firstPlayerId(): PlayerId { return this.firstPlayer.id; }
 }

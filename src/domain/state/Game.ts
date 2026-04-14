@@ -204,14 +204,20 @@ export class Game {
     data: GameRecordDataByKind[TKind],
     metadata: GameEventMetadata = {},
   ): void {
+    const invokedByPlayer = metadata.invokedByPlayer ?? null;
+    const invokedByFighter = metadata.invokedByFighter ?? null;
+    const invokedByCard = metadata.invokedByCard ?? null;
     this.records.push({
       kind,
       roundNumber: metadata.roundNumber ?? this.roundNumber,
-      invokedByPlayerId: metadata.invokedByPlayerId ?? null,
-      invokedByFighterId: metadata.invokedByFighterId ?? null,
-      invokedByCardId: metadata.invokedByCardId ?? null,
+      invokedByPlayer,
+      invokedByFighter,
+      invokedByCard,
       actionKind: metadata.actionKind ?? null,
       data,
+      get invokedByPlayerId() { return invokedByPlayer?.id ?? null; },
+      get invokedByFighterId() { return invokedByFighter?.id ?? null; },
+      get invokedByCardId() { return invokedByCard?.id ?? null; },
     });
   }
 

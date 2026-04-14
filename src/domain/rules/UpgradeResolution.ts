@@ -1,32 +1,31 @@
 import type { CardDefinitionId, CardId, FighterId, PlayerId } from "../values/ids";
+import type { Card } from "../cards/Card";
+import type { Fighter } from "../state/Fighter";
+import type { Player } from "../state/Player";
 
 export class UpgradeResolution {
-  public readonly playerId: PlayerId;
-  public readonly playerName: string;
-  public readonly cardId: CardId;
-  public readonly cardDefinitionId: CardDefinitionId;
-  public readonly cardName: string;
-  public readonly fighterId: FighterId;
-  public readonly fighterName: string;
+  public readonly player: Player;
+  public readonly card: Card;
+  public readonly fighter: Fighter;
   public readonly gloryPaid: number;
 
   public constructor(
-    playerId: PlayerId,
-    playerName: string,
-    cardId: CardId,
-    cardDefinitionId: CardDefinitionId,
-    cardName: string,
-    fighterId: FighterId,
-    fighterName: string,
+    player: Player,
+    card: Card,
+    fighter: Fighter,
     gloryPaid: number,
   ) {
-    this.playerId = playerId;
-    this.playerName = playerName;
-    this.cardId = cardId;
-    this.cardDefinitionId = cardDefinitionId;
-    this.cardName = cardName;
-    this.fighterId = fighterId;
-    this.fighterName = fighterName;
+    this.player = player;
+    this.card = card;
+    this.fighter = fighter;
     this.gloryPaid = gloryPaid;
   }
+
+  public get playerId(): PlayerId { return this.player.id; }
+  public get playerName(): string { return this.player.name; }
+  public get cardId(): CardId { return this.card.id; }
+  public get cardDefinitionId(): CardDefinitionId { return this.card.name as CardDefinitionId; }
+  public get cardName(): string { return this.card.name; }
+  public get fighterId(): FighterId { return this.fighter.id; }
+  public get fighterName(): string { return this.fighter.definition.name; }
 }

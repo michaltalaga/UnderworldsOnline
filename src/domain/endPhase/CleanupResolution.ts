@@ -1,5 +1,6 @@
 import type { GameOutcomeKind } from "../values/enums";
 import type { FighterId, PlayerId } from "../values/ids";
+import type { Player } from "../state/Player";
 
 export const CleanupTransitionKind = {
   CombatReady: "combatReady",
@@ -33,7 +34,7 @@ export class CleanupResolution {
   public readonly nextStateKind: CleanupTransitionKind;
   public readonly nextRoundNumber: number | null;
   public readonly outcomeKind: GameOutcomeKind | null;
-  public readonly winnerPlayerId: PlayerId | null;
+  public readonly winner: Player | null;
   public readonly outcomeReason: string | null;
 
   public constructor(
@@ -43,7 +44,7 @@ export class CleanupResolution {
     nextStateKind: CleanupTransitionKind,
     nextRoundNumber: number | null,
     outcomeKind: GameOutcomeKind | null = null,
-    winnerPlayerId: PlayerId | null = null,
+    winner: Player | null = null,
     outcomeReason: string | null = null,
   ) {
     this.completedRoundNumber = completedRoundNumber;
@@ -59,7 +60,9 @@ export class CleanupResolution {
     this.nextStateKind = nextStateKind;
     this.nextRoundNumber = nextRoundNumber;
     this.outcomeKind = outcomeKind;
-    this.winnerPlayerId = winnerPlayerId;
+    this.winner = winner;
     this.outcomeReason = outcomeReason;
   }
+
+  public get winnerPlayerId(): PlayerId | null { return this.winner?.id ?? null; }
 }

@@ -1,8 +1,9 @@
 import type { WarscrollAbilityEffect } from "../definitions/WarscrollAbilityEffect";
 import type { PlayerId } from "../values/ids";
+import type { Player } from "../state/Player";
 
 export class WarscrollAbilityResolution {
-  public readonly playerId: PlayerId;
+  public readonly player: Player;
   public readonly warscrollName: string;
   public readonly abilityIndex: number;
   public readonly abilityName: string;
@@ -11,7 +12,7 @@ export class WarscrollAbilityResolution {
   public readonly effectSummaries: readonly string[];
 
   public constructor(
-    playerId: PlayerId,
+    player: Player,
     warscrollName: string,
     abilityIndex: number,
     abilityName: string,
@@ -19,7 +20,7 @@ export class WarscrollAbilityResolution {
     effectsResolved: readonly WarscrollAbilityEffect[],
     effectSummaries: readonly string[],
   ) {
-    this.playerId = playerId;
+    this.player = player;
     this.warscrollName = warscrollName;
     this.abilityIndex = abilityIndex;
     this.abilityName = abilityName;
@@ -27,4 +28,6 @@ export class WarscrollAbilityResolution {
     this.effectsResolved = effectsResolved;
     this.effectSummaries = effectSummaries;
   }
+
+  public get playerId(): PlayerId { return this.player.id; }
 }

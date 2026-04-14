@@ -1,27 +1,36 @@
 import type { FighterId, PlayerId, WeaponDefinitionId } from "../values/ids";
 import { WeaponAbilityKind } from "../values/enums";
+import type { WeaponDefinition } from "../definitions/WeaponDefinition";
+import type { Fighter } from "../state/Fighter";
+import type { Player } from "../state/Player";
 
 export class CombatContext {
-  public readonly attackerPlayerId: PlayerId;
-  public readonly defenderPlayerId: PlayerId;
-  public readonly attackerFighterId: FighterId;
-  public readonly targetFighterId: FighterId;
-  public readonly weaponId: WeaponDefinitionId;
+  public readonly attackerPlayer: Player;
+  public readonly defenderPlayer: Player;
+  public readonly attacker: Fighter;
+  public readonly target: Fighter;
+  public readonly weapon: WeaponDefinition;
   public readonly selectedAbility: WeaponAbilityKind | null;
 
   public constructor(
-    attackerPlayerId: PlayerId,
-    defenderPlayerId: PlayerId,
-    attackerFighterId: FighterId,
-    targetFighterId: FighterId,
-    weaponId: WeaponDefinitionId,
+    attackerPlayer: Player,
+    defenderPlayer: Player,
+    attacker: Fighter,
+    target: Fighter,
+    weapon: WeaponDefinition,
     selectedAbility: WeaponAbilityKind | null = null,
   ) {
-    this.attackerPlayerId = attackerPlayerId;
-    this.defenderPlayerId = defenderPlayerId;
-    this.attackerFighterId = attackerFighterId;
-    this.targetFighterId = targetFighterId;
-    this.weaponId = weaponId;
+    this.attackerPlayer = attackerPlayer;
+    this.defenderPlayer = defenderPlayer;
+    this.attacker = attacker;
+    this.target = target;
+    this.weapon = weapon;
     this.selectedAbility = selectedAbility;
   }
+
+  public get attackerPlayerId(): PlayerId { return this.attackerPlayer.id; }
+  public get defenderPlayerId(): PlayerId { return this.defenderPlayer.id; }
+  public get attackerFighterId(): FighterId { return this.attacker.id; }
+  public get targetFighterId(): FighterId { return this.target.id; }
+  public get weaponId(): WeaponDefinitionId { return this.weapon.id; }
 }

@@ -1,43 +1,43 @@
 import type { Phase, TurnStep } from "../values/enums";
 import type { PlayerId } from "../values/ids";
 import type { GameState } from "../state/GameState";
+import type { Player } from "../state/Player";
 
 export class PowerStepEndedResolution {
   public readonly roundNumber: number;
-  public readonly playerId: PlayerId;
-  public readonly playerName: string;
+  public readonly player: Player;
   public readonly completedPlayerTurnNumber: number;
   public readonly completedRoundTurnNumber: number;
   public readonly nextStateKind: GameState["kind"];
   public readonly nextPhase: Phase;
   public readonly nextTurnStep: TurnStep | null;
-  public readonly nextActivePlayerId: PlayerId | null;
-  public readonly nextActivePlayerName: string | null;
+  public readonly nextActivePlayer: Player | null;
   public readonly roundEnded: boolean;
 
   public constructor(
     roundNumber: number,
-    playerId: PlayerId,
-    playerName: string,
+    player: Player,
     completedPlayerTurnNumber: number,
     completedRoundTurnNumber: number,
     nextStateKind: GameState["kind"],
     nextPhase: Phase,
     nextTurnStep: TurnStep | null,
-    nextActivePlayerId: PlayerId | null,
-    nextActivePlayerName: string | null,
+    nextActivePlayer: Player | null,
     roundEnded: boolean,
   ) {
     this.roundNumber = roundNumber;
-    this.playerId = playerId;
-    this.playerName = playerName;
+    this.player = player;
     this.completedPlayerTurnNumber = completedPlayerTurnNumber;
     this.completedRoundTurnNumber = completedRoundTurnNumber;
     this.nextStateKind = nextStateKind;
     this.nextPhase = nextPhase;
     this.nextTurnStep = nextTurnStep;
-    this.nextActivePlayerId = nextActivePlayerId;
-    this.nextActivePlayerName = nextActivePlayerName;
+    this.nextActivePlayer = nextActivePlayer;
     this.roundEnded = roundEnded;
   }
+
+  public get playerId(): PlayerId { return this.player.id; }
+  public get playerName(): string { return this.player.name; }
+  public get nextActivePlayerId(): PlayerId | null { return this.nextActivePlayer?.id ?? null; }
+  public get nextActivePlayerName(): string | null { return this.nextActivePlayer?.name ?? null; }
 }

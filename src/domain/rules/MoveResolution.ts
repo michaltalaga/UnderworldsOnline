@@ -1,36 +1,41 @@
-import type { HexKind } from "../values/enums";
 import type { FighterId, HexId, PlayerId } from "../values/ids";
+import type { HexKind } from "../values/enums";
+import type { Fighter } from "../state/Fighter";
+import type { HexCell } from "../state/HexCell";
+import type { Player } from "../state/Player";
 
 export class MoveResolution {
-  public readonly playerId: PlayerId;
-  public readonly playerName: string;
-  public readonly fighterId: FighterId;
-  public readonly fighterName: string;
-  public readonly fromHexId: HexId;
-  public readonly toHexId: HexId;
+  public readonly player: Player;
+  public readonly fighter: Fighter;
+  public readonly fromHex: HexCell;
+  public readonly toHex: HexCell;
   public readonly path: readonly HexId[];
   public readonly destinationHexKind: HexKind;
   public readonly staggerApplied: boolean;
 
   public constructor(
-    playerId: PlayerId,
-    playerName: string,
-    fighterId: FighterId,
-    fighterName: string,
-    fromHexId: HexId,
-    toHexId: HexId,
+    player: Player,
+    fighter: Fighter,
+    fromHex: HexCell,
+    toHex: HexCell,
     path: readonly HexId[],
     destinationHexKind: HexKind,
     staggerApplied: boolean,
   ) {
-    this.playerId = playerId;
-    this.playerName = playerName;
-    this.fighterId = fighterId;
-    this.fighterName = fighterName;
-    this.fromHexId = fromHexId;
-    this.toHexId = toHexId;
+    this.player = player;
+    this.fighter = fighter;
+    this.fromHex = fromHex;
+    this.toHex = toHex;
     this.path = path;
     this.destinationHexKind = destinationHexKind;
     this.staggerApplied = staggerApplied;
   }
+
+  // Legacy id-shaped getters — derive from object refs above.
+  public get playerId(): PlayerId { return this.player.id; }
+  public get playerName(): string { return this.player.name; }
+  public get fighterId(): FighterId { return this.fighter.id; }
+  public get fighterName(): string { return this.fighter.definition.name; }
+  public get fromHexId(): HexId { return this.fromHex.id; }
+  public get toHexId(): HexId { return this.toHex.id; }
 }

@@ -1,6 +1,7 @@
 import type { Phase, TurnStep } from "../values/enums";
 import type { PlayerId } from "../values/ids";
 import type { GameState } from "../state/GameState";
+import type { Player } from "../state/Player";
 
 export class TurnStepChangeResolution {
   public readonly fromStateKind: GameState["kind"];
@@ -9,8 +10,8 @@ export class TurnStepChangeResolution {
   public readonly toPhase: Phase;
   public readonly fromTurnStep: TurnStep | null;
   public readonly toTurnStep: TurnStep | null;
-  public readonly fromActivePlayerId: PlayerId | null;
-  public readonly toActivePlayerId: PlayerId | null;
+  public readonly fromActivePlayer: Player | null;
+  public readonly toActivePlayer: Player | null;
   public readonly turnStepChanged: boolean;
   public readonly activePlayerChanged: boolean;
 
@@ -21,8 +22,8 @@ export class TurnStepChangeResolution {
     toPhase: Phase,
     fromTurnStep: TurnStep | null,
     toTurnStep: TurnStep | null,
-    fromActivePlayerId: PlayerId | null,
-    toActivePlayerId: PlayerId | null,
+    fromActivePlayer: Player | null,
+    toActivePlayer: Player | null,
   ) {
     this.fromStateKind = fromStateKind;
     this.toStateKind = toStateKind;
@@ -30,9 +31,12 @@ export class TurnStepChangeResolution {
     this.toPhase = toPhase;
     this.fromTurnStep = fromTurnStep;
     this.toTurnStep = toTurnStep;
-    this.fromActivePlayerId = fromActivePlayerId;
-    this.toActivePlayerId = toActivePlayerId;
+    this.fromActivePlayer = fromActivePlayer;
+    this.toActivePlayer = toActivePlayer;
     this.turnStepChanged = fromTurnStep !== toTurnStep;
-    this.activePlayerChanged = fromActivePlayerId !== toActivePlayerId;
+    this.activePlayerChanged = fromActivePlayer !== toActivePlayer;
   }
+
+  public get fromActivePlayerId(): PlayerId | null { return this.fromActivePlayer?.id ?? null; }
+  public get toActivePlayerId(): PlayerId | null { return this.toActivePlayer?.id ?? null; }
 }

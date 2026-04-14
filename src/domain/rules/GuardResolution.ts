@@ -1,20 +1,18 @@
 import type { FighterId, PlayerId } from "../values/ids";
+import type { Fighter } from "../state/Fighter";
+import type { Player } from "../state/Player";
 
 export class GuardResolution {
-  public readonly playerId: PlayerId;
-  public readonly playerName: string;
-  public readonly fighterId: FighterId;
-  public readonly fighterName: string;
+  public readonly player: Player;
+  public readonly fighter: Fighter;
 
-  public constructor(
-    playerId: PlayerId,
-    playerName: string,
-    fighterId: FighterId,
-    fighterName: string,
-  ) {
-    this.playerId = playerId;
-    this.playerName = playerName;
-    this.fighterId = fighterId;
-    this.fighterName = fighterName;
+  public constructor(player: Player, fighter: Fighter) {
+    this.player = player;
+    this.fighter = fighter;
   }
+
+  public get playerId(): PlayerId { return this.player.id; }
+  public get playerName(): string { return this.player.name; }
+  public get fighterId(): FighterId { return this.fighter.id; }
+  public get fighterName(): string { return this.fighter.definition.name; }
 }
