@@ -3,13 +3,13 @@ import { ObjectiveCard } from "../../cards/ObjectiveCard";
 import { PloyCard } from "../../cards/PloyCard";
 import { UpgradeCard } from "../../cards/UpgradeCard";
 import { Fighter } from "../../state/Fighter";
-import { GameRecordKind } from "../../state/GameRecord";
 import type { Game } from "../../state/Game";
 import type { Player } from "../../state/Player";
 import { CardZone, FeatureTokenSide } from "../../values/enums";
 import { friendlyFightersWithoutGuard, enemyFightersWithoutStagger } from "../../cards/targeting";
 import { giveGuard, giveStagger } from "../../cards/effects";
-import { getMyLatestCombat, getTerritoryOwner } from "../../cards/scoring";
+import { getMyLatestCombatEvent, getMyLatestDelveEvent, getTerritoryOwner } from "../../cards/scoring";
+import { FighterDelvedEvent } from "../../events/FighterDelvedEvent";
 
 // ─── Custom Objectives (event-log aware) ────────────────────────────────────
 
@@ -21,10 +21,10 @@ export class PracticeObjective01 extends ObjectiveCard {
   }
 
   protected override canScore(game: Game): boolean {
-    const combat = getMyLatestCombat(game, this.owner.id);
+    const combat = getMyLatestCombatEvent(game, this.owner);
     if (combat === null) return false;
-    if (combat.data.attackRoll.length === 0) return false;
-    return combat.data.attackSuccesses === combat.data.attackRoll.length;
+    if (combat.attackRoll.length === 0) return false;
+    return combat.attackSuccesses === combat.attackRoll.length;
   }
 }
 
@@ -36,12 +36,10 @@ export class PracticeObjective02 extends ObjectiveCard {
   }
 
   protected override canScore(game: Game): boolean {
-    const combat = getMyLatestCombat(game, this.owner.id);
-    if (combat === null || !combat.data.targetSlain) return false;
-    const attackerPlayer = game.getPlayer(combat.data.context.attackerPlayerId);
-    const defenderPlayer = game.getPlayer(combat.data.context.defenderPlayerId);
-    const attackerDef = attackerPlayer?.getFighterDefinition(combat.data.context.attackerFighterId);
-    const targetDef = defenderPlayer?.getFighterDefinition(combat.data.context.targetFighterId);
+    const combat = getMyLatestCombatEvent(game, this.owner);
+    if (combat === null || !combat.targetSlain) return false;
+    const attackerDef = combat.attackerPlayer.getFighterDefinition(combat.attacker.id);
+    const targetDef = combat.defenderPlayer.getFighterDefinition(combat.target.id);
     if (attackerDef === undefined || targetDef === undefined) return false;
     return targetDef.isLeader || targetDef.health >= attackerDef.health;
   }
@@ -55,9 +53,9 @@ export class PracticeObjective03 extends ObjectiveCard {
   }
 
   protected override canScore(game: Game): boolean {
-    const latestDelve = game.getLatestEvent(GameRecordKind.Delve);
-    if (latestDelve === null || latestDelve.invokedByPlayerId !== this.owner.id) return false;
-    const owner = getTerritoryOwner(game, latestDelve.data.featureTokenHexId);
+    const latestDelve = getMyLatestDelveEvent(game, this.owner);
+    if (latestDelve === null) return false;
+    const owner = getTerritoryOwner(game, latestDelve.featureTokenHexId);
     if (owner === null) return false;
     // Enemy territory = not ours
     if (owner !== this.owner.id) return true;
@@ -76,13 +74,12 @@ export class PracticeObjective04 extends ObjectiveCard {
 
   protected override canScore(game: Game): boolean {
     if (game.phase !== "end") return false;
-    const thisRoundDelves = game.getEventHistory(GameRecordKind.Delve).filter((event) =>
-      event.roundNumber === game.roundNumber && event.invokedByPlayerId === this.owner.id,
+    const thisRoundDelves = game.getEventsOfTypeThisRound(FighterDelvedEvent)
+      .filter((e) => e.player === this.owner);
+    const thisRoundTreasureDelves = thisRoundDelves.filter((e) =>
+      e.sideBeforeDelve === FeatureTokenSide.Treasure,
     );
-    const thisRoundTreasureDelves = thisRoundDelves.filter((event) =>
-      event.data.sideBeforeDelve === FeatureTokenSide.Treasure,
-    );
-    const delvedTokenIds = new Set(thisRoundTreasureDelves.map((event) => event.data.featureTokenId));
+    const delvedTokenIds = new Set(thisRoundTreasureDelves.map((e) => e.featureTokenId));
     return delvedTokenIds.size >= 3;
   }
 }

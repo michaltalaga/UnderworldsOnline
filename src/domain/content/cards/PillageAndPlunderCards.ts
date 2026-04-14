@@ -1,6 +1,5 @@
 import type { Target } from "../../cards/Card";
 import { Fighter } from "../../state/Fighter";
-import { GameRecordKind } from "../../state/GameRecord";
 import type { Game } from "../../state/Game";
 import type { Player } from "../../state/Player";
 import { type CardZone, FeatureTokenSide, GameActionKind, WeaponAbilityKind } from "../../values/enums";
@@ -15,7 +14,21 @@ import type { WeaponDefinition } from "../../definitions/WeaponDefinition";
 import { giveGuard, giveStagger, heal, dealDamage, pushFighter } from "../../cards/effects";
 import { CombatOutcome } from "../../values/enums";
 import { rollAttackDie } from "../../rules/Dice";
-import { getMyLatestCombat, getTerritoryOwner, isInEnemyTerritory, isOnTreasureToken, isOnStaggerHex } from "../../cards/scoring";
+import {
+  getMyLatestCombatEvent,
+  getMyLatestDelveEvent,
+  getMyLatestMoveEvent,
+  getTerritoryOwner,
+  isInEnemyTerritory,
+  isOnTreasureToken,
+  isOnStaggerHex,
+} from "../../cards/scoring";
+import { CombatResolvedEvent } from "../../events/CombatResolvedEvent";
+import { FighterDelvedEvent } from "../../events/FighterDelvedEvent";
+import { FighterMovedEvent } from "../../events/FighterMovedEvent";
+import { AttackDiceRolledEvent } from "../../events/AttackDiceRolledEvent";
+import { SaveDiceRolledEvent } from "../../events/SaveDiceRolledEvent";
+import { CombatEndedEvent } from "../../events/CombatEndedEvent";
 
 // Source: Warhammer Underworlds — Pillage and Plunder Rivals deck.
 
@@ -30,10 +43,10 @@ export class BrokenProspects extends ObjectiveCard {
 
   protected override canScore(game: Game): boolean {
     if (game.phase !== "end") return false;
-    const thisRoundDelves = game.getEventHistory(GameRecordKind.Delve)
-      .filter((e) => e.roundNumber === game.roundNumber && e.invokedByPlayerId === this.owner.id);
-    const treasureDelves = thisRoundDelves.filter((e) => e.data.sideBeforeDelve === FeatureTokenSide.Treasure);
-    const uniqueTokens = new Set(treasureDelves.map((e) => e.data.featureTokenId));
+    const thisRoundDelves = game.getEventsOfTypeThisRound(FighterDelvedEvent)
+      .filter((e) => e.player === this.owner);
+    const treasureDelves = thisRoundDelves.filter((e) => e.sideBeforeDelve === FeatureTokenSide.Treasure);
+    const uniqueTokens = new Set(treasureDelves.map((e) => e.featureTokenId));
     return uniqueTokens.size >= 3;
   }
 }
@@ -47,10 +60,10 @@ export class AgainstTheOdds extends ObjectiveCard {
 
   protected override canScore(game: Game): boolean {
     if (game.phase !== "end") return false;
-    const thisRoundDelves = game.getEventHistory(GameRecordKind.Delve)
-      .filter((e) => e.roundNumber === game.roundNumber && e.invokedByPlayerId === this.owner.id);
+    const thisRoundDelves = game.getEventsOfTypeThisRound(FighterDelvedEvent)
+      .filter((e) => e.player === this.owner);
     return thisRoundDelves.some((e) => {
-      const token = game.getFeatureToken(e.data.featureTokenId);
+      const token = game.getFeatureToken(e.featureTokenId);
       return token !== undefined && token.value % 2 === 1;
     });
   }
@@ -143,12 +156,11 @@ export class AggressiveClaimant extends ObjectiveCard {
   }
 
   protected override canScore(game: Game): boolean {
-    const combat = getMyLatestCombat(game, this.owner.id);
-    if (combat === null || combat.data.damageInflicted === 0) return false;
-    const targetFighter = game.getFighter(combat.data.context.targetFighterId);
-    if (targetFighter === undefined || targetFighter.currentHexId === null) return false;
+    const combat = getMyLatestCombatEvent(game, this.owner);
+    if (combat === null || combat.damageInflicted === 0) return false;
+    if (combat.target.currentHexId === null) return false;
     // Neutral territory: no owner
-    return getTerritoryOwner(game, targetFighter.currentHexId) === null;
+    return getTerritoryOwner(game, combat.target.currentHexId) === null;
   }
 }
 
@@ -160,9 +172,9 @@ export class ClaimThePrize extends ObjectiveCard {
   }
 
   protected override canScore(game: Game): boolean {
-    const latestDelve = game.getLatestEvent(GameRecordKind.Delve);
-    if (latestDelve === null || latestDelve.invokedByPlayerId !== this.owner.id) return false;
-    const owner = getTerritoryOwner(game, latestDelve.data.featureTokenHexId);
+    const latestDelve = getMyLatestDelveEvent(game, this.owner);
+    if (latestDelve === null) return false;
+    const owner = getTerritoryOwner(game, latestDelve.featureTokenHexId);
     // Enemy territory: owned by someone, but not us
     return owner !== null && owner !== this.owner.id;
   }
@@ -177,10 +189,10 @@ export class DelvingForWealth extends ObjectiveCard {
 
   protected override canScore(game: Game): boolean {
     // Early exit: only scorable right after a delve by us
-    const latestDelve = game.getLatestEvent(GameRecordKind.Delve);
-    if (latestDelve === null || latestDelve.invokedByPlayerId !== this.owner.id) return false;
-    const thisRoundDelves = game.getEventHistory(GameRecordKind.Delve)
-      .filter((e) => e.roundNumber === game.roundNumber && e.invokedByPlayerId === this.owner.id);
+    const latestDelve = getMyLatestDelveEvent(game, this.owner);
+    if (latestDelve === null) return false;
+    const thisRoundDelves = game.getEventsOfTypeThisRound(FighterDelvedEvent)
+      .filter((e) => e.player === this.owner);
     return thisRoundDelves.length >= 3;
   }
 }
@@ -193,9 +205,8 @@ export class ShareTheLoad extends ObjectiveCard {
   }
 
   protected override canScore(game: Game): boolean {
-    const latestMove = game.getLatestEvent(GameRecordKind.Move);
+    const latestMove = getMyLatestMoveEvent(game, this.owner);
     if (latestMove === null) return false;
-    if (latestMove.invokedByPlayerId !== this.owner.id) return false;
     // Check how many friendly fighters are on feature tokens
     const friendlyOnFeatureTokens = this.owner.fighters.filter((f) => {
       if (f.isSlain || f.currentHexId === null) return false;
@@ -215,14 +226,10 @@ export class HostileTakeover extends ObjectiveCard {
 
   protected override canScore(game: Game): boolean {
     // Early exit: only scorable right after a combat by us
-    const combat = getMyLatestCombat(game, this.owner.id);
+    const combat = getMyLatestCombatEvent(game, this.owner);
     if (combat === null) return false;
-    const nonChargeAttacks = game.getEventHistory(GameRecordKind.Combat)
-      .filter((e) =>
-        e.roundNumber === game.roundNumber &&
-        e.invokedByPlayerId === this.owner.id &&
-        e.actionKind !== GameActionKind.Charge,
-      );
+    const nonChargeAttacks = game.getEventsOfTypeThisRound(CombatResolvedEvent)
+      .filter((e) => e.attackerPlayer === this.owner && e.actionKind !== GameActionKind.Charge);
     return nonChargeAttacks.length >= 2;
   }
 }
@@ -273,20 +280,19 @@ export class PridefulDuellist extends PloyCard {
   }
 
   protected override canPlay(game: Game): boolean {
-    const pending = game.pendingCombat;
-    if (pending === null || pending.phase !== "resolved") return false;
-    if (pending.attackerPlayerId !== this.owner.id) return false;
-    const attacker = this.owner.getFighter(pending.attackerFighterId);
-    if (attacker === undefined || attacker.isSlain) return false;
-    return isInEnemyTerritory(game, attacker, this.owner.id);
+    // Playable after combat is resolved but before it ends
+    const resolved = game.getLatestEventOfType(CombatResolvedEvent);
+    if (resolved === null || resolved.attackerPlayer !== this.owner) return false;
+    if (game.getLatestEventAfter(resolved, CombatEndedEvent) !== null) return false;
+    if (resolved.attacker.isSlain) return false;
+    return isInEnemyTerritory(game, resolved.attacker, this.owner.id);
   }
 
   protected override onPlay(game: Game, _target: Target | null): string[] {
-    const pending = game.pendingCombat;
-    if (pending === null) return [];
-    const attacker = this.owner.getFighter(pending.attackerFighterId);
-    if (attacker === undefined || attacker.isSlain) return [];
-    return heal(attacker);
+    const resolved = game.getLatestEventOfType(CombatResolvedEvent);
+    if (resolved === null) return [];
+    if (resolved.attacker.isSlain) return [];
+    return heal(resolved.attacker);
   }
 }
 
@@ -362,12 +368,11 @@ export class BrashScout extends PloyCard {
   }
 
   protected override canPlay(game: Game): boolean {
-    const pending = game.pendingCombat;
-    if (pending === null || pending.phase !== "attack-rolled") return false;
-    if (pending.attackerPlayerId !== this.owner.id) return false;
-    const attacker = this.owner.getFighter(pending.attackerFighterId);
-    if (attacker === undefined || attacker.isSlain) return false;
-    return isInEnemyTerritory(game, attacker, this.owner.id);
+    const event = game.getLatestEventOfType(AttackDiceRolledEvent);
+    if (event === null || event.attackerPlayer !== this.owner) return false;
+    if (game.getLatestEventAfter(event, SaveDiceRolledEvent) !== null) return false;
+    if (event.attacker.isSlain) return false;
+    return isInEnemyTerritory(game, event.attacker, this.owner.id);
   }
 
   protected override onPlay(game: Game, _target: Target | null): string[] {

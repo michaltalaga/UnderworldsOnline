@@ -1,6 +1,5 @@
 import type { Target } from "../../cards/Card";
 import { Fighter } from "../../state/Fighter";
-import { GameRecordKind } from "../../state/GameRecord";
 import type { Game } from "../../state/Game";
 import type { Player } from "../../state/Player";
 import { type CardZone, CombatOutcome, WeaponAbilityKind } from "../../values/enums";
@@ -11,7 +10,12 @@ import type { WeaponDefinition } from "../../definitions/WeaponDefinition";
 import { friendlyFightersOnBoard } from "../../cards/targeting";
 import { giveGuard, heal, dealDamage, removeMovementToken, pushFighter } from "../../cards/effects";
 import { rollAttackDie } from "../../rules/Dice";
-import { getMyLatestCombat, getTerritoryOwner, isMeleeWeapon } from "../../cards/scoring";
+import { getMyLatestCombatEvent, getLatestSlainEvent, getTerritoryOwner, isMeleeWeapon } from "../../cards/scoring";
+import { CombatResolvedEvent } from "../../events/CombatResolvedEvent";
+import { FighterSlainEvent } from "../../events/FighterSlainEvent";
+import { AttackDiceRolledEvent } from "../../events/AttackDiceRolledEvent";
+import { SaveDiceRolledEvent } from "../../events/SaveDiceRolledEvent";
+import { CombatEndedEvent } from "../../events/CombatEndedEvent";
 
 // ─── Objectives ─────────────────────────────────────────────────────────────
 
@@ -22,12 +26,10 @@ export class StrikeTheHead extends ObjectiveCard {
   }
 
   protected override canScore(game: Game): boolean {
-    const combat = getMyLatestCombat(game, this.owner.id);
-    if (combat === null || !combat.data.targetSlain) return false;
-    const attackerPlayer = game.getPlayer(combat.data.context.attackerPlayerId);
-    const defenderPlayer = game.getPlayer(combat.data.context.defenderPlayerId);
-    const attackerDef = attackerPlayer?.getFighterDefinition(combat.data.context.attackerFighterId);
-    const targetDef = defenderPlayer?.getFighterDefinition(combat.data.context.targetFighterId);
+    const combat = getMyLatestCombatEvent(game, this.owner);
+    if (combat === null || !combat.targetSlain) return false;
+    const attackerDef = combat.attackerPlayer.getFighterDefinition(combat.attacker.id);
+    const targetDef = combat.defenderPlayer.getFighterDefinition(combat.target.id);
     if (attackerDef === undefined || targetDef === undefined) return false;
     return targetDef.isLeader || targetDef.health >= attackerDef.health;
   }
@@ -40,9 +42,9 @@ export class BranchingFate extends ObjectiveCard {
   }
 
   protected override canScore(game: Game): boolean {
-    const combat = getMyLatestCombat(game, this.owner.id);
+    const combat = getMyLatestCombatEvent(game, this.owner);
     if (combat === null) return false;
-    const uniqueSymbols = new Set(combat.data.attackRoll);
+    const uniqueSymbols = new Set(combat.attackRoll);
     const opponent = game.getOpponent(this.owner.id);
     const isUnderdog = opponent !== undefined && this.owner.glory < opponent.glory;
     return uniqueSymbols.size >= (isUnderdog ? 2 : 3);
@@ -56,10 +58,10 @@ export class PerfectStrike extends ObjectiveCard {
   }
 
   protected override canScore(game: Game): boolean {
-    const combat = getMyLatestCombat(game, this.owner.id);
+    const combat = getMyLatestCombatEvent(game, this.owner);
     if (combat === null) return false;
-    if (combat.data.attackRoll.length === 0) return false;
-    return combat.data.attackSuccesses === combat.data.attackRoll.length;
+    if (combat.attackRoll.length === 0) return false;
+    return combat.attackSuccesses === combat.attackRoll.length;
   }
 }
 
@@ -70,9 +72,9 @@ export class CriticalEffort extends ObjectiveCard {
   }
 
   protected override canScore(game: Game): boolean {
-    const combat = getMyLatestCombat(game, this.owner.id);
+    const combat = getMyLatestCombatEvent(game, this.owner);
     if (combat === null) return false;
-    return combat.data.attackCriticals > 0;
+    return combat.attackCriticals > 0;
   }
 }
 
@@ -83,17 +85,16 @@ export class GetStuckIn extends ObjectiveCard {
   }
 
   protected override canScore(game: Game): boolean {
-    const combat = getMyLatestCombat(game, this.owner.id);
+    const combat = getMyLatestCombatEvent(game, this.owner);
     if (combat === null) return false;
-    // If target was slain, the latest FighterSlain event has the hex they died on.
-    // Otherwise the target is still on the board — use the combat record's target.
+    // If target was slain, the latest FighterSlainEvent has the hex they died on.
+    // Otherwise the target is still on the board.
     let targetHexId: string | null = null;
-    if (combat.data.targetSlain) {
-      const slainEvent = game.getLatestEvent(GameRecordKind.FighterSlain);
-      targetHexId = slainEvent?.data.slainHexId ?? null;
+    if (combat.targetSlain) {
+      const slainEvent = getLatestSlainEvent(game);
+      targetHexId = slainEvent?.slainHexId ?? null;
     } else {
-      const target = game.getFighter(combat.data.context.targetFighterId);
-      targetHexId = target?.currentHexId ?? null;
+      targetHexId = combat.target.currentHexId;
     }
     if (targetHexId === null) return false;
     const owner = getTerritoryOwner(game, targetHexId);
@@ -108,10 +109,9 @@ export class StrongStart extends ObjectiveCard {
   }
 
   protected override canScore(game: Game): boolean {
-    const combat = getMyLatestCombat(game, this.owner.id);
-    if (combat === null || !combat.data.targetSlain) return false;
-    const slainEvents = game.getEventHistory(GameRecordKind.FighterSlain)
-      .filter((e) => e.roundNumber === game.roundNumber);
+    const combat = getMyLatestCombatEvent(game, this.owner);
+    if (combat === null || !combat.targetSlain) return false;
+    const slainEvents = game.getEventsOfTypeThisRound(FighterSlainEvent);
     return slainEvents.length === 1;
   }
 }
@@ -124,8 +124,8 @@ export class KeepChoppin extends ObjectiveCard {
 
   protected override canScore(game: Game): boolean {
     if (game.phase !== "end") return false;
-    const combatEvents = game.getEventHistory(GameRecordKind.Combat)
-      .filter((e) => e.roundNumber === game.roundNumber && e.invokedByPlayerId === this.owner.id);
+    const combatEvents = game.getEventsOfTypeThisRound(CombatResolvedEvent)
+      .filter((e) => e.attackerPlayer === this.owner);
     return combatEvents.length >= 3;
   }
 }
@@ -221,9 +221,10 @@ export class DeterminedEffort extends PloyCard {
   }
 
   protected override canPlay(game: Game): boolean {
-    const pending = game.pendingCombat;
-    if (pending === null || pending.phase !== "attack-rolled") return false;
-    return pending.attackerPlayerId === this.owner.id;
+    const event = game.getLatestEventOfType(AttackDiceRolledEvent);
+    if (event === null || event.attackerPlayer !== this.owner) return false;
+    // Only playable before save dice are rolled
+    return game.getLatestEventAfter(event, SaveDiceRolledEvent) === null;
   }
 
   protected override onPlay(game: Game, _target: Target | null): string[] {
@@ -247,14 +248,10 @@ export class TwistTheKnife extends PloyCard {
   }
 
   protected override canPlay(game: Game): boolean {
-    const pending = game.pendingCombat;
-    if (pending === null || pending.phase !== "attack-rolled") return false;
-    if (pending.attackerPlayerId !== this.owner.id) return false;
-    // Check the weapon is melee
-    const player = game.getPlayer(this.owner.id);
-    if (player === undefined) return false;
-    const weapon = player.getFighterWeaponDefinition(pending.attackerFighterId, pending.weaponId);
-    return weapon !== undefined && isMeleeWeapon(weapon);
+    const event = game.getLatestEventOfType(AttackDiceRolledEvent);
+    if (event === null || event.attackerPlayer !== this.owner) return false;
+    if (game.getLatestEventAfter(event, SaveDiceRolledEvent) !== null) return false;
+    return isMeleeWeapon(event.weapon);
   }
 
   protected override onPlay(game: Game, _target: Target | null): string[] {
