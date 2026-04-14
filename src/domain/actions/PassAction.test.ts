@@ -9,7 +9,7 @@ import {
   TurnStep,
 } from "../index";
 import { getActiveCombatState } from "../rules/CombatStateProjection";
-import { createGameInActionStep } from "../../test-utils/combatGame";
+import { createGameInActionStep } from "../../test-utils";
 
 describe("PassAction eligibility", () => {
   it("is legal at the start of the action step", () => {
