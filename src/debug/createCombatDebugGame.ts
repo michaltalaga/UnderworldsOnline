@@ -602,16 +602,12 @@ function applyDebugDefenderFeatureToken(
     throw new Error(`Could not find debug defender hex ${defenderHexId}.`);
   }
 
-  const existingFeatureTokenId = defenderHex.featureTokenId;
-  if (existingFeatureTokenId !== null) {
-    const existingFeatureToken = game.board.getFeatureToken(existingFeatureTokenId);
-    if (existingFeatureToken !== undefined) {
-      existingFeatureToken.side = defenderState.isOnCoverToken
-        ? FeatureTokenSide.Cover
-        : FeatureTokenSide.Treasure;
-      existingFeatureToken.heldByFighterId = null;
-    }
-
+  const existingFeatureToken = defenderHex.featureToken;
+  if (existingFeatureToken !== null) {
+    existingFeatureToken.side = defenderState.isOnCoverToken
+      ? FeatureTokenSide.Cover
+      : FeatureTokenSide.Treasure;
+    existingFeatureToken.heldByFighter = null;
     return;
   }
 
@@ -624,15 +620,15 @@ function applyDebugDefenderFeatureToken(
     throw new Error("Could not find debug feature token feature:1.");
   }
 
-  const previousHex = game.board.getHex(debugFeatureToken.hexId);
-  if (previousHex?.featureTokenId === debugFeatureToken.id) {
-    previousHex.featureTokenId = null;
+  const previousHex = debugFeatureToken.hex;
+  if (previousHex.featureToken === debugFeatureToken) {
+    previousHex.featureToken = null;
   }
 
-  debugFeatureToken.hexId = defenderHex.id;
+  debugFeatureToken.hex = defenderHex;
   debugFeatureToken.side = FeatureTokenSide.Cover;
-  debugFeatureToken.heldByFighterId = null;
-  defenderHex.featureTokenId = debugFeatureToken.id;
+  debugFeatureToken.heldByFighter = null;
+  defenderHex.featureToken = debugFeatureToken;
 }
 
 function getDefenderFeatureTokenSnapshot(

@@ -61,9 +61,9 @@ export function pushOneHex(game: Game, fighter: Fighter): string[] {
   }
   const destination =
     emptyNeighbors[Math.floor(Math.random() * emptyNeighbors.length)];
-  originHex.occupantFighterId = null;
-  destination.occupantFighterId = fighter.id;
-  fighter.currentHexId = destination.id;
+  originHex.occupantFighter = null;
+  destination.occupantFighter = fighter;
+  fighter.currentHex = destination;
   return [`pushed ${fighter.id} to ${destination.id}`];
 }
 

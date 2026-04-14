@@ -26,14 +26,20 @@ function makeFighter(
     hasGuardToken: boolean;
   }> = {},
 ): Fighter {
+  const fakeDef = { id: "fighter-def:test" } as never;
+  const fakeOwner = { id: "player:one" } as never;
+  const fakeHex = { id: "hex:a" } as never;
   const f = new Fighter(
     "fighter:test" as never,
-    "fighter-def:test" as never,
-    "player:one" as never,
-    "hex:a" as never,
+    fakeDef,
+    fakeOwner,
+    fakeHex,
   );
   if (overrides.isSlain !== undefined) f.isSlain = overrides.isSlain;
-  if (overrides.currentHexId !== undefined) f.currentHexId = overrides.currentHexId as never;
+  if (overrides.currentHexId !== undefined) {
+    // Map the legacy hex-id override to the ref.
+    f.currentHex = overrides.currentHexId === null ? null : (fakeHex);
+  }
   if (overrides.hasMoveToken !== undefined) f.hasMoveToken = overrides.hasMoveToken;
   if (overrides.hasChargeToken !== undefined) f.hasChargeToken = overrides.hasChargeToken;
   if (overrides.hasGuardToken !== undefined) f.hasGuardToken = overrides.hasGuardToken;
@@ -42,7 +48,7 @@ function makeFighter(
 
 function makeHex(
   kind: HexKind,
-  occupantFighterId: string | null = null,
+  occupant: Fighter | null = null,
 ): HexCell {
   return new HexCell(
     "hex:test" as never,
@@ -52,7 +58,7 @@ function makeHex(
     false,
     false,
     null,
-    occupantFighterId as never,
+    occupant,
   );
 }
 
@@ -138,6 +144,7 @@ describe("isTraversableMoveHex", () => {
   });
 
   it("is false for an occupied hex", () => {
-    expect(isTraversableMoveHex(makeHex(HexKind.Empty, "fighter:other"))).toBe(false);
+    const occupant = makeFighter();
+    expect(isTraversableMoveHex(makeHex(HexKind.Empty, occupant))).toBe(false);
   });
 });

@@ -2,6 +2,7 @@ import type { BoardTheme } from "../../../board/boardTheme";
 import { Board } from "../../state/Board";
 import { HexCell } from "../../state/HexCell";
 import { Territory } from "../../state/Territory";
+import type { TerritoryId } from "../../values/ids";
 import { BoardSide, HexKind } from "../../values/enums";
 
 const rowSizes = [6, 7, 8, 9, 8, 9, 8, 9, 8, 7, 6] as const;
@@ -44,53 +45,54 @@ export const embergard1BoardTheme: BoardTheme = {
 };
 
 function createEmbergard1Board(): Board {
-  const hexes = createHexes();
-  const northHexIds = hexes
-    .filter((hex) => hex.territoryId === northTerritoryId)
-    .map((hex) => hex.id);
-  const southHexIds = hexes
-    .filter((hex) => hex.territoryId === southTerritoryId)
-    .map((hex) => hex.id);
+  // Create territories first (empty hexes) so HexCell can reference them.
+  const northTerritory = new Territory(northTerritoryId as TerritoryId, "North Territory", null, []);
+  const southTerritory = new Territory(southTerritoryId as TerritoryId, "South Territory", null, []);
+  const territoryByRow = (rowIndex: number): Territory | null =>
+    rowIndex < 5 ? northTerritory : rowIndex > 5 ? southTerritory : null;
+
+  const hexes = rowSizes.flatMap((rowSize, rowIndex) =>
+    createRowHexes(rowIndex, rowSize, territoryByRow(rowIndex)),
+  );
+
+  // Populate Territory.hexes with the refs we just built.
+  northTerritory.hexes = hexes.filter((hex) => hex.territory === northTerritory);
+  southTerritory.hexes = hexes.filter((hex) => hex.territory === southTerritory);
 
   const board = new Board(
     "board:centered-battlefield",
     BoardSide.Front,
     hexes,
-    [
-      new Territory(northTerritoryId, "North Territory", null, northHexIds),
-      new Territory(southTerritoryId, "South Territory", null, southHexIds),
-    ],
+    [northTerritory, southTerritory],
   );
   board.recomputeEdgeFlags();
   return board;
 }
 
-function createHexes(): HexCell[] {
-  return rowSizes.flatMap((rowSize, rowIndex) => createRowHexes(rowIndex, rowSize));
-}
-
-function createRowHexes(rowIndex: number, rowSize: number): HexCell[] {
+function createRowHexes(
+  rowIndex: number,
+  rowSize: number,
+  territory: Territory | null,
+): HexCell[] {
   const axialRow = rowIndex - 5;
   const qStart = (-axialRow - rowSize + 1) / 2;
 
   return Array.from({ length: rowSize }, (_, columnIndex) => {
     const hexId = `hex:r${rowIndex}:c${columnIndex}`;
     const q = qStart + columnIndex;
-    const territoryId =
-      rowIndex < 5 ? northTerritoryId : rowIndex > 5 ? southTerritoryId : null;
     const isStartingHex =
       northStartingHexIds.has(hexId) || southStartingHexIds.has(hexId);
 
     const kind = staggerHexIds.has(hexId) ? HexKind.Stagger : HexKind.Empty;
 
     return new HexCell(
-      hexId,
+      hexId as never,
       q,
       axialRow,
       kind,
       isStartingHex,
       false,
-      territoryId,
+      territory,
     );
   });
 }

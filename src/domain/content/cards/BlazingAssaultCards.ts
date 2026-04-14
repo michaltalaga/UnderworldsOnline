@@ -431,26 +431,25 @@ export class IllusoryFighter extends PloyCard {
   }
 
   protected override onPlay(game: Game, target: Target | null): string[] {
-    if (!(target instanceof Fighter) || target.currentHexId === null) return [];
-    const originHex = game.getHex(target.currentHexId);
-    if (originHex === undefined) return [];
+    if (!(target instanceof Fighter) || target.currentHex === null) return [];
+    const originHex = target.currentHex;
     // Remove from current hex
-    originHex.occupantFighterId = null;
+    originHex.occupantFighter = null;
     // Find an empty starting hex in friendly territory
-    const friendlyTerritoryId = this.owner.territoryId;
+    const friendlyTerritory = this.owner.territory;
     const startingHexes = game.board.hexes.filter(h =>
       h.isStartingHex &&
-      h.occupantFighterId === null &&
-      h.territoryId === friendlyTerritoryId
+      h.occupantFighter === null &&
+      h.territory === friendlyTerritory
     );
     if (startingHexes.length === 0) {
       // No valid hex, put fighter back
-      originHex.occupantFighterId = target.id;
+      originHex.occupantFighter = target;
       return [`no empty starting hex available for ${target.id}`];
     }
     const destination = startingHexes[Math.floor(Math.random() * startingHexes.length)];
-    destination.occupantFighterId = target.id;
-    target.currentHexId = destination.id;
+    destination.occupantFighter = target;
+    target.currentHex = destination;
     return [`removed ${target.id} and placed in ${destination.id}`];
   }
 }

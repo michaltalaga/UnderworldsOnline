@@ -519,10 +519,10 @@ export class GameEngine {
       throw new Error("Could not find the opposing territory.");
     }
 
-    chosenTerritory.ownerPlayerId = winningPlayer.id;
-    remainingTerritory.ownerPlayerId = losingPlayer.id;
-    winningPlayer.territoryId = chosenTerritory.id;
-    losingPlayer.territoryId = remainingTerritory.id;
+    chosenTerritory.owner = winningPlayer;
+    remainingTerritory.owner = losingPlayer;
+    winningPlayer.territory = chosenTerritory;
+    losingPlayer.territory = remainingTerritory;
     game.transitionTo(createSetupPlaceFeatureTokensGameState(losingPlayer.id));
     game.eventLog.push(
       `${winningPlayer.name} chose ${chosenTerritory.name} on the ${action.boardSide} board side.`,
@@ -560,11 +560,11 @@ export class GameEngine {
     const featureToken = new FeatureToken(
       `feature:${placementNumber}`,
       placementNumber,
-      hex.id,
+      hex,
       FeatureTokenSide.Hidden,
     );
     game.board.featureTokens.push(featureToken);
-    hex.featureTokenId = featureToken.id;
+    hex.featureToken = featureToken;
     game.eventLog.push(`${player.name} placed feature token ${placementNumber} on ${hex.id}.`);
 
     if (placementNumber === 5) {
@@ -601,8 +601,8 @@ export class GameEngine {
       throw new Error(`Hex ${hex.id} is already occupied.`);
     }
 
-    fighter.currentHexId = hex.id;
-    hex.occupantFighterId = fighter.id;
+    fighter.currentHex = hex;
+    hex.occupantFighter = fighter;
     fighter.hasStaggerToken = hex.kind === HexKind.Stagger;
     game.eventLog.push(`${player.name} deployed fighter ${fighter.id} to ${hex.id}.`);
 
@@ -643,11 +643,11 @@ export class GameEngine {
 
     const destinationHex = this.requireHex(game, destinationHexId);
 
-    currentHex.occupantFighterId = null;
+    currentHex.occupantFighter = null;
     this.syncFeatureTokenHolderAtHex(game, currentHex.id);
-    destinationHex.occupantFighterId = fighter.id;
+    destinationHex.occupantFighter = fighter;
     this.syncFeatureTokenHolderAtHex(game, destinationHex.id);
-    fighter.currentHexId = destinationHex.id;
+    fighter.currentHex = destinationHex;
     fighter.hasMoveToken = true;
     const hadStaggerTokenBeforeMove = fighter.hasStaggerToken;
     if (destinationHex.kind === HexKind.Stagger) {
@@ -767,11 +767,11 @@ export class GameEngine {
 
     const currentHex = this.requireHex(game, currentHexId);
     const destinationHex = this.requireHex(game, destinationHexId);
-    currentHex.occupantFighterId = null;
+    currentHex.occupantFighter = null;
     this.syncFeatureTokenHolderAtHex(game, currentHex.id);
-    destinationHex.occupantFighterId = attacker.id;
+    destinationHex.occupantFighter = attacker;
     this.syncFeatureTokenHolderAtHex(game, destinationHex.id);
-    attacker.currentHexId = destinationHex.id;
+    attacker.currentHex = destinationHex;
     const hadStaggerTokenBeforeMove = attacker.hasStaggerToken;
     if (destinationHex.kind === HexKind.Stagger) {
       attacker.hasStaggerToken = true;
@@ -2934,9 +2934,9 @@ export class GameEngine {
       }
 
       const targetHex = this.requireHex(game, targetHexId);
-      targetHex.occupantFighterId = null;
+      targetHex.occupantFighter = null;
       this.syncFeatureTokenHolderAtHex(game, targetHex.id);
-      target.currentHexId = null;
+      target.currentHex = null;
       target.isSlain = true;
       attackerPlayer.glory += targetDefinition.bounty;
       game.addRecord(
@@ -3047,8 +3047,8 @@ export class GameEngine {
       throw new Error(`Feature token ${featureToken.id} is not on expected hex ${hex.id}.`);
     }
 
-    featureToken.heldByFighterId =
-      featureToken.side === FeatureTokenSide.Treasure ? hex.occupantFighterId : null;
+    featureToken.heldByFighter =
+      featureToken.side === FeatureTokenSide.Treasure ? hex.occupantFighter : null;
   }
 
   private getPloyTargetDetails(

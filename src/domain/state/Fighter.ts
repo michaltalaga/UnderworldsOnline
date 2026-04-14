@@ -1,10 +1,27 @@
-import type { CardId, FighterDefinitionId, FighterId, HexId, PlayerId } from "../values/ids";
+import type { Card } from "../cards/Card";
+import type { FighterDefinition } from "../definitions/FighterDefinition";
+import type {
+  CardId,
+  FighterDefinitionId,
+  FighterId,
+  HexId,
+  PlayerId,
+} from "../values/ids";
+import type { HexCell } from "./HexCell";
+import type { Player } from "./Player";
 
+/**
+ * A fighter is a live warband piece during play. Holds object references
+ * to definition, owner, current hex, and equipped upgrades — no string
+ * ids for cross-references. The legacy `*Id` properties are getters that
+ * derive from the refs above, kept for UI/tests until every consumer is
+ * migrated.
+ */
 export class Fighter {
   public readonly id: FighterId;
-  public readonly definitionId: FighterDefinitionId;
-  public readonly ownerPlayerId: PlayerId;
-  public currentHexId: HexId | null;
+  public readonly definition: FighterDefinition;
+  public readonly owner: Player;
+  public currentHex: HexCell | null;
   public damage: number;
   public hasMoveToken: boolean;
   public hasChargeToken: boolean;
@@ -12,13 +29,13 @@ export class Fighter {
   public hasStaggerToken: boolean;
   public isInspired: boolean;
   public isSlain: boolean;
-  public upgradeCardIds: CardId[];
+  public upgrades: Card[];
 
   public constructor(
     id: FighterId,
-    definitionId: FighterDefinitionId,
-    ownerPlayerId: PlayerId,
-    currentHexId: HexId | null = null,
+    definition: FighterDefinition,
+    owner: Player,
+    currentHex: HexCell | null = null,
     damage: number = 0,
     hasMoveToken: boolean = false,
     hasChargeToken: boolean = false,
@@ -26,12 +43,12 @@ export class Fighter {
     hasStaggerToken: boolean = false,
     isInspired: boolean = false,
     isSlain: boolean = false,
-    upgradeCardIds: CardId[] = [],
+    upgrades: Card[] = [],
   ) {
     this.id = id;
-    this.definitionId = definitionId;
-    this.ownerPlayerId = ownerPlayerId;
-    this.currentHexId = currentHexId;
+    this.definition = definition;
+    this.owner = owner;
+    this.currentHex = currentHex;
     this.damage = damage;
     this.hasMoveToken = hasMoveToken;
     this.hasChargeToken = hasChargeToken;
@@ -39,6 +56,23 @@ export class Fighter {
     this.hasStaggerToken = hasStaggerToken;
     this.isInspired = isInspired;
     this.isSlain = isSlain;
-    this.upgradeCardIds = upgradeCardIds;
+    this.upgrades = upgrades;
+  }
+
+  // Legacy id-shaped getters — derive from object refs above.
+  public get definitionId(): FighterDefinitionId {
+    return this.definition.id;
+  }
+
+  public get ownerPlayerId(): PlayerId {
+    return this.owner.id;
+  }
+
+  public get currentHexId(): HexId | null {
+    return this.currentHex?.id ?? null;
+  }
+
+  public get upgradeCardIds(): CardId[] {
+    return this.upgrades.map((card) => card.id);
   }
 }

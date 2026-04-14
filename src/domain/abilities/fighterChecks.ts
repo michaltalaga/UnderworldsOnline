@@ -31,5 +31,5 @@ export function canFighterAttack(
 
 /** Hex is not blocked and has no occupant — can be moved through/into. */
 export function isTraversableMoveHex(hex: HexCell): boolean {
-  return hex.kind !== HexKind.Blocked && hex.occupantFighterId === null;
+  return hex.kind !== HexKind.Blocked && hex.occupantFighter === null;
 }

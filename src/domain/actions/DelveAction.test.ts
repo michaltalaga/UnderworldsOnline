@@ -41,13 +41,13 @@ function revealFeatureTokenAndPlaceFriendly(
 
   // Vacate the fighter's current hex and the target hex before moving.
   const oldHex = game.getFighterHex(fighter)!;
-  oldHex.occupantFighterId = null;
+  oldHex.occupantFighter = null;
 
-  const newHex = game.getHex(token.hexId)!;
+  const newHex = token.hex;
   // If something else occupies the hex, bail — test scenario isn't valid.
-  if (newHex.occupantFighterId !== null) return null;
-  newHex.occupantFighterId = fighter.id;
-  fighter.currentHexId = newHex.id;
+  if (newHex.occupantFighter !== null) return null;
+  newHex.occupantFighter = fighter;
+  fighter.currentHex = newHex;
 
   return { tokenId: token.id, fighter };
 }

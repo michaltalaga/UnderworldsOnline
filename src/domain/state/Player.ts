@@ -13,6 +13,7 @@ import { WarbandDefinition } from "../definitions/WarbandDefinition";
 import type { Game } from "./Game";
 import { Deck } from "./Deck";
 import { Fighter } from "./Fighter";
+import type { Territory } from "./Territory";
 import { Warscroll } from "./Warscroll";
 
 export type PlayerWarscrollWithDefinition = {
@@ -25,7 +26,7 @@ export class Player {
   public name: string;
   public readonly warband: WarbandDefinition;
   public glory: number;
-  public territoryId: TerritoryId | null;
+  public territory: Territory | null;
   public mulliganUsed: boolean;
   public turnsTakenThisRound: number;
   public hasDelvedThisPowerStep: boolean;
@@ -43,7 +44,7 @@ export class Player {
     name: string,
     warband: WarbandDefinition,
     glory: number = 0,
-    territoryId: TerritoryId | null = null,
+    territory: Territory | null = null,
     mulliganUsed: boolean = false,
     turnsTakenThisRound: number = 0,
     hasDelvedThisPowerStep: boolean = false,
@@ -54,13 +55,13 @@ export class Player {
     powerHand: Card[] = [],
     scoredObjectives: Card[] = [],
     equippedUpgrades: Card[] = [],
-    warscrollState: Warscroll = new Warscroll(id, warband.warscroll.id),
+    warscrollState?: Warscroll,
   ) {
     this.id = id;
     this.name = name;
     this.warband = warband;
     this.glory = glory;
-    this.territoryId = territoryId;
+    this.territory = territory;
     this.mulliganUsed = mulliganUsed;
     this.turnsTakenThisRound = turnsTakenThisRound;
     this.hasDelvedThisPowerStep = hasDelvedThisPowerStep;
@@ -71,7 +72,12 @@ export class Player {
     this.powerHand = powerHand;
     this.scoredObjectives = scoredObjectives;
     this.equippedUpgrades = equippedUpgrades;
-    this.warscrollState = warscrollState;
+    this.warscrollState = warscrollState ?? new Warscroll(this, warband.warscroll);
+  }
+
+  /** Legacy id-shaped getter — derived from `territory`. */
+  public get territoryId(): TerritoryId | null {
+    return this.territory?.id ?? null;
   }
 
   public getFighter(fighterId: FighterId): Fighter | undefined {
@@ -79,14 +85,7 @@ export class Player {
   }
 
   public getFighterDefinition(fighterId: FighterId): FighterDefinition | undefined {
-    const fighter = this.getFighter(fighterId);
-    if (fighter === undefined) {
-      return undefined;
-    }
-
-    return this.warband.fighters.find(
-      (definition) => definition.id === fighter.definitionId,
-    );
+    return this.getFighter(fighterId)?.definition;
   }
 
   public getFighterWeaponDefinition(
@@ -97,20 +96,13 @@ export class Player {
   }
 
   public getWarscrollDefinition(): WarscrollDefinition | undefined {
-    return this.warband.warscroll.id === this.warscrollState.definitionId
-      ? this.warband.warscroll
-      : undefined;
+    return this.warscrollState.definition;
   }
 
   public getWarscrollWithDefinition(): PlayerWarscrollWithDefinition | undefined {
-    const definition = this.getWarscrollDefinition();
-    if (definition === undefined) {
-      return undefined;
-    }
-
     return {
       state: this.warscrollState,
-      definition,
+      definition: this.warscrollState.definition,
     };
   }
 
@@ -152,7 +144,7 @@ export class Player {
 
   public getUndeployedFighters(): Fighter[] {
     return this.fighters.filter(
-      (fighter) => fighter.currentHexId === null && !fighter.isSlain,
+      (fighter) => fighter.currentHex === null && !fighter.isSlain,
     );
   }
 }

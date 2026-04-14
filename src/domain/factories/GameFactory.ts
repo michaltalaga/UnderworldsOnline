@@ -8,7 +8,6 @@ import { Game } from "../state/Game";
 import { HexCell } from "../state/HexCell";
 import { Player } from "../state/Player";
 import { Territory } from "../state/Territory";
-import { Warscroll } from "../state/Warscroll";
 import {
   BoardSide,
   CardZone,
@@ -76,16 +75,8 @@ export class GameFactory {
     const powerCardFactories = config.deck?.powerCards ?? config.warband.powerCards;
     this.validateWarband(config.warband, config.name);
 
-    const fighters = config.warband.fighters.map(
-      (fighter, index) =>
-        new Fighter(
-          `${config.id}:fighter:${fighter.id}:${index + 1}`,
-          fighter.id,
-          config.id,
-        ),
-    );
-
-    // Create player first (without cards) so Card constructors can reference their owner.
+    // Create player first (empty fighters) so Fighter can hold the
+    // Player ref. Fighters are assigned immediately after construction.
     const player = new Player(
       config.id,
       config.name,
@@ -95,18 +86,22 @@ export class GameFactory {
       false,
       0,
       false,
-      fighters,
+      [],
       new Deck(DeckKind.Objective, [], []),
       new Deck(DeckKind.Power, [], []),
       [],
       [],
       [],
       [],
-      new Warscroll(
-        config.id,
-        config.warband.warscroll.id,
-        { ...config.warband.warscroll.startingTokens },
-      ),
+    );
+    player.warscrollState.tokens = { ...config.warband.warscroll.startingTokens };
+    player.fighters = config.warband.fighters.map(
+      (fighterDef, index) =>
+        new Fighter(
+          `${config.id}:fighter:${fighterDef.id}:${index + 1}` as never,
+          fighterDef,
+          player,
+        ),
     );
 
     // Now create card objects with the player as owner.
@@ -208,7 +203,7 @@ export class GameFactory {
           hex.kind,
           hex.isStartingHex,
           hex.isEdgeHex,
-          hex.territoryId,
+          hex.territory,
           null,
           null,
         ),
@@ -218,7 +213,7 @@ export class GameFactory {
   private createSideTerritories(territories: readonly Territory[]): Territory[] {
     return territories.map(
       (territory) =>
-        new Territory(territory.id, territory.name, null, [...territory.hexIds]),
+        new Territory(territory.id, territory.name, null, [...territory.hexes]),
     );
   }
 
