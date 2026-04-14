@@ -367,8 +367,8 @@ function getRoundLabel(game: Game): string | null {
   if (game.state.kind !== "combatTurn" || game.activePlayerId === null) {
     return null;
   }
-  const activePlayer = game.getPlayer(game.activePlayerId);
-  if (activePlayer === undefined) {
+  const activePlayer = game.activePlayer;
+  if (activePlayer === null) {
     return null;
   }
   const activationNumber = activePlayer.turnsTakenThisRound + 1;

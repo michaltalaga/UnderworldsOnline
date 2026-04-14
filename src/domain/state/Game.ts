@@ -107,6 +107,36 @@ export class Game {
     return this.flowState.priorityPlayerId;
   }
 
+  /** Active player ref, derived from activePlayerId. */
+  public get activePlayer(): Player | null {
+    const id = this.flowState.activePlayerId;
+    return id === null ? null : this.players.find((p) => p.id === id) ?? null;
+  }
+
+  /** First player ref, derived from firstPlayerId. */
+  public get firstPlayer(): Player | null {
+    const id = this.flowState.firstPlayerId;
+    return id === null ? null : this.players.find((p) => p.id === id) ?? null;
+  }
+
+  /** Priority player ref, derived from priorityPlayerId. */
+  public get priorityPlayer(): Player | null {
+    const id = this.flowState.priorityPlayerId;
+    return id === null ? null : this.players.find((p) => p.id === id) ?? null;
+  }
+
+  /** Winner player ref, derived from winnerPlayerId. */
+  public get winner(): Player | null {
+    return this.winnerPlayerId === null
+      ? null
+      : this.players.find((p) => p.id === this.winnerPlayerId) ?? null;
+  }
+
+  /** Opponent of the given player — derived from players list. */
+  public opponentOf(player: Player): Player | null {
+    return this.players.find((p) => p !== player) ?? null;
+  }
+
   public get events(): readonly GameRecord[] {
     return this.records;
   }

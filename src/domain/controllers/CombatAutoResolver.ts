@@ -101,8 +101,8 @@ export class CombatAutoResolver {
       // Auto-confirm active combat for local player when no reaction
       // cards are playable — skip straight to resolution.
       if (getActiveCombatState(game) !== null) {
-        const player = game.getPlayer(game.activePlayerId);
-        if (player !== undefined) {
+        const player = game.activePlayer;
+        if (player !== null) {
           const hasPlayableReactions = player.powerHand.some(
             (card) => card.getLegalTargets(game).length > 0,
           );

@@ -382,7 +382,7 @@ export function createEndPhaseDebugSnapshot(
   engine.applyGameAction(game, new PassAction(playerOne));
 
   while (game.state.kind === "combatTurn") {
-    const activePlayer = game.getPlayer(game.activePlayerId!)!;
+    const activePlayer = game.activePlayer!;
     engine.applyGameAction(game, new PassAction(activePlayer));
   }
 

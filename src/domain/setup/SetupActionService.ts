@@ -198,7 +198,7 @@ export class SetupActionService {
       return null;
     }
 
-    return game.getPlayer(game.activePlayerId) ?? null;
+    return game.activePlayer;
   }
 
   private getBoardSides(game: Game): BoardSide[] {

@@ -680,7 +680,7 @@ export function getNextSelectedFighterId(
     game.activePlayerId === previousActivePlayerId &&
     previousSelectedFighterId !== null
   ) {
-    const activePlayer = game.getPlayer(game.activePlayerId);
+    const activePlayer = game.activePlayer;
     const fighter = activePlayer?.getFighter(previousSelectedFighterId);
     if (fighter !== undefined && !fighter.isSlain && fighter.currentHex !== null) {
       return fighter.id;

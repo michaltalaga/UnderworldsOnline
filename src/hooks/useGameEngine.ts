@@ -121,7 +121,7 @@ export function useGameEngine({ warband, deck = null }: UseGameEngineOptions) {
   const isSetup = game.phase === Phase.Setup;
   const localPlayer = getLocalPlayer(game);
   const opponentPlayer = game.players.find((p) => p.id !== LOCAL_PLAYER_ID) ?? null;
-  const activePlayer = game.activePlayerId === null ? null : game.getPlayer(game.activePlayerId) ?? null;
+  const activePlayer = game.activePlayer;
 
   // Combat-derived state (safe to compute during setup -- returns empty results)
   const legalActions = activePlayer === null || isSetup ? [] : combatActionService.getLegalActions(game, activePlayer.id);
