@@ -68,7 +68,7 @@ import {
   TurnStep,
 } from "../values/enums";
 import type { CardZone as CardZoneType, GameActionKind } from "../values/enums";
-import type { CardId, HexId, PlayerId, TerritoryId } from "../values/ids";
+import type { HexId, PlayerId, TerritoryId } from "../values/ids";
 import { ChooseTerritoryAction } from "../setup/ChooseTerritoryAction";
 import { CompleteMusterAction } from "../setup/CompleteMusterAction";
 import { DeployFighterAction } from "../setup/DeployFighterAction";
@@ -684,7 +684,7 @@ export class GameEngine {
     const defenderPlayer = this.requireOpponent(game, attackerPlayer.id);
     const attacker = action.attacker;
     const attackerDefinition = attacker.definition;
-    const target = defenderPlayer.getFighter(action.target.id);
+    const target = action.target;
     const targetDefinition = action.target.definition;
     if (
       attackerDefinition === undefined ||
@@ -736,7 +736,7 @@ export class GameEngine {
     const defenderPlayer = this.requireOpponent(game, attackerPlayer.id);
     const attacker = action.fighter;
     const attackerDefinition = attacker.definition;
-    const target = defenderPlayer.getFighter(action.target.id);
+    const target = action.target;
     const targetDefinition = action.target.definition;
     if (
       attackerDefinition === undefined ||
@@ -1062,7 +1062,7 @@ export class GameEngine {
     const discardedObjectives = action.objectiveCards.map((card) =>
       this.discardFocusCard(
         player,
-        card.id,
+        card,
         player.objectiveHand,
         player.objectiveDeck.discardPile,
         CardZone.ObjectiveDiscard,
@@ -1071,7 +1071,7 @@ export class GameEngine {
     const discardedPowerCards = action.powerCards.map((card) =>
       this.discardFocusCard(
         player,
-        card.id,
+        card,
         player.powerHand,
         player.powerDeck.discardPile,
         CardZone.PowerDiscard,
@@ -1112,10 +1112,10 @@ export class GameEngine {
     game.emitEvent(new FighterFocusedEvent(
       game.roundNumber,
       player,
-      discardedObjectives.map((fc) => player.getCard(fc.cardId)).filter((c): c is Card => c !== undefined),
-      discardedPowerCards.map((fc) => player.getCard(fc.cardId)).filter((c): c is Card => c !== undefined),
-      drawnObjectives.map((fc) => player.getCard(fc.cardId)).filter((c): c is Card => c !== undefined),
-      drawnPowerCards.map((fc) => player.getCard(fc.cardId)).filter((c): c is Card => c !== undefined),
+      discardedObjectives.map((fc) => fc.card),
+      discardedPowerCards.map((fc) => fc.card),
+      drawnObjectives.map((fc) => fc.card),
+      drawnPowerCards.map((fc) => fc.card),
       action.kind,
     ));
     game.consecutivePasses = 0;
@@ -1213,9 +1213,7 @@ export class GameEngine {
       player,
       card,
       targetFighter ?? null,
-      targetFighter !== null && targetFighter !== undefined
-        ? game.players.find((p) => p.getFighter(targetFighter.id) !== undefined) ?? null
-        : null,
+      targetFighter?.owner ?? null,
       [], // ployEffects — not tracked on Card yet
       effectDescriptions,
       action.kind,
@@ -1777,9 +1775,7 @@ export class GameEngine {
 
       game.winnerPlayerId = outcome.winnerPlayerId;
       game.transitionTo(createFinishedGameState());
-      const outcomeWinner = outcome.winnerPlayerId !== null
-        ? game.getPlayer(outcome.winnerPlayerId) ?? null
-        : null;
+      const outcomeWinner = game.winner;
       const resolution = new CleanupResolution(
         completedRoundNumber,
         consecutivePassesBeforeReset,
@@ -2461,6 +2457,7 @@ export class GameEngine {
       card.zone = zone;
       hand.push(card);
       drawnCards.push({
+        card,
         cardId: card.id,
         cardDefinitionId: card.name, // Card IS the definition — use name as identifier
         cardName: card.name,
@@ -2472,16 +2469,11 @@ export class GameEngine {
 
   private discardFocusCard(
     player: Player,
-    cardId: CardId,
+    card: Card,
     hand: Card[],
     discardPile: Card[],
     discardZone: CardZoneType,
   ): FocusCardResolution {
-    const card = player.getCard(cardId);
-    if (card === undefined) {
-      throw new Error(`Player ${player.name} does not have focus card ${cardId}.`);
-    }
-
     const handIndex = hand.indexOf(card);
     if (handIndex === -1) {
       throw new Error(`Could not find focus card ${card.id} in ${player.name}'s hand.`);
@@ -2492,6 +2484,7 @@ export class GameEngine {
     card.revealed = true;
     discardPile.push(card);
     return {
+      card,
       cardId: card.id,
       cardDefinitionId: card.name, // Card IS the definition — use name as identifier
       cardName: card.name,

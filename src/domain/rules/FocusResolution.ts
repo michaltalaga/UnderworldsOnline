@@ -1,7 +1,9 @@
 import type { CardDefinitionId, CardId, PlayerId } from "../values/ids";
+import type { Card } from "../cards/Card";
 import type { Player } from "../state/Player";
 
 export type FocusCardResolution = {
+  card: Card;
   cardId: CardId;
   cardDefinitionId: CardDefinitionId;
   cardName: string;
