@@ -67,7 +67,7 @@ import {
   TurnStep,
 } from "../values/enums";
 import type { CardZone as CardZoneType, GameActionKind } from "../values/enums";
-import type { CardId, FighterId, HexId, PlayerId, TerritoryId } from "../values/ids";
+import type { CardId, HexId, PlayerId, TerritoryId } from "../values/ids";
 import { ChooseTerritoryAction } from "../setup/ChooseTerritoryAction";
 import { CompleteMusterAction } from "../setup/CompleteMusterAction";
 import { DeployFighterAction } from "../setup/DeployFighterAction";
@@ -1173,7 +1173,7 @@ export class GameEngine {
       throw new Error(`Card ${card.name} is not a ploy.`);
     }
 
-    const ployTarget = this.getPloyTargetDetails(game, action.targetFighter?.id ?? null);
+    const ployTarget = this.getPloyTargetDetails(game, action.targetFighter ?? null);
     this.recordCardPlayed(
       game,
       player,
@@ -1265,7 +1265,7 @@ export class GameEngine {
       throw new Error(`Could not find fighter definition for ${fighter.id}.`);
     }
 
-    const upgradeTarget = this.getPloyTargetDetails(game, fighter.id);
+    const upgradeTarget = this.getPloyTargetDetails(game, fighter);
     this.recordCardPlayed(
       game,
       player,
@@ -1829,14 +1829,14 @@ export class GameEngine {
 
   private recordRoundStart(game: Game, firstPlayerId: PlayerId): void {
     const featureTokens: RoundStartFeatureTokenResolution[] = game.board.featureTokens.map((featureToken) => {
-      const holderDetails = this.getPloyTargetDetails(game, featureToken.heldByFighter?.id ?? null);
+      const holderDetails = this.getPloyTargetDetails(game, featureToken.heldByFighter);
       return {
         featureTokenId: featureToken.id,
         featureTokenHexId: featureToken.hex.id,
         side: featureToken.side,
-        heldByFighterId: holderDetails?.fighterId ?? null,
+        heldByFighterId: holderDetails?.fighter.id ?? null,
         heldByFighterName: holderDetails?.fighterName ?? null,
-        holderOwnerPlayerId: holderDetails?.ownerPlayerId ?? null,
+        holderOwnerPlayerId: holderDetails?.ownerPlayer.id ?? null,
       };
     });
 
@@ -2003,9 +2003,7 @@ export class GameEngine {
       target?: ReturnType<GameEngine["getPloyTargetDetails"]>;
     } = {},
   ): void {
-    const targetFighter = options.target?.fighterId !== undefined
-      ? game.getFighter(options.target.fighterId) ?? null
-      : null;
+    const targetFighter = options.target?.fighter ?? null;
     game.addRecord(
       GameRecordKind.CardPlayed,
       new CardPlayedResolution(
@@ -2017,9 +2015,7 @@ export class GameEngine {
       ),
       metadata,
     );
-    const targetOwnerPlayer = options.target?.ownerPlayerId !== undefined
-      ? game.getPlayer(options.target.ownerPlayerId) ?? null
-      : null;
+    const targetOwnerPlayer = options.target?.ownerPlayer ?? null;
     game.emitEvent(new CardPlayedEvent(
       game.roundNumber,
       player,
@@ -2045,9 +2041,7 @@ export class GameEngine {
       target?: ReturnType<GameEngine["getPloyTargetDetails"]>;
     } = {},
   ): void {
-    const resolvedTargetFighter = options.target?.fighterId !== undefined
-      ? game.getFighter(options.target.fighterId) ?? null
-      : null;
+    const resolvedTargetFighter = options.target?.fighter ?? null;
     game.addRecord(
       GameRecordKind.CardResolved,
       new CardResolvedResolution(
@@ -2061,9 +2055,7 @@ export class GameEngine {
       ),
       metadata,
     );
-    const resolvedTargetOwnerPlayer = options.target?.ownerPlayerId !== undefined
-      ? game.getPlayer(options.target.ownerPlayerId) ?? null
-      : null;
+    const resolvedTargetOwnerPlayer = options.target?.ownerPlayer ?? null;
     game.emitEvent(new CardResolvedEvent(
       game.roundNumber,
       player,
@@ -2956,33 +2948,23 @@ export class GameEngine {
   }
 
   private getPloyTargetDetails(
-    game: Game,
-    targetFighterId: FighterId | null,
+    _game: Game,
+    targetFighter: Fighter | null,
   ): {
-    fighterId: FighterId;
+    fighter: Fighter;
     fighterName: string;
-    ownerPlayerId: PlayerId;
+    ownerPlayer: Player;
     ownerPlayerName: string;
   } | null {
-    if (targetFighterId === null) {
+    if (targetFighter === null) {
       return null;
     }
 
-    for (const player of game.players) {
-      const fighter = player.getFighter(targetFighterId);
-      const fighterDefinition = player.getFighterDefinition(targetFighterId);
-      if (fighter === undefined || fighterDefinition === undefined) {
-        continue;
-      }
-
-      return {
-        fighterId: fighter.id,
-        fighterName: fighterDefinition.name,
-        ownerPlayerId: player.id,
-        ownerPlayerName: player.name,
-      };
-    }
-
-    return null;
+    return {
+      fighter: targetFighter,
+      fighterName: targetFighter.definition.name,
+      ownerPlayer: targetFighter.owner,
+      ownerPlayerName: targetFighter.owner.name,
+    };
   }
 }

@@ -118,8 +118,7 @@ describe("DelveAction resolution", () => {
 
     engine.applyGameAction(game, delve);
 
-    const fighter = game.getFighter(setup.fighter.id as never)!;
-    expect(fighter.hasStaggerToken).toBe(true);
+    expect(setup.fighter.hasStaggerToken).toBe(true);
 
     const token = game.getFeatureToken(setup.tokenId as never)!;
     // Treasure → Cover after delve.
