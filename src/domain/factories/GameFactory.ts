@@ -12,8 +12,6 @@ import {
   BoardSide,
   CardZone,
   DeckKind,
-  Phase,
-  SetupStep,
 } from "../values/enums";
 import type { GameId, PlayerId } from "../values/ids";
 
@@ -50,13 +48,6 @@ export class GameFactory {
       players,
       1,
       3,
-      Phase.Setup,
-      SetupStep.MusterWarbands,
-      null,
-      null,
-      null,
-      null,
-      null,
       0,
       null,
       [],

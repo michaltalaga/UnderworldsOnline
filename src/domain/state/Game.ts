@@ -15,7 +15,7 @@ import {
 } from "./GameRecord";
 import {
   canTransitionGameState,
-  createGameStateFromLegacyFields,
+  createSetupMusterWarbandsGameState,
   type GameState,
 } from "./GameState";
 import { Player } from "./Player";
@@ -43,13 +43,6 @@ export class Game {
     players: Player[] = [],
     roundNumber: number = 1,
     maxRounds: number = 3,
-    phase: Phase = Phase.Setup,
-    setupStep: SetupStep | null = SetupStep.MusterWarbands,
-    turnStep: TurnStep | null = null,
-    endPhaseStep: EndPhaseStep | null = null,
-    activePlayerId: PlayerId | null = null,
-    firstPlayerId: PlayerId | null = null,
-    priorityPlayerId: PlayerId | null = null,
     consecutivePasses: number = 0,
     winnerPlayerId: PlayerId | null = null,
     records: GameRecord[] = [],
@@ -64,15 +57,7 @@ export class Game {
     this.winnerPlayerId = winnerPlayerId;
     this.records = records;
     this.eventLog = eventLog;
-    this.flowState = createGameStateFromLegacyFields({
-      phase,
-      setupStep,
-      turnStep,
-      endPhaseStep,
-      activePlayerId,
-      firstPlayerId,
-      priorityPlayerId,
-    });
+    this.flowState = createSetupMusterWarbandsGameState();
   }
 
   public get state(): GameState {
@@ -96,33 +81,30 @@ export class Game {
   }
 
   public get activePlayerId(): PlayerId | null {
-    return this.flowState.activePlayerId;
+    return this.flowState.activePlayer?.id ?? null;
   }
 
   public get firstPlayerId(): PlayerId | null {
-    return this.flowState.firstPlayerId;
+    return this.flowState.firstPlayer?.id ?? null;
   }
 
   public get priorityPlayerId(): PlayerId | null {
-    return this.flowState.priorityPlayerId;
+    return this.flowState.priorityPlayer?.id ?? null;
   }
 
-  /** Active player ref, derived from activePlayerId. */
+  /** Active player ref. */
   public get activePlayer(): Player | null {
-    const id = this.flowState.activePlayerId;
-    return id === null ? null : this.players.find((p) => p.id === id) ?? null;
+    return this.flowState.activePlayer;
   }
 
-  /** First player ref, derived from firstPlayerId. */
+  /** First player ref. */
   public get firstPlayer(): Player | null {
-    const id = this.flowState.firstPlayerId;
-    return id === null ? null : this.players.find((p) => p.id === id) ?? null;
+    return this.flowState.firstPlayer;
   }
 
-  /** Priority player ref, derived from priorityPlayerId. */
+  /** Priority player ref. */
   public get priorityPlayer(): Player | null {
-    const id = this.flowState.priorityPlayerId;
-    return id === null ? null : this.players.find((p) => p.id === id) ?? null;
+    return this.flowState.priorityPlayer;
   }
 
   /** Winner player ref, derived from winnerPlayerId. */

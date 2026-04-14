@@ -1,5 +1,5 @@
 import { EndPhaseStep, Phase, SetupStep, TurnStep } from "../values/enums";
-import type { PlayerId } from "../values/ids";
+import type { Player } from "./Player";
 
 type GameStateBase<Kind extends string> = {
   readonly kind: Kind;
@@ -7,36 +7,36 @@ type GameStateBase<Kind extends string> = {
   readonly setupStep: SetupStep | null;
   readonly turnStep: TurnStep | null;
   readonly endPhaseStep: EndPhaseStep | null;
-  readonly activePlayerId: PlayerId | null;
-  readonly firstPlayerId: PlayerId | null;
-  readonly priorityPlayerId: PlayerId | null;
+  readonly activePlayer: Player | null;
+  readonly firstPlayer: Player | null;
+  readonly priorityPlayer: Player | null;
 };
 
-type SetupGameStateBase<Kind extends string, Step extends SetupStep, ActivePlayer extends PlayerId | null> =
+type SetupGameStateBase<Kind extends string, Step extends SetupStep, ActivePlayer extends Player | null> =
   GameStateBase<Kind> & {
     readonly phase: typeof Phase.Setup;
     readonly setupStep: Step;
     readonly turnStep: null;
     readonly endPhaseStep: null;
-    readonly activePlayerId: ActivePlayer;
-    readonly firstPlayerId: null;
-    readonly priorityPlayerId: null;
+    readonly activePlayer: ActivePlayer;
+    readonly firstPlayer: null;
+    readonly priorityPlayer: null;
   };
 
 type CombatGameStateBase<
   Kind extends string,
   Turn extends TurnStep | null,
-  ActivePlayer extends PlayerId | null,
-  FirstPlayer extends PlayerId | null,
-  PriorityPlayer extends PlayerId | null,
+  ActivePlayer extends Player | null,
+  FirstPlayer extends Player | null,
+  PriorityPlayer extends Player | null,
 > = GameStateBase<Kind> & {
   readonly phase: typeof Phase.Combat;
   readonly setupStep: typeof SetupStep.Complete;
   readonly turnStep: Turn;
   readonly endPhaseStep: null;
-  readonly activePlayerId: ActivePlayer;
-  readonly firstPlayerId: FirstPlayer;
-  readonly priorityPlayerId: PriorityPlayer;
+  readonly activePlayer: ActivePlayer;
+  readonly firstPlayer: FirstPlayer;
+  readonly priorityPlayer: PriorityPlayer;
 };
 
 export type SetupMusterWarbandsGameState = SetupGameStateBase<
@@ -54,7 +54,7 @@ export type SetupDrawStartingHandsGameState = SetupGameStateBase<
 export type SetupMulliganGameState = SetupGameStateBase<
   "setupMulligan",
   typeof SetupStep.Mulligan,
-  PlayerId
+  Player
 >;
 
 export type SetupDetermineTerritoriesRollOffGameState = SetupGameStateBase<
@@ -66,19 +66,19 @@ export type SetupDetermineTerritoriesRollOffGameState = SetupGameStateBase<
 export type SetupDetermineTerritoriesChoiceGameState = SetupGameStateBase<
   "setupDetermineTerritoriesChoice",
   typeof SetupStep.DetermineTerritories,
-  PlayerId
+  Player
 >;
 
 export type SetupPlaceFeatureTokensGameState = SetupGameStateBase<
   "setupPlaceFeatureTokens",
   typeof SetupStep.PlaceFeatureTokens,
-  PlayerId
+  Player
 >;
 
 export type SetupDeployFightersGameState = SetupGameStateBase<
   "setupDeployFighters",
   typeof SetupStep.DeployFighters,
-  PlayerId
+  Player
 >;
 
 export type CombatReadyGameState = CombatGameStateBase<
@@ -94,14 +94,14 @@ export type CombatChooseFirstPlayerGameState = CombatGameStateBase<
   null,
   null,
   null,
-  PlayerId
+  Player
 >;
 
 export type CombatTurnGameState = CombatGameStateBase<
   "combatTurn",
   TurnStep,
-  PlayerId,
-  PlayerId,
+  Player,
+  Player,
   null
 >;
 
@@ -110,9 +110,9 @@ export type EndPhaseGameState = GameStateBase<"endPhase"> & {
   readonly setupStep: typeof SetupStep.Complete;
   readonly turnStep: null;
   readonly endPhaseStep: EndPhaseStep;
-  readonly activePlayerId: PlayerId | null;
-  readonly firstPlayerId: PlayerId | null;
-  readonly priorityPlayerId: null;
+  readonly activePlayer: Player | null;
+  readonly firstPlayer: Player | null;
+  readonly priorityPlayer: null;
 };
 
 export type FinishedGameState = GameStateBase<"finished"> & {
@@ -120,9 +120,9 @@ export type FinishedGameState = GameStateBase<"finished"> & {
   readonly setupStep: typeof SetupStep.Complete;
   readonly turnStep: null;
   readonly endPhaseStep: null;
-  readonly activePlayerId: null;
-  readonly firstPlayerId: null;
-  readonly priorityPlayerId: null;
+  readonly activePlayer: null;
+  readonly firstPlayer: null;
+  readonly priorityPlayer: null;
 };
 
 export type GameState =
@@ -141,16 +141,6 @@ export type GameState =
 
 export type GameStateKind = GameState["kind"];
 
-export type LegacyGameStateFields = {
-  phase: Phase;
-  setupStep: SetupStep | null;
-  turnStep: TurnStep | null;
-  endPhaseStep: EndPhaseStep | null;
-  activePlayerId: PlayerId | null;
-  firstPlayerId: PlayerId | null;
-  priorityPlayerId: PlayerId | null;
-};
-
 export function createSetupMusterWarbandsGameState(): SetupMusterWarbandsGameState {
   return {
     kind: "setupMusterWarbands",
@@ -158,9 +148,9 @@ export function createSetupMusterWarbandsGameState(): SetupMusterWarbandsGameSta
     setupStep: SetupStep.MusterWarbands,
     turnStep: null,
     endPhaseStep: null,
-    activePlayerId: null,
-    firstPlayerId: null,
-    priorityPlayerId: null,
+    activePlayer: null,
+    firstPlayer: null,
+    priorityPlayer: null,
   };
 }
 
@@ -171,14 +161,14 @@ export function createSetupDrawStartingHandsGameState(): SetupDrawStartingHandsG
     setupStep: SetupStep.DrawStartingHands,
     turnStep: null,
     endPhaseStep: null,
-    activePlayerId: null,
-    firstPlayerId: null,
-    priorityPlayerId: null,
+    activePlayer: null,
+    firstPlayer: null,
+    priorityPlayer: null,
   };
 }
 
 export function createSetupMulliganGameState(
-  activePlayerId: PlayerId,
+  activePlayer: Player,
 ): SetupMulliganGameState {
   return {
     kind: "setupMulligan",
@@ -186,9 +176,9 @@ export function createSetupMulliganGameState(
     setupStep: SetupStep.Mulligan,
     turnStep: null,
     endPhaseStep: null,
-    activePlayerId,
-    firstPlayerId: null,
-    priorityPlayerId: null,
+    activePlayer,
+    firstPlayer: null,
+    priorityPlayer: null,
   };
 }
 
@@ -199,14 +189,14 @@ export function createSetupDetermineTerritoriesRollOffGameState(): SetupDetermin
     setupStep: SetupStep.DetermineTerritories,
     turnStep: null,
     endPhaseStep: null,
-    activePlayerId: null,
-    firstPlayerId: null,
-    priorityPlayerId: null,
+    activePlayer: null,
+    firstPlayer: null,
+    priorityPlayer: null,
   };
 }
 
 export function createSetupDetermineTerritoriesChoiceGameState(
-  activePlayerId: PlayerId,
+  activePlayer: Player,
 ): SetupDetermineTerritoriesChoiceGameState {
   return {
     kind: "setupDetermineTerritoriesChoice",
@@ -214,14 +204,14 @@ export function createSetupDetermineTerritoriesChoiceGameState(
     setupStep: SetupStep.DetermineTerritories,
     turnStep: null,
     endPhaseStep: null,
-    activePlayerId,
-    firstPlayerId: null,
-    priorityPlayerId: null,
+    activePlayer,
+    firstPlayer: null,
+    priorityPlayer: null,
   };
 }
 
 export function createSetupPlaceFeatureTokensGameState(
-  activePlayerId: PlayerId,
+  activePlayer: Player,
 ): SetupPlaceFeatureTokensGameState {
   return {
     kind: "setupPlaceFeatureTokens",
@@ -229,14 +219,14 @@ export function createSetupPlaceFeatureTokensGameState(
     setupStep: SetupStep.PlaceFeatureTokens,
     turnStep: null,
     endPhaseStep: null,
-    activePlayerId,
-    firstPlayerId: null,
-    priorityPlayerId: null,
+    activePlayer,
+    firstPlayer: null,
+    priorityPlayer: null,
   };
 }
 
 export function createSetupDeployFightersGameState(
-  activePlayerId: PlayerId,
+  activePlayer: Player,
 ): SetupDeployFightersGameState {
   return {
     kind: "setupDeployFighters",
@@ -244,9 +234,9 @@ export function createSetupDeployFightersGameState(
     setupStep: SetupStep.DeployFighters,
     turnStep: null,
     endPhaseStep: null,
-    activePlayerId,
-    firstPlayerId: null,
-    priorityPlayerId: null,
+    activePlayer,
+    firstPlayer: null,
+    priorityPlayer: null,
   };
 }
 
@@ -257,14 +247,14 @@ export function createCombatReadyGameState(): CombatReadyGameState {
     setupStep: SetupStep.Complete,
     turnStep: null,
     endPhaseStep: null,
-    activePlayerId: null,
-    firstPlayerId: null,
-    priorityPlayerId: null,
+    activePlayer: null,
+    firstPlayer: null,
+    priorityPlayer: null,
   };
 }
 
 export function createCombatChooseFirstPlayerGameState(
-  priorityPlayerId: PlayerId,
+  priorityPlayer: Player,
 ): CombatChooseFirstPlayerGameState {
   return {
     kind: "combatChooseFirstPlayer",
@@ -272,15 +262,15 @@ export function createCombatChooseFirstPlayerGameState(
     setupStep: SetupStep.Complete,
     turnStep: null,
     endPhaseStep: null,
-    activePlayerId: null,
-    firstPlayerId: null,
-    priorityPlayerId,
+    activePlayer: null,
+    firstPlayer: null,
+    priorityPlayer,
   };
 }
 
 export function createCombatTurnGameState(
-  firstPlayerId: PlayerId,
-  activePlayerId: PlayerId,
+  firstPlayer: Player,
+  activePlayer: Player,
   turnStep: TurnStep,
 ): CombatTurnGameState {
   return {
@@ -289,16 +279,16 @@ export function createCombatTurnGameState(
     setupStep: SetupStep.Complete,
     turnStep,
     endPhaseStep: null,
-    activePlayerId,
-    firstPlayerId,
-    priorityPlayerId: null,
+    activePlayer,
+    firstPlayer,
+    priorityPlayer: null,
   };
 }
 
 export function createEndPhaseGameState(
   endPhaseStep: EndPhaseStep,
-  activePlayerId: PlayerId | null = null,
-  firstPlayerId: PlayerId | null = null,
+  activePlayer: Player | null = null,
+  firstPlayer: Player | null = null,
 ): EndPhaseGameState {
   return {
     kind: "endPhase",
@@ -306,9 +296,9 @@ export function createEndPhaseGameState(
     setupStep: SetupStep.Complete,
     turnStep: null,
     endPhaseStep,
-    activePlayerId,
-    firstPlayerId,
-    priorityPlayerId: null,
+    activePlayer,
+    firstPlayer,
+    priorityPlayer: null,
   };
 }
 
@@ -319,27 +309,10 @@ export function createFinishedGameState(): FinishedGameState {
     setupStep: SetupStep.Complete,
     turnStep: null,
     endPhaseStep: null,
-    activePlayerId: null,
-    firstPlayerId: null,
-    priorityPlayerId: null,
+    activePlayer: null,
+    firstPlayer: null,
+    priorityPlayer: null,
   };
-}
-
-export function createGameStateFromLegacyFields(fields: LegacyGameStateFields): GameState {
-  switch (fields.phase) {
-    case Phase.Setup:
-      return createSetupStateFromLegacyFields(fields);
-    case Phase.Combat:
-      return createCombatStateFromLegacyFields(fields);
-    case Phase.End:
-      return createEndStateFromLegacyFields(fields);
-    case Phase.Finished:
-      return createFinishedStateFromLegacyFields(fields);
-    default: {
-      const exhaustivePhase: never = fields.phase;
-      throw new Error(`Unsupported game phase ${exhaustivePhase}.`);
-    }
-  }
 }
 
 export function canTransitionGameState(current: GameState, next: GameState): boolean {
@@ -373,144 +346,4 @@ export function canTransitionGameState(current: GameState, next: GameState): boo
       throw new Error(`Unsupported game state ${(exhaustiveState as GameState).kind}.`);
     }
   }
-}
-
-function createSetupStateFromLegacyFields(fields: LegacyGameStateFields): GameState {
-  switch (fields.setupStep) {
-    case SetupStep.MusterWarbands:
-      assertNoAncillaryState(fields, "Setup muster");
-      return createSetupMusterWarbandsGameState();
-    case SetupStep.DrawStartingHands:
-      assertNoAncillaryState(fields, "Draw starting hands");
-      return createSetupDrawStartingHandsGameState();
-    case SetupStep.Mulligan:
-      assertNull(fields.turnStep, "Mulligan turn step");
-      assertNull(fields.endPhaseStep, "Mulligan end phase step");
-      assertNull(fields.firstPlayerId, "Mulligan first player");
-      assertNull(fields.priorityPlayerId, "Mulligan priority player");
-      return createSetupMulliganGameState(requirePlayerId(fields.activePlayerId, "mulligan"));
-    case SetupStep.DetermineTerritories:
-      assertNull(fields.turnStep, "Territory choice turn step");
-      assertNull(fields.endPhaseStep, "Territory choice end phase step");
-      assertNull(fields.firstPlayerId, "Territory choice first player");
-      assertNull(fields.priorityPlayerId, "Territory choice priority player");
-      if (fields.activePlayerId === null) {
-        return createSetupDetermineTerritoriesRollOffGameState();
-      }
-
-      return createSetupDetermineTerritoriesChoiceGameState(fields.activePlayerId);
-    case SetupStep.PlaceFeatureTokens:
-      assertNull(fields.turnStep, "Feature placement turn step");
-      assertNull(fields.endPhaseStep, "Feature placement end phase step");
-      assertNull(fields.firstPlayerId, "Feature placement first player");
-      assertNull(fields.priorityPlayerId, "Feature placement priority player");
-      return createSetupPlaceFeatureTokensGameState(
-        requirePlayerId(fields.activePlayerId, "feature placement"),
-      );
-    case SetupStep.DeployFighters:
-      assertNull(fields.turnStep, "Deployment turn step");
-      assertNull(fields.endPhaseStep, "Deployment end phase step");
-      assertNull(fields.firstPlayerId, "Deployment first player");
-      assertNull(fields.priorityPlayerId, "Deployment priority player");
-      return createSetupDeployFightersGameState(
-        requirePlayerId(fields.activePlayerId, "deployment"),
-      );
-    case SetupStep.Complete:
-      throw new Error("Setup cannot be complete while the game is still in the setup phase.");
-    case null:
-      throw new Error("Setup phase requires an active setup step.");
-    default: {
-      const exhaustiveStep: never = fields.setupStep;
-      throw new Error(`Unsupported setup step ${exhaustiveStep}.`);
-    }
-  }
-}
-
-function createCombatStateFromLegacyFields(fields: LegacyGameStateFields): GameState {
-  assertNull(fields.endPhaseStep, "Combat end phase step");
-  if (fields.setupStep !== SetupStep.Complete) {
-    throw new Error(
-      `Combat phase expects setup step ${SetupStep.Complete}, got ${fields.setupStep}.`,
-    );
-  }
-
-  if (fields.priorityPlayerId !== null) {
-    assertNull(fields.activePlayerId, "First player chooser active player");
-    assertNull(fields.firstPlayerId, "First player chooser first player");
-    assertNull(fields.turnStep, "First player chooser turn step");
-    return createCombatChooseFirstPlayerGameState(fields.priorityPlayerId);
-  }
-
-  if (fields.turnStep !== null) {
-    return createCombatTurnGameState(
-      requirePlayerId(fields.firstPlayerId, "combat first player"),
-      requirePlayerId(fields.activePlayerId, "combat active player"),
-      fields.turnStep,
-    );
-  }
-
-  assertNull(fields.activePlayerId, "Combat ready active player");
-  assertNull(fields.firstPlayerId, "Combat ready first player");
-  return createCombatReadyGameState();
-}
-
-function createEndStateFromLegacyFields(fields: LegacyGameStateFields): GameState {
-  if (fields.setupStep !== SetupStep.Complete) {
-    throw new Error(`End phase expects setup step ${SetupStep.Complete}, got ${fields.setupStep}.`);
-  }
-
-  assertNull(fields.turnStep, "End phase turn step");
-  assertNull(fields.priorityPlayerId, "End phase priority player");
-
-  return createEndPhaseGameState(
-    requireEndPhaseStep(fields.endPhaseStep),
-    fields.activePlayerId,
-    fields.firstPlayerId,
-  );
-}
-
-function createFinishedStateFromLegacyFields(fields: LegacyGameStateFields): GameState {
-  if (fields.setupStep !== SetupStep.Complete) {
-    throw new Error(
-      `Finished phase expects setup step ${SetupStep.Complete}, got ${fields.setupStep}.`,
-    );
-  }
-
-  assertNull(fields.turnStep, "Finished phase turn step");
-  assertNull(fields.endPhaseStep, "Finished phase end step");
-  assertNull(fields.activePlayerId, "Finished phase active player");
-  assertNull(fields.firstPlayerId, "Finished phase first player");
-  assertNull(fields.priorityPlayerId, "Finished phase priority player");
-
-  return createFinishedGameState();
-}
-
-function assertNoAncillaryState(fields: LegacyGameStateFields, label: string): void {
-  assertNull(fields.turnStep, `${label} turn step`);
-  assertNull(fields.endPhaseStep, `${label} end phase step`);
-  assertNull(fields.activePlayerId, `${label} active player`);
-  assertNull(fields.firstPlayerId, `${label} first player`);
-  assertNull(fields.priorityPlayerId, `${label} priority player`);
-}
-
-function assertNull(value: unknown, label: string): void {
-  if (value !== null) {
-    throw new Error(`${label} must be null.`);
-  }
-}
-
-function requirePlayerId(playerId: PlayerId | null, label: string): PlayerId {
-  if (playerId === null) {
-    throw new Error(`Expected ${label} player id.`);
-  }
-
-  return playerId;
-}
-
-function requireEndPhaseStep(endPhaseStep: EndPhaseStep | null): EndPhaseStep {
-  if (endPhaseStep === null) {
-    throw new Error("Expected an end phase step.");
-  }
-
-  return endPhaseStep;
 }

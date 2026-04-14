@@ -350,7 +350,7 @@ export class GameEngine {
       rounds,
     );
 
-    game.transitionTo(createCombatChooseFirstPlayerGameState(result.winnerPlayerId));
+    game.transitionTo(createCombatChooseFirstPlayerGameState(game.players.find((p) => p.id === result.winnerPlayerId)!));
     game.eventLog.push(this.describeRollOff(game, result));
 
     return result;
@@ -373,9 +373,9 @@ export class GameEngine {
   ): Game {
     this.assertStateKind(game, "combatChooseFirstPlayer");
 
-    if (game.priorityPlayerId !== chooserPlayerId) {
+    if (game.priorityPlayer?.id !== chooserPlayerId) {
       throw new Error(
-        `Expected roll-off winner ${game.priorityPlayerId} to choose first player, got ${chooserPlayerId}.`,
+        `Expected roll-off winner ${game.priorityPlayer?.id} to choose first player, got ${chooserPlayerId}.`,
       );
     }
 
@@ -393,7 +393,7 @@ export class GameEngine {
     this.recordRoundStart(game, firstPlayer.id);
     this.transitionToState(
       game,
-      createCombatTurnGameState(firstPlayer.id, firstPlayer.id, TurnStep.Action),
+      createCombatTurnGameState(firstPlayer, firstPlayer, TurnStep.Action),
       { invokedByPlayer: chooser },
     );
     game.consecutivePasses = 0;
@@ -428,7 +428,7 @@ export class GameEngine {
       throw new Error("Expected at least one player when drawing starting hands.");
     }
 
-    game.transitionTo(createSetupMulliganGameState(firstPlayerId));
+    game.transitionTo(createSetupMulliganGameState(game.players.find((p) => p.id === firstPlayerId)!));
     game.eventLog.push("Starting hands drawn.");
   }
 
@@ -464,7 +464,7 @@ export class GameEngine {
       throw new Error("Expected the next player to resolve their mulligan.");
     }
 
-    game.transitionTo(createSetupMulliganGameState(nextPlayerId));
+    game.transitionTo(createSetupMulliganGameState(game.players.find((p) => p.id === nextPlayerId)!));
   }
 
   private applyResolveTerritoryRollOff(
@@ -494,7 +494,7 @@ export class GameEngine {
       this.requirePlayer(game, result.loserPlayerId),
       result.resolvedByTieBreaker,
     ));
-    game.transitionTo(createSetupDetermineTerritoriesChoiceGameState(result.winnerPlayerId));
+    game.transitionTo(createSetupDetermineTerritoriesChoiceGameState(game.players.find((p) => p.id === result.winnerPlayerId)!));
     game.eventLog.push(this.describeRollOff(game, result));
   }
 
@@ -522,7 +522,7 @@ export class GameEngine {
     remainingTerritory.owner = losingPlayer;
     winningPlayer.territory = chosenTerritory;
     losingPlayer.territory = remainingTerritory;
-    game.transitionTo(createSetupPlaceFeatureTokensGameState(losingPlayer.id));
+    game.transitionTo(createSetupPlaceFeatureTokensGameState(losingPlayer));
     game.eventLog.push(
       `${winningPlayer.name} chose ${chosenTerritory.name} on the ${action.boardSide} board side.`,
     );
@@ -571,12 +571,12 @@ export class GameEngine {
         token.side = FeatureTokenSide.Treasure;
       }
 
-      game.transitionTo(createSetupDeployFightersGameState(player.id));
+      game.transitionTo(createSetupDeployFightersGameState(player));
       game.eventLog.push("Feature placement complete.");
       return;
     }
 
-    game.transitionTo(createSetupPlaceFeatureTokensGameState(this.requireOpponent(game, player.id).id));
+    game.transitionTo(createSetupPlaceFeatureTokensGameState(this.requireOpponent(game, player.id)));
   }
 
   private applyDeployFighter(game: Game, action: DeployFighterAction): void {
@@ -611,7 +611,7 @@ export class GameEngine {
       return;
     }
 
-    game.transitionTo(createSetupDeployFightersGameState(this.getNextDeploymentPlayer(game, player.id).id));
+    game.transitionTo(createSetupDeployFightersGameState(this.getNextDeploymentPlayer(game, player.id)));
   }
 
   private applyMoveAction(game: Game, action: MoveAction): void {
@@ -1131,14 +1131,14 @@ export class GameEngine {
     const player = action.player;
     this.assertActivePlayer(game, player.id);
 
-    const firstPlayerId = game.firstPlayerId;
-    if (firstPlayerId === null) {
-      throw new Error("Combat turn state requires a first player id.");
+    const firstPlayer = game.firstPlayer;
+    if (firstPlayer === null) {
+      throw new Error("Combat turn state requires a first player.");
     }
 
     this.transitionToState(
       game,
-      createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power),
+      createCombatTurnGameState(firstPlayer, player, TurnStep.Power),
       {
         invokedByPlayer: player,
         actionKind: action.kind,
@@ -1392,15 +1392,15 @@ export class GameEngine {
     const player = action.player;
     this.assertActivePlayer(game, player.id);
 
-    const firstPlayerId = game.firstPlayerId;
-    if (firstPlayerId === null) {
-      throw new Error("Combat turn state requires a first player id.");
+    const firstPlayer = game.firstPlayer;
+    if (firstPlayer === null) {
+      throw new Error("Combat turn state requires a first player.");
     }
 
     if (game.turnStep === TurnStep.Action) {
       const consecutivePassesBefore = game.consecutivePasses;
       const turnsTakenBefore = player.turnsTakenThisRound;
-      const nextState = createCombatTurnGameState(firstPlayerId, player.id, TurnStep.Power);
+      const nextState = createCombatTurnGameState(firstPlayer, player, TurnStep.Power);
       game.consecutivePasses += 1;
       game.addRecord(
         GameRecordKind.Pass,
@@ -1454,7 +1454,7 @@ export class GameEngine {
       player.hasDelvedThisPowerStep = false;
 
       if (this.haveAllPlayersCompletedRoundTurns(game)) {
-        const nextState = createEndPhaseGameState(EndPhaseStep.ScoreObjectives, null, firstPlayerId);
+        const nextState = createEndPhaseGameState(EndPhaseStep.ScoreObjectives, null, firstPlayer);
         game.consecutivePasses = 0;
         game.addRecord(
           GameRecordKind.Pass,
@@ -1504,7 +1504,7 @@ export class GameEngine {
       const nextPlayer = this.requireOpponent(game, player.id);
       nextPlayer.hasDelvedThisPowerStep = false;
 
-      const nextState = createCombatTurnGameState(firstPlayerId, nextPlayer.id, TurnStep.Action);
+      const nextState = createCombatTurnGameState(firstPlayer, nextPlayer, TurnStep.Action);
       game.consecutivePasses += 1;
       game.addRecord(
         GameRecordKind.Pass,
@@ -1583,7 +1583,7 @@ export class GameEngine {
       createEndPhaseGameState(
         EndPhaseStep.EquipUpgrades,
         null,
-        game.firstPlayerId,
+        game.firstPlayer,
       ),
     );
     game.eventLog.push("Objective scoring complete.");
@@ -1595,7 +1595,7 @@ export class GameEngine {
       createEndPhaseGameState(
         EndPhaseStep.DiscardCards,
         null,
-        game.firstPlayerId,
+        game.firstPlayer,
       ),
     );
     game.eventLog.push("Upgrade equipping complete.");
@@ -1607,7 +1607,7 @@ export class GameEngine {
       createEndPhaseGameState(
         EndPhaseStep.DrawObjectives,
         null,
-        game.firstPlayerId,
+        game.firstPlayer,
       ),
     );
     game.eventLog.push("Card discarding complete.");
@@ -1663,7 +1663,7 @@ export class GameEngine {
       createEndPhaseGameState(
         EndPhaseStep.DrawPowerCards,
         null,
-        game.firstPlayerId,
+        game.firstPlayer,
       ),
     );
     game.eventLog.push("Objective drawing complete.");
@@ -1719,7 +1719,7 @@ export class GameEngine {
       createEndPhaseGameState(
         EndPhaseStep.Cleanup,
         null,
-        game.firstPlayerId,
+        game.firstPlayer,
       ),
     );
     game.eventLog.push("Power card drawing complete.");
@@ -1873,45 +1873,39 @@ export class GameEngine {
     if (
       previousState.kind === "combatTurn" &&
       previousState.turnStep === TurnStep.Action &&
-      previousState.activePlayerId !== null &&
+      previousState.activePlayer !== null &&
       (
         currentState.kind !== "combatTurn" ||
         currentState.turnStep !== TurnStep.Action ||
-        currentState.activePlayerId !== previousState.activePlayerId
+        currentState.activePlayer !== previousState.activePlayer
       )
     ) {
-      const previousActionPlayer = this.requirePlayer(game, previousState.activePlayerId);
-      this.recordActionStepEnded(game, previousActionPlayer, currentState, metadata);
+      this.recordActionStepEnded(game, previousState.activePlayer, currentState, metadata);
     }
 
     if (
       previousState.kind === "combatTurn" &&
       previousState.turnStep === TurnStep.Power &&
-      previousState.activePlayerId !== null &&
+      previousState.activePlayer !== null &&
       (
         currentState.kind !== "combatTurn" ||
         currentState.turnStep !== TurnStep.Power ||
-        currentState.activePlayerId !== previousState.activePlayerId
+        currentState.activePlayer !== previousState.activePlayer
       )
     ) {
-      const previousPowerPlayer = this.requirePlayer(game, previousState.activePlayerId);
-      this.recordPowerStepEnded(game, previousPowerPlayer, currentState, metadata);
-      this.recordTurnEnded(game, previousPowerPlayer, currentState, metadata);
+      this.recordPowerStepEnded(game, previousState.activePlayer, currentState, metadata);
+      this.recordTurnEnded(game, previousState.activePlayer, currentState, metadata);
     }
 
     if (
       previousState.turnStep === currentState.turnStep &&
-      previousState.activePlayerId === currentState.activePlayerId
+      previousState.activePlayer === currentState.activePlayer
     ) {
       return;
     }
 
-    const fromActivePlayer = previousState.activePlayerId !== null
-      ? game.getPlayer(previousState.activePlayerId) ?? null
-      : null;
-    const toActivePlayer = currentState.activePlayerId !== null
-      ? game.getPlayer(currentState.activePlayerId) ?? null
-      : null;
+    const fromActivePlayer = previousState.activePlayer;
+    const toActivePlayer = currentState.activePlayer;
     game.addRecord(
       GameRecordKind.TurnStepChanged,
       new TurnStepChangeResolution(
@@ -1934,21 +1928,21 @@ export class GameEngine {
       currentState.phase,
       previousState.turnStep,
       currentState.turnStep,
-      previousState.activePlayerId !== null ? game.getPlayer(previousState.activePlayerId) ?? null : null,
-      currentState.activePlayerId !== null ? game.getPlayer(currentState.activePlayerId) ?? null : null,
+      previousState.activePlayer,
+      currentState.activePlayer,
     ));
 
     if (
       currentState.kind === "combatTurn" &&
       currentState.turnStep === TurnStep.Action &&
-      currentState.activePlayerId !== null &&
+      currentState.activePlayer !== null &&
       (
         previousState.turnStep !== TurnStep.Action ||
-        previousState.activePlayerId !== currentState.activePlayerId
+        previousState.activePlayer !== currentState.activePlayer
       )
     ) {
-      this.recordActionStepStarted(game, currentState.activePlayerId, metadata);
-      this.recordTurnStarted(game, currentState.activePlayerId, metadata);
+      this.recordActionStepStarted(game, currentState.activePlayer, metadata);
+      this.recordTurnStarted(game, currentState.activePlayer, metadata);
     }
   }
 
@@ -2069,10 +2063,9 @@ export class GameEngine {
 
   private recordTurnStarted(
     game: Game,
-    playerId: PlayerId,
+    player: Player,
     metadata: GameEventMetadata = {},
   ): void {
-    const player = this.requirePlayer(game, playerId);
     const roundTurnNumber =
       game.players.reduce((total, currentPlayer) => total + currentPlayer.turnsTakenThisRound, 0) + 1;
 
@@ -2098,10 +2091,9 @@ export class GameEngine {
 
   private recordActionStepStarted(
     game: Game,
-    playerId: PlayerId,
+    player: Player,
     metadata: GameEventMetadata = {},
   ): void {
-    const player = this.requirePlayer(game, playerId);
     const roundTurnNumber =
       game.players.reduce((total, currentPlayer) => total + currentPlayer.turnsTakenThisRound, 0) + 1;
 
@@ -2131,8 +2123,7 @@ export class GameEngine {
     nextState: GameState,
     metadata: GameEventMetadata = {},
   ): void {
-    const nextActivePlayer =
-      nextState.activePlayerId === null ? null : game.getPlayer(nextState.activePlayerId);
+    const nextActivePlayer = nextState.activePlayer;
     const roundTurnNumber =
       game.players.reduce((total, currentPlayer) => total + currentPlayer.turnsTakenThisRound, 0) + 1;
 
@@ -2172,8 +2163,7 @@ export class GameEngine {
       (total, currentPlayer) => total + currentPlayer.turnsTakenThisRound,
       0,
     );
-    const nextActivePlayer =
-      nextState.activePlayerId === null ? null : game.getPlayer(nextState.activePlayerId);
+    const nextActivePlayer = nextState.activePlayer;
 
     game.addRecord(
       GameRecordKind.PowerStepEnded,
@@ -2213,8 +2203,7 @@ export class GameEngine {
       (total, currentPlayer) => total + currentPlayer.turnsTakenThisRound,
       0,
     );
-    const nextActivePlayer =
-      nextState.activePlayerId === null ? null : game.getPlayer(nextState.activePlayerId);
+    const nextActivePlayer = nextState.activePlayer;
 
     game.addRecord(
       GameRecordKind.TurnEnded,
@@ -2660,8 +2649,8 @@ export class GameEngine {
   }
 
   private assertActivePlayer(game: Game, playerId: PlayerId): void {
-    if (game.activePlayerId !== playerId) {
-      throw new Error(`Expected active player ${game.activePlayerId}, got ${playerId}.`);
+    if (game.activePlayer?.id !== playerId) {
+      throw new Error(`Expected active player ${game.activePlayer?.id ?? "none"}, got ${playerId}.`);
     }
   }
 

@@ -194,7 +194,7 @@ export class SetupActionService {
   }
 
   private getActivePlayer(game: Game): Player | null {
-    if (game.activePlayerId === null) {
+    if (game.activePlayer === null) {
       return null;
     }
 
