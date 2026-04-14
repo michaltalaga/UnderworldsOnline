@@ -55,7 +55,6 @@ import {
 } from "../state/GameState";
 import { HexCell } from "../state/HexCell";
 import { Player } from "../state/Player";
-import { Territory } from "../state/Territory";
 import {
   RollOffKind,
   CardKind,
@@ -435,7 +434,7 @@ export class GameEngine {
 
   private applyResolveMulligan(game: Game, action: ResolveMulliganAction): void {
     this.assertStateKind(game, "setupMulligan");
-    const player = this.requirePlayer(game, action.player.id);
+    const player = action.player;
     this.assertActivePlayer(game, player.id);
 
     if (action.redrawObjectives) {
@@ -507,10 +506,10 @@ export class GameEngine {
       throw new Error("Territory choice requires exactly two territories on the board.");
     }
 
-    const winningPlayer = this.requirePlayer(game, action.player.id);
+    const winningPlayer = action.player;
     this.assertActivePlayer(game, winningPlayer.id);
     const losingPlayer = this.requireOpponent(game, winningPlayer.id);
-    const chosenTerritory = this.requireTerritory(game, action.territory.id);
+    const chosenTerritory = action.territory;
     const remainingTerritory = game.board.territories.find(
       (territory) => territory.id !== chosenTerritory.id,
     );
@@ -531,7 +530,7 @@ export class GameEngine {
 
   private applyPlaceFeatureToken(game: Game, action: PlaceFeatureTokenAction): void {
     this.assertStateKind(game, "setupPlaceFeatureTokens");
-    const player = this.requirePlayer(game, action.player.id);
+    const player = action.player;
     this.assertActivePlayer(game, player.id);
 
     const placementNumber = game.board.featureTokens.length + 1;
@@ -539,7 +538,7 @@ export class GameEngine {
       throw new Error("All feature tokens have already been placed.");
     }
 
-    const hex = this.requireHex(game, action.hex.id);
+    const hex = action.hex;
     const requireNeutralHex = game.board.featureTokens.length === 0;
     const standardPlacements = game.board.hexes.filter((candidate) =>
       this.isLegalFeatureHex(game, candidate, false, requireNeutralHex),
@@ -582,12 +581,12 @@ export class GameEngine {
 
   private applyDeployFighter(game: Game, action: DeployFighterAction): void {
     this.assertStateKind(game, "setupDeployFighters");
-    const player = this.requirePlayer(game, action.player.id);
+    const player = action.player;
     this.assertActivePlayer(game, player.id);
 
-    const fighter = this.requireOwnedUndeployedFighter(player, action.fighter.id);
+    const fighter = action.fighter;
     const territoryId = this.requirePlayerTerritory(player);
-    const hex = this.requireHex(game, action.hex.id);
+    const hex = action.hex;
 
     if (!hex.isStartingHex) {
       throw new Error(`Hex ${hex.id} is not a starting hex.`);
@@ -621,10 +620,10 @@ export class GameEngine {
       throw new Error(`Move path ${action.path.join(" -> ")} is not legal for fighter ${action.fighter.id}.`);
     }
 
-    const player = this.requirePlayer(game, action.player.id);
+    const player = action.player;
     this.assertActivePlayer(game, player.id);
 
-    const fighter = this.requireOwnedDeployedFighter(player, action.fighter.id);
+    const fighter = action.fighter;
     const fighterDefinition = fighter.definition;
     if (fighterDefinition === undefined) {
       throw new Error(`Could not find fighter definition for ${fighter.id}.`);
@@ -678,11 +677,11 @@ export class GameEngine {
       throw new Error(`Attack action is not legal for fighter ${action.attacker.id} against ${action.target.id}.`);
     }
 
-    const attackerPlayer = this.requirePlayer(game, action.player.id);
+    const attackerPlayer = action.player;
     this.assertActivePlayer(game, attackerPlayer.id);
 
     const defenderPlayer = this.requireOpponent(game, attackerPlayer.id);
-    const attacker = this.requireOwnedDeployedFighter(attackerPlayer, action.attacker.id);
+    const attacker = action.attacker;
     const attackerDefinition = attacker.definition;
     const target = defenderPlayer.getFighter(action.target.id);
     const targetDefinition = defenderPlayer.getFighterDefinition(action.target.id);
@@ -730,11 +729,11 @@ export class GameEngine {
       throw new Error(`Charge action is not legal for fighter ${action.fighter.id} against ${action.target.id}.`);
     }
 
-    const attackerPlayer = this.requirePlayer(game, action.player.id);
+    const attackerPlayer = action.player;
     this.assertActivePlayer(game, attackerPlayer.id);
 
     const defenderPlayer = this.requireOpponent(game, attackerPlayer.id);
-    const attacker = this.requireOwnedDeployedFighter(attackerPlayer, action.fighter.id);
+    const attacker = action.fighter;
     const attackerDefinition = attacker.definition;
     const target = defenderPlayer.getFighter(action.target.id);
     const targetDefinition = defenderPlayer.getFighterDefinition(action.target.id);
@@ -939,10 +938,10 @@ export class GameEngine {
       throw new Error(`Guard action is not legal for fighter ${action.fighter.id}.`);
     }
 
-    const player = this.requirePlayer(game, action.player.id);
+    const player = action.player;
     this.assertActivePlayer(game, player.id);
 
-    const fighter = this.requireOwnedDeployedFighter(player, action.fighter.id);
+    const fighter = action.fighter;
     const fighterDefinition = fighter.definition;
     if (fighterDefinition === undefined) {
       throw new Error(`Could not find fighter definition for ${fighter.id}.`);
@@ -977,10 +976,10 @@ export class GameEngine {
       );
     }
 
-    const player = this.requirePlayer(game, action.player.id);
+    const player = action.player;
     this.assertActivePlayer(game, player.id);
 
-    const fighter = this.requireOwnedDeployedFighter(player, action.fighter.id);
+    const fighter = action.fighter;
     const fighterDefinition = fighter.definition;
     if (fighterDefinition === undefined) {
       throw new Error(`Could not find fighter definition for ${fighter.id}.`);
@@ -1060,7 +1059,7 @@ export class GameEngine {
       throw new Error(`Focus action is not legal for player ${action.player.id}.`);
     }
 
-    const player = this.requirePlayer(game, action.player.id);
+    const player = action.player;
     this.assertActivePlayer(game, player.id);
 
     const discardedObjectives = action.objectiveCards.map((card) =>
@@ -1133,7 +1132,7 @@ export class GameEngine {
 
   private applyEndActionStep(game: Game, action: EndActionStepAction): void {
     this.assertCombatTurnStep(game, TurnStep.Action);
-    const player = this.requirePlayer(game, action.player.id);
+    const player = action.player;
     this.assertActivePlayer(game, player.id);
 
     const firstPlayerId = game.firstPlayerId;
@@ -1162,7 +1161,7 @@ export class GameEngine {
       throw new Error(`Ploy play is not legal for card ${action.card.id}.`);
     }
 
-    const player = this.requirePlayer(game, action.player.id);
+    const player = action.player;
     this.assertActivePlayer(game, player.id);
 
     const card = player.getCard(action.card.id);
@@ -1248,11 +1247,11 @@ export class GameEngine {
       throw new Error(`Upgrade play is not legal for card ${action.card.id} on fighter ${action.fighter.id}.`);
     }
 
-    const player = this.requirePlayer(game, action.player.id);
+    const player = action.player;
     this.assertActivePlayer(game, player.id);
 
     const card = player.getCard(action.card.id);
-    const fighter = this.requireOwnedDeployedFighter(player, action.fighter.id);
+    const fighter = action.fighter;
     if (card === undefined) {
       throw new Error(`Player ${player.name} does not have upgrade card ${action.card.id}.`);
     }
@@ -1341,7 +1340,7 @@ export class GameEngine {
       throw new Error(`Warscroll ability ${action.abilityIndex} is not legal for player ${action.player.id}.`);
     }
 
-    const player = this.requirePlayer(game, action.player.id);
+    const player = action.player;
     this.assertActivePlayer(game, player.id);
 
     const warscroll = player.getWarscrollWithDefinition();
@@ -1394,7 +1393,7 @@ export class GameEngine {
   private applyPassAction(game: Game, action: PassAction): void {
     this.assertStateKind(game, "combatTurn");
 
-    const player = this.requirePlayer(game, action.player.id);
+    const player = action.player;
     this.assertActivePlayer(game, player.id);
 
     const firstPlayerId = game.firstPlayerId;
@@ -2624,32 +2623,6 @@ export class GameEngine {
     );
   }
 
-  private requireOwnedUndeployedFighter(player: Player, fighterId: FighterId): Fighter {
-    const fighter = player.getFighter(fighterId);
-    if (fighter === undefined) {
-      throw new Error(`Player ${player.name} does not control fighter ${fighterId}.`);
-    }
-
-    if (fighter.currentHex !== null) {
-      throw new Error(`Fighter ${fighter.id} has already been deployed.`);
-    }
-
-    return fighter;
-  }
-
-  private requireOwnedDeployedFighter(player: Player, fighterId: FighterId): Fighter {
-    const fighter = player.getFighter(fighterId);
-    if (fighter === undefined) {
-      throw new Error(`Player ${player.name} does not control fighter ${fighterId}.`);
-    }
-
-    if (fighter.currentHex === null || fighter.isSlain) {
-      throw new Error(`Fighter ${fighter.id} is not deployed on the board.`);
-    }
-
-    return fighter;
-  }
-
   private requirePlayerTerritory(player: Player): TerritoryId {
     if (player.territory === null) {
       throw new Error(`Player ${player.name} does not have an assigned territory.`);
@@ -2687,15 +2660,6 @@ export class GameEngine {
     }
 
     return opponent;
-  }
-
-  private requireTerritory(game: Game, territoryId: TerritoryId): Territory {
-    const territory = game.board.getTerritory(territoryId);
-    if (territory === undefined) {
-      throw new Error(`Unknown territory ${territoryId}.`);
-    }
-
-    return territory;
   }
 
   private requireHex(game: Game, hexId: HexId): HexCell {
