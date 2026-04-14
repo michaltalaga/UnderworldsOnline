@@ -93,7 +93,7 @@ describe("PassAction eligibility", () => {
         firstCharge.weaponId,
         firstCharge.selectedAbility,
         [AttackDieFace.Blank, AttackDieFace.Blank],
-        [SaveDieFace.Success],
+        [SaveDieFace.Shield],
       ),
     );
 
