@@ -63,10 +63,7 @@ export class AgainstTheOdds extends ObjectiveCard {
     if (game.phase !== "end") return false;
     const thisRoundDelves = game.getEventsOfTypeThisRound(FighterDelvedEvent)
       .filter((e) => e.player === this.owner);
-    return thisRoundDelves.some((e) => {
-      const token = game.getFeatureToken(e.featureTokenId);
-      return token !== undefined && token.value % 2 === 1;
-    });
+    return thisRoundDelves.some((e) => e.featureToken.value % 2 === 1);
   }
 }
 

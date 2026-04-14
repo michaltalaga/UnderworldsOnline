@@ -26,7 +26,7 @@ function seedGuardPloy(
   game: ReturnType<typeof createGameInPowerStep>["game"],
   playerId: "player:one" | "player:two" = "player:one",
 ): GiveGuardPloy {
-  const owner = game.getPlayer(playerId)!;
+  const owner = playerId === "player:one" ? game.players[0] : game.players[1];
   const ploy = new GiveGuardPloy("ploy-guard-test", owner, CardZone.PowerHand, "99");
   owner.powerHand.push(ploy);
   return ploy;

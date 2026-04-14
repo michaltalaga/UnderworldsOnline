@@ -26,7 +26,7 @@ function seedPracticeUpgrade(
   playerId: "player:one" | "player:two" = "player:one",
   glory: number = 5,
 ): PracticeUpgrade {
-  const owner = game.getPlayer(playerId)!;
+  const owner = playerId === "player:one" ? game.players[0] : game.players[1];
   owner.glory = glory;
   const upgrade = new PracticeUpgrade("upg-practice-test", owner, CardZone.PowerHand, "01");
   owner.powerHand.push(upgrade);
