@@ -71,7 +71,7 @@ export function getTerritoryOwner(
   game: Game,
   hexId: HexId,
 ): PlayerId | null {
-  const hex = game.getHex(hexId);
+  const hex = game.board.hexes.find((h) => h.id === hexId);
   return hex?.territory?.owner?.id ?? null;
 }
 

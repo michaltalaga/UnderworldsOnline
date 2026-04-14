@@ -50,7 +50,7 @@ export function getPlayerToneClass(playerId: string): string {
 }
 
 export function getFighterName(game: Game, fighterId: string): string {
-  const fighter = game.getFighter(fighterId);
+  const fighter = game.players.flatMap((p) => p.fighters).find((f) => f.id === fighterId);
   if (fighter === undefined) {
     return fighterId;
   }

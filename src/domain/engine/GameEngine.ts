@@ -2603,7 +2603,7 @@ export class GameEngine {
       throw new Error("This action requires a player id.");
     }
 
-    const player = game.getPlayer(playerId);
+    const player = game.players.find((p) => p.id === playerId);
     if (player === undefined) {
       throw new Error(`Unknown player ${playerId}.`);
     }
@@ -2630,7 +2630,7 @@ export class GameEngine {
   }
 
   private requireHex(game: Game, hexId: HexId): HexCell {
-    const hex = game.board.getHex(hexId);
+    const hex = game.board.hexes.find((h) => h.id === hexId);
     if (hex === undefined) {
       throw new Error(`Unknown hex ${hexId}.`);
     }

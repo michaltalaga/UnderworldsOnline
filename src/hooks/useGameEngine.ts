@@ -811,7 +811,7 @@ function getSetupMapWiring(
     return {
       legalHexIds,
       onHexClick: (hexId) => {
-        const hex = game.getHex(hexId);
+        const hex = game.board.hexes.find((h) => h.id === hexId);
         if (hex === undefined) return;
         applySetupAction(new PlaceFeatureTokenAction(activePlayer, hex));
       },
@@ -833,7 +833,7 @@ function getSetupMapWiring(
     return {
       legalHexIds,
       onHexClick: (hexId) => {
-        const hex = game.getHex(hexId);
+        const hex = game.board.hexes.find((h) => h.id === hexId);
         if (hex === undefined) return;
         applySetupAction(new DeployFighterAction(activePlayer, nextFighter, hex));
       },

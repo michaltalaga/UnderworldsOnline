@@ -303,9 +303,8 @@ export function createCombatDebugSnapshot(
     game.eventLog.push(`Debug setup applied defender tokens: ${defenderEffects.join(", ")}.`);
   }
 
-  const attackerPlayer = game.players[1];
-  const attackerWeapon = attackerPlayer?.getFighterWeaponDefinition(playerTwoFighterOneId, practiceBladeWeaponId);
-  if (attackerWeapon === undefined) {
+  const attackerWeapon = attackerFighter.definition.getWeapon(practiceBladeWeaponId);
+  if (attackerWeapon === null) {
     throw new Error(`Could not find debug weapon ${practiceBladeWeaponId}.`);
   }
 
@@ -725,7 +724,7 @@ function createPloyDebugOption(
   playerId: string,
   action: PlayPloyAction,
 ): PloyDebugOption {
-  const player = game.getPlayer(playerId);
+  const player = game.players.find((p) => p.id === playerId);
   const card = action.card;
   if (player === undefined || card === undefined) {
     throw new Error(`Could not build ploy debug option for card ${action.card.id}.`);
@@ -761,7 +760,7 @@ function getPloyDebugTargetDetails(
   }
 
   for (const player of game.players) {
-    const fighterDefinition = player.getFighterDefinition(targetFighterId);
+    const fighterDefinition = player.fighters.find((f) => f.id === targetFighterId)?.definition;
     if (fighterDefinition !== undefined) {
       return {
         targetFighterName: fighterDefinition.name,
@@ -781,7 +780,7 @@ function createUpgradeDebugOption(
   playerId: string,
   action: PlayUpgradeAction,
 ): UpgradeDebugOption {
-  const player = game.getPlayer(playerId);
+  const player = game.players.find((p) => p.id === playerId);
   const card = action.card;
   const fighterDefinition = action.fighter.definition;
   if (
@@ -810,7 +809,7 @@ function movePowerCardFromDrawPileToHand(
   playerId: string,
   cardName: string,
 ): void {
-  const player = game.getPlayer(playerId);
+  const player = game.players.find((p) => p.id === playerId);
   if (player === undefined) {
     throw new Error(`Could not find player ${playerId} for debug power card setup.`);
   }

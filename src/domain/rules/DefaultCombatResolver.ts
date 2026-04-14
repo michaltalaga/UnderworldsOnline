@@ -295,7 +295,7 @@ export class DefaultCombatResolver extends CombatResolver {
 
 
   private isFighterOnCoverToken(game: Game, fighterHexId: string): boolean {
-    const fighterHex = game.board.getHex(fighterHexId);
+    const fighterHex = game.board.hexes.find((h) => h.id === fighterHexId);
     const featureToken = fighterHex?.featureToken ?? null;
     return (
       featureToken !== null &&

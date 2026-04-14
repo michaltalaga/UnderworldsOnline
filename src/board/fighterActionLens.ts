@@ -40,7 +40,7 @@ function getDestinationHexId(action: MoveAction | ChargeAction): HexId | undefin
 function collectCurrentHexIds(game: Game, fighterIds: Iterable<FighterId>): Set<HexId> {
   return new Set(
     [...fighterIds].flatMap((fighterId) => {
-      const target = game.getFighter(fighterId);
+      const target = game.players.flatMap((p) => p.fighters).find((f) => f.id === fighterId);
       return target === undefined || target.currentHex === null
         ? []
         : [target.currentHex.id];
@@ -602,7 +602,8 @@ function describeWeaponProfile(
   label: string;
   stats: string;
 } {
-  const weapon = player.getFighterWeaponDefinition(fighterId, weaponId);
+  const fighter = player.fighters.find((f) => f.id === fighterId);
+  const weapon = fighter?.definition.getWeapon(weaponId) ?? undefined;
   if (weapon === undefined) {
     return {
       label: weaponId,

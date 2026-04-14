@@ -79,7 +79,7 @@ export class CombatActionService extends LegalActionService {
       return [];
     }
 
-    const player = game.getPlayer(playerId);
+    const player = game.players.find((p) => p.id === playerId);
     if (player === undefined) {
       return [];
     }
