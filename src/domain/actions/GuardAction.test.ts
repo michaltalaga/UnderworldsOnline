@@ -104,8 +104,8 @@ describe("GuardAction resolution", () => {
 
     const records = game.getEventHistory(GameRecordKind.Guard);
     expect(records).toHaveLength(1);
-    expect(records[0].invokedByPlayerId).toBe("player:one");
-    expect(records[0].invokedByFighterId).toBe(guard.fighter.id);
+    expect(records[0].invokedByPlayer?.id).toBe("player:one");
+    expect(records[0].invokedByFighter?.id).toBe(guard.fighter.id);
   });
 
   it("consumes the action step — no further moves are legal afterwards", () => {

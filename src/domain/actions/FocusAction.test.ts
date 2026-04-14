@@ -60,6 +60,6 @@ describe("FocusAction resolution", () => {
 
     const records = game.getEventHistory(GameRecordKind.Focus);
     expect(records).toHaveLength(1);
-    expect(records[0].invokedByPlayerId).toBe("player:one");
+    expect(records[0].invokedByPlayer?.id).toBe("player:one");
   });
 });

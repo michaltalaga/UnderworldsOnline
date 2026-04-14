@@ -25,7 +25,6 @@ import { TurnStartedResolution } from "../rules/TurnStartedResolution";
 import { UpgradeResolution } from "../rules/UpgradeResolution";
 import { WarscrollAbilityResolution } from "../rules/WarscrollAbilityResolution";
 import type { EndPhaseActionKind, GameActionKind, SetupActionKind } from "../values/enums";
-import type { CardId, FighterId, PlayerId } from "../values/ids";
 import type { Card } from "../cards/Card";
 import type { Fighter } from "./Fighter";
 import type { Player } from "./Player";
@@ -108,10 +107,6 @@ export type GameEvent<TKind extends GameEventKind = GameEventKind> = {
   invokedByCard: Card | null;
   actionKind: GameEventInvokerKind | null;
   data: GameEventDataByKind[TKind];
-  // Legacy id-shaped getters, derived from refs above.
-  readonly invokedByPlayerId: PlayerId | null;
-  readonly invokedByFighterId: FighterId | null;
-  readonly invokedByCardId: CardId | null;
 };
 
 export const GameRecordKind = GameEventKind;

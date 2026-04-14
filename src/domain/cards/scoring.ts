@@ -21,7 +21,7 @@ export function getMyLatestCombat(
   ownerId: PlayerId,
 ): GameRecord<typeof GameRecordKind.Combat> | null {
   const event = game.getLatestEvent(GameRecordKind.Combat);
-  if (event === null || event.invokedByPlayerId !== ownerId) return null;
+  if (event === null || event.invokedByPlayer?.id !== ownerId) return null;
   return event;
 }
 

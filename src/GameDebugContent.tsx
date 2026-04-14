@@ -378,9 +378,9 @@ export default function GameDebugContent({
             {[...game.records].reverse().slice(0, 30).map((record, index) => (
               <li key={index} style={{ padding: "2px 4px", borderBottom: "1px solid #333", color: "#ccc" }}>
                 <strong style={{ color: "#8cf" }}>{record.kind}</strong>
-                {record.invokedByPlayerId && <span> by={record.invokedByPlayerId}</span>}
-                {record.invokedByFighterId && <span> fighter={record.invokedByFighterId}</span>}
-                {record.invokedByCardId && <span> card={record.invokedByCardId}</span>}
+                {record.invokedByPlayer && <span> by={record.invokedByPlayer.id}</span>}
+                {record.invokedByFighter && <span> fighter={record.invokedByFighter.id}</span>}
+                {record.invokedByCard && <span> card={record.invokedByCard.id}</span>}
                 {record.actionKind && <span> action={record.actionKind}</span>}
                 <span style={{ color: "#999" }}> r{record.roundNumber}</span>
                 <div style={{ color: "#aaa", paddingLeft: 8 }}>{JSON.stringify(record.data, null, 0).slice(0, 200)}</div>

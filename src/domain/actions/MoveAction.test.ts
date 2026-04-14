@@ -91,8 +91,8 @@ describe("MoveAction resolution", () => {
 
     const records = game.getEventHistory(GameRecordKind.Move);
     expect(records).toHaveLength(1);
-    expect(records[0].invokedByPlayerId).toBe("player:one");
-    expect(records[0].invokedByFighterId).toBe(move.fighter.id);
+    expect(records[0].invokedByPlayer?.id).toBe("player:one");
+    expect(records[0].invokedByFighter?.id).toBe(move.fighter.id);
   });
 
   it("rejects a move with a non-adjacent path", () => {

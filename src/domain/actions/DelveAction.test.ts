@@ -144,8 +144,8 @@ describe("DelveAction resolution", () => {
 
     const records = game.getEventHistory(GameRecordKind.Delve);
     expect(records).toHaveLength(1);
-    expect(records[0].invokedByPlayerId).toBe("player:one");
-    expect(records[0].invokedByFighterId).toBe(setup.fighter.id);
+    expect(records[0].invokedByPlayer?.id).toBe("player:one");
+    expect(records[0].invokedByFighter?.id).toBe(setup.fighter.id);
   });
 
   it("rejects delve for the wrong player", () => {
