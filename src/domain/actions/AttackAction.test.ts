@@ -121,9 +121,7 @@ describe("AttackAction resolution", () => {
     if (attacks.length === 0) return; // vacuous
 
     const template = attacks[0];
-    const weapon = game
-      .getPlayer("player:one")!
-      .getFighterWeaponDefinition(template.attacker.id, template.weapon.id)!;
+    const weapon = template.weapon;
     const scriptedRoll = attackBlanks(weapon.dice);
 
     engine.applyGameAction(
@@ -153,10 +151,7 @@ describe("AttackAction resolution", () => {
     if (attacks.length === 0) return; // vacuous
 
     const template = attacks[0];
-    const weapon = game
-      .getPlayer("player:one")!
-      .getFighterWeaponDefinition(template.attacker.id, template.weapon.id)!;
-
+    const weapon = template.weapon;
     engine.applyGameAction(
       game,
       new AttackAction(

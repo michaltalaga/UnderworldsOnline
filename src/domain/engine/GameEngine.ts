@@ -55,6 +55,7 @@ import {
 } from "../state/GameState";
 import { HexCell } from "../state/HexCell";
 import { Player } from "../state/Player";
+import type { WeaponDefinition } from "../definitions/WeaponDefinition";
 import {
   RollOffKind,
   CardKind,
@@ -916,7 +917,7 @@ export class GameEngine {
       const { combatResult, targetSlain } = this.resolveCombatAction(
         game, attackerPlayer, defenderPlayer,
         attacker, attackerDefinition, target, targetDefinition,
-        combatState.weapon.id, combatState.weapon.name, combatState.selectedAbility,
+        combatState.weapon, combatState.selectedAbility,
         [...combatState.attackRoll], [...combatState.saveRoll], combatState.actionKind,
       );
 
@@ -2724,17 +2725,12 @@ export class GameEngine {
     _attackerDefinition: Player["warband"]["fighters"][number],
     target: Fighter,
     targetDefinition: Player["warband"]["fighters"][number],
-    weaponId: string,
-    _weaponName: string,
+    weapon: WeaponDefinition,
     selectedAbility: AttackAction["selectedAbility"],
     attackRoll: AttackAction["attackRoll"],
     saveRoll: AttackAction["saveRoll"],
     actionKind: GameEventInvokerKind,
   ): { combatResult: ReturnType<CombatResolver["resolve"]>; targetSlain: boolean } {
-    const weapon = attackerPlayer.getFighterWeaponDefinition(attacker.id, weaponId);
-    if (weapon === undefined) {
-      throw new Error(`Weapon ${weaponId} not found on ${attacker.id}.`);
-    }
     game.addRecord(
       GameRecordKind.CombatStarted,
       new CombatStartedResolution(
@@ -2764,9 +2760,6 @@ export class GameEngine {
       ));
     }
 
-    if (weapon === undefined) {
-      throw new Error(`Weapon ${weaponId} not found on ${attacker.id}.`);
-    }
     const combatResult = this.combatResolver.resolve(
       game,
       new CombatContext(
