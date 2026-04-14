@@ -125,7 +125,7 @@ export class CombatActionService extends LegalActionService {
     }
 
     const fighterHex = fighter.currentHex;
-    const featureToken = game.getFeatureToken(action.featureToken.id);
+    const featureToken = action.featureToken;
     if (fighterHex === undefined || featureToken === undefined) {
       return false;
     }
@@ -145,7 +145,7 @@ export class CombatActionService extends LegalActionService {
     const player = action.player;
     if (player === undefined) return false;
 
-    const card = player.getCard(action.card.id);
+    const card = action.card;
     const fighter = action.fighter;
     if (card === undefined || card.kind !== CardKind.Upgrade || fighter === undefined) {
       return false;
@@ -159,7 +159,7 @@ export class CombatActionService extends LegalActionService {
     const player = action.player;
     if (player === undefined) return false;
 
-    const card = player.getCard(action.card.id);
+    const card = action.card;
     if (card === undefined || card.kind !== CardKind.Ploy) return false;
 
     // The card itself decides when it's playable via getLegalTargets.

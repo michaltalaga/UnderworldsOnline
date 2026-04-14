@@ -695,7 +695,7 @@ export class GameEngine {
       throw new Error(`Attack target ${action.target.id} is not available.`);
     }
 
-    const weapon = attackerPlayer.getFighterWeaponDefinition(attacker.id, action.weapon.id);
+    const weapon = action.weapon;
     if (weapon === undefined) {
       throw new Error(`Fighter ${attacker.id} does not have weapon ${action.weapon.id}.`);
     }
@@ -747,7 +747,7 @@ export class GameEngine {
       throw new Error(`Charge target ${action.target.id} is not available.`);
     }
 
-    const weapon = attackerPlayer.getFighterWeaponDefinition(attacker.id, action.weapon.id);
+    const weapon = action.weapon;
     if (weapon === undefined) {
       throw new Error(`Fighter ${attacker.id} does not have weapon ${action.weapon.id}.`);
     }
@@ -996,11 +996,7 @@ export class GameEngine {
       );
     }
 
-    const featureToken = game.board.getFeatureToken(action.featureToken.id);
-    if (featureToken === undefined) {
-      throw new Error(`Unknown feature token ${action.featureToken.id}.`);
-    }
-
+    const featureToken = action.featureToken;
     const sideBeforeDelve = featureToken.side;
     if (featureToken.side === FeatureTokenSide.Treasure) {
       featureToken.side = FeatureTokenSide.Cover;
@@ -1164,7 +1160,7 @@ export class GameEngine {
     const player = action.player;
     this.assertActivePlayer(game, player.id);
 
-    const card = player.getCard(action.card.id);
+    const card = action.card;
     if (card === undefined) {
       throw new Error(`Player ${player.name} does not have ploy card ${action.card.id}.`);
     }
@@ -1250,7 +1246,7 @@ export class GameEngine {
     const player = action.player;
     this.assertActivePlayer(game, player.id);
 
-    const card = player.getCard(action.card.id);
+    const card = action.card;
     const fighter = action.fighter;
     if (card === undefined) {
       throw new Error(`Player ${player.name} does not have upgrade card ${action.card.id}.`);
