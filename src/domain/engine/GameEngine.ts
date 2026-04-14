@@ -625,7 +625,7 @@ export class GameEngine {
     this.assertActivePlayer(game, player.id);
 
     const fighter = this.requireOwnedDeployedFighter(player, action.fighter.id);
-    const fighterDefinition = player.getFighterDefinition(fighter.id);
+    const fighterDefinition = fighter.definition;
     if (fighterDefinition === undefined) {
       throw new Error(`Could not find fighter definition for ${fighter.id}.`);
     }
@@ -684,7 +684,7 @@ export class GameEngine {
 
     const defenderPlayer = this.requireOpponent(game, attackerPlayer.id);
     const attacker = this.requireOwnedDeployedFighter(attackerPlayer, action.attacker.id);
-    const attackerDefinition = attackerPlayer.getFighterDefinition(attacker.id);
+    const attackerDefinition = attacker.definition;
     const target = defenderPlayer.getFighter(action.target.id);
     const targetDefinition = defenderPlayer.getFighterDefinition(action.target.id);
     if (
@@ -736,7 +736,7 @@ export class GameEngine {
 
     const defenderPlayer = this.requireOpponent(game, attackerPlayer.id);
     const attacker = this.requireOwnedDeployedFighter(attackerPlayer, action.fighter.id);
-    const attackerDefinition = attackerPlayer.getFighterDefinition(attacker.id);
+    const attackerDefinition = attacker.definition;
     const target = defenderPlayer.getFighter(action.target.id);
     const targetDefinition = defenderPlayer.getFighterDefinition(action.target.id);
     if (
@@ -830,7 +830,7 @@ export class GameEngine {
     const attackerPlayer = combatState.attackerPlayer;
     const defenderPlayer = combatState.defenderPlayer;
     const target = combatState.target;
-    const targetDefinition = defenderPlayer.getFighterDefinition(target.id);
+    const targetDefinition = target.definition;
 
     // --- Phase: attack-rolled → save-rolled ---
     if (combatState.phase === "attack-rolled") {
@@ -856,7 +856,7 @@ export class GameEngine {
     // --- Phase: save-rolled → resolved ---
     if (combatState.phase === "save-rolled") {
       const attacker = combatState.attacker;
-      const attackerDef = attackerPlayer.getFighterDefinition(attacker.id);
+      const attackerDef = attacker.definition;
       if (attackerDef === undefined || targetDefinition === undefined) return;
 
       const combatResult = this.combatResolver.resolve(
@@ -907,7 +907,7 @@ export class GameEngine {
     // --- Phase: resolved → apply damage and finish ---
     if (combatState.phase === "resolved") {
       const attacker = combatState.attacker;
-      const attackerDefinition = attackerPlayer.getFighterDefinition(attacker.id);
+      const attackerDefinition = attacker.definition;
       if (
         attackerDefinition === undefined ||
         targetDefinition === undefined ||
@@ -945,7 +945,7 @@ export class GameEngine {
     this.assertActivePlayer(game, player.id);
 
     const fighter = this.requireOwnedDeployedFighter(player, action.fighter.id);
-    const fighterDefinition = player.getFighterDefinition(fighter.id);
+    const fighterDefinition = fighter.definition;
     if (fighterDefinition === undefined) {
       throw new Error(`Could not find fighter definition for ${fighter.id}.`);
     }
@@ -983,7 +983,7 @@ export class GameEngine {
     this.assertActivePlayer(game, player.id);
 
     const fighter = this.requireOwnedDeployedFighter(player, action.fighter.id);
-    const fighterDefinition = player.getFighterDefinition(fighter.id);
+    const fighterDefinition = fighter.definition;
     if (fighterDefinition === undefined) {
       throw new Error(`Could not find fighter definition for ${fighter.id}.`);
     }
@@ -1264,7 +1264,7 @@ export class GameEngine {
       throw new Error(`Card ${card.name} is not an upgrade.`);
     }
 
-    const fighterDefinition = player.getFighterDefinition(fighter.id);
+    const fighterDefinition = fighter.definition;
     if (fighterDefinition === undefined) {
       throw new Error(`Could not find fighter definition for ${fighter.id}.`);
     }
@@ -1746,7 +1746,7 @@ export class GameEngine {
           continue;
         }
 
-        const fighterDefinition = player.getFighterDefinition(fighter.id);
+        const fighterDefinition = fighter.definition;
         if (fighterDefinition === undefined) {
           throw new Error(`Fighter ${fighter.id} is missing definition data during cleanup.`);
         }
