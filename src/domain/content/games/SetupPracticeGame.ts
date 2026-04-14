@@ -72,7 +72,7 @@ export function createCombatReadySetupPracticeGame(
   if (territoryChooser === null) {
     throw new Error("Territory chooser not found.");
   }
-  const northTerritory = game.board.getTerritory(northTerritoryId);
+  const northTerritory = game.board.territories.find((t) => t.id === northTerritoryId);
   if (northTerritory === undefined) {
     throw new Error("North territory not found.");
   }

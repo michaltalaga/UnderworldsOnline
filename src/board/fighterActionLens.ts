@@ -661,13 +661,7 @@ export function getChargeOptions(
 }
 
 export function getDefaultSelectableFighterId(game: Game): FighterId | null {
-  const activePlayerId = game.activePlayerId;
-  if (activePlayerId === null) {
-    return null;
-  }
-
-  const activePlayer = game.getPlayer(activePlayerId);
-  return activePlayer?.fighters.find((fighter) => !fighter.isSlain && fighter.currentHex !== null)?.id ?? null;
+  return game.activePlayer?.fighters.find((fighter) => !fighter.isSlain && fighter.currentHex !== null)?.id ?? null;
 }
 
 export function getNextSelectedFighterId(
