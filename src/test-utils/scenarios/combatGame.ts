@@ -42,9 +42,9 @@ export function createGameInPowerStep(firstPlayerId: FirstPlayerId = "player:one
   engine: GameEngine;
 } {
   const { game, engine } = createGameInActionStep(firstPlayerId);
-  const firstPlayer = game.getPlayer(firstPlayerId);
-  if (firstPlayer === undefined) {
-    throw new Error(`First player ${firstPlayerId} not found in the game.`);
+  const firstPlayer = game.activePlayer;
+  if (firstPlayer === null) {
+    throw new Error(`First player ${firstPlayerId} not active.`);
   }
   engine.applyGameAction(game, new PassAction(firstPlayer));
   return { game, engine };
@@ -65,13 +65,9 @@ export function createGameInEndPhase(firstPlayerId: FirstPlayerId = "player:one"
 } {
   const { game, engine } = createGameInActionStep(firstPlayerId);
   for (let i = 0; i < 8; i += 1) {
-    const activePlayerId = game.activePlayerId;
-    if (activePlayerId === null) {
+    const activePlayer = game.activePlayer;
+    if (activePlayer === null) {
       throw new Error("Expected an active player while draining round 1 turns.");
-    }
-    const activePlayer = game.getPlayer(activePlayerId);
-    if (activePlayer === undefined) {
-      throw new Error(`Active player ${activePlayerId} not found in the game.`);
     }
     // Each turn = pass action step + pass power step.
     engine.applyGameAction(game, new PassAction(activePlayer));

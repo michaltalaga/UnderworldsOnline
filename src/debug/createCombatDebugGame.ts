@@ -28,6 +28,7 @@ import {
   createCombatReadySetupPracticeGame,
   type Game,
   type Player,
+  type Fighter,
   type WarscrollAbilityDefinition,
   type WeaponDefinition,
 } from "../domain";
@@ -217,8 +218,8 @@ export function createCombatDebugSnapshot(
   if (playerOneRef === undefined || playerTwoRef === undefined) {
     throw new Error("Could not find both players for combat debug setup.");
   }
-  const debugDefender = game.getFighter(debugDefenderId);
-  const attackerFighter = game.getFighter(playerTwoFighterOneId);
+  const debugDefender = playerOneRef.fighters.find((f) => f.id === debugDefenderId);
+  const attackerFighter = playerTwoRef.fighters.find((f) => f.id === playerTwoFighterOneId);
   if (debugDefender === undefined || attackerFighter === undefined) {
     throw new Error("Could not find debug fighters.");
   }
@@ -273,12 +274,8 @@ export function createCombatDebugSnapshot(
 
   engine.applyGameAction(game, new PassAction(playerOneRef));
 
-  const defender = game.getFighter(debugDefenderId);
-  if (defender === undefined) {
-    throw new Error(`Could not find debug defender ${debugDefenderId}.`);
-  }
-
-  applyDebugDefenderFeatureToken(game, defender.id, defenderState);
+  const defender = debugDefender;
+  applyDebugDefenderFeatureToken(game, defender, defenderState);
   defender.hasGuardToken = defenderState.hasGuardToken ?? false;
   defender.hasStaggerToken = defenderState.hasStaggerToken ?? false;
 
@@ -305,7 +302,7 @@ export function createCombatDebugSnapshot(
     throw new Error(`Could not find debug weapon ${practiceBladeWeaponId}.`);
   }
 
-  const defenderFeatureTokenBeforeAttack = getDefenderFeatureTokenSnapshot(game, defender.id);
+  const defenderFeatureTokenBeforeAttack = getDefenderFeatureTokenSnapshot(game, defender);
   let attackError: string | null = null;
   try {
     engine.applyGameAction(
@@ -412,8 +409,8 @@ export function createDelveDebugSnapshot(): DelveDebugSnapshot {
     "player:one",
   );
   const delvePlayerOne = game.players[0];
-  const delveFighter = game.getFighter(playerOneFighterThreeId);
-  const delveToken = game.board.getFeatureToken("feature:2" as never);
+  const delveFighter = delvePlayerOne?.fighters.find((f) => f.id === playerOneFighterThreeId);
+  const delveToken = game.board.featureTokens.find((t) => t.id === "feature:2");
   if (delvePlayerOne === undefined || delveFighter === undefined || delveToken === undefined) {
     throw new Error("Could not find delve debug refs.");
   }
@@ -588,13 +585,12 @@ function movePowerCardsToDiscard(
 
 function applyDebugDefenderFeatureToken(
   game: Game,
-  defenderId: string,
+  defender: Fighter,
   defenderState: CombatDebugDefenderState,
 ): void {
-  const defender = game.getFighter(defenderId);
-  const defenderHex = defender?.currentHex ?? null;
-  if (defender === undefined || defenderHex === null) {
-    throw new Error(`Could not place debug feature token state for defender ${defenderId}.`);
+  const defenderHex = defender.currentHex;
+  if (defenderHex === null) {
+    throw new Error(`Could not place debug feature token state for defender ${defender.id}.`);
   }
 
   const existingFeatureToken = defenderHex.featureToken;
@@ -610,7 +606,7 @@ function applyDebugDefenderFeatureToken(
     return;
   }
 
-  const debugFeatureToken = game.board.getFeatureToken("feature:1");
+  const debugFeatureToken = game.board.featureTokens.find((t) => t.id === "feature:1");
   if (debugFeatureToken === undefined) {
     throw new Error("Could not find debug feature token feature:1.");
   }
@@ -627,13 +623,12 @@ function applyDebugDefenderFeatureToken(
 }
 
 function getDefenderFeatureTokenSnapshot(
-  game: Game,
-  defenderId: string,
+  _game: Game,
+  defender: Fighter,
 ): CombatDebugFeatureTokenSnapshot {
-  const defender = game.getFighter(defenderId);
-  const fighterHex = defender?.currentHex ?? null;
-  if (defender === undefined || fighterHex === null) {
-    throw new Error(`Could not capture feature token snapshot for defender ${defenderId}.`);
+  const fighterHex = defender.currentHex;
+  if (fighterHex === null) {
+    throw new Error(`Could not capture feature token snapshot for defender ${defender.id}.`);
   }
 
   const featureToken = fighterHex.featureToken;
@@ -723,7 +718,7 @@ function createPloyDebugOption(
   action: PlayPloyAction,
 ): PloyDebugOption {
   const player = game.getPlayer(playerId);
-  const card = player?.getCard(action.card.id);
+  const card = action.card;
   if (player === undefined || card === undefined) {
     throw new Error(`Could not build ploy debug option for card ${action.card.id}.`);
   }
@@ -779,7 +774,7 @@ function createUpgradeDebugOption(
   action: PlayUpgradeAction,
 ): UpgradeDebugOption {
   const player = game.getPlayer(playerId);
-  const card = player?.getCard(action.card.id);
+  const card = action.card;
   const fighterDefinition = action.fighter.definition;
   if (
     player === undefined ||

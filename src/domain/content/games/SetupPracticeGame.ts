@@ -68,9 +68,8 @@ export function createCombatReadySetupPracticeGame(
     new ResolveTerritoryRollOffAction([deterministicFirstPlayerRollOff]),
   );
 
-  const territoryChooserId = requirePlayerId(game.activePlayerId, "territory chooser");
-  const territoryChooser = game.getPlayer(territoryChooserId);
-  if (territoryChooser === undefined) {
+  const territoryChooser = game.activePlayer;
+  if (territoryChooser === null) {
     throw new Error("Territory chooser not found.");
   }
   const northTerritory = game.board.getTerritory(northTerritoryId);
@@ -173,10 +172,3 @@ function getPreferredFeatureTerritories(game: Game): Array<string | null> {
   return [northTerritoryId, southTerritoryId, null];
 }
 
-function requirePlayerId(playerId: string | null, label: string): string {
-  if (playerId === null) {
-    throw new Error(`Expected ${label} id to be available.`);
-  }
-
-  return playerId;
-}

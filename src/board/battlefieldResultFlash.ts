@@ -89,8 +89,7 @@ export function buildBattlefieldResultFlash(
   }
 
   if (action instanceof PlayPloyAction) {
-    const player = action.player;
-    const card = player?.getCard(action.card.id);
+    const card = action.card;
     return {
       id: Date.now(),
       tone: "power",
@@ -100,8 +99,7 @@ export function buildBattlefieldResultFlash(
   }
 
   if (action instanceof PlayUpgradeAction) {
-    const player = action.player;
-    const card = player?.getCard(action.card.id);
+    const card = action.card;
     return {
       id: Date.now(),
       tone: "power",
