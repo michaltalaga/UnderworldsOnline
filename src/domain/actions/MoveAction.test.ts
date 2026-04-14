@@ -42,7 +42,7 @@ describe("MoveAction eligibility", () => {
 
     // Pass burns the action step without using a core ability, but the
     // next step is Power — so MoveAction should also disappear.
-    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new PassAction(game.players[0]));
 
     const movesAfter = getLegalActionsOfType(service, game, "player:one", MoveAction);
     expect(movesAfter).toEqual([]);
@@ -113,7 +113,7 @@ describe("MoveAction resolution", () => {
     const service = new CombatActionService();
     const move = expectFirstLegalActionOfType(service, game, "player:one", MoveAction);
 
-    const illegalMove = new MoveAction(game.getPlayer("player:two")!, move.fighter, move.path);
+    const illegalMove = new MoveAction(game.players[1], move.fighter, move.path);
     expect(() => engine.applyGameAction(game, illegalMove)).toThrow();
   });
 });

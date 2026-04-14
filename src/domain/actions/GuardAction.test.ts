@@ -130,7 +130,7 @@ describe("GuardAction resolution", () => {
     const service = new CombatActionService();
     const guard = expectFirstLegalActionOfType(service, game, "player:one", GuardAction);
 
-    const illegal = new GuardAction(game.getPlayer("player:two")!, guard.fighter);
+    const illegal = new GuardAction(game.players[1], guard.fighter);
     expect(() => engine.applyGameAction(game, illegal)).toThrow();
   });
 });

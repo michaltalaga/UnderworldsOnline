@@ -41,7 +41,7 @@ describe("GameEngine turn-step flow", () => {
     expect(game.turnStep).toBe(TurnStep.Action);
     expect(game.activePlayerId).toBe("player:one");
 
-    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new PassAction(game.players[0]));
 
     expect(game.turnStep).toBe(TurnStep.Power);
     expect(game.activePlayerId).toBe("player:one");
@@ -56,9 +56,9 @@ describe("GameEngine turn-step flow", () => {
     const { game, engine } = createGameInActionStep("player:one");
 
     // action → power for player one
-    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new PassAction(game.players[0]));
     // power → opponent's action
-    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new PassAction(game.players[0]));
 
     expect(game.activePlayerId).toBe("player:two");
     expect(game.turnStep).toBe(TurnStep.Action);
@@ -68,16 +68,16 @@ describe("GameEngine turn-step flow", () => {
     const { game, engine } = createGameInActionStep("player:one");
 
     // Player one: action pass, power pass = 1 turn completed.
-    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
-    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new PassAction(game.players[0]));
+    engine.applyGameAction(game, new PassAction(game.players[0]));
 
-    const playerOne = game.getPlayer("player:one")!;
+    const playerOne = game.players[0];
     expect(playerOne.turnsTakenThisRound).toBe(1);
 
     // Player two: same → 1 turn.
-    engine.applyGameAction(game, new PassAction(game.getPlayer("player:two")!));
-    engine.applyGameAction(game, new PassAction(game.getPlayer("player:two")!));
-    const playerTwo = game.getPlayer("player:two")!;
+    engine.applyGameAction(game, new PassAction(game.players[1]));
+    engine.applyGameAction(game, new PassAction(game.players[1]));
+    const playerTwo = game.players[1];
     expect(playerTwo.turnsTakenThisRound).toBe(1);
   });
 });

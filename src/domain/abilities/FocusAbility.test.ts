@@ -19,7 +19,7 @@ describe("FocusAbility eligibility", () => {
   it("returns exactly one FocusAction in the action step", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new FocusAbility();
-    const player = game.getPlayer("player:one")!;
+    const player = game.players[0];
 
     const actions = ability.getLegalActions(game, player);
     expect(actions).toHaveLength(1);
@@ -30,14 +30,14 @@ describe("FocusAbility eligibility", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new FocusAbility();
 
-    const opponent = game.getPlayer("player:two")!;
+    const opponent = game.players[1];
     expect(ability.getLegalActions(game, opponent)).toEqual([]);
   });
 
   it("returns no actions in the power step", () => {
     const { game } = createGameInPowerStep("player:one");
     const ability = new FocusAbility();
-    const player = game.getPlayer("player:one")!;
+    const player = game.players[0];
 
     expect(ability.getLegalActions(game, player)).toEqual([]);
   });
@@ -48,13 +48,13 @@ describe("FocusAbility.isLegalAction", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new FocusAbility();
 
-    expect(ability.isLegalAction(game, new FocusAction(game.getPlayer("player:one")!))).toBe(true);
+    expect(ability.isLegalAction(game, new FocusAction(game.players[0]))).toBe(true);
   });
 
   it("accepts a FocusAction that references real cards in hand", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new FocusAbility();
-    const player = game.getPlayer("player:one")!;
+    const player = game.players[0];
 
     // Pick one card from each hand if available.
     const objCard = player.objectiveHand[0];
@@ -70,7 +70,7 @@ describe("FocusAbility.isLegalAction", () => {
   it("rejects a FocusAction with duplicate objective ids", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new FocusAbility();
-    const player = game.getPlayer("player:one")!;
+    const player = game.players[0];
 
     const card = player.objectiveHand[0];
     if (card === undefined) return; // vacuous when no cards in hand
@@ -81,9 +81,9 @@ describe("FocusAbility.isLegalAction", () => {
   it("rejects a FocusAction with a card that isn't in the player's hand", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new FocusAbility();
-    const player = game.getPlayer("player:one")!;
+    const player = game.players[0];
     // Construct a card that belongs to a different player — it is not in this player's hand.
-    const strangerPlayer = game.getPlayer("player:two")!;
+    const strangerPlayer = game.players[1];
     const outsideCard = strangerPlayer.objectiveHand[0];
     if (outsideCard === undefined) return;
 
@@ -95,6 +95,6 @@ describe("FocusAbility.isLegalAction", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new FocusAbility();
 
-    expect(ability.isLegalAction(game, new FocusAction(game.getPlayer("player:two")!))).toBe(false);
+    expect(ability.isLegalAction(game, new FocusAction(game.players[1]))).toBe(false);
   });
 });

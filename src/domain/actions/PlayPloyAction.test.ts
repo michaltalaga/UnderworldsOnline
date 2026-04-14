@@ -36,7 +36,7 @@ describe("PlayPloyAction eligibility", () => {
   it("is NOT legal in the action step (even when ploy is in hand)", () => {
     const { game } = createGameInActionStep("player:one");
     const service = new CombatActionService();
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     const ploy = new GiveGuardPloy("ploy-guard-test", owner, CardZone.PowerHand, "99");
     owner.powerHand.push(ploy);
 
@@ -95,7 +95,7 @@ describe("PlayPloyAction resolution", () => {
 
     expect(target.hasGuardToken).toBe(true);
     expect(ploy.zone).toBe(CardZone.PowerDiscard);
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     expect(owner.powerHand.includes(ploy)).toBe(false);
   });
 
@@ -118,7 +118,7 @@ describe("PlayPloyAction resolution", () => {
 
   it("GiveStaggerPloy targets enemy fighters without stagger", () => {
     const { game } = createGameInPowerStep("player:one");
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     const ploy = new GiveStaggerPloy("ploy-stagger-test", owner, CardZone.PowerHand, "99");
     owner.powerHand.push(ploy);
     const service = new CombatActionService();
@@ -139,7 +139,7 @@ describe("PlayPloyAction resolution", () => {
     expect(() =>
       engine.applyGameAction(
         game,
-        new PlayPloyAction(game.getPlayer("player:one")!, "not-a-real-card" as never, null),
+        new PlayPloyAction(game.players[0], "not-a-real-card" as never, null),
       ),
     ).toThrow();
   });

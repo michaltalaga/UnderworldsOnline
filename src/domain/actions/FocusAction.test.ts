@@ -31,7 +31,7 @@ describe("FocusAction eligibility", () => {
     const { game, engine } = createGameInActionStep("player:one");
     const service = new CombatActionService();
 
-    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new PassAction(game.players[0]));
 
     const focusesAfter = getLegalActionsOfType(service, game, "player:one", FocusAction);
     expect(focusesAfter).toEqual([]);

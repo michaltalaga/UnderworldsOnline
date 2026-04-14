@@ -84,7 +84,7 @@ describe("DelveAction eligibility", () => {
       .find((d) => d.fighter.id === setup.fighter.id)!;
     engine.applyGameAction(game, delve);
 
-    expect(game.getPlayer("player:one")!.hasDelvedThisPowerStep).toBe(true);
+    expect(game.players[0].hasDelvedThisPowerStep).toBe(true);
     const delvesAfter = getLegalActionsOfType(service, game, "player:one", DelveAction);
     expect(delvesAfter).toEqual([]);
   });
@@ -150,7 +150,7 @@ describe("DelveAction resolution", () => {
 
   it("rejects delve for the wrong player", () => {
     const { game, engine } = createGameInPowerStep("player:one");
-    const playerTwo = game.getPlayer("player:two")!;
+    const playerTwo = game.players[1];
     const opponentFighter = playerTwo.fighters[0]!;
     const anyToken = game.featureTokens[0]!;
 

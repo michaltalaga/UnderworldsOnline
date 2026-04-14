@@ -51,7 +51,7 @@ describe("AttackAction eligibility", () => {
     // PassAction does NOT count as a core ability — it transitions to
     // the power step, after which all attacks disappear because they
     // require the action step.
-    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new PassAction(game.players[0]));
 
     const attacksAfter = getLegalActionsOfType(
       service,
@@ -87,7 +87,7 @@ describe("AttackAction resolution", () => {
 
     // Same attack but attributed to the non-active player.
     const illegalAttack = new AttackAction(
-      game.getPlayer("player:two")!,
+      game.players[1],
       attacks[0].attacker,
       attacks[0].target,
       attacks[0].weapon,
@@ -170,9 +170,9 @@ describe("AttackAction resolution", () => {
       ),
     );
 
-    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
-    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
-    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.players[0]));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.players[0]));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.players[0]));
 
     const combatRecords = game.getEventHistory(GameRecordKind.Combat);
     expect(combatRecords).toHaveLength(1);

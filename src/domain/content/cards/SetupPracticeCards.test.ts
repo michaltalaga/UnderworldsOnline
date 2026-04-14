@@ -39,7 +39,7 @@ import {
 describe("PracticeObjective01 — objective card exemplar", () => {
   it("returns no legal targets when not in hand", () => {
     const { game } = createGameInActionStep("player:one");
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     // Construct in the deck zone (not the hand) — the objective cannot
     // be scored from there.
     const card = new PracticeObjective01("obj-01-test", owner, CardZone.ObjectiveDeck);
@@ -49,7 +49,7 @@ describe("PracticeObjective01 — objective card exemplar", () => {
 
   it("returns no legal targets during the action step with no preceding combat", () => {
     const { game } = createGameInActionStep("player:one");
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     const card = new PracticeObjective01("obj-01-test", owner, CardZone.ObjectiveHand);
 
     // Precondition is "latest combat event has all successes" — no
@@ -59,7 +59,7 @@ describe("PracticeObjective01 — objective card exemplar", () => {
 
   it("the generic end-phase objective only scores during the end phase", () => {
     const { game } = createGameInActionStep("player:one");
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     const generic = new PracticeObjectiveGeneric("obj-gen", owner, CardZone.ObjectiveHand, "05");
 
     expect(game.phase).toBe("combat");
@@ -70,7 +70,7 @@ describe("PracticeObjective01 — objective card exemplar", () => {
 describe("GiveGuardPloy — ploy card exemplar", () => {
   it("is not playable during the action step (power step only)", () => {
     const { game } = createGameInActionStep("player:one");
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     const ploy = new GiveGuardPloy("ploy-guard", owner, CardZone.PowerHand, "99");
 
     expect(game.turnStep).toBe("action");
@@ -79,10 +79,10 @@ describe("GiveGuardPloy — ploy card exemplar", () => {
 
   it("targets only friendly fighters without a Guard token during the power step", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new PassAction(game.players[0]));
     // Now in the power step.
 
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     const ploy = new GiveGuardPloy("ploy-guard", owner, CardZone.PowerHand, "99");
 
     const targets = ploy.getLegalTargets(game);
@@ -98,9 +98,9 @@ describe("GiveGuardPloy — ploy card exemplar", () => {
 
   it("applies a guard token when played through the engine", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new PassAction(game.players[0]));
 
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     const ploy = new GiveGuardPloy("ploy-guard", owner, CardZone.PowerHand, "99");
     owner.powerHand.push(ploy);
 
@@ -110,7 +110,7 @@ describe("GiveGuardPloy — ploy card exemplar", () => {
 
     engine.applyGameAction(
       game,
-      new PlayPloyAction(game.getPlayer("player:one")!, ploy, targetFighter),
+      new PlayPloyAction(game.players[0], ploy, targetFighter),
     );
 
     expect(targetFighter.hasGuardToken).toBe(true);
@@ -121,9 +121,9 @@ describe("GiveGuardPloy — ploy card exemplar", () => {
 
   it("GiveStaggerPloy targets enemy fighters without stagger", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new PassAction(game.players[0]));
 
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     const ploy = new GiveStaggerPloy("ploy-stagger", owner, CardZone.PowerHand, "99");
 
     const targets = ploy.getLegalTargets(game);
@@ -139,7 +139,7 @@ describe("GiveGuardPloy — ploy card exemplar", () => {
 describe("PracticeUpgrade — upgrade card exemplar", () => {
   it("has no passive effects by default (base-class hooks return neutrals)", () => {
     const { game } = createGameInActionStep("player:one");
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     const upgrade = new PracticeUpgrade("upg-01", owner, CardZone.PowerHand, "01");
 
     expect(upgrade.getMovementBonus()).toBe(0);
@@ -153,7 +153,7 @@ describe("PracticeUpgrade — upgrade card exemplar", () => {
 
   it("is not playable during the action step (power step only)", () => {
     const { game } = createGameInActionStep("player:one");
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     const upgrade = new PracticeUpgrade("upg-01", owner, CardZone.PowerHand, "01");
 
     expect(game.turnStep).toBe("action");
@@ -162,9 +162,9 @@ describe("PracticeUpgrade — upgrade card exemplar", () => {
 
   it("is not playable while the owner lacks enough glory", () => {
     const { game, engine } = createGameInActionStep("player:one");
-    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new PassAction(game.players[0]));
 
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     owner.glory = 0;
     const upgrade = new PracticeUpgrade("upg-01", owner, CardZone.PowerHand, "01");
 
@@ -184,7 +184,7 @@ describe("PracticeUpgrade — upgrade card exemplar", () => {
 
   it("inherits from PloyCard/UpgradeCard base classes (structure check)", () => {
     const { game } = createGameInActionStep("player:one");
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     const ploy = new GiveGuardPloy("p", owner, CardZone.PowerHand, "01");
     const upgrade = new PracticeUpgrade("u", owner, CardZone.PowerHand, "01");
 

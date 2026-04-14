@@ -37,7 +37,7 @@ describe("PlayUpgradeAction eligibility", () => {
   it("is NOT legal in the action step", () => {
     const { game } = createGameInActionStep("player:one");
     const service = new CombatActionService();
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     owner.glory = 5;
     const upgrade = new PracticeUpgrade("upg-test", owner, CardZone.PowerHand, "01");
     owner.powerHand.push(upgrade);
@@ -63,7 +63,7 @@ describe("PlayUpgradeAction eligibility", () => {
 
   it("is NOT legal with insufficient glory", () => {
     const { game } = createGameInPowerStep("player:one");
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     owner.glory = 0;
     const upgrade = new PracticeUpgrade("upg-test-broke", owner, CardZone.PowerHand, "01");
     owner.powerHand.push(upgrade);
@@ -84,14 +84,14 @@ describe("PlayUpgradeAction resolution", () => {
     const play = getLegalActionsOfType(service, game, "player:one", PlayUpgradeAction)
       .filter((p) => p.card === upgrade)[0];
     const fighterBefore = game.getFighter(play.fighter.id)!;
-    const gloryBefore = game.getPlayer("player:one")!.glory;
+    const gloryBefore = game.players[0].glory;
 
     engine.applyGameAction(game, play);
 
     expect(upgrade.zone).toBe(CardZone.Equipped);
     expect(upgrade.attachedToFighter).toBe(fighterBefore);
 
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     expect(owner.equippedUpgrades.includes(upgrade)).toBe(true);
     expect(owner.powerHand.includes(upgrade)).toBe(false);
     expect(owner.glory).toBe(gloryBefore - upgrade.gloryValue);
@@ -116,7 +116,7 @@ describe("PlayUpgradeAction resolution", () => {
 
   it("rejects playing an upgrade the player doesn't hold", () => {
     const { game, engine } = createGameInPowerStep("player:one");
-    const owner = game.getPlayer("player:one")!;
+    const owner = game.players[0];
     const fighter = owner.fighters[0]!;
     // Construct a fake card that the player doesn't hold.
     const fakeCard = {

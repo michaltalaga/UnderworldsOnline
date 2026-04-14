@@ -23,7 +23,7 @@ describe("MoveAbility eligibility", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new MoveAbility();
 
-    const opponent = game.getPlayer("player:two")!;
+    const opponent = game.players[1];
     const actions = ability.getLegalActions(game, opponent);
     expect(actions).toEqual([]);
   });
@@ -31,7 +31,7 @@ describe("MoveAbility eligibility", () => {
   it("returns at least one move per eligible fighter", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new MoveAbility();
-    const player = game.getPlayer("player:one")!;
+    const player = game.players[0];
 
     const actions = ability.getLegalActions(game, player) as MoveAction[];
     expect(actions.length).toBeGreaterThan(0);
@@ -51,7 +51,7 @@ describe("MoveAbility eligibility", () => {
   it("every returned path is a sequence of adjacent traversable hexes", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new MoveAbility();
-    const player = game.getPlayer("player:one")!;
+    const player = game.players[0];
 
     const actions = ability.getLegalActions(game, player) as MoveAction[];
     for (const action of actions) {
@@ -69,7 +69,7 @@ describe("MoveAbility eligibility", () => {
   it("produces no moves after a fighter gains a move token", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new MoveAbility();
-    const player = game.getPlayer("player:one")!;
+    const player = game.players[0];
 
     const fighter = player.fighters.find(
       (f) => !f.isSlain && f.currentHex !== null,
@@ -120,7 +120,7 @@ describe("MoveAbility.isLegalAction", () => {
     const ability = new MoveAbility();
 
     const move = expectFirstLegalActionOfType(service, game, "player:one", MoveAction);
-    const wrongPlayerMove = new MoveAction(game.getPlayer("player:two")!, move.fighter, move.path);
+    const wrongPlayerMove = new MoveAction(game.players[1], move.fighter, move.path);
     expect(ability.isLegalAction(game, wrongPlayerMove)).toBe(false);
   });
 });
@@ -138,7 +138,7 @@ describe("MoveAbility integration with CombatActionService", () => {
     expect(guard).toBeDefined();
     engine.applyGameAction(game, guard!);
 
-    const player = game.getPlayer("player:one")!;
+    const player = game.players[0];
     // Provider gating (via service) returns no MoveActions; ability
     // itself is still called and returns moves only for fighters with
     // no move/charge token. So we assert via the service:

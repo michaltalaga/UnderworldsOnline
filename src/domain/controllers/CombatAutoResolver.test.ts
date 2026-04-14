@@ -151,9 +151,9 @@ describe("CombatAutoResolver.drainAll", () => {
       "player:one",
     );
 
-    const turnsBefore = game.getPlayer("player:one")!.turnsTakenThisRound;
+    const turnsBefore = game.players[0].turnsTakenThisRound;
     resolver.drainAll(game);
-    const turnsAfter = game.getPlayer("player:one")!.turnsTakenThisRound;
+    const turnsAfter = game.players[0].turnsTakenThisRound;
 
     // No progress was made — local player holds the turn.
     expect(turnsAfter).toBe(turnsBefore);
@@ -172,7 +172,7 @@ describe("DumbAiController", () => {
     const ai = new DumbAiController();
 
     // Any single-element list — the AI should echo it back.
-    const pass = new PassAction(game.getPlayer("player:one")!);
+    const pass = new PassAction(game.players[0]);
     expect(ai.chooseAction(game, [pass])).toBe(pass);
   });
 });

@@ -23,7 +23,7 @@ describe("ChargeAbility eligibility", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new ChargeAbility();
 
-    const opponent = game.getPlayer("player:two")!;
+    const opponent = game.players[1];
     const actions = ability.getLegalActions(game, opponent);
     expect(actions).toEqual([]);
   });
@@ -31,7 +31,7 @@ describe("ChargeAbility eligibility", () => {
   it("every returned charge ends within weapon range of its target", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new ChargeAbility();
-    const player = game.getPlayer("player:one")!;
+    const player = game.players[0];
 
     const actions = ability.getLegalActions(game, player) as ChargeAction[];
     expect(actions.length).toBeGreaterThan(0);
@@ -49,7 +49,7 @@ describe("ChargeAbility eligibility", () => {
   it("generates weapon-ability variants (selectedAbility per weapon ability)", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new ChargeAbility();
-    const player = game.getPlayer("player:one")!;
+    const player = game.players[0];
 
     const actions = ability.getLegalActions(game, player) as ChargeAction[];
 
@@ -81,7 +81,7 @@ describe("ChargeAbility.isLegalAction", () => {
 
     const charge = expectFirstLegalActionOfType(service, game, "player:one", ChargeAction);
     const illegal = new ChargeAction(
-      game.getPlayer("player:two")!,
+      game.players[1],
       charge.fighter,
       charge.path,
       charge.target,

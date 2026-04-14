@@ -155,9 +155,9 @@ describe("ChargeAction resolution", () => {
     );
 
     // Three confirm actions: attack-rolled → save-rolled → resolved → apply.
-    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
-    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
-    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.players[0]));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.players[0]));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.players[0]));
 
     const combatRecords = game.getEventHistory(GameRecordKind.Combat);
     expect(combatRecords).toHaveLength(1);
@@ -175,7 +175,7 @@ describe("ChargeAction resolution", () => {
 
     // Same charge params, but attributed to the non-active player.
     const illegalCharge = new ChargeAction(
-      game.getPlayer("player:two")!,
+      game.players[1],
       charge.fighter,
       charge.path,
       charge.target,
@@ -203,9 +203,9 @@ describe("ChargeAction resolution", () => {
         null,
       ),
     );
-    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
-    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
-    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.players[0]));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.players[0]));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.players[0]));
 
     const fighter = game.getFighter(charge.fighter.id);
     expect(fighter?.hasChargeToken).toBe(true);

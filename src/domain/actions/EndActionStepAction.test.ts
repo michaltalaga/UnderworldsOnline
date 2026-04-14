@@ -137,7 +137,7 @@ describe("EndActionStepAction resolution", () => {
     engine.applyGameAction(game, guard);
 
     expect(() =>
-      engine.applyGameAction(game, new EndActionStepAction(game.getPlayer("player:two")!)),
+      engine.applyGameAction(game, new EndActionStepAction(game.players[1])),
     ).toThrow();
   });
 });

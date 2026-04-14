@@ -33,7 +33,7 @@ describe("AttackAbility eligibility", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new AttackAbility();
 
-    const opponent = game.getPlayer("player:two")!;
+    const opponent = game.players[1];
     const actions = ability.getLegalActions(game, opponent);
     expect(actions).toEqual([]);
   });
@@ -52,7 +52,7 @@ describe("AttackAbility eligibility", () => {
 
     const legalAttack = legal[0];
     const illegalAttack = new AttackAction(
-      game.getPlayer("player:two")!,
+      game.players[1],
       legalAttack.attacker,
       legalAttack.target,
       legalAttack.weapon,
@@ -146,7 +146,7 @@ describe("AttackAbility integration with CombatActionService", () => {
 
     // Use Pass as a neutral way to burn the action step, then verify the
     // aggregate service no longer surfaces AttackActions for player one.
-    engine.applyGameAction(game, new PassAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new PassAction(game.players[0]));
 
     const attacks = getLegalActionsOfType(service, game, "player:one", AttackAction);
     expect(attacks).toEqual([]);

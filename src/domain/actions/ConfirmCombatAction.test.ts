@@ -103,17 +103,17 @@ describe("ConfirmCombatAction resolution sequence", () => {
     expect(findLatestEvent(game, SaveDiceRolledEvent)).toBeNull();
 
     // Phase 2: first confirm emits SaveDiceRolledEvent.
-    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.players[0]));
     expect(findLatestEvent(game, SaveDiceRolledEvent)).not.toBeNull();
     expect(findLatestEvent(game, CombatResolvedEvent)).toBeNull();
 
     // Phase 3: second confirm emits CombatResolvedEvent.
-    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.players[0]));
     expect(findLatestEvent(game, CombatResolvedEvent)).not.toBeNull();
 
     // Phase 4 (apply damage + end combat): third confirm closes the combat.
     expect(getActiveCombatState(game)).not.toBeNull();
-    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.players[0]));
     expect(getActiveCombatState(game)).toBeNull();
   });
 
@@ -135,9 +135,9 @@ describe("ConfirmCombatAction resolution sequence", () => {
         null,
       ),
     );
-    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
-    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
-    engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.players[0]));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.players[0]));
+    engine.applyGameAction(game, new ConfirmCombatAction(game.players[0]));
 
     expect(game.getEventHistory(GameRecordKind.Combat)).toHaveLength(1);
   });
@@ -146,7 +146,7 @@ describe("ConfirmCombatAction resolution sequence", () => {
     const { game, engine } = createGameInActionStep("player:one");
 
     expect(() =>
-      engine.applyGameAction(game, new ConfirmCombatAction(game.getPlayer("player:one")!)),
+      engine.applyGameAction(game, new ConfirmCombatAction(game.players[0])),
     ).toThrow();
   });
 });

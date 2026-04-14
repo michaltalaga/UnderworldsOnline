@@ -22,7 +22,7 @@ import {
 describe("UseWarscrollAbilityAction eligibility", () => {
   it("is NOT legal in the action step", () => {
     const { game } = createGameInActionStep("player:one");
-    game.getPlayer("player:one")!.warscrollState.tokens = { signal: 5 };
+    game.players[0].warscrollState.tokens = { signal: 5 };
     const service = new CombatActionService();
 
     const uses = getLegalActionsOfType(
@@ -36,7 +36,7 @@ describe("UseWarscrollAbilityAction eligibility", () => {
 
   it("is legal in the power step when the player has the required tokens", () => {
     const { game } = createGameInPowerStep("player:one");
-    game.getPlayer("player:one")!.warscrollState.tokens = { signal: 5 };
+    game.players[0].warscrollState.tokens = { signal: 5 };
     const service = new CombatActionService();
 
     const uses = getLegalActionsOfType(
@@ -54,7 +54,7 @@ describe("UseWarscrollAbilityAction eligibility", () => {
 
   it("is NOT legal when tokens are insufficient", () => {
     const { game } = createGameInPowerStep("player:one");
-    game.getPlayer("player:one")!.warscrollState.tokens = { signal: 0 };
+    game.players[0].warscrollState.tokens = { signal: 0 };
     const service = new CombatActionService();
 
     const uses = getLegalActionsOfType(
@@ -68,7 +68,7 @@ describe("UseWarscrollAbilityAction eligibility", () => {
 
   it("is NOT legal for the inactive player", () => {
     const { game } = createGameInPowerStep("player:one");
-    game.getPlayer("player:two")!.warscrollState.tokens = { signal: 5 };
+    game.players[1].warscrollState.tokens = { signal: 5 };
     const service = new CombatActionService();
 
     const uses = getLegalActionsOfType(
@@ -84,7 +84,7 @@ describe("UseWarscrollAbilityAction eligibility", () => {
 describe("UseWarscrollAbilityAction resolution", () => {
   it("consumes the correct number of tokens and records a WarscrollAbility resolution", () => {
     const { game, engine } = createGameInPowerStep("player:one");
-    const player = game.getPlayer("player:one")!;
+    const player = game.players[0];
     player.warscrollState.tokens = { signal: 3 };
     const service = new CombatActionService();
 
@@ -116,7 +116,7 @@ describe("UseWarscrollAbilityAction resolution", () => {
 
   it("emits WarscrollAbilityUsedEvent", () => {
     const { game, engine } = createGameInPowerStep("player:one");
-    const player = game.getPlayer("player:one")!;
+    const player = game.players[0];
     player.warscrollState.tokens = { signal: 3 };
     const service = new CombatActionService();
 
@@ -138,10 +138,10 @@ describe("UseWarscrollAbilityAction resolution", () => {
 
   it("rejects a use from the wrong player", () => {
     const { game, engine } = createGameInPowerStep("player:one");
-    game.getPlayer("player:one")!.warscrollState.tokens = { signal: 1 };
+    game.players[0].warscrollState.tokens = { signal: 1 };
 
     expect(() =>
-      engine.applyGameAction(game, new UseWarscrollAbilityAction(game.getPlayer("player:two")!, 0)),
+      engine.applyGameAction(game, new UseWarscrollAbilityAction(game.players[1], 0)),
     ).toThrow();
   });
 });

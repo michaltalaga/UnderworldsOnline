@@ -19,7 +19,7 @@ describe("GuardAbility eligibility", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new GuardAbility();
 
-    const opponent = game.getPlayer("player:two")!;
+    const opponent = game.players[1];
     const actions = ability.getLegalActions(game, opponent);
     expect(actions).toEqual([]);
   });
@@ -27,7 +27,7 @@ describe("GuardAbility eligibility", () => {
   it("returns one GuardAction per eligible friendly fighter", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new GuardAbility();
-    const player = game.getPlayer("player:one")!;
+    const player = game.players[0];
 
     const actions = ability.getLegalActions(game, player) as GuardAction[];
     const fighterIds = actions.map((a) => a.fighter.id);
@@ -49,7 +49,7 @@ describe("GuardAbility eligibility", () => {
   it("skips fighters that already have a guard token", () => {
     const { game } = createGameInActionStep("player:one");
     const ability = new GuardAbility();
-    const player = game.getPlayer("player:one")!;
+    const player = game.players[0];
     const fighter = player.fighters.find(
       (f) => !f.isSlain && f.currentHex !== null,
     )!;
@@ -86,7 +86,7 @@ describe("GuardAbility.isLegalAction", () => {
     const ability = new GuardAbility();
 
     const guard = expectFirstLegalActionOfType(service, game, "player:one", GuardAction);
-    const illegal = new GuardAction(game.getPlayer("player:two")!, guard.fighter);
+    const illegal = new GuardAction(game.players[1], guard.fighter);
     expect(ability.isLegalAction(game, illegal)).toBe(false);
   });
 });
