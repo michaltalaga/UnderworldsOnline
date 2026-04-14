@@ -89,8 +89,7 @@ describe("GameEngine round-end → end-phase entry", () => {
     // A round requires each player to take 4 turns (8 total,
     // alternating).  One turn = pass-action + pass-power.
     for (let t = 0; t < 8; t += 1) {
-      const activeId = game.activePlayerId!;
-      const active = game.getPlayer(activeId)!;
+      const active = game.activePlayer!;
       engine.applyGameAction(game, new PassAction(active));
       engine.applyGameAction(game, new PassAction(active));
     }
@@ -113,8 +112,7 @@ describe("GameEngine round-2 setup after cleanup", () => {
 
     // Drain round 1 into the end phase.
     for (let t = 0; t < 8; t += 1) {
-      const activeId = game.activePlayerId!;
-      const active = game.getPlayer(activeId)!;
+      const active = game.activePlayer!;
       engine.applyGameAction(game, new PassAction(active));
       engine.applyGameAction(game, new PassAction(active));
     }
@@ -142,8 +140,7 @@ describe("GameEngine round-2 setup after cleanup", () => {
 
     // Drive round 1 to completion.
     for (let t = 0; t < 8; t += 1) {
-      const activeId = game.activePlayerId!;
-      const active = game.getPlayer(activeId)!;
+      const active = game.activePlayer!;
       engine.applyGameAction(game, new PassAction(active));
       engine.applyGameAction(game, new PassAction(active));
     }
