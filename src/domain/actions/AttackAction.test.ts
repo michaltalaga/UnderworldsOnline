@@ -71,7 +71,7 @@ describe("AttackAction eligibility", () => {
     // below is vacuous — still verify the shape of any that exist.
     for (const attack of attacks) {
       expect(attack.player.id).toBe("player:one");
-      const target = game.getFighter(attack.target.id)!;
+      const target = attack.target;
       expect(target.isSlain).toBe(false);
       expect(target.owner.id).toBe("player:two");
     }
@@ -180,7 +180,7 @@ describe("AttackAction resolution", () => {
     const resolved = findEvents(game, CombatResolvedEvent);
     expect(resolved).toHaveLength(1);
 
-    const target = game.getFighter(template.target.id)!;
+    const target = template.target;
     expect(target.damage).toBe(0);
     expect(target.isSlain).toBe(false);
   });

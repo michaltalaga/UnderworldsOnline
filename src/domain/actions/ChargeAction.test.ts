@@ -98,7 +98,7 @@ describe("ChargeAction resolution", () => {
     engine.applyGameAction(game, deterministicCharge);
 
     // Fighter moved to the charge destination.
-    const fighter = game.getFighter(charge.fighter.id);
+    const fighter = charge.fighter;
     expect(fighter?.currentHex?.id).toBe(destinationHexId);
     expect(fighter?.hasChargeToken).toBe(true);
 
@@ -163,7 +163,7 @@ describe("ChargeAction resolution", () => {
     expect(combatRecords).toHaveLength(1);
 
     // With a guaranteed miss, the target should be undamaged.
-    const target = game.getFighter(charge.target.id);
+    const target = charge.target;
     expect(target?.damage).toBe(0);
     expect(target?.isSlain).toBe(false);
   });
@@ -207,7 +207,7 @@ describe("ChargeAction resolution", () => {
     engine.applyGameAction(game, new ConfirmCombatAction(game.players[0]));
     engine.applyGameAction(game, new ConfirmCombatAction(game.players[0]));
 
-    const fighter = game.getFighter(charge.fighter.id);
+    const fighter = charge.fighter;
     expect(fighter?.hasChargeToken).toBe(true);
 
     // Charge uses up the action step — pass should NOT be legal here; the

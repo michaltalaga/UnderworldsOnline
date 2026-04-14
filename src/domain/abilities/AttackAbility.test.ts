@@ -70,7 +70,7 @@ describe("AttackAbility eligibility", () => {
     if (legal.length === 0) return;
 
     const attack = legal[0];
-    const target = game.getFighter(attack.target.id)!;
+    const target = attack.target;
     target.isSlain = true;
 
     expect(ability.isLegalAction(game, attack)).toBe(false);
@@ -119,7 +119,7 @@ describe("AttackAbility fighter checks", () => {
       ),
     );
 
-    const attacker = game.getFighter(charge.fighter.id)!;
+    const attacker = charge.fighter;
     expect(attacker.hasChargeToken).toBe(true);
     expect(canFighterAttack(attacker)).toBe(false);
   });
@@ -131,7 +131,7 @@ describe("AttackAbility fighter checks", () => {
     const guard = expectFirstLegalActionOfType(service, game, "player:one", GuardAction);
     engine.applyGameAction(game, guard);
 
-    const fighter = game.getFighter(guard.fighter.id)!;
+    const fighter = guard.fighter;
     expect(fighter.hasGuardToken).toBe(true);
     // Guard doesn't give a charge token, so attacking is still mechanically
     // allowed (even though the action step was consumed at a higher level).

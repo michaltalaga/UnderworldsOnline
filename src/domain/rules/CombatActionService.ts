@@ -114,7 +114,7 @@ export class CombatActionService extends LegalActionService {
       return false;
     }
 
-    const player = game.getPlayer(action.player.id);
+    const player = action.player;
     if (player === undefined || player.hasDelvedThisPowerStep) {
       return false;
     }
@@ -142,7 +142,7 @@ export class CombatActionService extends LegalActionService {
       return false;
     }
 
-    const player = game.getPlayer(action.player.id);
+    const player = action.player;
     if (player === undefined) return false;
 
     const card = player.getCard(action.card.id);
@@ -156,7 +156,7 @@ export class CombatActionService extends LegalActionService {
   }
 
   public isLegalPlayPloyAction(game: Game, action: PlayPloyAction): boolean {
-    const player = game.getPlayer(action.player.id);
+    const player = action.player;
     if (player === undefined) return false;
 
     const card = player.getCard(action.card.id);
@@ -176,7 +176,7 @@ export class CombatActionService extends LegalActionService {
       return false;
     }
 
-    const player = game.getPlayer(action.player.id);
+    const player = action.player;
     const warscrollDefinition = player?.getWarscrollDefinition();
     const ability = warscrollDefinition?.getAbility(action.abilityIndex);
     if (player === undefined || warscrollDefinition === undefined || ability === undefined) {

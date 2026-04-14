@@ -39,7 +39,7 @@ describe("ChargeAbility eligibility", () => {
     for (const action of actions) {
       const destHexId = action.path[action.path.length - 1];
       const destHex = game.getHex(destHexId)!;
-      const target = game.getFighter(action.target.id)!;
+      const target = action.target;
       const targetHex = game.getFighterHex(target)!;
       const weapon = player.getFighterWeaponDefinition(action.fighter.id, action.weapon.id)!;
       expect(game.getDistance(destHex, targetHex)).toBeLessThanOrEqual(weapon.range);
@@ -96,7 +96,7 @@ describe("ChargeAbility.isLegalAction", () => {
     const ability = new ChargeAbility();
 
     const charge = expectFirstLegalActionOfType(service, game, "player:one", ChargeAction);
-    const target = game.getFighter(charge.target.id)!;
+    const target = charge.target;
     target.isSlain = true;
     expect(ability.isLegalAction(game, charge)).toBe(false);
   });

@@ -76,7 +76,7 @@ describe("GuardAbility.isLegalAction", () => {
     const ability = new GuardAbility();
 
     const guard = expectFirstLegalActionOfType(service, game, "player:one", GuardAction);
-    game.getFighter(guard.fighter.id)!.hasGuardToken = true;
+    guard.fighter.hasGuardToken = true;
     expect(ability.isLegalAction(game, guard)).toBe(false);
   });
 

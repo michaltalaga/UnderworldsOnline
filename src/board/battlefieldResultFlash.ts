@@ -89,7 +89,7 @@ export function buildBattlefieldResultFlash(
   }
 
   if (action instanceof PlayPloyAction) {
-    const player = game.getPlayer(action.player.id);
+    const player = action.player;
     const card = player?.getCard(action.card.id);
     return {
       id: Date.now(),
@@ -100,7 +100,7 @@ export function buildBattlefieldResultFlash(
   }
 
   if (action instanceof PlayUpgradeAction) {
-    const player = game.getPlayer(action.player.id);
+    const player = action.player;
     const card = player?.getCard(action.card.id);
     return {
       id: Date.now(),
@@ -111,7 +111,7 @@ export function buildBattlefieldResultFlash(
   }
 
   if (action instanceof UseWarscrollAbilityAction) {
-    const player = game.getPlayer(action.player.id);
+    const player = action.player;
     const ability = player?.getWarscrollDefinition()?.getAbility(action.abilityIndex);
     return {
       id: Date.now(),

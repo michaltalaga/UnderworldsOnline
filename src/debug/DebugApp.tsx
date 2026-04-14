@@ -1380,7 +1380,7 @@ function formatLatestUpgradeResult(
     return upgradeDebugSnapshot.upgradeActionError;
   }
 
-  const playerOne = upgradeDebugSnapshot.game.getPlayer(resolution.playerId);
+  const playerOne = upgradeDebugSnapshot.game.players.find((p) => p.id === resolution.playerId);
   const fighter = playerOne?.getFighter(resolution.fighterId);
   const attachedCount = fighter?.upgrades.length ?? 0;
   return `Glory ${upgradeDebugSnapshot.gloryBeforeUpgrades} to ${upgradeDebugSnapshot.gloryAfterUpgrades}. ${resolution.fighterName} now has ${attachedCount} attached upgrade${attachedCount === 1 ? "" : "s"}.`;

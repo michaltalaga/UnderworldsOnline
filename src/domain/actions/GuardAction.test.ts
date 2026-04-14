@@ -29,7 +29,7 @@ describe("GuardAction eligibility", () => {
     expect(guards.length).toBeGreaterThan(0);
     for (const guard of guards) {
       expect(guard.player.id).toBe("player:one");
-      const fighter = game.getFighter(guard.fighter.id)!;
+      const fighter = guard.fighter;
       expect(fighter.hasGuardToken).toBe(false);
     }
   });
@@ -61,7 +61,7 @@ describe("GuardAction eligibility", () => {
 
     // Manually set the guard token on the first eligible fighter and
     // re-query: the guard for that fighter should have dropped.
-    game.getFighter(first.fighter.id)!.hasGuardToken = true;
+    first.fighter.hasGuardToken = true;
 
     const afterIds = getLegalActionsOfType(
       service,
@@ -86,7 +86,7 @@ describe("GuardAction resolution", () => {
 
     engine.applyGameAction(game, guard);
 
-    const fighter = game.getFighter(guard.fighter.id)!;
+    const fighter = guard.fighter;
     expect(fighter.hasGuardToken).toBe(true);
 
     const guarded = findLatestEvent(game, FighterGuardedEvent);

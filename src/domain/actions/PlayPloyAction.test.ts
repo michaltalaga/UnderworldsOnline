@@ -56,7 +56,7 @@ describe("PlayPloyAction eligibility", () => {
     // Every play of GiveGuardPloy targets a friendly fighter by id.
     for (const play of playsForPloy) {
       expect(play.targetFighter?.id).not.toBeNull();
-      const fighter = game.getFighter(play.targetFighter?.id!);
+      const fighter = play.targetFighter;
       expect(fighter?.owner.id).toBe("player:one");
     }
   });
@@ -88,7 +88,7 @@ describe("PlayPloyAction resolution", () => {
     expect(plays.length).toBeGreaterThan(0);
 
     const play = plays[0];
-    const target = game.getFighter(play.targetFighter?.id!)!;
+    const target = play.targetFighter!;
     expect(target.hasGuardToken).toBe(false);
 
     engine.applyGameAction(game, play);
@@ -127,7 +127,7 @@ describe("PlayPloyAction resolution", () => {
       .filter((p) => p.card === ploy);
     expect(plays.length).toBeGreaterThan(0);
     for (const play of plays) {
-      const target = game.getFighter(play.targetFighter?.id!);
+      const target = play.targetFighter;
       expect(target?.owner.id).toBe("player:two");
       expect(target?.hasStaggerToken).toBe(false);
     }

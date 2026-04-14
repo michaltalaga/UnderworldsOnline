@@ -212,8 +212,8 @@ export function createCombatDebugSnapshot(
     "player:one",
   );
 
-  const playerOneRef = game.getPlayer("player:one");
-  const playerTwoRef = game.getPlayer("player:two");
+  const playerOneRef = game.players[0];
+  const playerTwoRef = game.players[1];
   if (playerOneRef === undefined || playerTwoRef === undefined) {
     throw new Error("Could not find both players for combat debug setup.");
   }
@@ -236,7 +236,7 @@ export function createCombatDebugSnapshot(
   engine.applyGameAction(game, new PassAction(playerTwoRef));
 
   engine.applyGameAction(game, new PassAction(playerOneRef));
-  const warscrollPlayer = game.getPlayer("player:one");
+  const warscrollPlayer = game.players[0];
   const playerWarscroll = warscrollPlayer?.getWarscrollWithDefinition();
   if (warscrollPlayer === undefined || playerWarscroll === undefined) {
     throw new Error("Could not find player one's warscroll state for debug setup.");
@@ -299,7 +299,7 @@ export function createCombatDebugSnapshot(
     game.eventLog.push(`Debug setup applied defender tokens: ${defenderEffects.join(", ")}.`);
   }
 
-  const attackerPlayer = game.getPlayer("player:two");
+  const attackerPlayer = game.players[1];
   const attackerWeapon = attackerPlayer?.getFighterWeaponDefinition(playerTwoFighterOneId, practiceBladeWeaponId);
   if (attackerWeapon === undefined) {
     throw new Error(`Could not find debug weapon ${practiceBladeWeaponId}.`);
@@ -351,7 +351,7 @@ export function createEndPhaseDebugSnapshot(
       : "game:setup-practice:end-phase-debug";
   const game = createCombatReadySetupPracticeGame(gameId);
   const engine = new GameEngine();
-  const playerOne = game.getPlayer("player:one");
+  const playerOne = game.players[0];
 
   if (playerOne === undefined) {
     throw new Error("Could not find player one for end-phase debug setup.");
@@ -411,7 +411,7 @@ export function createDelveDebugSnapshot(): DelveDebugSnapshot {
     [deterministicFirstPlayerRollOff],
     "player:one",
   );
-  const delvePlayerOne = game.getPlayer("player:one");
+  const delvePlayerOne = game.players[0];
   const delveFighter = game.getFighter(playerOneFighterThreeId);
   const delveToken = game.board.getFeatureToken("feature:2" as never);
   if (delvePlayerOne === undefined || delveFighter === undefined || delveToken === undefined) {
@@ -441,8 +441,8 @@ export function createPloyDebugSnapshot(
     [deterministicFirstPlayerRollOff],
     "player:one",
   );
-  const playerOne = game.getPlayer("player:one");
-  const playerTwo = game.getPlayer("player:two");
+  const playerOne = game.players[0];
+  const playerTwo = game.players[1];
   if (playerOne === undefined || playerTwo === undefined) {
     throw new Error("Could not find both players for ploy debug setup.");
   }
@@ -518,7 +518,7 @@ export function createUpgradeDebugSnapshot(
     [deterministicFirstPlayerRollOff],
     "player:one",
   );
-  const playerOne = game.getPlayer("player:one");
+  const playerOne = game.players[0];
   if (playerOne === undefined) {
     throw new Error("Could not find Player One for upgrade debug setup.");
   }

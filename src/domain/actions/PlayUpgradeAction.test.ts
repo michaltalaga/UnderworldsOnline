@@ -55,7 +55,7 @@ describe("PlayUpgradeAction eligibility", () => {
       .filter((p) => p.card === upgrade);
     expect(plays.length).toBeGreaterThan(0);
     for (const play of plays) {
-      const fighter = game.getFighter(play.fighter.id);
+      const fighter = play.fighter;
       expect(fighter?.owner.id).toBe("player:one");
       expect(fighter?.isSlain).toBe(false);
     }
@@ -83,7 +83,7 @@ describe("PlayUpgradeAction resolution", () => {
 
     const play = getLegalActionsOfType(service, game, "player:one", PlayUpgradeAction)
       .filter((p) => p.card === upgrade)[0];
-    const fighterBefore = game.getFighter(play.fighter.id)!;
+    const fighterBefore = play.fighter;
     const gloryBefore = game.players[0].glory;
 
     engine.applyGameAction(game, play);

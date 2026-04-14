@@ -64,11 +64,11 @@ describe("MoveAction resolution", () => {
 
     const move = expectFirstLegalActionOfType(service, game, "player:one", MoveAction);
     const destinationHexId = move.path[move.path.length - 1];
-    const fromHexId = game.getFighter(move.fighter.id)!.currentHex?.id ?? null;
+    const fromHexId = move.fighter.currentHex?.id ?? null;
 
     engine.applyGameAction(game, move);
 
-    const fighter = game.getFighter(move.fighter.id);
+    const fighter = move.fighter;
     expect(fighter?.currentHex?.id).toBe(destinationHexId);
     expect(fighter?.hasMoveToken).toBe(true);
 
