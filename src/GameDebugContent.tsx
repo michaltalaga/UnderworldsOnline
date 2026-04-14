@@ -318,9 +318,9 @@ export default function GameDebugContent({
                     {formatFeatureTokenSide(featureToken.side)}
                   </span>
                 </div>
-                <p className="text-[#645345]">Hex: {featureToken.hexId}</p>
+                <p className="text-[#645345]">Hex: {featureToken.hex.id}</p>
                 <p className="text-[#645345]">
-                  Holder: {featureToken.heldByFighterId === null ? "none" : getFighterName(game, featureToken.heldByFighterId)}
+                  Holder: {featureToken.heldByFighter === null ? "none" : getFighterName(game, featureToken.heldByFighter.id)}
                 </p>
               </article>
               );

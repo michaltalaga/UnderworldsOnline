@@ -130,10 +130,7 @@ export function useGameEngine({ warband, deck = null }: UseGameEngineOptions) {
       ? null
       : activePlayer.getFighter(selectedFighterId) ?? null;
   const selectedFighterHex = selectedFighter?.currentHex ?? null;
-  const selectedFeatureToken =
-    selectedFighterHex?.featureTokenId === null || selectedFighterHex?.featureTokenId === undefined
-      ? null
-      : game.board.getFeatureToken(selectedFighterHex.featureTokenId) ?? null;
+  const selectedFeatureToken = selectedFighterHex?.featureToken ?? null;
   const actionLens = isSetup
     ? createEmptyActionLens(null, null)
     : getFighterActionLens(game, activePlayer, selectedFighterId, legalActions);

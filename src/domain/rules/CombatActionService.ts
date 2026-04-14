@@ -131,8 +131,8 @@ export class CombatActionService extends LegalActionService {
     }
 
     return (
-      fighterHex.featureTokenId === featureToken.id &&
-      featureToken.hexId === fighterHex.id &&
+      fighterHex.featureToken === featureToken &&
+      featureToken.hex === fighterHex &&
       featureToken.side !== FeatureTokenSide.Hidden
     );
   }

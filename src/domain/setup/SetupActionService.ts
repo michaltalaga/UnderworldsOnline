@@ -112,7 +112,7 @@ export class SetupActionService {
       }
 
       if (placementNumber === 5) {
-        return this.wouldSatisfyTerritoryCoverage(game, hex.territoryId);
+        return this.wouldSatisfyTerritoryCoverage(game, hex.territory?.id ?? null);
       }
 
       return true;
@@ -128,8 +128,8 @@ export class SetupActionService {
     return game.board.hexes.filter(
       (hex) =>
         hex.isStartingHex &&
-        hex.territoryId === territoryId &&
-        hex.occupantFighterId === null,
+        hex.territory?.id === territoryId &&
+        hex.occupantFighter === null,
     );
   }
 
@@ -139,7 +139,7 @@ export class SetupActionService {
     allowEdgePlacement: boolean,
     requireNeutralHex: boolean,
   ): boolean {
-    if (hex.occupantFighterId !== null || hex.featureTokenId !== null) {
+    if (hex.occupantFighter !== null || hex.featureToken !== null) {
       return false;
     }
 
@@ -155,13 +155,12 @@ export class SetupActionService {
       return false;
     }
 
-    if (requireNeutralHex && hex.territoryId !== null) {
+    if (requireNeutralHex && hex.territory !== null) {
       return false;
     }
 
     return !game.board.featureTokens.some((token) => {
-      const tokenHex = game.board.getHex(token.hexId);
-      return tokenHex !== undefined && this.getHexDistance(hex, tokenHex) <= 2;
+      return this.getHexDistance(hex, token.hex) <= 2;
     });
   }
 
@@ -172,9 +171,9 @@ export class SetupActionService {
     const occupiedTerritories = new Set<TerritoryId>();
 
     for (const token of game.board.featureTokens) {
-      const tokenHex = game.board.getHex(token.hexId);
-      if (tokenHex?.territoryId !== null && tokenHex?.territoryId !== undefined) {
-        occupiedTerritories.add(tokenHex.territoryId);
+      const territoryId = token.hex.territory?.id;
+      if (territoryId !== undefined) {
+        occupiedTerritories.add(territoryId);
       }
     }
 

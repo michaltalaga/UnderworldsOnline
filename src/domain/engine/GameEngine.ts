@@ -552,7 +552,7 @@ export class GameEngine {
 
     if (
       placementNumber === 5 &&
-      !this.wouldSatisfyTerritoryCoverage(game, hex.territoryId)
+      !this.wouldSatisfyTerritoryCoverage(game, hex.territory?.id ?? null)
     ) {
       throw new Error("The fifth feature token must leave at least one token in each territory.");
     }
@@ -593,11 +593,11 @@ export class GameEngine {
       throw new Error(`Hex ${hex.id} is not a starting hex.`);
     }
 
-    if (hex.territoryId !== territoryId) {
+    if (hex.territory?.id !== territoryId) {
       throw new Error(`Hex ${hex.id} is not in ${player.name}'s territory.`);
     }
 
-    if (hex.occupantFighterId !== null) {
+    if (hex.occupantFighter !== null) {
       throw new Error(`Hex ${hex.id} is already occupied.`);
     }
 
@@ -991,7 +991,7 @@ export class GameEngine {
       throw new Error(`Fighter ${fighter.id} is not on the board to delve.`);
     }
 
-    if (fighterHex.featureTokenId !== action.featureToken.id) {
+    if (fighterHex.featureToken !== action.featureToken) {
       throw new Error(
         `Fighter ${fighter.id} is not on feature token ${action.featureToken.id}.`,
       );
@@ -1830,10 +1830,10 @@ export class GameEngine {
 
   private recordRoundStart(game: Game, firstPlayerId: PlayerId): void {
     const featureTokens: RoundStartFeatureTokenResolution[] = game.board.featureTokens.map((featureToken) => {
-      const holderDetails = this.getPloyTargetDetails(game, featureToken.heldByFighterId);
+      const holderDetails = this.getPloyTargetDetails(game, featureToken.heldByFighter?.id ?? null);
       return {
         featureTokenId: featureToken.id,
-        featureTokenHexId: featureToken.hexId,
+        featureTokenHexId: featureToken.hex.id,
         side: featureToken.side,
         heldByFighterId: holderDetails?.fighterId ?? null,
         heldByFighterName: holderDetails?.fighterName ?? null,
@@ -1853,15 +1853,13 @@ export class GameEngine {
       game.roundNumber,
       firstPlayer,
       game.board.featureTokens.map((featureToken) => {
-        const holder = featureToken.heldByFighterId !== null ? game.getFighter(featureToken.heldByFighterId) : undefined;
-        const holderOwner = holder !== undefined
-          ? game.players.find((p) => p.getFighter(holder.id) !== undefined) ?? null
-          : null;
+        const holder = featureToken.heldByFighter;
+        const holderOwner = holder !== null ? holder.owner : null;
         return {
           featureTokenId: featureToken.id,
-          featureTokenHexId: featureToken.hexId,
+          featureTokenHexId: featureToken.hex.id,
           side: featureToken.side,
-          heldByFighter: holder ?? null,
+          heldByFighter: holder,
           holderOwnerPlayer: holderOwner,
         };
       }),
@@ -2550,7 +2548,7 @@ export class GameEngine {
     allowEdgePlacement: boolean,
     requireNeutralHex: boolean,
   ): boolean {
-    if (hex.occupantFighterId !== null || hex.featureTokenId !== null) {
+    if (hex.occupantFighter !== null || hex.featureToken !== null) {
       return false;
     }
 
@@ -2566,13 +2564,12 @@ export class GameEngine {
       return false;
     }
 
-    if (requireNeutralHex && hex.territoryId !== null) {
+    if (requireNeutralHex && hex.territory !== null) {
       return false;
     }
 
     return !game.board.featureTokens.some((token) => {
-      const tokenHex = game.board.getHex(token.hexId);
-      return tokenHex !== undefined && this.getHexDistance(hex, tokenHex) <= 2;
+      return this.getHexDistance(hex, token.hex) <= 2;
     });
   }
 
@@ -2580,9 +2577,9 @@ export class GameEngine {
     const occupiedTerritories = new Set<TerritoryId>();
 
     for (const token of game.board.featureTokens) {
-      const tokenHex = game.board.getHex(token.hexId);
-      if (tokenHex?.territoryId !== null && tokenHex?.territoryId !== undefined) {
-        occupiedTerritories.add(tokenHex.territoryId);
+      const territoryId = token.hex.territory?.id;
+      if (territoryId !== undefined) {
+        occupiedTerritories.add(territoryId);
       }
     }
 
@@ -2981,16 +2978,12 @@ export class GameEngine {
 
   private syncFeatureTokenHolderAtHex(game: Game, hexId: HexId): void {
     const hex = this.requireHex(game, hexId);
-    if (hex.featureTokenId === null) {
+    const featureToken = hex.featureToken;
+    if (featureToken === null) {
       return;
     }
 
-    const featureToken = game.board.getFeatureToken(hex.featureTokenId);
-    if (featureToken === undefined) {
-      throw new Error(`Unknown feature token ${hex.featureTokenId} on hex ${hex.id}.`);
-    }
-
-    if (featureToken.hexId !== hex.id) {
+    if (featureToken.hex !== hex) {
       throw new Error(`Feature token ${featureToken.id} is not on expected hex ${hex.id}.`);
     }
 

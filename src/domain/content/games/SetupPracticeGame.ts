@@ -124,7 +124,7 @@ function chooseFeaturePlacementAction(
 
   for (const territoryId of preferredTerritories) {
     const preferredPlacement = featurePlacements.find((action) => {
-      return action.hex.territoryId === territoryId;
+      return action.hex.territory?.id === territoryId;
     });
 
     if (preferredPlacement !== undefined) {
@@ -156,9 +156,9 @@ function getPreferredFeatureTerritories(game: Game): Array<string | null> {
 
   const occupiedTerritories = new Set<string>();
   for (const featureToken of game.board.featureTokens) {
-    const hex = game.board.getHex(featureToken.hexId);
-    if (hex?.territoryId !== null && hex?.territoryId !== undefined) {
-      occupiedTerritories.add(hex.territoryId);
+    const territoryId = featureToken.hex.territory?.id;
+    if (territoryId !== undefined) {
+      occupiedTerritories.add(territoryId);
     }
   }
 

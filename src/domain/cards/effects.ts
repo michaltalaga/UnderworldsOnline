@@ -54,7 +54,7 @@ export function pushOneHex(game: Game, fighter: Fighter): string[] {
   }
   const neighbors = game.getNeighbors(originHex);
   const emptyNeighbors = neighbors.filter(
-    (hex) => hex.occupantFighterId === null && hex.kind !== HexKind.Blocked,
+    (hex) => hex.occupantFighter === null && hex.kind !== HexKind.Blocked,
   );
   if (emptyNeighbors.length === 0) {
     return [`${fighter.id} could not be pushed (no empty adjacent hex)`];

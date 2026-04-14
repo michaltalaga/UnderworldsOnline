@@ -1,4 +1,4 @@
-import type { HexId, PlayerId, TerritoryId } from "../values/ids";
+import type { TerritoryId } from "../values/ids";
 import type { HexCell } from "./HexCell";
 import type { Player } from "./Player";
 
@@ -18,13 +18,5 @@ export class Territory {
     this.name = name;
     this.owner = owner;
     this.hexes = hexes;
-  }
-
-  public get ownerPlayerId(): PlayerId | null {
-    return this.owner?.id ?? null;
-  }
-
-  public get hexIds(): HexId[] {
-    return this.hexes.map((hex) => hex.id);
   }
 }

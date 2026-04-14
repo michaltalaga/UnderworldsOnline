@@ -1,4 +1,4 @@
-import type { FeatureTokenId, FighterId, HexId, TerritoryId } from "../values/ids";
+import type { HexId } from "../values/ids";
 import { HexKind } from "../values/enums";
 import type { FeatureToken } from "./FeatureToken";
 import type { Fighter } from "./Fighter";
@@ -35,18 +35,5 @@ export class HexCell {
     this.territory = territory;
     this.occupantFighter = occupantFighter;
     this.featureToken = featureToken;
-  }
-
-  // Legacy id-shaped getters — derive from object refs above.
-  public get territoryId(): TerritoryId | null {
-    return this.territory?.id ?? null;
-  }
-
-  public get occupantFighterId(): FighterId | null {
-    return this.occupantFighter?.id ?? null;
-  }
-
-  public get featureTokenId(): FeatureTokenId | null {
-    return this.featureToken?.id ?? null;
   }
 }

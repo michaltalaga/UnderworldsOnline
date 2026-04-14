@@ -344,14 +344,8 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
 
   // --- Hexes ---
   const hexes: BoardSceneHex[] = positionedHexes.map(({ hex, left, top }) => {
-    const featureTokenState =
-      hex.featureTokenId === null
-        ? null
-        : game.board.getFeatureToken(hex.featureTokenId) ?? null;
-    const fighterState =
-      hex.occupantFighterId === null
-        ? null
-        : game.getFighter(hex.occupantFighterId) ?? null;
+    const featureTokenState = hex.featureToken;
+    const fighterState = hex.occupantFighter;
 
     const occupant: BoardSceneFighter | null =
       fighterState === null
@@ -374,12 +368,9 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
             badge: getFeatureTokenBadge(featureTokenState),
           };
 
-    const territoryOwnerId =
-      hex.territoryId === null
-        ? null
-        : game.board.getTerritory(hex.territoryId)?.ownerPlayerId ?? null;
+    const territoryOwnerId = hex.territory?.owner?.id ?? null;
     const territoryOwner: BoardSceneTerritoryOwner =
-      hex.territoryId === null
+      hex.territory === null
         ? "none"
         : territoryOwnerId === LOCAL_PLAYER_ID
           ? "player-one"
@@ -756,8 +747,8 @@ export function projectBoardScene(params: ProjectBoardSceneParams): BoardSceneMo
     territoryIndicator: params.territoryIndicator ?? "none",
     territoryLabels: (() => {
       const territories = game.board.territories;
-      const p1 = territories.find((t) => t.ownerPlayerId === LOCAL_PLAYER_ID);
-      const p2 = territories.find((t) => t.ownerPlayerId !== null && t.ownerPlayerId !== LOCAL_PLAYER_ID);
+      const p1 = territories.find((t) => t.owner?.id === LOCAL_PLAYER_ID);
+      const p2 = territories.find((t) => t.owner !== null && t.owner.id !== LOCAL_PLAYER_ID);
       if (p1 === undefined || p2 === undefined) return null;
       return { playerOne: p1.name, playerTwo: p2.name };
     })(),

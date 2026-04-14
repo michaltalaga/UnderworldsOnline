@@ -232,12 +232,12 @@ export class GameFactory {
       `${side} territory ids`,
     );
 
-    const hexIds = new Set(hexes.map((hex) => hex.id));
+    const hexSet = new Set<HexCell>(hexes);
     for (const territory of territories) {
-      for (const hexId of territory.hexIds) {
-        if (!hexIds.has(hexId)) {
+      for (const hex of territory.hexes) {
+        if (!hexSet.has(hex)) {
           throw new Error(
-            `Territory ${territory.id} on ${side} references unknown hex ${hexId}.`,
+            `Territory ${territory.id} on ${side} references unknown hex ${hex.id}.`,
           );
         }
       }

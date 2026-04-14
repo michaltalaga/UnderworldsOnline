@@ -1,6 +1,7 @@
 import type { Target } from "../../cards/Card";
 import { Fighter } from "../../state/Fighter";
 import type { Game } from "../../state/Game";
+import type { HexCell } from "../../state/HexCell";
 import type { Player } from "../../state/Player";
 import { type CardZone, FeatureTokenSide, GameActionKind, WeaponAbilityKind } from "../../values/enums";
 import { ObjectiveCard } from "../../cards/ObjectiveCard";
@@ -106,7 +107,7 @@ export class DesolateHomeland extends ObjectiveCard {
     let count = 0;
     for (const token of game.featureTokens) {
       if (token.side !== FeatureTokenSide.Treasure) continue;
-      if (getTerritoryOwner(game, token.hexId) === this.owner.id) count++;
+      if (token.hex.territory?.owner === this.owner) count++;
     }
     return count <= 1;
   }
@@ -141,8 +142,8 @@ export class StripTheRealm extends ObjectiveCard {
     const opponent = game.getOpponent(this.owner.id);
     if (opponent === undefined) return false;
     const enemyHoldsTreasure = treasures.some((t) =>
-      t.heldByFighterId !== null &&
-      opponent.fighters.some((f) => f.id === t.heldByFighterId),
+      t.heldByFighter !== null &&
+      opponent.fighters.includes(t.heldByFighter),
     );
     return !enemyHoldsTreasure;
   }
@@ -461,9 +462,9 @@ export class TrappedCache extends PloyCard {
       if (enemyHex === null) return false;
       // Check if any treasure token is within 1 hex
       const neighbors = game.getNeighbors(enemyHex);
-      const nearbyHexIds = [enemyHex.id, ...neighbors.map((h) => h.id)];
+      const nearby = new Set<HexCell>([enemyHex, ...neighbors]);
       return game.featureTokens.some(
-        (t) => t.side === FeatureTokenSide.Treasure && nearbyHexIds.includes(t.hexId),
+        (t) => t.side === FeatureTokenSide.Treasure && nearby.has(t.hex),
       );
     });
   }

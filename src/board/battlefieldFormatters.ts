@@ -16,13 +16,8 @@ export function formatWeaponAccuracy(accuracy: string): string {
   return accuracy.charAt(0).toUpperCase() + accuracy.slice(1);
 }
 
-export function formatTerritoryLabel(game: Game, hex: HexCell): string {
-  if (hex.territoryId === null) {
-    return "neutral";
-  }
-
-  const territory = game.board.getTerritory(hex.territoryId);
-  return territory?.name ?? hex.territoryId;
+export function formatTerritoryLabel(_game: Game, hex: HexCell): string {
+  return hex.territory?.name ?? "neutral";
 }
 
 export function formatHexKind(kind: HexKind): string {

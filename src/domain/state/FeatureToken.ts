@@ -1,4 +1,4 @@
-import type { FeatureTokenId, FighterId, HexId } from "../values/ids";
+import type { FeatureTokenId } from "../values/ids";
 import { FeatureTokenSide } from "../values/enums";
 import type { Fighter } from "./Fighter";
 import type { HexCell } from "./HexCell";
@@ -22,13 +22,5 @@ export class FeatureToken {
     this.hex = hex;
     this.side = side;
     this.heldByFighter = heldByFighter;
-  }
-
-  public get hexId(): HexId {
-    return this.hex.id;
-  }
-
-  public get heldByFighterId(): FighterId | null {
-    return this.heldByFighter?.id ?? null;
   }
 }

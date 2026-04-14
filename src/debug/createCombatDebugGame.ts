@@ -636,7 +636,8 @@ function getDefenderFeatureTokenSnapshot(
     throw new Error(`Could not capture feature token snapshot for defender ${defenderId}.`);
   }
 
-  if (fighterHex.featureTokenId === null) {
+  const featureToken = fighterHex.featureToken;
+  if (featureToken === null) {
     return {
       fighterHexId: fighterHex.id,
       featureTokenId: null,
@@ -645,16 +646,11 @@ function getDefenderFeatureTokenSnapshot(
     };
   }
 
-  const featureToken = game.board.getFeatureToken(fighterHex.featureTokenId);
-  if (featureToken === undefined) {
-    throw new Error(`Could not find feature token ${fighterHex.featureTokenId} for debug snapshot.`);
-  }
-
   return {
     fighterHexId: fighterHex.id,
     featureTokenId: featureToken.id,
     featureTokenSide: featureToken.side,
-    heldByFighterId: featureToken.heldByFighterId,
+    heldByFighterId: featureToken.heldByFighter?.id ?? null,
   };
 }
 

@@ -296,14 +296,10 @@ export class DefaultCombatResolver extends CombatResolver {
 
   private isFighterOnCoverToken(game: Game, fighterHexId: string): boolean {
     const fighterHex = game.board.getHex(fighterHexId);
-    if (fighterHex?.featureTokenId === null || fighterHex?.featureTokenId === undefined) {
-      return false;
-    }
-
-    const featureToken = game.board.getFeatureToken(fighterHex.featureTokenId);
+    const featureToken = fighterHex?.featureToken ?? null;
     return (
-      featureToken !== undefined &&
-      featureToken.hexId === fighterHex.id &&
+      featureToken !== null &&
+      featureToken.hex === fighterHex &&
       featureToken.side === FeatureTokenSide.Cover
     );
   }

@@ -47,7 +47,7 @@ export default function TerritoryChoiceScreen({
             >
               <h2 className="m-0 font-heading text-[1.35rem]">{territory.name}</h2>
               <p className="m-0 text-ink-muted text-[0.92rem] italic">
-                {boardSide === BoardSide.Front ? "Front side" : "Back side"} · {territory.hexIds.length} hexes
+                {boardSide === BoardSide.Front ? "Front side" : "Back side"} · {territory.hexes.length} hexes
               </p>
             </PanelButton>
           </li>
