@@ -18,10 +18,7 @@ export class ChargeAbility extends Ability {
     const moveActions = this.moveAbility.getLegalActions(game, player) as MoveAction[];
 
     return moveActions.flatMap((moveAction) => {
-      const destinationHexId = moveAction.path[moveAction.path.length - 1];
-      if (destinationHexId === undefined) return [];
-
-      const destinationHex = game.getHex(destinationHexId);
+      const destinationHex = moveAction.path[moveAction.path.length - 1];
       if (destinationHex === undefined) return [];
 
       const fighter = moveAction.fighter;
@@ -62,12 +59,11 @@ export class ChargeAbility extends Ability {
     if (attackerDef === undefined || !attackerDef.weapons.includes(weapon)) return false;
     if (action.selectedAbility !== null && !weapon.hasAbility(action.selectedAbility)) return false;
 
-    const destinationHexId = action.path[action.path.length - 1];
-    if (destinationHexId === undefined) return false;
+    const destinationHex = action.path[action.path.length - 1];
+    if (destinationHex === undefined) return false;
 
-    const destinationHex = game.getHex(destinationHexId);
     const targetHex = game.getFighterHex(target);
-    if (destinationHex === undefined || targetHex === undefined) return false;
+    if (targetHex === undefined) return false;
 
     return game.getDistance(destinationHex, targetHex) <= weapon.range;
   }

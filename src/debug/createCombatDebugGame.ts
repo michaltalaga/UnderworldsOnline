@@ -29,6 +29,7 @@ import {
   type Game,
   type Player,
   type Fighter,
+  type HexCell,
   type WarscrollAbilityDefinition,
   type WeaponDefinition,
 } from "../domain";
@@ -224,15 +225,21 @@ export function createCombatDebugSnapshot(
     throw new Error("Could not find debug fighters.");
   }
 
+  const resolveHexes = (ids: string[]): HexCell[] =>
+    ids.map((id) => {
+      const hex = game.board.hexes.find((h) => h.id === id);
+      if (hex === undefined) throw new Error(`Debug move path references unknown hex ${id}.`);
+      return hex;
+    });
   engine.applyGameAction(
     game,
-    new MoveAction(playerOneRef, debugDefender, defenderMovePath),
+    new MoveAction(playerOneRef, debugDefender, resolveHexes(defenderMovePath)),
   );
   engine.applyGameAction(game, new PassAction(playerOneRef));
 
   engine.applyGameAction(
     game,
-    new MoveAction(playerTwoRef, attackerFighter, attackerMovePath),
+    new MoveAction(playerTwoRef, attackerFighter, resolveHexes(attackerMovePath)),
   );
   engine.applyGameAction(game, new PassAction(playerTwoRef));
 
@@ -411,12 +418,13 @@ export function createDelveDebugSnapshot(): DelveDebugSnapshot {
   const delvePlayerOne = game.players[0];
   const delveFighter = delvePlayerOne?.fighters.find((f) => f.id === playerOneFighterThreeId);
   const delveToken = game.board.featureTokens.find((t) => t.id === "feature:2");
-  if (delvePlayerOne === undefined || delveFighter === undefined || delveToken === undefined) {
+  const delveDestination = game.board.hexes.find((h) => h.id === "hex:r1:c2");
+  if (delvePlayerOne === undefined || delveFighter === undefined || delveToken === undefined || delveDestination === undefined) {
     throw new Error("Could not find delve debug refs.");
   }
   engine.applyGameAction(
     game,
-    new MoveAction(delvePlayerOne, delveFighter, ["hex:r1:c2"]),
+    new MoveAction(delvePlayerOne, delveFighter, [delveDestination]),
   );
   engine.applyGameAction(
     game,

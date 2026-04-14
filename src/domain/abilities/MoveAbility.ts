@@ -3,14 +3,13 @@ import { MoveAction } from "../actions/MoveAction";
 import type { Game } from "../state/Game";
 import type { HexCell } from "../state/HexCell";
 import type { Player } from "../state/Player";
-import type { HexId } from "../values/ids";
 import { Ability } from "./Ability";
 import { canFighterMove, isTraversableMoveHex } from "./fighterChecks";
 import { getEffectiveMove } from "../cards/upgradeEffects";
 
 type MovePathSearchNode = {
   hex: HexCell;
-  path: HexId[];
+  path: HexCell[];
 };
 
 export class MoveAbility extends Ability {
@@ -22,13 +21,13 @@ export class MoveAbility extends Ability {
       const definition = fighter.definition;
       if (definition === undefined || !canFighterMove(fighter)) return [];
 
-      const startHex = game.getFighterHex(fighter);
-      if (startHex === undefined) return [];
+      const startHex = fighter.currentHex;
+      if (startHex === null) return [];
 
       const moveDistance = getEffectiveMove(definition, player, fighter);
       const actions: MoveAction[] = [];
       const frontier: MovePathSearchNode[] = [{ hex: startHex, path: [] }];
-      const shortestPathLengths = new Map<HexId, number>([[startHex.id, 0]]);
+      const shortestPathLengths = new Map<HexCell, number>([[startHex, 0]]);
 
       while (frontier.length > 0) {
         const node = frontier.shift();
@@ -37,11 +36,11 @@ export class MoveAbility extends Ability {
         for (const neighbor of game.getNeighbors(node.hex)) {
           if (!isTraversableMoveHex(neighbor)) continue;
           const nextLen = node.path.length + 1;
-          const best = shortestPathLengths.get(neighbor.id);
+          const best = shortestPathLengths.get(neighbor);
           if (best !== undefined && best <= nextLen) continue;
 
-          const nextPath = [...node.path, neighbor.id];
-          shortestPathLengths.set(neighbor.id, nextLen);
+          const nextPath = [...node.path, neighbor];
+          shortestPathLengths.set(neighbor, nextLen);
           actions.push(new MoveAction(player, fighter, nextPath));
           frontier.push({ hex: neighbor, path: nextPath });
         }
@@ -61,16 +60,14 @@ export class MoveAbility extends Ability {
     const moveDistance = getEffectiveMove(definition, action.player, fighter);
     if (action.path.length === 0 || action.path.length > moveDistance) return false;
 
-    const visited = new Set<HexId>([fighter.currentHex.id]);
-    let currentHex = game.getFighterHex(fighter);
-    if (currentHex === undefined) return false;
+    const visited = new Set<HexCell>([fighter.currentHex]);
+    let currentHex: HexCell = fighter.currentHex;
 
-    for (const nextHexId of action.path) {
-      if (visited.has(nextHexId)) return false;
-      const nextHex = game.getHex(nextHexId);
-      if (nextHex === undefined || !game.areAdjacent(currentHex, nextHex)) return false;
+    for (const nextHex of action.path) {
+      if (visited.has(nextHex)) return false;
+      if (!game.areAdjacent(currentHex, nextHex)) return false;
       if (!isTraversableMoveHex(nextHex)) return false;
-      visited.add(nextHex.id);
+      visited.add(nextHex);
       currentHex = nextHex;
     }
 

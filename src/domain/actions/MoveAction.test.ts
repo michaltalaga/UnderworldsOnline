@@ -63,7 +63,7 @@ describe("MoveAction resolution", () => {
     const service = new CombatActionService();
 
     const move = expectFirstLegalActionOfType(service, game, "player:one", MoveAction);
-    const destinationHexId = move.path[move.path.length - 1];
+    const destinationHexId = move.path[move.path.length - 1]?.id;
     const fromHexId = move.fighter.currentHex?.id ?? null;
 
     engine.applyGameAction(game, move);

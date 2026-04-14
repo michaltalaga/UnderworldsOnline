@@ -31,7 +31,7 @@ import type {
 // the path is empty. Every helper that filters or groups by destination
 // flows through this rather than repeating `action.path[action.path.length - 1]`.
 function getDestinationHexId(action: MoveAction | ChargeAction): HexId | undefined {
-  return action.path[action.path.length - 1];
+  return action.path[action.path.length - 1]?.id;
 }
 
 // Flattens an iterable of fighter ids to the hex ids they currently occupy,
@@ -414,7 +414,7 @@ export function getArmedPathModel(
   if (moveAction !== null) {
     return {
       tone: "move",
-      stepByHexId: new Map(moveAction.path.map((hexId, index) => [hexId, index + 1])),
+      stepByHexId: new Map(moveAction.path.map((hex, index) => [hex.id, index + 1])),
     };
   }
 
@@ -438,7 +438,7 @@ export function getArmedPathModel(
 
   return {
     tone: "charge",
-    stepByHexId: new Map(selectedChargeAction.path.map((hexId, index) => [hexId, index + 1])),
+    stepByHexId: new Map(selectedChargeAction.path.map((hex, index) => [hex.id, index + 1])),
   };
 }
 

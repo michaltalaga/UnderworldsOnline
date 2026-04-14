@@ -635,12 +635,10 @@ export class GameEngine {
       throw new Error(`Fighter ${fighter.id} is not deployed on the board.`);
     }
 
-    const destinationHexId = action.path[action.path.length - 1];
-    if (destinationHexId === undefined) {
+    const destinationHex = action.path[action.path.length - 1];
+    if (destinationHex === undefined) {
       throw new Error(`Move action for fighter ${fighter.id} requires a destination hex.`);
     }
-
-    const destinationHex = this.requireHex(game, destinationHexId);
 
     currentHex.occupantFighter = null;
     this.syncFeatureTokenHolderAtHex(game, currentHex.id);
@@ -758,12 +756,11 @@ export class GameEngine {
       throw new Error(`Fighter ${attacker.id} is not deployed on the board.`);
     }
 
-    const destinationHexId = action.path[action.path.length - 1];
-    if (destinationHexId === undefined) {
+    const destinationHex = action.path[action.path.length - 1];
+    if (destinationHex === undefined) {
       throw new Error(`Charge action for fighter ${attacker.id} requires a destination hex.`);
     }
 
-    const destinationHex = this.requireHex(game, destinationHexId);
     currentHex.occupantFighter = null;
     this.syncFeatureTokenHolderAtHex(game, currentHex.id);
     destinationHex.occupantFighter = attacker;
@@ -1949,7 +1946,7 @@ export class GameEngine {
     fighter: Fighter,
     fromHex: HexCell,
     toHex: HexCell,
-    path: readonly HexId[],
+    path: readonly HexCell[],
     destinationHexKind: HexKind,
     staggerApplied: boolean,
     metadata: GameEventMetadata = {},
@@ -1973,7 +1970,7 @@ export class GameEngine {
       fighter,
       fromHex.id,
       toHex.id,
-      path,
+      path.map((h) => h.id),
       destinationHexKind,
       staggerApplied,
       metadata.actionKind ?? null,

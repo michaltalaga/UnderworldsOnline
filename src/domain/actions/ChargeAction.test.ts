@@ -94,7 +94,7 @@ describe("ChargeAction resolution", () => {
       null,
     );
 
-    const destinationHexId = charge.path[charge.path.length - 1];
+    const destinationHexId = charge.path[charge.path.length - 1]?.id;
     engine.applyGameAction(game, deterministicCharge);
 
     // Fighter moved to the charge destination.

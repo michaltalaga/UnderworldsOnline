@@ -1,4 +1,3 @@
-import type { HexId } from "../values/ids";
 import {
   AttackDieFace,
   GameActionKind,
@@ -8,6 +7,7 @@ import {
 import { GameAction } from "./GameAction";
 import type { LegalActionProvider } from "./LegalActionProvider";
 import type { Game } from "../state/Game";
+import type { HexCell } from "../state/HexCell";
 import type { Player } from "../state/Player";
 import type { Fighter } from "../state/Fighter";
 import type { WeaponDefinition } from "../definitions/WeaponDefinition";
@@ -16,7 +16,7 @@ import { hasUsedCoreAbilityThisActionStep } from "../rules/actionStepQueries";
 
 export class ChargeAction extends GameAction {
   public readonly fighter: Fighter;
-  public readonly path: HexId[];
+  public readonly path: HexCell[];
   public readonly target: Fighter;
   public readonly weapon: WeaponDefinition;
   public readonly selectedAbility: WeaponAbilityKind | null;
@@ -26,7 +26,7 @@ export class ChargeAction extends GameAction {
   public constructor(
     player: Player,
     fighter: Fighter,
-    path: HexId[],
+    path: HexCell[],
     target: Fighter,
     weapon: WeaponDefinition,
     selectedAbility: WeaponAbilityKind | null = null,

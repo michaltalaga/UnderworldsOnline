@@ -27,11 +27,11 @@ export function buildBattlefieldResultFlash(
   }
 
   if (action instanceof MoveAction) {
-    const destinationHexId = action.path[action.path.length - 1];
+    const destination = action.path[action.path.length - 1];
     return {
       id: Date.now(),
       tone: "move",
-      title: `Moved to ${destinationHexId === undefined ? "destination" : compactHexId(destinationHexId)}`,
+      title: `Moved to ${destination === undefined ? "destination" : compactHexId(destination.id)}`,
       detail,
     };
   }

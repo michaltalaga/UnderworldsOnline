@@ -56,10 +56,8 @@ describe("MoveAbility eligibility", () => {
     const actions = ability.getLegalActions(game, player) as MoveAction[];
     for (const action of actions) {
       const fighter = action.fighter;
-      const startHexId = fighter.currentHex!.id;
-      let currentHex = game.getHex(startHexId)!;
-      for (const nextHexId of action.path) {
-        const nextHex = game.getHex(nextHexId)!;
+      let currentHex = fighter.currentHex!;
+      for (const nextHex of action.path) {
         expect(game.areAdjacent(currentHex, nextHex)).toBe(true);
         currentHex = nextHex;
       }

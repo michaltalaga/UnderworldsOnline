@@ -9,7 +9,7 @@ export class MoveResolution {
   public readonly fighter: Fighter;
   public readonly fromHex: HexCell;
   public readonly toHex: HexCell;
-  public readonly path: readonly HexId[];
+  public readonly path: readonly HexCell[];
   public readonly destinationHexKind: HexKind;
   public readonly staggerApplied: boolean;
 
@@ -18,7 +18,7 @@ export class MoveResolution {
     fighter: Fighter,
     fromHex: HexCell,
     toHex: HexCell,
-    path: readonly HexId[],
+    path: readonly HexCell[],
     destinationHexKind: HexKind,
     staggerApplied: boolean,
   ) {

@@ -1,8 +1,8 @@
-import type { HexId } from "../values/ids";
 import { GameActionKind } from "../values/enums";
 import { GameAction } from "./GameAction";
 import type { LegalActionProvider } from "./LegalActionProvider";
 import type { Game } from "../state/Game";
+import type { HexCell } from "../state/HexCell";
 import type { Player } from "../state/Player";
 import type { Fighter } from "../state/Fighter";
 import { MoveAbility } from "../abilities/MoveAbility";
@@ -10,9 +10,9 @@ import { hasUsedCoreAbilityThisActionStep } from "../rules/actionStepQueries";
 
 export class MoveAction extends GameAction {
   public readonly fighter: Fighter;
-  public readonly path: HexId[];
+  public readonly path: HexCell[];
 
-  public constructor(player: Player, fighter: Fighter, path: HexId[]) {
+  public constructor(player: Player, fighter: Fighter, path: HexCell[]) {
     super(GameActionKind.Move, player);
     this.fighter = fighter;
     this.path = path;
