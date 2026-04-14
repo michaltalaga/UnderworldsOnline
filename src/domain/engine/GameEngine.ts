@@ -27,13 +27,8 @@ import {
   WarscrollAbilityUsedEvent,
   PlayerPassedEvent,
   RollOffResolvedEvent,
-  ObjectivesScoredEvent,
-  ObjectivesDrawnEvent,
-  PowerCardsDrawnEvent,
-  CleanupEvent,
 } from "../events";
 import { rollAttackDie, rollSaveDie } from "../rules/Dice";
-import { WeaponAbilityDefinition } from "../definitions/WeaponAbilityDefinition";
 import {
   CleanupResolution,
   CleanupTransitionKind,
@@ -43,7 +38,7 @@ import {
 import { FeatureToken } from "../state/FeatureToken";
 import { Fighter } from "../state/Fighter";
 import { Game } from "../state/Game";
-import { type GameEventMetadata, GameRecordKind } from "../state/GameRecord";
+import { type GameEventMetadata, type GameEventInvokerKind, GameRecordKind } from "../state/GameRecord";
 import {
   createCombatChooseFirstPlayerGameState,
   createCombatReadyGameState,
@@ -2844,7 +2839,7 @@ export class GameEngine {
     selectedAbility: AttackAction["selectedAbility"],
     attackRoll: AttackAction["attackRoll"],
     saveRoll: AttackAction["saveRoll"],
-    actionKind: GameActionKind,
+    actionKind: GameEventInvokerKind,
   ): { combatResult: ReturnType<CombatResolver["resolve"]>; targetSlain: boolean } {
     const weapon = attackerPlayer.getFighterWeaponDefinition(attacker.id, weaponId);
     game.addRecord(

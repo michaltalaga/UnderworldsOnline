@@ -1399,20 +1399,6 @@ function getUpgradeUsageLabel(
   return getResolutionStatusLabel(getLatestUpgradeResolution(upgradeDebugSnapshot.game));
 }
 
-function getUpgradeUsageStatusClass(
-  upgradeDebugSnapshot: ReturnType<typeof createUpgradeDebugSnapshot>,
-): string {
-  if (upgradeDebugSnapshot.selectedUpgradeActionKey === null) {
-    return "status-idle";
-  }
-
-  if (upgradeDebugSnapshot.upgradeActionError !== null) {
-    return "status-unsupported";
-  }
-
-  return getResolutionStatusClass(getLatestUpgradeResolution(upgradeDebugSnapshot.game));
-}
-
 function getUpgradeUsageStatusTw(
   upgradeDebugSnapshot: ReturnType<typeof createUpgradeDebugSnapshot>,
 ): string {
@@ -1435,14 +1421,6 @@ function getWarscrollUsageLabel(debugSnapshot: CombatDebugSnapshot): string {
   return debugSnapshot.warscrollAbilityError === null ? "used" : "failed";
 }
 
-function getWarscrollUsageStatusClass(debugSnapshot: CombatDebugSnapshot): string {
-  if (debugSnapshot.selectedWarscrollAbilityIndex === null) {
-    return "status-idle";
-  }
-
-  return debugSnapshot.warscrollAbilityError === null ? "status-supported" : "status-unsupported";
-}
-
 function getWarscrollUsageStatusTw(debugSnapshot: CombatDebugSnapshot): string {
   if (debugSnapshot.selectedWarscrollAbilityIndex === null) {
     return "bg-idle-bg text-idle";
@@ -1461,18 +1439,6 @@ function getWarscrollAbilityStatusLabel(
   }
 
   return isLegal ? "legal" : "not legal";
-}
-
-function getWarscrollAbilityStatusClass(
-  debugSnapshot: CombatDebugSnapshot,
-  abilityIndex: number,
-  isLegal: boolean,
-): string {
-  if (debugSnapshot.selectedWarscrollAbilityIndex === abilityIndex) {
-    return debugSnapshot.warscrollAbilityError === null ? "status-supported" : "status-unsupported";
-  }
-
-  return isLegal ? "status-supported" : "status-unsupported";
 }
 
 function getWarscrollAbilityStatusTw(
@@ -1619,10 +1585,6 @@ function formatCleanupDetails(game: Game): string[] {
 
 function getResolutionStatusLabel(resolution: object | null): string {
   return resolution === null ? "missing" : "recorded";
-}
-
-function getResolutionStatusClass(resolution: object | null): string {
-  return resolution === null ? "status-unsupported" : "status-supported";
 }
 
 function getResolutionStatusTw(resolution: object | null): string {

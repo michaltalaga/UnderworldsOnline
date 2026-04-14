@@ -1,7 +1,8 @@
-import type { AttackDieFace, GameActionKind, SaveDieFace, WeaponAbilityKind } from "../values/enums";
+import type { AttackDieFace, SaveDieFace, WeaponAbilityKind } from "../values/enums";
 import type { WeaponDefinition } from "../definitions/WeaponDefinition";
 import type { Fighter } from "../state/Fighter";
 import type { Player } from "../state/Player";
+import type { GameEventInvokerKind } from "../state/GameRecord";
 import { GameEvent } from "./GameEvent";
 
 export class SaveDiceRolledEvent extends GameEvent {
@@ -24,7 +25,7 @@ export class SaveDiceRolledEvent extends GameEvent {
     selectedAbility: WeaponAbilityKind | null,
     attackRoll: readonly AttackDieFace[],
     saveRoll: readonly SaveDieFace[],
-    actionKind: GameActionKind,
+    actionKind: GameEventInvokerKind,
   ) {
     super(roundNumber, attackerPlayer, attacker, null, actionKind);
     this.attackerPlayer = attackerPlayer;

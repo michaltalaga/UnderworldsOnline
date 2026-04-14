@@ -1,7 +1,8 @@
-import type { GameActionKind, WeaponAbilityKind } from "../values/enums";
+import type { WeaponAbilityKind } from "../values/enums";
 import type { WeaponDefinition } from "../definitions/WeaponDefinition";
 import type { Fighter } from "../state/Fighter";
 import type { Player } from "../state/Player";
+import type { GameEventInvokerKind } from "../state/GameRecord";
 import { GameEvent } from "./GameEvent";
 
 export class CombatStartedEvent extends GameEvent {
@@ -20,7 +21,7 @@ export class CombatStartedEvent extends GameEvent {
     target: Fighter,
     weapon: WeaponDefinition,
     selectedAbility: WeaponAbilityKind | null,
-    actionKind: GameActionKind,
+    actionKind: GameEventInvokerKind,
   ) {
     super(roundNumber, attackerPlayer, attacker, null, actionKind);
     this.attackerPlayer = attackerPlayer;

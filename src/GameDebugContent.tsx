@@ -49,7 +49,6 @@ export default function GameDebugContent({
   activePlayer,
   selectedFighterId,
   selectedFighterName,
-  selectedMoveHexId,
   selectedMoveOption,
   selectedChargeOption,
   actionLens,

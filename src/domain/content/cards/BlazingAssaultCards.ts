@@ -2,7 +2,7 @@ import type { Target } from "../../cards/Card";
 import { Fighter } from "../../state/Fighter";
 import type { Game } from "../../state/Game";
 import type { Player } from "../../state/Player";
-import { type CardZone, CombatOutcome, WeaponAbilityKind } from "../../values/enums";
+import { type CardZone, WeaponAbilityKind } from "../../values/enums";
 import { ObjectiveCard } from "../../cards/ObjectiveCard";
 import { PloyCard } from "../../cards/PloyCard";
 import { UpgradeCard } from "../../cards/UpgradeCard";
@@ -17,7 +17,6 @@ import { AttackDiceRolledEvent } from "../../events/AttackDiceRolledEvent";
 import { AttackDiceModifiedEvent } from "../../events/AttackDiceModifiedEvent";
 import { WeaponAbilityModifiedEvent } from "../../events/WeaponAbilityModifiedEvent";
 import { SaveDiceRolledEvent } from "../../events/SaveDiceRolledEvent";
-import { CombatEndedEvent } from "../../events/CombatEndedEvent";
 import { getActiveCombatState } from "../../rules/CombatStateProjection";
 
 // ─── Objectives ─────────────────────────────────────────────────────────────

@@ -1,7 +1,8 @@
-import type { GameActionKind, HexKind } from "../values/enums";
+import type { HexKind } from "../values/enums";
 import type { HexId } from "../values/ids";
 import type { Fighter } from "../state/Fighter";
 import type { Player } from "../state/Player";
+import type { GameEventInvokerKind } from "../state/GameRecord";
 import { GameEvent } from "./GameEvent";
 
 export class FighterMovedEvent extends GameEvent {
@@ -22,7 +23,7 @@ export class FighterMovedEvent extends GameEvent {
     path: readonly HexId[],
     destinationHexKind: HexKind,
     staggerApplied: boolean,
-    actionKind: GameActionKind,
+    actionKind: GameEventInvokerKind | null,
   ) {
     super(roundNumber, player, fighter, null, actionKind);
     this.player = player;

@@ -1,13 +1,13 @@
 import type {
   AttackDieFace,
   CombatOutcome,
-  GameActionKind,
   SaveDieFace,
   WeaponAbilityKind,
 } from "../values/enums";
 import type { WeaponDefinition } from "../definitions/WeaponDefinition";
 import type { Fighter } from "../state/Fighter";
 import type { Player } from "../state/Player";
+import type { GameEventInvokerKind } from "../state/GameRecord";
 import { GameEvent } from "./GameEvent";
 
 export class CombatResolvedEvent extends GameEvent {
@@ -54,7 +54,7 @@ export class CombatResolvedEvent extends GameEvent {
     targetMoved: boolean,
     attackerMoved: boolean,
     staggerApplied: boolean,
-    actionKind: GameActionKind,
+    actionKind: GameEventInvokerKind,
   ) {
     super(roundNumber, attackerPlayer, attacker, null, actionKind);
     this.attackerPlayer = attackerPlayer;

@@ -11,7 +11,6 @@ import { UseWarscrollAbilityAction } from "../actions/UseWarscrollAbilityAction"
 import type { LegalActionProvider } from "../actions/LegalActionProvider";
 import { Game } from "../state/Game";
 import { Fighter } from "../state/Fighter";
-import { Player } from "../state/Player";
 import { CardKind, FeatureTokenSide, TurnStep } from "../values/enums";
 import type { PlayerId } from "../values/ids";
 import { DefaultWarscrollEffectResolver } from "./DefaultWarscrollEffectResolver";

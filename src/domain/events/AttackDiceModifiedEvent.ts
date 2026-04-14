@@ -1,7 +1,8 @@
-import type { AttackDieFace, GameActionKind } from "../values/enums";
+import type { AttackDieFace } from "../values/enums";
 import type { Card } from "../cards/Card";
 import type { Fighter } from "../state/Fighter";
 import type { Player } from "../state/Player";
+import type { GameEventInvokerKind } from "../state/GameRecord";
 import { GameEvent } from "./GameEvent";
 
 export class AttackDiceModifiedEvent extends GameEvent {
@@ -20,7 +21,7 @@ export class AttackDiceModifiedEvent extends GameEvent {
     previousRoll: readonly AttackDieFace[],
     newRoll: readonly AttackDieFace[],
     reason: string,
-    actionKind: GameActionKind,
+    actionKind: GameEventInvokerKind,
   ) {
     super(roundNumber, attackerPlayer, attacker, modifiedByCard, actionKind);
     this.attackerPlayer = attackerPlayer;

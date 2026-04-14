@@ -12,7 +12,6 @@ import {
 } from "../../cards/targeting";
 import type { WeaponDefinition } from "../../definitions/WeaponDefinition";
 import { giveGuard, giveStagger, heal, dealDamage, pushFighter } from "../../cards/effects";
-import { CombatOutcome } from "../../values/enums";
 import { rollAttackDie } from "../../rules/Dice";
 import {
   getMyLatestCombatEvent,
@@ -25,7 +24,6 @@ import {
 } from "../../cards/scoring";
 import { CombatResolvedEvent } from "../../events/CombatResolvedEvent";
 import { FighterDelvedEvent } from "../../events/FighterDelvedEvent";
-import { FighterMovedEvent } from "../../events/FighterMovedEvent";
 import { AttackDiceRolledEvent } from "../../events/AttackDiceRolledEvent";
 import { AttackDiceModifiedEvent } from "../../events/AttackDiceModifiedEvent";
 import { SaveDiceRolledEvent } from "../../events/SaveDiceRolledEvent";
