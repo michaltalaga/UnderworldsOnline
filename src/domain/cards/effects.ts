@@ -48,7 +48,7 @@ export function pushOneHex(game: Game, fighter: Fighter): string[] {
   if (fighter.currentHex === null) {
     return [`${fighter.id} is not on the board`];
   }
-  const originHex = game.getFighterHex(fighter);
+  const originHex = fighter.currentHex ?? undefined;
   if (originHex === undefined) {
     return [`${fighter.id} hex not found`];
   }

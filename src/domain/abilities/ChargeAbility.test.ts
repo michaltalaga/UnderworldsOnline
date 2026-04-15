@@ -39,7 +39,7 @@ describe("ChargeAbility eligibility", () => {
     for (const action of actions) {
       const destHex = action.path[action.path.length - 1]!;
       const target = action.target;
-      const targetHex = game.getFighterHex(target)!;
+      const targetHex = target.currentHex!;
       expect(game.getDistance(destHex, targetHex)).toBeLessThanOrEqual(action.weapon.range);
     }
   });

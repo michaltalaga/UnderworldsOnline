@@ -17,13 +17,13 @@ export class AttackAbility extends Ability {
       const definition = fighter.definition;
       if (definition === undefined || !canFighterAttack(fighter)) return [];
 
-      const attackerHex = game.getFighterHex(fighter);
+      const attackerHex = fighter.currentHex ?? undefined;
       if (attackerHex === undefined) return [];
 
       return definition.weapons.flatMap((weapon) =>
         opponent.fighters.flatMap((target) => {
           if (target.isSlain || target.currentHex === null) return [];
-          const targetHex = game.getFighterHex(target);
+          const targetHex = target.currentHex ?? undefined;
           if (targetHex === undefined || game.getDistance(attackerHex, targetHex) > weapon.range) return [];
 
           return [
@@ -53,8 +53,8 @@ export class AttackAbility extends Ability {
     if (attackerDef === undefined || !attackerDef.weapons.includes(weapon)) return false;
     if (action.selectedAbility !== null && !weapon.hasAbility(action.selectedAbility)) return false;
 
-    const attackerHex = game.getFighterHex(attacker);
-    const targetHex = game.getFighterHex(target);
+    const attackerHex = attacker.currentHex ?? undefined;
+    const targetHex = target.currentHex ?? undefined;
     if (attackerHex === undefined || targetHex === undefined) return false;
 
     return game.getDistance(attackerHex, targetHex) <= weapon.range;

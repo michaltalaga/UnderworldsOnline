@@ -28,7 +28,7 @@ export class ChargeAbility extends Ability {
       return definition.weapons.flatMap((weapon) =>
         opponent.fighters.flatMap((target) => {
           if (target.isSlain || target.currentHex === null) return [];
-          const targetHex = game.getFighterHex(target);
+          const targetHex = target.currentHex ?? undefined;
           if (targetHex === undefined || game.getDistance(destinationHex, targetHex) > weapon.range) return [];
 
           return [
@@ -62,7 +62,7 @@ export class ChargeAbility extends Ability {
     const destinationHex = action.path[action.path.length - 1];
     if (destinationHex === undefined) return false;
 
-    const targetHex = game.getFighterHex(target);
+    const targetHex = target.currentHex ?? undefined;
     if (targetHex === undefined) return false;
 
     return game.getDistance(destinationHex, targetHex) <= weapon.range;

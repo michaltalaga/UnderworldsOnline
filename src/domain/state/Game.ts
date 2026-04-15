@@ -167,10 +167,6 @@ export class Game {
 
   // --- Board delegation (eliminate game.board.* chains) ---
 
-  public getFighterHex(fighter: Fighter): HexCell | undefined {
-    return fighter.currentHex ?? undefined;
-  }
-
   public getNeighbors(hex: HexCell): HexCell[] {
     return this.board.getNeighbors(hex);
   }
