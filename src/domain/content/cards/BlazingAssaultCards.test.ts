@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   CardZone,
+  Fighter,
   PassAction,
   UpgradeCard,
   WeaponAbilityKind,
@@ -280,9 +281,8 @@ describe("BlazingAssault ploys — power-step friendly targeting", () => {
     const ploy = new CommandingStride("cs-test", owner, CardZone.PowerHand);
     const targets = ploy.getLegalTargets(game);
     expect(targets.length).toBe(1);
-    const leaderFighter = targets[0] as { id: string };
-    const def = owner.getFighterDefinition(leaderFighter.id as never);
-    expect(def?.isLeader).toBe(true);
+    const leaderFighter = targets[0] as Fighter;
+    expect(leaderFighter.definition.isLeader).toBe(true);
   });
 
   it("IllusoryFighter targets friendly on-board fighters", () => {

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   CardZone,
   FeatureTokenSide,
+  Fighter,
   PassAction,
   UpgradeCard,
   WeaponAbilityKind,
@@ -181,8 +182,8 @@ describe("PillageAndPlunder ploys — power step", () => {
     const ploy = new PillageCommandingStride("pcs-test", owner, CardZone.PowerHand);
     const targets = ploy.getLegalTargets(game);
     expect(targets.length).toBe(1);
-    const def = owner.getFighterDefinition((targets[0] as { id: string }).id as never);
-    expect(def?.isLeader).toBe(true);
+    const target = targets[0] as Fighter;
+    expect(target.definition.isLeader).toBe(true);
   });
 
   it("CrumblingMine targets nothing (feature tokens not currently targetable)", () => {

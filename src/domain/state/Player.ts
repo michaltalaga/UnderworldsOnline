@@ -4,7 +4,6 @@ import type {
 } from "../values/ids";
 import { DeckKind } from "../values/enums";
 import type { Card, Target } from "../cards/Card";
-import { FighterDefinition } from "../definitions/FighterDefinition";
 import { WarscrollDefinition } from "../definitions/WarscrollDefinition";
 import { WarbandDefinition } from "../definitions/WarbandDefinition";
 import type { Game } from "./Game";
@@ -74,10 +73,6 @@ export class Player {
 
   public getFighter(fighterId: FighterId): Fighter | undefined {
     return this.fighters.find((fighter) => fighter.id === fighterId);
-  }
-
-  public getFighterDefinition(fighterId: FighterId): FighterDefinition | undefined {
-    return this.getFighter(fighterId)?.definition;
   }
 
   public getWarscrollDefinition(): WarscrollDefinition | undefined {
